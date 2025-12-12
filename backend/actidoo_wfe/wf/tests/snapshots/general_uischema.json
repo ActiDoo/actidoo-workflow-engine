@@ -1,0 +1,143 @@
+{
+    "ui:field": "layout",
+    "ui:layout": {
+        "Row_04trp1s": [
+            "checkbox1",
+            "select_flu4so",
+            "Field_0em8zpa"
+        ],
+        "Row_1fuaysd": [
+            "checkbox2"
+        ],
+        "Row_1t7jclu": [
+            "checkbox3"
+        ],
+        "Row_0xtqzfd": [
+            "checkbox4",
+            "checkbox4_have_done"
+        ],
+        "Row_1g1rmw2": [
+            "checkbox5",
+            "select_fys1lj"
+        ],
+        "dynamiclist_outer": [
+            "dynamiclist_outer"
+        ]
+    },
+    "checkbox1": {
+        "ui:description": "Hint",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "checkbox1"
+        ]
+    },
+    "select_flu4so": {
+        "ui:description": "I confirm!",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_flu4so"
+        ],
+        "ui:widget": "SelectStatic"
+    },
+    "Field_0em8zpa": {
+        "ui:description": "# Version 7",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "Field_0em8zpa"
+        ]
+    },
+    "checkbox2": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "checkbox2"
+        ],
+        "ui:disabled": true
+    },
+    "checkbox3": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "checkbox3"
+        ]
+    },
+    "checkbox4": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "checkbox4"
+        ]
+    },
+    "checkbox4_have_done": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "checkbox4_have_done"
+        ]
+    },
+    "checkbox5": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "checkbox5"
+        ]
+    },
+    "select_fys1lj": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_fys1lj"
+        ],
+        "ui:widget": "SelectStatic"
+    },
+    "dynamiclist_outer": {
+        "items": {
+            "ui:field": "layout",
+            "ui:layout": {
+                "Row_1o2iuya": [
+                    "textfield_outer"
+                ],
+                "dynamiclist_inner": [
+                    "dynamiclist_inner"
+                ]
+            },
+            "textfield_outer": {
+                "ui:description": "",
+                "ui:enableMarkdownInDescription": true,
+                "ui:path": [
+                    "dynamiclist_outer",
+                    "textfield_outer"
+                ]
+            },
+            "dynamiclist_inner": {
+                "items": {
+                    "ui:field": "layout",
+                    "ui:layout": {
+                        "Row_0m6795x": [
+                            "textfield_inner"
+                        ]
+                    },
+                    "textfield_inner": {
+                        "ui:description": "",
+                        "ui:enableMarkdownInDescription": true,
+                        "ui:path": [
+                            "dynamiclist_outer",
+                            "dynamiclist_inner",
+                            "textfield_inner"
+                        ]
+                    }
+                },
+                "ui:arrayAddButtonText": "Add",
+                "ui:arrayAllowAddRemove": "True",
+                "ui:arrayOverviewButtonText": "Overview",
+                "ui:defaultRepetitions": 1,
+                "ui:label": "Inner Dynamic List"
+            }
+        },
+        "ui:arrayAddButtonText": "Add",
+        "ui:arrayAllowAddRemove": "True",
+        "ui:arrayOverviewButtonText": "Overview",
+        "ui:defaultRepetitions": 1,
+        "ui:label": "Outer Dynamic list"
+    }
+}

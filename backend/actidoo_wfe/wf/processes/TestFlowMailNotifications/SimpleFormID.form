@@ -1,0 +1,56 @@
+{
+  "components": [
+    {
+      "components": [
+        {
+          "text": "# Text",
+          "label": "Text view",
+          "type": "text",
+          "layout": {
+            "row": "Row_02k64va",
+            "columns": null
+          },
+          "id": "Field_0rd87sc"
+        },
+        {
+          "label": "Text in List",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_1ab5k5j",
+            "columns": null
+          },
+          "id": "Field_01ihwbd",
+          "key": "textfield_2",
+          "properties": {},
+          "defaultValue": "Hallo"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 10,
+      "label": "My Dynamic List",
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_088fr8p",
+        "columns": null
+      },
+      "id": "Field_16sq3p7",
+      "path": "dynamiclist_y80xuo",
+      "properties": {
+        "minItems": "0",
+        "itemgroup_addbutton": "tschaka!",
+        "itemgroup_overviewbutton": "👁 Overview 👁"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "TestForm1",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.24.0"
+  },
+  "schemaVersion": 16
+}

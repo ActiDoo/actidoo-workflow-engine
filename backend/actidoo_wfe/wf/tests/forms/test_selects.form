@@ -1,0 +1,87 @@
+{
+  "components": [
+    {
+      "values": [
+        {
+          "label": "Value 1",
+          "value": "value1"
+        },
+        {
+          "label": "Value 2",
+          "value": "value2"
+        }
+      ],
+      "label": "Select Static Required",
+      "type": "select",
+      "layout": {
+        "row": "Row_1con3cx",
+        "columns": null
+      },
+      "id": "Field_1lkx3u2",
+      "key": "select_static_required",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "values": [
+        {
+          "label": "Value 3",
+          "value": "value3"
+        },
+        {
+          "label": "Value 4",
+          "value": "value4"
+        }
+      ],
+      "label": "Select Static",
+      "type": "select",
+      "layout": {
+        "row": "Row_1x8g3j6",
+        "columns": null
+      },
+      "id": "Field_14yznex",
+      "key": "select_static"
+    },
+    {
+      "values": [],
+      "label": "Select Dynamic Required",
+      "type": "select",
+      "layout": {
+        "row": "Row_1tlojmr",
+        "columns": null
+      },
+      "id": "Field_0mbobi9",
+      "key": "select_dynamic_required",
+      "validate": {
+        "required": true
+      },
+      "properties": {
+        "options_file": "test_options.csv"
+      }
+    },
+    {
+      "values": [],
+      "label": "Select Dynamic",
+      "type": "select",
+      "layout": {
+        "row": "Row_16508yr",
+        "columns": null
+      },
+      "id": "Field_0o5zasw",
+      "key": "select_dynamic",
+      "properties": {
+        "options_file": "test_options.csv"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "TestForm1",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.24.0"
+  },
+  "schemaVersion": 16
+}

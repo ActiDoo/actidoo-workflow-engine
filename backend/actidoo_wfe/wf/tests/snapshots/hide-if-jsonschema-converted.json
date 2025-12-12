@@ -1,0 +1,99 @@
+{
+    "definitions": {},
+    "type": "object",
+    "properties": {
+        "textfield1": {
+            "type": "string",
+            "title": "Text field 1"
+        },
+        "textfield_with_condition": true
+    },
+    "allOf": [
+        {
+            "if": {
+                "not": {
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "textfield1": {
+                                    "const": "A",
+                                    "default": ""
+                                }
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "textfield1": {
+                                    "const": "B",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            "then": {
+                "type": "object",
+                "properties": {
+                    "textfield_with_condition": {
+                        "type": "string",
+                        "title": "Text field 2"
+                    }
+                }
+            },
+            "else": {
+                "properties": {
+                    "textfield_with_condition": {
+                        "type": "null"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        {
+            "if": {
+                "not": {
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "textfield1": {
+                                    "const": "A",
+                                    "default": ""
+                                }
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "textfield1": {
+                                    "const": "B",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            "then": {
+                "type": "object",
+                "properties": {
+                    "textfield_with_condition": {
+                        "type": "string",
+                        "title": "Text field 2"
+                    }
+                }
+            },
+            "else": {
+                "properties": {
+                    "textfield_with_condition": {
+                        "type": "null"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    ]
+}

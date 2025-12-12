@@ -1,0 +1,215 @@
+{
+  "components": [
+    {
+      "label": "Multi upload",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1drnz35",
+        "columns": null
+      },
+      "id": "Field_0ola8wo",
+      "key": "uploadFieldMulti",
+      "properties": {
+        "custom_type": "attachment_multi"
+      },
+      "description": "This is a hint"
+    },
+    {
+      "label": "Single upload",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_08ujxig",
+        "columns": null
+      },
+      "id": "Field_0jxjpu4",
+      "key": "uploadFieldSingle",
+      "description": "This is a hint",
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    },
+    {
+      "label": "Multi upload required",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1prh013",
+        "columns": null
+      },
+      "id": "Field_12jlpom",
+      "key": "uploadFieldMultiRequired",
+      "description": "This is a hint",
+      "properties": {
+        "custom_type": "attachment_multi"
+      },
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Single upload required",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1dw7x02",
+        "columns": null
+      },
+      "id": "Field_0ipou06",
+      "key": "uploadFieldSingleRequired",
+      "description": "This is a hint",
+      "validate": {
+        "required": true
+      },
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    },
+    {
+      "text": "*Default Label and Description*:",
+      "label": "Text view",
+      "type": "text",
+      "layout": {
+        "row": "Row_1t6vy56",
+        "columns": null
+      },
+      "id": "Field_097qdo7"
+    },
+    {
+      "label": "",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0dklbie",
+        "columns": null
+      },
+      "id": "Field_1orz3sb",
+      "key": "multi_default",
+      "properties": {
+        "custom_type": "attachment_multi"
+      }
+    },
+    {
+      "label": "",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0fia12d",
+        "columns": null
+      },
+      "id": "Field_12r22ra",
+      "key": "single_default",
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    },
+    {
+      "label": "",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1mbxey7",
+        "columns": null
+      },
+      "id": "Field_08cch17",
+      "key": "multiDefaultRequired",
+      "properties": {
+        "custom_type": "attachment_multi"
+      },
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0jwezqj",
+        "columns": null
+      },
+      "id": "Field_0ywfiwr",
+      "key": "singleDefaultRequired",
+      "properties": {
+        "custom_type": "attachment_single"
+      },
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "text": "*Disabled test:*",
+      "label": "Text view",
+      "type": "text",
+      "layout": {
+        "row": "Row_0aoywba",
+        "columns": null
+      },
+      "id": "Field_096r6we"
+    },
+    {
+      "label": "Multi upload disabled",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1276ke2",
+        "columns": null
+      },
+      "id": "Field_1od57g5",
+      "key": "uploadFieldMultiDisabled",
+      "disabled": true,
+      "properties": {
+        "custom_type": "attachment_multi"
+      }
+    },
+    {
+      "label": "Single upload disabled",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0hxmr8i",
+        "columns": null
+      },
+      "id": "Field_06vvr33",
+      "key": "uploadFieldSingleDisabled",
+      "disabled": true,
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    },
+    {
+      "label": "Multi Upload required+disabled, empty",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0wi6x42",
+        "columns": null
+      },
+      "id": "Field_1ptg4ar",
+      "key": "uploadFieldMultiRequiredDisabledEmpty",
+      "properties": {
+        "custom_type": "attachment_multi"
+      },
+      "disabled": true,
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Single Upload required+disabled, empty",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1yesf4o",
+        "columns": null
+      },
+      "id": "Field_0qzryi9",
+      "key": "uploadFieldSingleRequiredDisabledEmpty",
+      "disabled": true,
+      "validate": {
+        "required": true
+      },
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form_0bb5c9n",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.5.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.24.0"
+  },
+  "schemaVersion": 16
+}

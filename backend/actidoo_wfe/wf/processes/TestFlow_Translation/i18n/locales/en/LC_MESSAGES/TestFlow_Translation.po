@@ -1,0 +1,58 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: TestFlow_Translation VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-05-14 06:27+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.16.0\n"
+
+msgctxt "Field_1pi0zgp.text"
+msgid "# Camunda tâche d'essai"
+msgstr "Translation test, this should be English"
+
+msgctxt "textfield1.label"
+msgid "Camunda champ de texte"
+msgstr "First entry"
+
+msgctxt "select1.label"
+msgid "Camunda sélectionner un champ"
+msgstr "My translated selection field"
+
+msgctxt "select1.value.value1"
+msgid "Camunda Value 1"
+msgstr "First value (English translated)"
+
+msgctxt "select1.value.value2"
+msgid "Camunda Value 2"
+msgstr "Second value (English translated)"
+
+msgctxt "dynamiclist1.label"
+msgid "Camunda liste dynamique"
+msgstr "My translated dynamic list"
+
+msgctxt "dynamiclist1.textfield1.label"
+msgid "Camunda champ de texte intérieur"
+msgstr "The inner field (translated)"
+
+#, fuzzy
+msgctxt "TestFlow_Translation.process"
+msgid "Processus de test - Traduction"
+msgstr "English name of the process"
+
+msgctxt "InitLaneID.lane"
+msgid "Init Lane"
+msgstr "en9"
+
+#, fuzzy
+msgctxt "SimpleForm.userTask"
+msgid "Un formulaire simple avec des sélections"
+msgstr "The first task"
+

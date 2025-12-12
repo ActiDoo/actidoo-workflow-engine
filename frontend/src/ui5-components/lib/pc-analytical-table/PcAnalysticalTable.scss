@@ -1,0 +1,51 @@
+.pc-analytical-table div[data-component-name="AnalyticalTableBody"]{
+   overflow-y: inherit !important;
+   height: inherit !important;
+}
+
+.pc-analytical-table span[class*='ExpandableIndicatorStyles-container'] {
+   padding-left: 0 !important;
+   margin-right: 8px
+}
+
+
+div[class*='TableColumnHeader'] > ui5-icon[name='sort-ascending'],
+div[class*='TableColumnHeader'] > ui5-icon[name='sort-descending']
+{
+   display: none;
+}
+
+.pc-pagination {
+   display: flex;
+   list-style: none;
+   gap: 13px;
+   align-items: center;
+   justify-content: flex-end;
+
+
+   li a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 4px;
+      font-family: var(--sapFontFamily);
+   }
+   li:not(.previous):not(.next) {
+      a {
+         background: #fff;
+         padding: 10px 15px;
+      }
+      a:hover {
+         box-shadow: inset 0 0 0 2px var(--pc-color-blue-primary);
+      }
+      &.selected a {
+         background: var(--pc-color-blue-primary);
+         color: #fff
+      }
+   }
+   li.disabled a {
+      cursor: inherit;
+      opacity: 0.3;
+   }
+}

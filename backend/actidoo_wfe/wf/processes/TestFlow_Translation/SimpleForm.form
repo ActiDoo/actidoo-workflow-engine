@@ -1,0 +1,82 @@
+{
+  "components": [
+    {
+      "text": "# Camunda tâche d'essai",
+      "label": "Text view",
+      "type": "text",
+      "layout": {
+        "row": "Row_0z86vw4",
+        "columns": null
+      },
+      "id": "Field_1pi0zgp"
+    },
+    {
+      "label": "Camunda champ de texte",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1con3cx",
+        "columns": null
+      },
+      "id": "Field_0yy8e8h",
+      "key": "textfield1"
+    },
+    {
+      "label": "Camunda sélectionner un champ",
+      "values": [
+        {
+          "label": "Camunda Value 1",
+          "value": "value1"
+        },
+        {
+          "label": "Camunda Value 2",
+          "value": "value2"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_0dljcv4",
+        "columns": null
+      },
+      "id": "Field_1lkx3u2",
+      "key": "select1",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Camunda liste dynamique",
+      "components": [
+        {
+          "label": "Camunda champ de texte intérieur",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_1c8dbm2",
+            "columns": null
+          },
+          "id": "Field_0fapy9r",
+          "key": "textfield1"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_11js89h",
+        "columns": null
+      },
+      "id": "Field_15fl6g2",
+      "path": "dynamiclist1"
+    }
+  ],
+  "type": "default",
+  "id": "TestForm1",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.38.1"
+  },
+  "schemaVersion": 19
+}

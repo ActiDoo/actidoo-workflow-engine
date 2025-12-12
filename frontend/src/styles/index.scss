@@ -1,0 +1,29 @@
+@import '../ui5-components/styles/ui5webcomponents.scss';
+
+
+@tailwind components;
+@tailwind utilities;
+
+
+// bootstrap for rjsf
+$primary: #007C84;
+$warning: #E00A18;
+
+@import 'bootstrap/scss/bootstrap';
+
+body {
+  --bs-border-color: var(--color-border-subtle);
+  --bs-secondary-bg: var(--color-surface-base);
+  font-family: var(--sapFontFamily);
+}
+
+
+.pc-px-responsive {
+  @apply px-3 sm:px-8 xl:px-12 #{!important}
+}
+.pc-px-header-responsive {
+  @apply px-0 sm:px-4 xl:px-8 #{!important}
+}
+.pc-pl-responsive {
+  @apply pl-3 sm:pl-8 xl:pl-12 #{!important}
+}

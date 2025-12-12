@@ -1,0 +1,35 @@
+:root {
+  /* Core brand color that downstream shades derive from */
+  --color-brand-primary: #2e8400;
+
+  /* Derived shades; adjust mixing ratios if different contrast is desired */
+  --color-brand-primary-strong: color-mix(in srgb, var(--color-brand-primary) 92%, black);
+  --color-brand-primary-soft: color-mix(in srgb, var(--color-brand-primary) 90%, white);
+
+  /* Supporting palette with sensible defaults */
+  --color-accent-positive: #09ae3b;
+  --color-accent-positive-weak: #96be0d;
+  --color-accent-warning: #ffa800;
+  --color-accent-warning-soft: #ffe766;
+  --color-accent-negative: #e00a18;
+  --color-accent-critical: #d8124f;
+  --color-accent-highlight: #a3009b;
+
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f4f4f4;
+  --color-neutral-100: #e9e9e9;
+  --color-neutral-200: #d2d2d2;
+  --color-neutral-400: #a6a6a6;
+  --color-neutral-700: #666a6e;
+  --color-neutral-800: #505156;
+  --color-neutral-900: #202020;
+
+  /* Frequently used semantic tokens */
+  --color-surface-base: var(--color-neutral-50);
+  --color-surface-contrast: var(--color-neutral-900);
+  --color-border-subtle: var(--color-neutral-200);
+  --color-border-strong: var(--color-neutral-700);
+  --color-text-default: var(--color-neutral-900);
+  --color-text-subtle: var(--color-neutral-700);
+  --color-focus-ring: var(--color-brand-primary-strong);
+}

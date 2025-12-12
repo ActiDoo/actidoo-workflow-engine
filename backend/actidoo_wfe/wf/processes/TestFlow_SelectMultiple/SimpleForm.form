@@ -1,0 +1,141 @@
+{
+  "components": [
+    {
+      "values": [
+        {
+          "label": "Value 1",
+          "value": "value1"
+        },
+        {
+          "label": "Value 2",
+          "value": "value2"
+        }
+      ],
+      "label": "Select Static Required",
+      "type": "select",
+      "layout": {
+        "row": "Row_1con3cx",
+        "columns": null
+      },
+      "id": "Field_1lkx3u2",
+      "key": "select_static_required",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "values": [
+        {
+          "label": "Value 3",
+          "value": "value3"
+        },
+        {
+          "label": "Value 4",
+          "value": "value4"
+        }
+      ],
+      "label": "Select Static",
+      "type": "select",
+      "layout": {
+        "row": "Row_1x8g3j6",
+        "columns": null
+      },
+      "id": "Field_14yznex",
+      "key": "select_static"
+    },
+    {
+      "values": [],
+      "label": "Select Dynamic Required",
+      "type": "select",
+      "layout": {
+        "row": "Row_1tlojmr",
+        "columns": null
+      },
+      "id": "Field_0mbobi9",
+      "key": "select_dynamic_required",
+      "validate": {
+        "required": true
+      },
+      "properties": {
+        "options_file": "test_options.csv"
+      }
+    },
+    {
+      "values": [],
+      "label": "Select Dynamic",
+      "type": "select",
+      "layout": {
+        "row": "Row_16508yr",
+        "columns": null
+      },
+      "id": "Field_0o5zasw",
+      "key": "select_dynamic",
+      "properties": {
+        "options_file": "test_options.csv"
+      }
+    },
+    {
+      "values": [],
+      "label": "Select Dynamic Multiple",
+      "type": "select",
+      "layout": {
+        "row": "Row_1dacg50",
+        "columns": null
+      },
+      "id": "Field_0d9ga67",
+      "key": "select_dynamic_multiple",
+      "properties": {
+        "options_file": "test_options.csv",
+        "custom_type": "select_multi"
+      }
+    },
+    {
+      "values": [
+        {
+          "label": "Value 5",
+          "value": "value5"
+        },
+        {
+          "label": "Value 6",
+          "value": "value6"
+        },
+        {
+          "label": "Value 7",
+          "value": "value7"
+        },
+        {
+          "label": "Value 8",
+          "value": "value8"
+        },
+        {
+          "label": "Value 9",
+          "value": "value9"
+        },
+        {
+          "label": "Value 10",
+          "value": "value10"
+        }
+      ],
+      "label": "Select",
+      "type": "select",
+      "layout": {
+        "row": "Row_0an25ym",
+        "columns": null
+      },
+      "id": "Field_12bfhta",
+      "key": "select_peaul",
+      "properties": {
+        "custom_type": "select_multi"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "TestForm1",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.24.0"
+  },
+  "schemaVersion": 16
+}

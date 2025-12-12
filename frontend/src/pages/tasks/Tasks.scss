@@ -1,0 +1,12 @@
+
+#pc-tasks {
+  ui5-li::part(native-li) {
+    padding:0
+  }
+
+  [data-component-name="ObjectPageContent"] {
+    padding: 0;
+    position: relative;
+  }
+
+}

@@ -1,0 +1,138 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = { find = { include = ["actidoo_wfe", "actidoo_wfe.*"] } }
+include-package-data = true
+
+[tool.setuptools.package-data]
+actidoo_wfe = [
+    "wf/templates/mails/*.mako",
+    "wf/processes/**/*.bpmn",
+    "wf/processes/**/*.form",
+    "wf/processes/**/*.json",
+    "wf/processes/**/*.csv",
+    "wf/processes/**/*.po",
+    "wf/processes/**/*.mo",
+    "wf/processes/**/*.png",
+    "wf/processes/**/*.pot",
+    "alembic/script.py.mako",
+]
+
+[project]
+name = "actidoo-wfe"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Marcel Sander", email = "marcel.sander@actidoo.com"}
+]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "spiffworkflow==3.0.0",
+    "jinja2>=3.1.2",
+    "restrictedpython>=6.0",
+    "fastapi[all]>=0.101.1",
+    "uvicorn>=0.22.0",
+    "pydantic[dotenv]>=2.2.1",
+    "sentry-sdk[fastapi]>=1.25.0",
+    "pytz>=2023.3",
+    "asgi-correlation-id>=4.2.0",
+    "pytest>=7.3.1",
+    "oic>=1.6.1",
+    "authlib>=1.2.0",
+    "sqlalchemy>=2.0.15",
+    "venusian>=3.0.0",
+    "alembic>=1.11.1",
+    "python-dateutil>=2.8.2",
+    "typer>=0.9.0",
+    "faker>=18.10.1",
+    "jsonschema[format-nongpl]>=4.17.3",
+    "pytest-timeout>=2.1.0",
+    "openpyxl>=3.1.2",
+    "docxtpl>=0.16.7",
+    "import-linter>=1.12.1",
+    "asyncer>=0.0.2",
+    "croniter>=2.0.1",
+    "mako>=1.3.0",
+    "pytest-asyncio>=0.23.3",
+    "watchfiles==0.21",
+    "pymysql>=1.1.0",
+    "snowflake-sqlalchemy>=1.6.1",
+    "atlassian-python-api>=3.41.14",
+    "orjson>=3.10.7",
+    "wrapt>=1.16.0",
+    "fpdf2==2.8.3", # restrict fpdf2 to this version, because auto-updates will break the snapshot comparison inside the pdf unit tests
+    "pypdf>=5.0.0",
+    "gitpython==3.1.44",
+    "pycountry==24.6.1",
+    "sqlalchemy-file==0.6.0",
+    "fasteners==0.19",
+    "babel==2.17.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pylint>=3.1.0",
+    "autopep8>=1.7.0",
+    "ipykernel>=6.26.0",
+    "ruff>=0.3.0"
+]
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "dummyfiles",
+]
+extend-select = ["I"]
+line-length = 200
+
+[tool.importlinter]
+root_package = "actidoo_wfe"
+
+[[tool.importlinter.contracts]]
+name = "Domain contract"
+type = "independence"
+modules = [
+    "actidoo_wfe.auth",
+    "actidoo_wfe.wf",
+]
+ignore_imports = [
+    "actidoo_wfe.fastapi -> actidoo_wfe.auth.fastapi",
+    "actidoo_wfe.fastapi -> actidoo_wfe.wf.fastapi",
+    "actidoo_wfe.wf.cross_context.imports -> actidoo_wfe.auth.cross_context.exports",
+]
+
+[[tool.importlinter.contracts]]
+name = "WFE Layers"
+type = "layers"
+layers = [
+    "actidoo_wfe.wf.bff",
+    "actidoo_wfe.wf.service_application",
+    "actidoo_wfe.wf.service_workflow : actidoo_wfe.wf.spiff_customized : actidoo_wfe.wf.service_task_helper",
+    "actidoo_wfe.wf.service_form",
+]

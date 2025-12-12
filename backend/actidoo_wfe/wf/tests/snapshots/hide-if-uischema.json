@@ -1,0 +1,26 @@
+{
+    "ui:field": "layout",
+    "ui:layout": {
+        "Row_1drnz35": [
+            "textfield1"
+        ],
+        "Row_17lhu7b": [
+            "textfield_with_condition"
+        ]
+    },
+    "textfield1": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "textfield1"
+        ]
+    },
+    "textfield_with_condition": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "textfield_with_condition"
+        ],
+        "ui:hideif": "=textfield1 = \"A\" or textfield1 = \"B\""
+    }
+}

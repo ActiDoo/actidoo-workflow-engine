@@ -1,0 +1,98 @@
+{
+    "definitions": {},
+    "type": "object",
+    "properties": {
+        "checkbox1": {
+            "type": "boolean",
+            "title": "Step 1",
+            "default": true
+        },
+        "select_flu4so": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select",
+            "oneOf": [
+                {
+                    "const": "confirmation",
+                    "title": "I confirm"
+                },
+                {
+                    "const": null,
+                    "title": "(null)"
+                }
+            ]
+        },
+        "Field_0em8zpa": {
+            "type": "null",
+            "title": ""
+        },
+        "checkbox2": {
+            "type": "boolean",
+            "title": "Step 2 Disabled"
+        },
+        "checkbox3": {
+            "type": "boolean",
+            "title": "Step 3 Readonly"
+        },
+        "checkbox4": {
+            "type": "boolean",
+            "title": "Step 4, mach das!"
+        },
+        "checkbox4_have_done": {
+            "type": "boolean",
+            "title": "Habe ich gemacht!"
+        },
+        "checkbox5": {
+            "type": "boolean",
+            "title": "Step 5"
+        },
+        "select_fys1lj": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select",
+            "oneOf": [
+                {
+                    "const": "first_value",
+                    "title": "My own Label"
+                },
+                {
+                    "const": null,
+                    "title": "(null)"
+                }
+            ]
+        },
+        "dynamiclist_outer": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "textfield_outer": {
+                        "type": "string",
+                        "title": "Text Field in Outer Dynamic List"
+                    },
+                    "dynamiclist_inner": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "textfield_inner": {
+                                    "type": "string",
+                                    "title": "Text Field in Inner Dynamic List"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "minItems": 1
+        }
+    },
+    "required": [
+        "select_flu4so",
+        "checkbox4_have_done"
+    ]
+}

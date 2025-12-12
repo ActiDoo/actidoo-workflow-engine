@@ -1,0 +1,188 @@
+{
+  "components": [
+    {
+      "label": "Step 1",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_04trp1s",
+        "columns": 3
+      },
+      "id": "Field_0s1zjfh",
+      "key": "checkbox1",
+      "description": "Hint",
+      "readonly": "=true",
+      "disabled": false,
+      "validate": {
+        "required": false
+      },
+      "defaultValue": true
+    },
+    {
+      "values": [
+        {
+          "label": "I confirm",
+          "value": "confirmation"
+        }
+      ],
+      "label": "Select",
+      "type": "select",
+      "layout": {
+        "row": "Row_04trp1s",
+        "columns": 4
+      },
+      "id": "Field_1tgq3ac",
+      "key": "select_flu4so",
+      "description": "I confirm!",
+      "validate": {
+        "required": true
+      },
+      "readonly": "=checkbox1=false"
+    },
+    {
+      "text": "# Version 7",
+      "label": "Text view",
+      "type": "text",
+      "layout": {
+        "row": "Row_04trp1s",
+        "columns": 6
+      },
+      "id": "Field_0em8zpa"
+    },
+    {
+      "label": "Step 2 Disabled",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_1fuaysd",
+        "columns": null
+      },
+      "id": "Field_0o1sg2z",
+      "key": "checkbox2",
+      "disabled": true
+    },
+    {
+      "label": "Step 3 Readonly",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_1t7jclu",
+        "columns": null
+      },
+      "id": "Field_1w5ehiq",
+      "key": "checkbox3",
+      "readonly": true
+    },
+    {
+      "label": "Step 4, mach das!",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_0xtqzfd",
+        "columns": null
+      },
+      "id": "Field_0sfelzc",
+      "key": "checkbox4"
+    },
+    {
+      "label": "Habe ich gemacht!",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_0xtqzfd",
+        "columns": null
+      },
+      "id": "Field_1okbejb",
+      "key": "checkbox4_have_done",
+      "readonly": "=checkbox4 = false",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Step 5",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_1g1rmw2",
+        "columns": 5
+      },
+      "id": "Field_1cf1mun",
+      "key": "checkbox5"
+    },
+    {
+      "values": [
+        {
+          "label": "My own Label",
+          "value": "first_value"
+        }
+      ],
+      "label": "Select",
+      "type": "select",
+      "layout": {
+        "row": "Row_1g1rmw2",
+        "columns": null
+      },
+      "id": "Field_0s44h5n",
+      "key": "select_fys1lj"
+    },
+    {
+      "components": [
+        {
+          "label": "Text Field in Outer Dynamic List",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_1o2iuya",
+            "columns": null
+          },
+          "id": "Field_1czqgeb",
+          "key": "textfield_outer"
+        },
+        {
+          "components": [
+            {
+              "label": "Text Field in Inner Dynamic List",
+              "type": "textfield",
+              "layout": {
+                "row": "Row_0m6795x",
+                "columns": null
+              },
+              "id": "Field_0vdxtbf",
+              "key": "textfield_inner"
+            }
+          ],
+          "showOutline": true,
+          "isRepeating": true,
+          "allowAddRemove": true,
+          "defaultRepetitions": 1,
+          "label": "Inner Dynamic List",
+          "type": "dynamiclist",
+          "layout": {
+            "row": "Row_0h6gy9k",
+            "columns": null
+          },
+          "id": "Field_1jhj4o7",
+          "path": "dynamiclist_inner"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "label": "Outer Dynamic list",
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_1hku0r0",
+        "columns": null
+      },
+      "id": "Field_1yil00p",
+      "path": "dynamiclist_outer",
+      "properties": {
+        "minItems": "1"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "CheckboxRequiredButHidden",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.24.0"
+  },
+  "schemaVersion": 16
+}

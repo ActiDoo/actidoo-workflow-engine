@@ -1,0 +1,53 @@
+{
+  "components": [
+    {
+      "label": "Request Title",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0m9y2sv",
+        "columns": null
+      },
+      "id": "Field_1pc40an",
+      "key": "request_title"
+    },
+    {
+      "label": "Reference Number",
+      "type": "number",
+      "layout": {
+        "row": "Row_01lzg08",
+        "columns": null
+      },
+      "id": "Field_11qh460",
+      "key": "reference_number"
+    },
+    {
+      "label": "Effort Hours",
+      "type": "number",
+      "layout": {
+        "row": "Row_17k01ng",
+        "columns": null
+      },
+      "id": "Field_0v42sgy",
+      "key": "effort_hours"
+    },
+    {
+      "label": "Reviewer Email",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1nmybk6",
+        "columns": null
+      },
+      "id": "Field_1np7i9t",
+      "key": "reviewer_email"
+    }
+  ],
+  "type": "default",
+  "id": "Form_0ayj5bu",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.20.0"
+  },
+  "schemaVersion": 15
+}

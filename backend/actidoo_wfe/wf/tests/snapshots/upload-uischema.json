@@ -1,0 +1,149 @@
+{
+    "ui:field": "layout",
+    "ui:layout": {
+        "Row_1drnz35": [
+            "uploadFieldMulti"
+        ],
+        "Row_08ujxig": [
+            "uploadFieldSingle"
+        ],
+        "Row_1prh013": [
+            "uploadFieldMultiRequired"
+        ],
+        "Row_1dw7x02": [
+            "uploadFieldSingleRequired"
+        ],
+        "Row_1t6vy56": [
+            "Field_097qdo7"
+        ],
+        "Row_0dklbie": [
+            "multi_default"
+        ],
+        "Row_0fia12d": [
+            "single_default"
+        ],
+        "Row_1mbxey7": [
+            "multiDefaultRequired"
+        ],
+        "Row_0jwezqj": [
+            "singleDefaultRequired"
+        ],
+        "Row_0aoywba": [
+            "Field_096r6we"
+        ],
+        "Row_1276ke2": [
+            "uploadFieldMultiDisabled"
+        ],
+        "Row_0hxmr8i": [
+            "uploadFieldSingleDisabled"
+        ],
+        "Row_0wi6x42": [
+            "uploadFieldMultiRequiredDisabledEmpty"
+        ],
+        "Row_1yesf4o": [
+            "uploadFieldSingleRequiredDisabledEmpty"
+        ]
+    },
+    "uploadFieldMulti": {
+        "ui:description": "This is a hint",
+        "ui:path": [
+            "uploadFieldMulti"
+        ],
+        "ui:field": "AttachmentMulti"
+    },
+    "uploadFieldSingle": {
+        "ui:description": "This is a hint",
+        "ui:path": [
+            "uploadFieldSingle"
+        ],
+        "ui:field": "AttachmentSingle"
+    },
+    "uploadFieldMultiRequired": {
+        "ui:description": "This is a hint",
+        "ui:path": [
+            "uploadFieldMultiRequired"
+        ],
+        "ui:field": "AttachmentMulti"
+    },
+    "uploadFieldSingleRequired": {
+        "ui:description": "This is a hint",
+        "ui:path": [
+            "uploadFieldSingleRequired"
+        ],
+        "ui:field": "AttachmentSingle"
+    },
+    "Field_097qdo7": {
+        "ui:description": "*Default Label and Description*:",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "Field_097qdo7"
+        ]
+    },
+    "multi_default": {
+        "ui:description": "",
+        "ui:path": [
+            "multi_default"
+        ],
+        "ui:field": "AttachmentMulti"
+    },
+    "single_default": {
+        "ui:description": "",
+        "ui:path": [
+            "single_default"
+        ],
+        "ui:field": "AttachmentSingle"
+    },
+    "multiDefaultRequired": {
+        "ui:description": "",
+        "ui:path": [
+            "multiDefaultRequired"
+        ],
+        "ui:field": "AttachmentMulti"
+    },
+    "singleDefaultRequired": {
+        "ui:description": "",
+        "ui:path": [
+            "singleDefaultRequired"
+        ],
+        "ui:field": "AttachmentSingle"
+    },
+    "Field_096r6we": {
+        "ui:description": "*Disabled test:*",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "Field_096r6we"
+        ]
+    },
+    "uploadFieldMultiDisabled": {
+        "ui:description": "",
+        "ui:path": [
+            "uploadFieldMultiDisabled"
+        ],
+        "ui:disabled": true,
+        "ui:field": "AttachmentMulti"
+    },
+    "uploadFieldSingleDisabled": {
+        "ui:description": "",
+        "ui:path": [
+            "uploadFieldSingleDisabled"
+        ],
+        "ui:disabled": true,
+        "ui:field": "AttachmentSingle"
+    },
+    "uploadFieldMultiRequiredDisabledEmpty": {
+        "ui:description": "",
+        "ui:path": [
+            "uploadFieldMultiRequiredDisabledEmpty"
+        ],
+        "ui:disabled": true,
+        "ui:field": "AttachmentMulti"
+    },
+    "uploadFieldSingleRequiredDisabledEmpty": {
+        "ui:description": "",
+        "ui:path": [
+            "uploadFieldSingleRequiredDisabledEmpty"
+        ],
+        "ui:disabled": true,
+        "ui:field": "AttachmentSingle"
+    }
+}

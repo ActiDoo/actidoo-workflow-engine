@@ -1,0 +1,61 @@
+{
+  "components": [
+    {
+      "label": "Text Label 1",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_09eujo2",
+        "columns": null
+      },
+      "id": "Field_0b8n0kz",
+      "key": "text1",
+      "description": "Field Description 1"
+    },
+    {
+      "label": "Attachments",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0attachments",
+        "columns": null
+      },
+      "id": "Field_attachments",
+      "key": "attachments",
+      "description": "Optional supporting files",
+      "properties": {
+        "custom_type": "attachment_multi"
+      }
+    },
+    {
+      "label": "Checkbox",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_09tq40a",
+        "columns": null
+      },
+      "id": "Field_0gb5tje",
+      "key": "toggle"
+    },
+    {
+      "label": "Text field",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_16gajek",
+        "columns": null
+      },
+      "id": "Field_0g7dj26",
+      "key": "should_not_survive",
+      "conditional": {
+        "hide": "=toggle != true"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "TestForm1",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.39.0"
+  },
+  "schemaVersion": 19
+}

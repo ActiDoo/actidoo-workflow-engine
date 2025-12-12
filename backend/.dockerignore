@@ -1,0 +1,52 @@
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Virtual environments
+.venv/
+*.egg-info/
+
+# Editor and IDE files
+.vscode/
+.idea/
+
+# Docker-related (if not needed inside image)
+.dockerignore
+
+# Kubernetes, CI/CD
+k8s/
+.gitlab-ci.yml
+
+# Devcontainer
+.devcontainer/
+.devcontainer/.devcontainer-secrets.env
+.devcontainer/dev-realm.json
+
+# Docs
+docs/
+
+# Test cache and coverage
+**/.pytest_cache/
+**/coverage/
+**/htmlcov/
+.ruff_cache/
+.import_linter_cache/
+conftest.py
+
+# Git metadata
+.git/
+.gitignore
+
+# OS-specific files
+**/.DS_Store
+**/Thumbs.db
+
+# Logs and temp files
+**/*.log
+**/*.tmp
+**/*.bak
+
+# Compiled gettext files
+**/*.mo

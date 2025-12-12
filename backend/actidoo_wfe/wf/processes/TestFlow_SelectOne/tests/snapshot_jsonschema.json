@@ -1,0 +1,27 @@
+{
+    "definitions": {},
+    "type": "object",
+    "properties": {
+        "select_static": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Static",
+            "oneOf": [
+                {
+                    "const": "value3",
+                    "title": "Value 3"
+                },
+                {
+                    "const": "value4",
+                    "title": "Value 4"
+                },
+                {
+                    "const": null,
+                    "title": "(null)"
+                }
+            ]
+        }
+    }
+}

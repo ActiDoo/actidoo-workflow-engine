@@ -1,0 +1,72 @@
+{
+    "definitions": {},
+    "type": "object",
+    "properties": {
+        "select_static_required": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Static Required",
+            "oneOf": [
+                {
+                    "const": "value1",
+                    "title": "Value 1"
+                },
+                {
+                    "const": "value2",
+                    "title": "Value 2"
+                },
+                {
+                    "const": null,
+                    "title": "(null)"
+                }
+            ]
+        },
+        "select_static": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Static",
+            "oneOf": [
+                {
+                    "const": "value3",
+                    "title": "Value 3"
+                },
+                {
+                    "const": "value4",
+                    "title": "Value 4"
+                },
+                {
+                    "const": null,
+                    "title": "(null)"
+                }
+            ]
+        },
+        "select_dynamic_required": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Dynamic Required",
+            "custom_properties": {
+                "options_file": "test_options.csv"
+            }
+        },
+        "select_dynamic": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Dynamic",
+            "custom_properties": {
+                "options_file": "test_options.csv"
+            }
+        }
+    },
+    "required": [
+        "select_static_required",
+        "select_dynamic_required"
+    ]
+}

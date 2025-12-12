@@ -1,0 +1,302 @@
+{
+    "definitions": {},
+    "type": "object",
+    "properties": {
+        "uploadFieldMulti": {
+            "type": "array",
+            "title": "Multi upload",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "datauri": {
+                        "type": "string",
+                        "format": "data-url"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "mimetype": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "uploadFieldSingle": {
+            "type": "object",
+            "title": "Single upload",
+            "properties": {
+                "datauri": {
+                    "type": "string",
+                    "format": "data-url"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimetype": {
+                    "type": "string"
+                }
+            }
+        },
+        "uploadFieldMultiRequired": {
+            "type": "array",
+            "title": "Multi upload required",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "datauri": {
+                        "type": "string",
+                        "format": "data-url"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "mimetype": {
+                        "type": "string"
+                    }
+                }
+            },
+            "minItems": 1
+        },
+        "uploadFieldSingleRequired": {
+            "type": "object",
+            "title": "Single upload required",
+            "properties": {
+                "datauri": {
+                    "type": "string",
+                    "format": "data-url"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimetype": {
+                    "type": "string"
+                }
+            }
+        },
+        "Field_097qdo7": {
+            "type": "null",
+            "title": ""
+        },
+        "multi_default": {
+            "type": "array",
+            "title": "",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "datauri": {
+                        "type": "string",
+                        "format": "data-url"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "mimetype": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "single_default": {
+            "type": "object",
+            "title": "",
+            "properties": {
+                "datauri": {
+                    "type": "string",
+                    "format": "data-url"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimetype": {
+                    "type": "string"
+                }
+            }
+        },
+        "multiDefaultRequired": {
+            "type": "array",
+            "title": "",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "datauri": {
+                        "type": "string",
+                        "format": "data-url"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "mimetype": {
+                        "type": "string"
+                    }
+                }
+            },
+            "minItems": 1
+        },
+        "singleDefaultRequired": {
+            "type": "object",
+            "title": "",
+            "properties": {
+                "datauri": {
+                    "type": "string",
+                    "format": "data-url"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimetype": {
+                    "type": "string"
+                }
+            }
+        },
+        "Field_096r6we": {
+            "type": "null",
+            "title": ""
+        },
+        "uploadFieldMultiDisabled": {
+            "type": "array",
+            "title": "Multi upload disabled",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "datauri": {
+                        "type": "string",
+                        "format": "data-url"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "mimetype": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "uploadFieldSingleDisabled": {
+            "type": "object",
+            "title": "Single upload disabled",
+            "properties": {
+                "datauri": {
+                    "type": "string",
+                    "format": "data-url"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimetype": {
+                    "type": "string"
+                }
+            }
+        },
+        "uploadFieldMultiRequiredDisabledEmpty": {
+            "type": "array",
+            "title": "Multi Upload required+disabled, empty",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "datauri": {
+                        "type": "string",
+                        "format": "data-url"
+                    },
+                    "filename": {
+                        "type": "string"
+                    },
+                    "hash": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "mimetype": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "uploadFieldSingleRequiredDisabledEmpty": {
+            "type": "object",
+            "title": "Single Upload required+disabled, empty",
+            "properties": {
+                "datauri": {
+                    "type": "string",
+                    "format": "data-url"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mimetype": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "required": [
+        "uploadFieldSingleRequired",
+        "singleDefaultRequired"
+    ]
+}

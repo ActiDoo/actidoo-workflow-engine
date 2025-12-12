@@ -1,0 +1,36 @@
+{
+  "components": [
+    {
+      "label": "Text field 1",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1drnz35",
+        "columns": null
+      },
+      "id": "Field_0ola8wo",
+      "key": "textfield1"
+    },
+    {
+      "label": "Text field 2",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_17lhu7b",
+        "columns": null
+      },
+      "id": "Field_1iu3foo",
+      "key": "textfield_with_condition",
+      "conditional": {
+        "hide": "=textfield1 = \"A\" or textfield1 = \"B\""
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form_0bb5c9n",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.5.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.24.0"
+  },
+  "schemaVersion": 16
+}

@@ -1,0 +1,101 @@
+
+body, :root{
+
+  --sapBackground: var(--color-surface-base);
+  --sapShell_Background: var(--color-surface-base) !important;
+  --sapHighlightColor: var(--color-brand-primary) !important;
+  --sapPageFooter_TextColor: var(--color-neutral-0);
+  --sapContent_ContrastFocusColor: var(--color-brand-primary-strong);
+  --sapContent_DragAndDropActiveColor: var(--color-brand-primary);
+  --sapScrollBar_FaceColor: var(--color-neutral-200);
+  --sapScrollBar_Hover_FaceColor: var(--color-brand-primary);
+  --sapContent_NonInteractiveIconColor: var(--color-brand-primary);
+  --sapContent_Placeholderloading_Gradient:  linear-gradient(90deg, var(--color-neutral-50) 0%, var(--color-neutral-50) 20%, var(--color-neutral-100) 50%, var(--color-neutral-50) 80%, var(--color-neutral-50) 100%);
+  --sapPageHeader_TextColor: var(--color-brand-primary);
+  --sapLink_Active_Color: var(--color-brand-primary);
+  --sapSelectedColor: var(--color-brand-primary) !important;
+  --sapContent_FocusColor: var(--color-focus-ring) !important;
+  --sapContent_HoverColor: var(--color-brand-primary) !important;
+  --sapContent_Selected_ForegroundColor: var(--color-brand-primary) !important;
+  --sapField_Active_BorderColor: var(--color-brand-primary) !important;
+  --sapContent_BusyColor: var(--color-brand-primary) !important;
+  --sapPageFooter_BorderColor: var(--color-border-subtle);
+  --sapButton_Handle_Selected_TextColor: var(--color-brand-primary) !important;
+
+  --sapButton_Track_Selected_Background: var(--color-brand-primary) !important;
+  --sapButton_Track_Selected_BorderColor: var(--color-brand-primary) !important;
+  --sapButton_Track_Selected_Hover_BorderColor: var(--color-brand-primary) !important;
+  --sapButton_Track_Selected_Hover_Background: var(--color-brand-primary) !important;
+
+  --sapButton_Reject_Hover_Background: var(--color-accent-critical);
+  --sapButton_Reject_Hover_TextColor: #ffffff ;
+  --sapButton_Reject_Hover_BorderColor: var(--color-accent-critical) ;
+
+  // ----- Button
+  --sapButton_Background: var(--color-neutral-700);
+  --sapButton_BorderColor: var(--color-neutral-700);
+  --sapButton_TextColor: #fff;
+  --sapButton_Selected_BorderColor: var(--color-brand-primary);
+  --sapButton_Selected_TextColor: var(--color-brand-primary);
+
+  --sapButton_Hover_TextColor: #fff;
+  --sapButton_Hover_Background: var(--color-neutral-800);
+  --sapButton_Hover_BorderColor: transparent;
+
+  --sapButton_Active_Background: var(--color-brand-primary-strong);
+  --sapButton_Active_TextColor: #fff;
+  --sapButton_Active_BorderColor: var(--color-brand-primary) !important;
+
+  --sapButton_Emphasized_Background:var(--color-brand-primary);
+  --sapButton_Emphasized_BorderColor: var(--color-brand-primary);
+  --sapButton_Emphasized_Hover_BorderColor: var(--color-brand-primary);
+
+  --sapButton_Emphasized_Hover_Background:var(--color-brand-primary-strong);
+
+  // Button Design Transparent
+  --sapButton_Lite_TextColor: var(--color-brand-primary);
+  --sapButton_Lite_BorderColor: var(--color-brand-primary);
+  --sapButton_Lite_Hover_TextColor: var(--color-brand-primary-strong);
+  --sapButton_Lite_Hover_BorderColor: var(--color-brand-primary-strong);
+  --sapButton_Lite_Active_Background: var(--color-brand-primary-strong);
+  --sapButton_Lite_Active_BorderColor: var(--color-brand-primary-strong);
+
+  --_ui5_wiz_content_item_wrapper_bg: transparent;
+  --_ui5_wiz_content_item_wrapper_padding: 0;
+  --sapList_SelectionBackgroundColor: var(--color-neutral-100);
+  --sapList_Hover_SelectionBackground: var(--color-neutral-100);
+  --v1-18-0-listitem-selected-border-bottom: var(--color-neutral-100);
+  --v1-18-0-listitem-focused-selected-border-bottom: var(--color-neutral-100);
+}
+
+.sapContent_Shadow0 {
+  box-shadow: var(--sapContent_Shadow0)
+}
+
+div[data-component-name="ObjectPageTabContainer"], header[data-component-name="ObjectPageTopHeader"] {
+  z-index: 20;
+}
+
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+
+html,body, body > #root  {
+  min-height: 100vh;
+  margin:0;
+}
+
+
+// Required because of ui5 override
+.border-r-solid {
+  border-right-style: solid;
+}
+.border-t-solid {
+   border-top-style: solid;
+ }
+.border-b-solid {
+  border-bottom-style: solid;
+}

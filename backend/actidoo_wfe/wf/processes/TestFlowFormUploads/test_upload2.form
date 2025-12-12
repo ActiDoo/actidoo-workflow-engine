@@ -1,0 +1,107 @@
+{
+  "components": [
+    {
+      "label": "Multi upload",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1drnz35",
+        "columns": null
+      },
+      "id": "Field_0ola8wo",
+      "key": "uploadFieldMulti",
+      "properties": {
+        "custom_type": "attachment_multi"
+      },
+      "description": "This is a hint",
+      "disabled": true
+    },
+    {
+      "label": "Single upload",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_08ujxig",
+        "columns": null
+      },
+      "id": "Field_0jxjpu4",
+      "key": "uploadFieldSingle",
+      "description": "This is a hint",
+      "properties": {
+        "custom_type": "attachment_single"
+      },
+      "disabled": true
+    },
+    {
+      "label": "Multi upload required",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1prh013",
+        "columns": null
+      },
+      "id": "Field_12jlpom",
+      "key": "uploadFieldMultiRequired",
+      "description": "This is a hint",
+      "properties": {
+        "custom_type": "attachment_multi"
+      },
+      "validate": {
+        "required": true
+      },
+      "disabled": true
+    },
+    {
+      "label": "Single upload required",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1dw7x02",
+        "columns": null
+      },
+      "id": "Field_0ipou06",
+      "key": "uploadFieldSingleRequired",
+      "description": "This is a hint",
+      "validate": {
+        "required": true
+      },
+      "properties": {
+        "custom_type": "attachment_single"
+      },
+      "disabled": true
+    },
+    {
+      "label": "Multi upload disabled",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1276ke2",
+        "columns": null
+      },
+      "id": "Field_1od57g5",
+      "key": "uploadFieldMultiDisabled",
+      "disabled": true,
+      "properties": {
+        "custom_type": "attachment_multi"
+      }
+    },
+    {
+      "label": "Single upload disabled",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0hxmr8i",
+        "columns": null
+      },
+      "id": "Field_06vvr33",
+      "key": "uploadFieldSingleDisabled",
+      "disabled": true,
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form_0bb5c9n",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.5.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.24.0"
+  },
+  "schemaVersion": 16
+}

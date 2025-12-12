@@ -1,0 +1,16 @@
+{
+    "ui:field": "layout",
+    "ui:layout": {
+        "Row_1x8g3j6": [
+            "select_static"
+        ]
+    },
+    "select_static": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_static"
+        ],
+        "ui:widget": "SelectStatic"
+    }
+}

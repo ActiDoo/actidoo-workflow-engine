@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0wx9c8n" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.25.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.5.0">
+  <bpmn:collaboration id="Collaboration_0dooj75">
+    <bpmn:participant id="Participant_15gbd63" name="TestFlow_TimerEvent" processRef="TestFlow_TimerEvent" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_TimerEvent" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_0enbcv3">
+      <bpmn:lane id="Lane_1bo32lp" name="Initiator">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>TimerForm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_13fk549</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_14yj2pq</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1wqqz5f</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_0ud0839</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1rlx5xp</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="TimerForm" name="TimerForm">
+      <bpmn:incoming>Flow_1rlx5xp</bpmn:incoming>
+      <bpmn:outgoing>Flow_06klxlg</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Activity_13fk549" name="interrupt">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="interrupt" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1vadfww</bpmn:incoming>
+      <bpmn:outgoing>Flow_0agd6cf</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_14yj2pq">
+      <bpmn:incoming>Flow_0agd6cf</bpmn:incoming>
+      <bpmn:incoming>Flow_06klxlg</bpmn:incoming>
+      <bpmn:outgoing>Flow_1fn1tc9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Event_1wqqz5f">
+      <bpmn:incoming>Flow_1fn1tc9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Event_0ud0839" attachedToRef="TimerForm">
+      <bpmn:outgoing>Flow_1vadfww</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1vudzpa">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="PT5S"</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_1rlx5xp" sourceRef="StartEvent_1" targetRef="TimerForm" />
+    <bpmn:sequenceFlow id="Flow_06klxlg" sourceRef="TimerForm" targetRef="Gateway_14yj2pq" />
+    <bpmn:sequenceFlow id="Flow_1vadfww" sourceRef="Event_0ud0839" targetRef="Activity_13fk549" />
+    <bpmn:sequenceFlow id="Flow_0agd6cf" sourceRef="Activity_13fk549" targetRef="Gateway_14yj2pq" />
+    <bpmn:sequenceFlow id="Flow_1fn1tc9" sourceRef="Gateway_14yj2pq" targetRef="Event_1wqqz5f" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_0dooj75">
+      <bpmndi:BPMNShape id="Participant_15gbd63_di" bpmnElement="Participant_15gbd63" isHorizontal="true">
+        <dc:Bounds x="160" y="60" width="630" height="330" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1bo32lp_di" bpmnElement="Lane_1bo32lp" isHorizontal="true">
+        <dc:Bounds x="190" y="60" width="600" height="330" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="212" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1jv7i0c_di" bpmnElement="TimerForm">
+        <dc:Bounds x="360" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0s4qx40_di" bpmnElement="Activity_13fk549">
+        <dc:Bounds x="370" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_14yj2pq_di" bpmnElement="Gateway_14yj2pq" isMarkerVisible="true">
+        <dc:Bounds x="525" y="255" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1wqqz5f_di" bpmnElement="Event_1wqqz5f">
+        <dc:Bounds x="732" y="262" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0ud0839_di" bpmnElement="Event_0ud0839">
+        <dc:Bounds x="402" y="142" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1rlx5xp_di" bpmnElement="Flow_1rlx5xp">
+        <di:waypoint x="248" y="120" />
+        <di:waypoint x="360" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06klxlg_di" bpmnElement="Flow_06klxlg">
+        <di:waypoint x="460" y="120" />
+        <di:waypoint x="550" y="120" />
+        <di:waypoint x="550" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1vadfww_di" bpmnElement="Flow_1vadfww">
+        <di:waypoint x="420" y="178" />
+        <di:waypoint x="420" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0agd6cf_di" bpmnElement="Flow_0agd6cf">
+        <di:waypoint x="470" y="280" />
+        <di:waypoint x="525" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1fn1tc9_di" bpmnElement="Flow_1fn1tc9">
+        <di:waypoint x="575" y="280" />
+        <di:waypoint x="732" y="280" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

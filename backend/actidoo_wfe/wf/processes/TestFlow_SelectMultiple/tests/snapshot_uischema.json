@@ -1,0 +1,71 @@
+{
+    "ui:field": "layout",
+    "ui:layout": {
+        "Row_1con3cx": [
+            "select_static_required"
+        ],
+        "Row_1x8g3j6": [
+            "select_static"
+        ],
+        "Row_1tlojmr": [
+            "select_dynamic_required"
+        ],
+        "Row_16508yr": [
+            "select_dynamic"
+        ],
+        "Row_1dacg50": [
+            "select_dynamic_multiple"
+        ],
+        "Row_0an25ym": [
+            "select_peaul"
+        ]
+    },
+    "select_static_required": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_static_required"
+        ],
+        "ui:widget": "SelectStatic"
+    },
+    "select_static": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_static"
+        ],
+        "ui:widget": "SelectStatic"
+    },
+    "select_dynamic_required": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_dynamic_required"
+        ],
+        "ui:widget": "SelectDynamic"
+    },
+    "select_dynamic": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_dynamic"
+        ],
+        "ui:widget": "SelectDynamic"
+    },
+    "select_dynamic_multiple": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_dynamic_multiple"
+        ],
+        "ui:widget": "MultiSelectDynamic"
+    },
+    "select_peaul": {
+        "ui:description": "",
+        "ui:enableMarkdownInDescription": true,
+        "ui:path": [
+            "select_peaul"
+        ],
+        "ui:widget": "MultiSelectStatic"
+    }
+}

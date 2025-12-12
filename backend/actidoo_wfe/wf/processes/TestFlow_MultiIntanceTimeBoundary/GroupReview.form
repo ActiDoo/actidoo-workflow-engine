@@ -1,0 +1,33 @@
+{
+  "components": [
+    {
+      "label": "Should the sample request be approved?",
+      "values": [
+        {
+          "label": "Approve",
+          "value": "1"
+        },
+        {
+          "label": "Reject",
+          "value": "0"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_0jrx8pm",
+        "columns": null
+      },
+      "id": "Field_19jj24r",
+      "key": "vote"
+    }
+  ],
+  "type": "default",
+  "id": "Form_0a109k6",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.6.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.39.0"
+  },
+  "schemaVersion": 19
+}

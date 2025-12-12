@@ -1,0 +1,14 @@
+#admin-workflow-details {
+  [data-component-name="DynamicPageContent"] {
+    padding: 0;
+  }
+
+  ui5-li::part(native-li) {
+    padding: 0;
+  }
+
+  ui5-li::part(native-li):after {
+    display: none;
+  }
+
+}

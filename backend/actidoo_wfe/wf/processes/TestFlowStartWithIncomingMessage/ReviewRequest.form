@@ -1,0 +1,72 @@
+{
+  "components": [
+    {
+      "label": "Request Title",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0m9y2sv",
+        "columns": null
+      },
+      "id": "Field_1pc40an",
+      "key": "request_title",
+      "readonly": false,
+      "disabled": true
+    },
+    {
+      "label": "Reference Number",
+      "type": "number",
+      "layout": {
+        "row": "Row_01lzg08",
+        "columns": null
+      },
+      "id": "Field_11qh460",
+      "key": "reference_number",
+      "readonly": false,
+      "disabled": true
+    },
+    {
+      "label": "Effort Hours",
+      "type": "number",
+      "layout": {
+        "row": "Row_17k01ng",
+        "columns": null
+      },
+      "id": "Field_0v42sgy",
+      "key": "effort_hours",
+      "readonly": false,
+      "disabled": true
+    },
+    {
+      "values": [
+        {
+          "label": "Yes",
+          "value": "yes"
+        },
+        {
+          "label": "No",
+          "value": "no"
+        }
+      ],
+      "label": "Approve",
+      "type": "select",
+      "layout": {
+        "row": "Row_155v56j",
+        "columns": null
+      },
+      "id": "Field_0ksbtjr",
+      "key": "approve",
+      "validate": {
+        "required": true
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form_0ayj5bu",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.20.0"
+  },
+  "schemaVersion": 15
+}

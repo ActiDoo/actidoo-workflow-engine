@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0wgx6yx" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.38.1" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
+  <bpmn:collaboration id="Collaboration_1dskoxq">
+    <bpmn:participant id="Participant_0xk54fj" name="Participant" processRef="TestFlow_Translation" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_Translation" name="Processus de test - Traduction" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1dci7ey">
+      <bpmn:lane id="InitLaneID" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>Activity_06zk4v0</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1knr342</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SimpleForm</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:serviceTask id="Activity_06zk4v0" name="EvaluateForm">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="evaluate_form" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_14nwovz</bpmn:incoming>
+      <bpmn:outgoing>Flow_1jw3vl8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_1knr342">
+      <bpmn:incoming>Flow_1jw3vl8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1wxg32k" sourceRef="StartEvent_1" targetRef="SimpleForm" />
+    <bpmn:sequenceFlow id="Flow_1jw3vl8" sourceRef="Activity_06zk4v0" targetRef="Event_1knr342" />
+    <bpmn:sequenceFlow id="Flow_14nwovz" sourceRef="SimpleForm" targetRef="Activity_06zk4v0" />
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1wxg32k</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="SimpleForm" name="Un formulaire simple avec des sélections">
+      <bpmn:incoming>Flow_1wxg32k</bpmn:incoming>
+      <bpmn:outgoing>Flow_14nwovz</bpmn:outgoing>
+    </bpmn:userTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1dskoxq">
+      <bpmndi:BPMNShape id="Participant_0xk54fj_di" bpmnElement="Participant_0xk54fj" isHorizontal="true">
+        <dc:Bounds x="129" y="79" width="689" height="251" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_0wino1n_di" bpmnElement="InitLaneID" isHorizontal="true">
+        <dc:Bounds x="159" y="79" width="659" height="251" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_06zk4v0_di" bpmnElement="Activity_06zk4v0">
+        <dc:Bounds x="490" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1knr342_di" bpmnElement="Event_1knr342">
+        <dc:Bounds x="682" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="192" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1q2mpkm_di" bpmnElement="SimpleForm">
+        <dc:Bounds x="290" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1wxg32k_di" bpmnElement="Flow_1wxg32k">
+        <di:waypoint x="228" y="190" />
+        <di:waypoint x="290" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1jw3vl8_di" bpmnElement="Flow_1jw3vl8">
+        <di:waypoint x="590" y="190" />
+        <di:waypoint x="682" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14nwovz_di" bpmnElement="Flow_14nwovz">
+        <di:waypoint x="390" y="190" />
+        <di:waypoint x="490" y="190" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

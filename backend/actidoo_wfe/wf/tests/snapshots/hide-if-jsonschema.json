@@ -1,0 +1,15 @@
+{
+    "definitions": {},
+    "type": "object",
+    "properties": {
+        "textfield1": {
+            "type": "string",
+            "title": "Text field 1"
+        },
+        "textfield_with_condition": {
+            "type": "string",
+            "title": "Text field 2",
+            "hideif": "=textfield1 = \"A\" or textfield1 = \"B\""
+        }
+    }
+}

@@ -1,0 +1,119 @@
+{
+    "definitions": {},
+    "type": "object",
+    "properties": {
+        "select_static_required": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Static Required",
+            "oneOf": [
+                {
+                    "const": "value1",
+                    "title": "Value 1"
+                },
+                {
+                    "const": "value2",
+                    "title": "Value 2"
+                },
+                {
+                    "const": null,
+                    "title": "(null)"
+                }
+            ]
+        },
+        "select_static": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Static",
+            "oneOf": [
+                {
+                    "const": "value3",
+                    "title": "Value 3"
+                },
+                {
+                    "const": "value4",
+                    "title": "Value 4"
+                },
+                {
+                    "const": null,
+                    "title": "(null)"
+                }
+            ]
+        },
+        "select_dynamic_required": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Dynamic Required",
+            "custom_properties": {
+                "options_file": "test_options.csv"
+            }
+        },
+        "select_dynamic": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "title": "Select Dynamic",
+            "custom_properties": {
+                "options_file": "test_options.csv"
+            }
+        },
+        "select_dynamic_multiple": {
+            "type": "array",
+            "title": "Select Dynamic Multiple",
+            "custom_properties": {
+                "options_file": "test_options.csv",
+                "custom_type": "select_multi"
+            },
+            "items": {
+                "type": "string"
+            }
+        },
+        "select_peaul": {
+            "type": "array",
+            "title": "Select",
+            "custom_properties": {
+                "custom_type": "select_multi"
+            },
+            "items": {
+                "type": "string",
+                "oneOf": [
+                    {
+                        "const": "value5",
+                        "title": "Value 5"
+                    },
+                    {
+                        "const": "value6",
+                        "title": "Value 6"
+                    },
+                    {
+                        "const": "value7",
+                        "title": "Value 7"
+                    },
+                    {
+                        "const": "value8",
+                        "title": "Value 8"
+                    },
+                    {
+                        "const": "value9",
+                        "title": "Value 9"
+                    },
+                    {
+                        "const": "value10",
+                        "title": "Value 10"
+                    }
+                ]
+            }
+        }
+    },
+    "required": [
+        "select_static_required",
+        "select_dynamic_required"
+    ]
+}
