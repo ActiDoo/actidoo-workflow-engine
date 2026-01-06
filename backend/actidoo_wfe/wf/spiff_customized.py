@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """
 This module contains customizations to the SpiffWorkflow BPMN engine.
 - serialize / deserialize additional data in the task/workflow instances (assigned users, ...)

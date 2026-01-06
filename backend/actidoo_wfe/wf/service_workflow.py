@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """
     This module contains most of our work around workflow instances:
     Loading, Execution, User Assignment, Delegations to Form-Service,....
@@ -28,7 +31,7 @@ from SpiffWorkflow.bpmn.specs.event_definitions.timer import TimerEventDefinitio
 
 from actidoo_wfe.helpers.modules import env_from_module
 from actidoo_wfe.helpers.string import boolean_or_string_list
-from actidoo_wfe.helpers.tests import in_test
+from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf.constants import (
     DATA_KEY_CREATED_BY,
@@ -127,7 +130,10 @@ def get_unfinished_tasks(workflow: BpmnWorkflow):
     return workflow.get_tasks(task_filter=TaskFilter(state = TaskState.NOT_FINISHED_MASK))
 
 def get_faulty_tasks(workflow: BpmnWorkflow):
-    return workflow.get_tasks(task_filter=TaskFilter(state = TaskState.ERROR))
+    # See comment in get_completed_usertasks(): for BPMN workflows, querying FINISHED-like states
+    # via Spiff's task iterator can miss tasks inside subprocesses. We therefore scan all tasks
+    # and filter explicitly.
+    return [t for t in workflow.get_tasks() if t.has_state(TaskState.ERROR)]
 
 def run_workflow(workflow: BpmnWorkflow):
     """Runs all possible tasks and finally auto-assigns if possible"""
@@ -233,6 +239,7 @@ def execute_user_task(
 
     assert is_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id)
 
+    # Deep-Update task.data with cleaned_task_data
     update(task.data, cleaned_task_data)
     
     set_stacktrace(
@@ -248,8 +255,12 @@ def execute_user_task(
 
 def get_completed_usertasks(workflow: BpmnWorkflow) -> list[Task]:
     """Returns the usertasks which are completed (and manual)"""
-    tasks = workflow.get_tasks(task_filter=TaskFilter(state = TaskState.COMPLETED))
-    return [t for t in tasks if t.task_spec.manual]
+    # IMPORTANT: For BPMN workflows, SpiffWorkflow's BpmnTaskIterator deliberately does not
+    # descend into completed subprocesses when filtering for FINISHED states (COMPLETED/ERROR/CANCELLED).
+    # Completed user tasks inside Multi-Instance and CallActivity subprocesses would be skipped.
+    # We therefore iterate all tasks (incl. subprocesses) and filter manually.
+    tasks = workflow.get_tasks()
+    return [t for t in tasks if t.task_spec.manual and t.has_state(TaskState.COMPLETED)]
 
 
 def get_ready_and_waiting_usertasks(workflow: BpmnWorkflow) -> list[Task]:

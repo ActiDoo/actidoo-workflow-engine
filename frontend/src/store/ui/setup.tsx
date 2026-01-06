@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { ReactNode } from 'react';
 import { DialogPropTypes } from '@ui5/webcomponents-react';
 

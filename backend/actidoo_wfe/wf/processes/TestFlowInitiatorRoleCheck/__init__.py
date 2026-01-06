@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 #previous TestFlow7InitiatorUserGroups
 
 from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper

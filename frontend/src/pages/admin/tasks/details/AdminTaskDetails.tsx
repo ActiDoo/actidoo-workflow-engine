@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect } from 'react';
 import { PcDetailsPage } from '@/ui5-components';
 import { ObjectPageSection, Title, TitleLevel } from '@ui5/webcomponents-react';
@@ -14,8 +17,10 @@ import WeEditableDataSection from '@/utils/components/WeEditableDataSection';
 import WeTaskHeaderActions from '@/utils/components/tasks/WeTaskHeaderActions';
 import WeTaskDetailsHeader from '@/utils/components/tasks/WeTaskDetailsHeader';
 import { WeDetailsTable } from '@/utils/components/WeDetailsTable';
+import { useTranslation } from '@/i18n';
 
 const AdminTaskDetails: React.FC = () => {
+  const { t } = useTranslation();
   const { taskId } = useParams();
   const dispatch = useDispatch();
 
@@ -33,7 +38,7 @@ const AdminTaskDetails: React.FC = () => {
   return (
     <PcDetailsPage
       header={{
-        title: `Task Details: ${data?.title}`,
+        title: t('admin.taskDetailsTitle', { title: data?.title ?? '' }),
         actionSection: headerActions,
         showBack: true,
       }}
@@ -47,7 +52,7 @@ const AdminTaskDetails: React.FC = () => {
                   <WeDetailsTable
                     data={[
                       {
-                        label: 'Instance id',
+                        label: t('admin.instanceId'),
                         content: data?.workflow_instance?.id ? (
                           <Link to={`/admin/all-workflows/${data.workflow_instance?.id}`}>
                             {data?.workflow_instance?.id}
@@ -55,7 +60,7 @@ const AdminTaskDetails: React.FC = () => {
                         ) : null,
                       },
                       {
-                        label: 'Instance title',
+                        label: t('admin.instanceTitle'),
                         content: data?.workflow_instance?.title,
                       },
                     ]}
@@ -66,7 +71,7 @@ const AdminTaskDetails: React.FC = () => {
           </div>
           {data?.error_stacktrace ? (
             <>
-              <Title level={TitleLevel.H6}>Error Message</Title>
+              <Title level={TitleLevel.H6}>{t('admin.errorMessage')}</Title>
               <div className="grid overflow-auto max-h-40 mb-4">
                 <pre className="bg-neutral-50 p-2 rounded ">{data.error_stacktrace}</pre>
               </div>
@@ -75,35 +80,39 @@ const AdminTaskDetails: React.FC = () => {
         </>
       }
       className={'!p-0'}>
-      <ObjectPageSection className=" mt-8 " aria-label="Completed" id="data" titleText="Data">
-        <Title level={TitleLevel.H4}>DATA</Title>
+      <ObjectPageSection
+        className=" mt-8 "
+        aria-label={t('admin.data')}
+        id="data"
+        titleText={t('admin.data')}>
+        <Title level={TitleLevel.H4}>{t('admin.data')}</Title>
         <div className="bg-white p-4 rounded mt-2">
           <WeEditableDataSection taskId={taskId} data={data?.data} />
         </div>
       </ObjectPageSection>
       <ObjectPageSection
         className=" mt-8"
-        aria-label="Completed"
+        aria-label={t('common.labels.workflowInstance')}
         id="workflowSchema"
-        titleText="Workflow Instance">
+        titleText={t('common.labels.workflowInstance')}>
         <div className="bg-white p-4 rounded mt-2 max-h-[500px] overflow-y-auto">
           <pre>{JSON.stringify(data?.workflow_instance, undefined, 2)}</pre>
         </div>
       </ObjectPageSection>
       <ObjectPageSection
         className=" mt-8"
-        aria-label="Completed"
+        aria-label={t('common.labels.jsonSchema')}
         id="jsonSchema"
-        titleText="Json Schema">
+        titleText={t('common.labels.jsonSchema')}>
         <div className="bg-white p-4 rounded mt-2 max-h-[500px] overflow-y-auto">
           <pre>{JSON.stringify(data?.jsonschema, undefined, 2)}</pre>
         </div>
       </ObjectPageSection>
       <ObjectPageSection
         className=" mt-8"
-        aria-label="Completed"
+        aria-label={t('common.labels.uiSchema')}
         id="uiSchema"
-        titleText="Ui Schema">
+        titleText={t('common.labels.uiSchema')}>
         <div className="bg-white p-4 rounded mt-2 max-h-[500px] overflow-y-auto mb-8">
           <pre>{JSON.stringify(data?.uischema, undefined, 2)}</pre>
         </div>

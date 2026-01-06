@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """
 Read-Only queries which work directly on the database instead of domain objects
 """

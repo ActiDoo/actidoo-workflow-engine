@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Workflow Engine (devcontainer)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "console": "integratedTerminal",
+      "args": [
+        "actidoo_wfe.fastapi:app",
+        "--reload",
+        "--reload-dir", ".",
+        "--reload-dir", "${workspaceFolder}/src",
+        "--reload-include", "*.form",
+        "--reload-include", "*.bpmn",
+        "--host", "0.0.0.0",
+        "--no-proxy-headers",
+        "--no-access-log"
+      ],
+      "cwd": "/opt/app",
+      "jinja": true,
+      "justMyCode": false,
+      "env": {
+        "PYDEVD_DISABLE_FILE_VALIDATION": "1",
+        "ENV_FILE": "/workspace/.env.devcontainer"
+      }
+    },
+    {
+      "name": "Reset Database",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "actidoo_wfe.cli",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "console": "integratedTerminal",
+      "args": [
+        "reset-db"
+      ],
+      "cwd": "/opt/app",
+      "jinja": true,
+      "justMyCode": false,
+      "env": {
+        "PYDEVD_DISABLE_FILE_VALIDATION": "1"
+      }
+    }
+  ]
+}

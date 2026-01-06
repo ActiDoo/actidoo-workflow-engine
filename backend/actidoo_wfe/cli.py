@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import json
 import logging
 import sys
@@ -6,8 +9,7 @@ from asyncio import run
 from functools import wraps
 
 import typer
-from sqlalchemy import and_, null, text
-from sqlalchemy_file import File
+from sqlalchemy import text
 
 import actidoo_wfe.database as database
 from actidoo_wfe.settings import settings
@@ -52,59 +54,6 @@ async def run_migrations():
 @app.async_command()
 async def create_revision(message: str):
     database.create_revision(settings, message)
-
-
-@app.command()
-def migrate_storage():
-    from actidoo_wfe.storage import setup_storage
-    
-    setup_storage(settings)
-    database.setup_db(settings)
-
-
-    BATCH_SIZE = 1
-    from actidoo_wfe.wf.models import WorkflowAttachment
-    session: database.Session = database.SessionLocal()
-    
-    migrated_count = 0
-    offset = 0
-
-    while True:
-        # Fetch small batch without server-side cursor
-        attachments = (
-            session.query(WorkflowAttachment)
-            .filter(and_(
-                WorkflowAttachment.data != null(),
-                WorkflowAttachment.file == null(),
-            ))
-            .limit(BATCH_SIZE)
-            .offset(offset)
-            .all()
-        )
-
-        if not attachments:
-            break
-
-        for attachment in attachments:
-            if attachment.data and not attachment.file:
-                try:
-                    attachment.file = File(
-                        content=attachment.data,
-                        filename=attachment.first_filename or "unnamed",
-                        content_type=attachment.mimetype or "application/octet-stream"
-                    )
-                    #attachment.data = None
-                    migrated_count += 1
-                    log.debug(f"Migrated attachment ID {attachment.id}")
-                except Exception as e:
-                    log.warning(f"Failed to migrate attachment ID {attachment.id}: {e}")
-
-        session.commit()
-        log.info(f"Committed batch at offset {offset}, total migrated so far: {migrated_count}")
-        offset += BATCH_SIZE
-
-    log.info(f"Migration complete. Total migrated: {migrated_count}")
-
 
 def compress_json(json_text: str) -> bytes:
     return zlib.compress(json_text.encode('utf-8'))

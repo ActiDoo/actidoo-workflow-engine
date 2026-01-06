@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import mimetypes
 import re
 import sys
@@ -191,3 +194,24 @@ class DataURI(str):
                 "data:text/plain;charset=utf-8;base64,VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUgbGF6eSBkb2cu"
             ],
         )
+
+def sanitize_metadata_value(value: str|None) -> str:
+    """
+    Convert an arbitrary string (e.g. filename with umlauts)
+    into an ASCII-only value suitable for Azure Blob metadata.
+
+    - Uses UTF-8 percent-encoding (URL-style).
+    - Result is reversible via `restore_metadata_value`.
+
+    We use this, because Azure does not allow non-Ascii in file meta-data.
+    Actually this should be done within libcloud's azure_blob.py,
+    because that's the right place for such abstractions,
+    but at the moment of writing that project seesm to be stalled.
+    """
+    if value is None:
+        return ""
+
+    safe_chars = "-_. "
+    # quote() nimmt str, encodet nach UTF-8 und ersetzt Nicht-ASCII durch %XX
+    # from urllib.parse import quote, unquote
+    return quote(value, safe=safe_chars, encoding="utf-8", errors="strict")

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { WidgetProps } from '@rjsf/utils';
 import { WeComboBox } from '@/utils/components/WeComboBox';
 import { ReactElement, useEffect, useState } from 'react';

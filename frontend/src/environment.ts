@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 type RuntimeConfig = {
   FRONTEND_BASE_URL?: string;
   API_BASE_URL?: string;

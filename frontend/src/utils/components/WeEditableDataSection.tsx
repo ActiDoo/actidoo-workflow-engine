@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useRef, useState } from 'react';
 import {
   BusyIndicator,
@@ -17,6 +20,7 @@ import { State } from '@/store';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { handleResponse } from '@/services/HelperService';
 import { useSelectUiLoading } from '@/store/ui/selectors';
+import { useTranslation } from '@/i18n';
 
 interface AdminJsonSchemaSectionProps {
   taskId?: string;
@@ -24,6 +28,7 @@ interface AdminJsonSchemaSectionProps {
 }
 
 const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const textAreaRef = useRef<TextAreaDomRef | null>(null);
   const replaceTaskData = useSelector(
@@ -40,8 +45,8 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
       dispatch,
       WeDataKey.ADMIN_REPLACE_TASK_DATA,
       replaceTaskData?.postResponse,
-      'JSON Schema successfully saved',
-      'Could not save JSON Schema. Please try again'
+      t('editableData.saveSuccess'),
+      t('editableData.saveError')
     );
   }, [replaceTaskData?.postResponse]);
 
@@ -90,7 +95,7 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
             design={MessageStripDesign.Warning}
             hideCloseButton
             className="max-w-[400px]">
-            No valid JSON
+            {t('editableData.noValidJson')}
           </MessageStrip>
         ) : null}
         <Button
@@ -99,7 +104,7 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
           onClick={() => {
             handleReset();
           }}>
-          Reset
+          {t('editableData.reset')}
         </Button>
         <BusyIndicator active={saveLoadingState} delay={0} className="text-white">
           <Button
@@ -108,14 +113,18 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
             onClick={() => {
               handleSaveChanges();
             }}>
-            Save changes
+            {t('editableData.saveChanges')}
           </Button>
         </BusyIndicator>
       </div>
     </>
   ) : (
     <div className="bg-neutral-50">
-      <WeEmptySection icon="syntax" title="No data defined" text="Object is empty" />
+      <WeEmptySection
+        icon="syntax"
+        title={t('common.messages.noDataDefined')}
+        text={t('common.messages.objectIsEmpty')}
+      />
     </div>
   );
 };

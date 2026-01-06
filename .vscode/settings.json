@@ -1,0 +1,66 @@
+{
+    "workbench.tree.indent": 16,
+    "workbench.tree.renderIndentGuides": "always",
+    "workbench.colorCustomizations": {
+        "tree.indentGuidesStroke": "#000000"
+    },
+    "workbench.iconTheme": "material-icon-theme",
+    "editor.mouseWheelZoom": true ,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.idea": true,
+        "**/*.iml": true,
+        "**/*.pyc": true, 
+        "**/__pycache__": true
+    },
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.languageServer": "Pylance",
+    "python.analysis.indexing": true,
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.variableTypes": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "files.autoSave": "onFocusChange",
+    "terminal.integrated.scrollback": 10000,
+    "remote.autoForwardPorts": false,
+    "debugpy.debugJustMyCode": false,
+    "debug.allowBreakpointsEverywhere": true,
+    "python.experiments.enabled": true,
+    "python.experiments.optInto": [
+        "pythonTestAdapter"
+    ],
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+    "search.exclude": {
+        "**/.yarn": true,
+        "**/.pnp.*": true
+    },
+    "typescript.tsdk": "frontend/.yarn/sdks/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "editor.formatOnSave": false,
+    "eslint.workingDirectories": [
+        "./frontend/"
+    ],
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.analysis.exclude": [
+        "**/node_modules"
+    ],
+    "python.testing.unittestArgs": [
+        "-s", "./",
+        "-p", "test_*.py",
+        "--ignore", "node_modules"
+    ],
+    "python.testing.pytestArgs": [
+        "--ignore=node_modules",
+        "."
+    ],
+    "python.testing.cwd": "${workspaceFolder}/backend"
+}

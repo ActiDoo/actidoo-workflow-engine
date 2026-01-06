@@ -1,0 +1,206 @@
+name: Build base images
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "*"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Set GHCR image names (lowercase)
+        run: |
+          set -euo pipefail
+          owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
+          repo_lc="${GITHUB_REPOSITORY##*/}"
+          repo_lc="${repo_lc,,}"
+          echo "RUNTIME_IMAGE=ghcr.io/${owner_lc}/${repo_lc}" >> "$GITHUB_ENV"
+          echo "DEVCONTAINER_IMAGE=ghcr.io/${owner_lc}/${repo_lc}-devcontainer" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.RUNTIME_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build (and push on push/tag)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/runtime/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || env.PLATFORMS }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  devcontainer:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    needs:
+      - runtime
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Set GHCR image names (lowercase)
+        run: |
+          set -euo pipefail
+          owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
+          repo_lc="${GITHUB_REPOSITORY##*/}"
+          repo_lc="${repo_lc,,}"
+          echo "RUNTIME_IMAGE=ghcr.io/${owner_lc}/${repo_lc}" >> "$GITHUB_ENV"
+          echo "DEVCONTAINER_IMAGE=ghcr.io/${owner_lc}/${repo_lc}-devcontainer" >> "$GITHUB_ENV"
+          
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DEVCONTAINER_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/devcontainer/Dockerfile
+          push: true
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ env.RUNTIME_IMAGE }}:${{ needs.runtime.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs:
+      - runtime
+      - devcontainer
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set GHCR image names (lowercase)
+        run: |
+          set -euo pipefail
+          owner_lc="${GITHUB_REPOSITORY_OWNER,,}"
+          repo_lc="${GITHUB_REPOSITORY##*/}"
+          repo_lc="${repo_lc,,}"
+          echo "RUNTIME_IMAGE=ghcr.io/${owner_lc}/${repo_lc}" >> "$GITHUB_ENV"
+          echo "DEVCONTAINER_IMAGE=ghcr.io/${owner_lc}/${repo_lc}-devcontainer" >> "$GITHUB_ENV"
+          
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write release notes
+        run: |
+          set -euo pipefail
+          COMMIT_TITLE="$(git log -1 --pretty=%s)"
+          cat <<EOF > release_notes.md
+          ## Images
+          - Runtime: ${RUNTIME_IMAGE}:${GITHUB_REF_NAME}
+          - Devcontainer: ${DEVCONTAINER_IMAGE}:${GITHUB_REF_NAME}
+
+          ## Commit
+          - ${COMMIT_TITLE} (${GITHUB_SHA})
+          EOF
+
+      - name: Pull images
+        run: |
+          set -euo pipefail
+          docker pull "${RUNTIME_IMAGE}:${GITHUB_REF_NAME}"
+          docker pull "${DEVCONTAINER_IMAGE}:${GITHUB_REF_NAME}"
+
+      - name: Generate SBOM (runtime image)
+        uses: anchore/sbom-action@v0
+        with:
+          image: "${{ env.RUNTIME_IMAGE }}:${{ github.ref_name }}"
+          format: "cyclonedx-json"
+          output-file: "sbom-runtime.cdx.json"
+
+      - name: Generate SBOM (devcontainer image)
+        uses: anchore/sbom-action@v0
+        with:
+          image: "${{ env.DEVCONTAINER_IMAGE }}:${{ github.ref_name }}"
+          format: "cyclonedx-json"
+          output-file: "sbom-devcontainer.cdx.json"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          body_path: release_notes.md
+          files: |
+            release_notes.md
+            sbom-runtime.cdx.json
+            sbom-devcontainer.cdx.json
+
+      - name: Upload release notes artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release_notes.md

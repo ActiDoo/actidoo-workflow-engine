@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """Core utilities for interactive OIDC authentication."""
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ client: StarletteOAuth2App = StarletteOAuth2App(
     client_secret=settings.oidc_client_secret,
     server_metadata_url=settings.oidc_discovery_url,
     client_kwargs={
-        "scope": "openid profile email"
+        "scope": settings.oidc_scopes
     },
     code_challenge_method="S256",
 )

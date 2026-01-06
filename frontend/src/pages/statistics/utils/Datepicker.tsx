@@ -1,34 +1,39 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { DateRangePicker, type DateRangePickerDomRef } from '@ui5/webcomponents-react';
 import type { Ui5CustomEvent } from '@ui5/webcomponents-react';
+import type { Dispatch, SetStateAction } from 'react';
 
 interface Props {
-  startSetter: React.Dispatch<React.SetStateAction<Date>>;
-  endSetter: React.Dispatch<React.SetStateAction<Date>>;
+  startSetter: Dispatch<SetStateAction<Date>>;
+  endSetter: Dispatch<SetStateAction<Date>>;
 }
 
 export const DateSelection: React.FC<Props> = ({ startSetter, endSetter }) => {
-    const today = new Date().toLocaleDateString();
-    const lastYear = new Date(new Date().setFullYear(new Date().getFullYear() - 1))
-    .toLocaleDateString()
-    const placeholder = lastYear + ' - ' + today;
+  const today = new Date();
+  const lastYear = new Date(today);
+  lastYear.setFullYear(today.getFullYear() - 1);
 
-    const handleChange = (e: Ui5CustomEvent<DateRangePickerDomRef, { valid: boolean }>) => {
-        if (e.detail.valid) {
-        const el = e.target; // DateRangePickerDomRef
-        startSetter(el.startDateValue ?? lastYear);
-        endSetter(el.endDateValue ?? today);
-        }
-    };
+  const placeholder = `${lastYear.toLocaleDateString()} - ${today.toLocaleDateString()}`;
+  const todayIso = today.toISOString().slice(0, 10);
 
-    return (
-        <div style={{paddingLeft: "50px"}}>
-        <DateRangePicker
+  const handleChange = (e: Ui5CustomEvent<DateRangePickerDomRef, { valid: boolean }>) => {
+    if (!e.detail.valid) return;
+    const el = e.target; // DateRangePickerDomRef
+    startSetter(el.startDateValue ?? lastYear);
+    endSetter(el.endDateValue ?? today);
+  };
+
+  return (
+    <div style={{ paddingLeft: '50px' }}>
+      <DateRangePicker
         minDate="2024-08-01"
-        maxDate={today}
+        maxDate={todayIso}
         formatPattern="dd.MM.yyyy"
         placeholder={placeholder}
         onChange={handleChange}
-        />
-        </div>
-    );
+      />
+    </div>
+  );
 };

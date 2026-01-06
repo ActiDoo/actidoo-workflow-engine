@@ -1,12 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import copy
+from pathlib import Path
 
 from actidoo_wfe.wf import service_form
-from actidoo_wfe.wf.tests.helpers.dicts import are_dicts_equal, load_dict_from_file, read_and_transform, save_dict_to_file
+from actidoo_wfe.wf.tests.helpers.dicts import (
+    are_dicts_equal,
+    load_dict_from_file,
+    read_and_transform,
+    save_dict_to_file,
+)
 
-SNAPSHOT_JSONSCHEMA: str = "./actidoo_wfe/wf/tests/snapshots/upload-jsonschema.json"
-SNAPSHOT_JSONSCHEMA_CONVERTED: str = "./actidoo_wfe/wf/tests/snapshots/upload-jsonschema-converted.json"
-SNAPSHOT_UISCHEMA: str = "./actidoo_wfe/wf/tests/snapshots/upload-uischema.json"
-FILE_FORM: str = "./actidoo_wfe/wf/tests/forms/test_upload.form"
+TESTS_DIR = Path(__file__).parent
+SNAPSHOT_JSONSCHEMA = TESTS_DIR / "snapshots" / "upload-jsonschema.json"
+SNAPSHOT_JSONSCHEMA_CONVERTED = TESTS_DIR / "snapshots" / "upload-jsonschema-converted.json"
+SNAPSHOT_UISCHEMA = TESTS_DIR / "snapshots" / "upload-uischema.json"
+FILE_FORM = TESTS_DIR / "forms" / "test_upload.form"
 
 
 def _read_snapshot_jsonschema():  # -> dict[Any, Any]:

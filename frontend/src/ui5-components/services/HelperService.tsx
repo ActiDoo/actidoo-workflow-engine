@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { StringDict } from '../models/models';
 import _ from 'lodash';
-import process from 'process';
 import { useCallback } from 'react';
 
 export function generateApiUrlWithParams(
@@ -23,7 +25,7 @@ export function generateApiUrlWithParams(
 }
 
 export function isDev(): boolean {
-  return !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+  return import.meta.env.DEV;
 }
 
 export function groupBy<T>(

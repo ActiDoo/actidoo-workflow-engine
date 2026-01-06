@@ -1,5 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { Button, ButtonDesign, Icon, Input } from '@ui5/webcomponents-react';
 import React, { useState } from 'react';
+import { useTranslation } from '@/i18n';
 
 export interface PcSearchProps {
   initialSearch?: string;
@@ -7,6 +11,7 @@ export interface PcSearchProps {
 }
 
 export const PcSearch: React.FC<PcSearchProps> = props => {
+  const { t } = useTranslation();
   const { initialSearch, searchInput } = props;
 
   const [searchValue, setSearchValue] = useState(initialSearch ?? '');
@@ -46,13 +51,13 @@ export const PcSearch: React.FC<PcSearchProps> = props => {
         disabled={searchValue === '' || lastSearchValue === searchValue}
         design={ButtonDesign.Emphasized}
         onClick={handleSearch}>
-        Search
+        {t('common.actions.search')}
       </Button>
       <Button
         disabled={searchValue === '' && lastSearchValue === ''}
         design={ButtonDesign.Transparent}
         onClick={handleReset}>
-        Reset
+        {t('common.actions.reset')}
       </Button>
     </>
   );

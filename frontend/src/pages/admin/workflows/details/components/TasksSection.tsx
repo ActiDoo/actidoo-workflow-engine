@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState } from 'react';
 import { List, StandardListItem, Text, Title, TitleLevel } from '@ui5/webcomponents-react';
 import { WeTaskStateIcons } from '@/utils/components/WeStateIcon';
@@ -12,8 +15,10 @@ import { postRequest } from '@/store/generic-data/actions';
 import { useParams } from 'react-router-dom';
 import WeTaskDetailsHeader from '@/utils/components/tasks/WeTaskDetailsHeader';
 import WeTaskHeaderActions from '@/utils/components/tasks/WeTaskHeaderActions';
+import { useTranslation } from '@/i18n';
 
 const AdminWorkflowDetailsTasksSection: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { workflowId } = useParams();
 
@@ -43,7 +48,7 @@ const AdminWorkflowDetailsTasksSection: React.FC = () => {
   return (
     <>
       <div className="bg-white mb-1 pc-px-responsive py-2">
-        <Title level={TitleLevel.H4}>Tasks</Title>
+        <Title level={TitleLevel.H4}>{t('admin.tasksHeadline')}</Title>
       </div>
       <div className="flex gap-1 min-w-[200px]">
         <div className="flex-1">
@@ -80,7 +85,7 @@ const AdminWorkflowDetailsTasksSection: React.FC = () => {
 
               {selectedTask.error_stacktrace ? (
                 <>
-                  <Title level={TitleLevel.H6}>Error Message</Title>
+                  <Title level={TitleLevel.H6}>{t('admin.errorMessage')}</Title>
                   <div className="grid overflow-auto">
                     <pre className="bg-neutral-50 p-2 mb-6 mt-2 rounded ">
                       {selectedTask.error_stacktrace}
@@ -88,7 +93,7 @@ const AdminWorkflowDetailsTasksSection: React.FC = () => {
                   </div>
                 </>
               ) : null}
-              <Title level={TitleLevel.H6}>Data</Title>
+              <Title level={TitleLevel.H6}>{t('admin.data')}</Title>
 
               <WeEditableDataSection
                 taskId={selectedTask.id}
@@ -99,8 +104,8 @@ const AdminWorkflowDetailsTasksSection: React.FC = () => {
           ) : (
             <WeEmptySection
               icon="activity-items"
-              title="No selected task"
-              text="Please select task on left side"
+              title={t('admin.noSelectedTaskTitle')}
+              text={t('admin.noSelectedTaskText')}
             />
           )}
         </div>

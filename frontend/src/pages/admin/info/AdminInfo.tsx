@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -9,8 +12,10 @@ import {
 } from '@/ui5-components';
 import { environment } from '@/environment';
 import { AnalyticalTable } from '@ui5/webcomponents-react';
+import { useTranslation } from '@/i18n';
 
 const AdminInfo: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   const data = useSelector((state: State) => state.data[WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]);
@@ -24,7 +29,7 @@ const AdminInfo: React.FC = () => {
   return (
     <PcPage
         header={{
-        title: 'System Information'
+        title: t('navigation.systemInformation')
         }}
     >
 
@@ -32,21 +37,21 @@ const AdminInfo: React.FC = () => {
         className='mb-4'
         columns={[
             {
-            Header: 'Title',
+            Header: t('common.labels.title'),
             accessor: 'title'
             },
             {
-            Header: 'Value',
+            Header: t('common.labels.value'),
             accessor: 'value'
             },
         ]}
         minRows={1}
         data={[{
-            "title": 'Frontend Build Commit',
+            "title": t('common.labels.frontendBuildCommit'),
             "value": environment.buildNumber || "dev"
         },{
-            "title": 'Backend Build Commit',
-            "value": data ? (data?.data?.build_number ||"") : ""
+            "title": t('common.labels.backendBuildCommit'),
+            "value": data ? (data?.data?.build_number || "") : ""
         }]}
     />
       

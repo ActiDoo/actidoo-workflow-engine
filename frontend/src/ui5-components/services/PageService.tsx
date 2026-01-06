@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { PcSortItem, StringDict, TableQueryParams } from '../models/models';
 import { AdditionalTableData } from '../hooks/useAdditionalTableFunctions';
 

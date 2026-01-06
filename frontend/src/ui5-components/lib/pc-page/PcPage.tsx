@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { PropsWithChildren } from 'react';
 import '@ui5/webcomponents-icons/dist/log';
 import '@ui5/webcomponents-icons/dist/nav-back';

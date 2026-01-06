@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { BusyIndicator, BusyIndicatorSize, Icon, Text } from '@ui5/webcomponents-react';
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import {
   BusyIndicator,
   Button,
@@ -13,6 +16,7 @@ import {
   TextArea,
 } from '@ui5/webcomponents-react';
 import React, { ReactNode, useEffect, useState } from 'react';
+import { useTranslation } from '@/i18n';
 import { PcMultiInput } from '@/ui5-components/lib/pc-editable-details-section/types/PcMultiInput';
 import {
   getErrorMessage,
@@ -53,6 +57,7 @@ interface PcDetailsSectionProps<T> {
 }
 
 export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): React.ReactElement {
+  const { t } = useTranslation();
   const [dataMap, setDataMap] = useState(props.data ?? (undefined as T));
   const [isValid, setIsValid] = useState(false);
 
@@ -286,7 +291,7 @@ export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): Re
             design={ButtonDesign.Transparent}
             disabled={props.loading}
             onClick={handleCancel}>
-            Cancel
+            {t('common.actions.cancel')}
           </Button>
         ) : null}
 
@@ -296,7 +301,7 @@ export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): Re
             design={ButtonDesign.Negative}
             disabled={props.loading}
             onClick={props.onDelete}>
-            Delete
+            {t('common.actions.delete')}
           </Button>
         ) : null}
 
@@ -306,7 +311,7 @@ export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): Re
             design={ButtonDesign.Emphasized}
             onClick={handleSave}
             disabled={!isValid || props.loading}>
-            {props.saveLabel ?? 'Save'}
+            {props.saveLabel ?? t('common.actions.save')}
           </Button>
         ) : null}
       </div>
@@ -317,7 +322,7 @@ export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): Re
           design={ButtonDesign.Default}
           onClick={props.onEdit}
           disabled={props.loading}>
-          Edit
+          {t('common.actions.edit')}
         </Button>
       </div>
     ) : null;

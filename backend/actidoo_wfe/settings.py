@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """
 Global Application Settings
 """
@@ -43,9 +46,8 @@ class Settings(BaseSettings):
     oidc_discovery_url: str = ""
     oidc_client_id: str = ""
     oidc_client_secret: str = ""
-    oidc_redirect_url: str = ""
     #oidc_scopes: str = "openid profile email groups roles"
-    oidc_scopes: str = "openid roles"
+    oidc_scopes: str = "openid profile email"
     oidc_roles_claim_paths: str = (
         "realm_access.roles,resource_access.{client_id}.roles,resource_access.*.roles,roles,groups,app_roles,appRoles"
     )
@@ -57,6 +59,7 @@ class Settings(BaseSettings):
     oidc_user_id_claims: str = "sub"
     oidc_token_refresh_skew_seconds: int = 60
     oidc_verify_ssl: str = "/etc/ssl/certs/ca-certificates.crt"
+    validate_and_parse_access_token: bool = True
 
     ### OAuth Bearer Settings (Authentication & Authorization) for M2M
     oauth_bearer_token_endpoint: str = ""
@@ -112,14 +115,27 @@ class Settings(BaseSettings):
     storage_azure_tenant_id: str|None = None
     storage_azure_client_id: str|None = None
 
-    ### Email Settings (Microsoft Graph API)
+    ### Email Settings
+    email_transport: Literal["GRAPH", "SMTP"] = "GRAPH"
+
+    # Microsoft Graph API
     email_client_id: str = ""
     email_client_secret: str = ""
     email_subscription_key: str = ""
     email_token_endpoint: str = ""
     email_send_endpoint: str = ""
+
+    # SMTP
+    email_smtp_host: str = ""
+    email_smtp_port: int = 25
+    email_smtp_username: str = ""
+    email_smtp_password: str = ""
+    email_smtp_use_tls: bool = False
+    email_smtp_use_ssl: bool = False
+    email_from_address: str = ""
+
     email_subject_suffix: str = ""
-    email_subject_prefix: str="Workflow Engine:"
+    email_subject_prefix: str="[WF] "
     email_override_recipients_enable: bool = False
     email_override_recipients_list: list[str] = []
     email_receivers_erroneous_tasks: list[str] = []
@@ -149,7 +165,7 @@ Workflow Engine
     model_config = SettingsConfigDict(
         env_file=(env_file, ".env.local"), secrets_dir="/run/secrets", env_nested_delimiter='__'
     )
-        
+    
     @field_validator("api_path", mode="before")
     @classmethod
     def _validate_api_path(cls, value: str | None) -> str:

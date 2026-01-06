@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState } from 'react';
 import { BusyIndicator, BusyIndicatorSize, Button, ButtonDesign } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/synchronize';
@@ -13,6 +16,7 @@ import { handleResponse } from '@/services/HelperService';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import WeUserAutocomplete from '@/utils/components/WeUserAutocomplete';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
+import { useTranslation } from '@/i18n';
 
 interface AdminTaskHeaderActionsProps {
   taskId: string;
@@ -20,6 +24,7 @@ interface AdminTaskHeaderActionsProps {
 }
 
 const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -44,8 +49,8 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
       dispatch,
       WeDataKey.ADMIN_EXECUTE_ERRONEOUS_TASK,
       executeErroneousTask?.postResponse,
-      'Task successfully executed',
-      'Task could not be executed. Please try again.',
+      t('admin.taskExecuted'),
+      t('admin.taskExecutedError'),
       () => {
         dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
       }
@@ -57,8 +62,8 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
       dispatch,
       WeDataKey.ADMIN_ASSIGN_TASK,
       assignTask?.postResponse,
-      'User successfully assigned',
-      'Task could not be executed. Please try again.',
+      t('admin.assignUserSuccess'),
+      t('admin.assignUserError'),
       () => {
         setUserDialogOpen(false);
       }
@@ -70,8 +75,8 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
       dispatch,
       WeDataKey.ADMIN_UNASSIGN_TASK,
       unassignTask?.postResponse,
-      'User successfully unassigned',
-      'Task could not be executed. Please try again.',
+      t('admin.unassignUserSuccess'),
+      t('admin.unassignUserError'),
       () => {
         setUserDialogOpen(false);
       }
@@ -103,7 +108,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
     const isLoading = assignTaskLoadState || unassignTaskLoadState;
     return (
       <WeAlertDialog
-        title="Edit assigned User"
+        title={t('admin.assignedUserDialogTitle')}
         isDialogOpen={userDialogOpen}
         isLoading={isLoading}
         setDialogOpen={setUserDialogOpen}
@@ -112,20 +117,20 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
             <Button
               disabled={isLoading || !props.data?.assigned_user}
               design={ButtonDesign.Negative}
-              tooltip="Unassign User"
+              tooltip={t('admin.unassignUserTooltip')}
               onClick={() => {
                 handleUnassignUser();
               }}>
-              Unassign User
+              {t('admin.unassignUser')}
             </Button>
             <Button
               disabled={isLoading || !selectedUserId}
               design={ButtonDesign.Emphasized}
-              tooltip="Assign User"
+              tooltip={t('admin.assignUserTooltip')}
               onClick={() => {
                 handleAssignUser();
               }}>
-              Assign User
+              {t('admin.assignUser')}
             </Button>
           </>
         }>
@@ -145,7 +150,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
         <Button
           icon="user-edit"
           design={ButtonDesign.Transparent}
-          tooltip="Assign user"
+          tooltip={t('admin.assignUserTooltip')}
           onClick={() => {
             setUserDialogOpen(true);
           }}
@@ -155,7 +160,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
           <Button
             icon="begin"
             design={ButtonDesign.Transparent}
-            tooltip="Skip tasks"
+            tooltip={t('admin.skipTasksTooltip')}
             onClick={() => {
               handleSkipTask();
             }}
@@ -169,7 +174,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
           <Button
             icon="synchronize"
             design={ButtonDesign.Transparent}
-            tooltip="Try again"
+            tooltip={t('admin.tryAgainTooltip')}
             disabled={!props.data?.state_error}
             onClick={() => {
               handleTryAgain();

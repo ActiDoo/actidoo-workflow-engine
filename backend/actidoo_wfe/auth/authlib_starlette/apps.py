@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 # starlette_fastapi/apps.py
 import time
 from typing import Any, Dict, Optional
@@ -12,6 +15,7 @@ from authlib.integrations.base_client import OAuthError
 from authlib.integrations.base_client import OpenIDMixin
 from authlib.integrations.requests_client import OAuth2Session
 from authlib.jose import JsonWebToken
+from actidoo_wfe.settings import settings
 
 class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
     client_cls = OAuth2Session
@@ -72,14 +76,14 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
 
         # OIDC userinfo if present
         if "id_token" in token and "nonce" in state_data:
-            userinfo = self.parse_id_token(
+            id_info = self.parse_id_token(
                 token,
                 nonce=state_data["nonce"],
                 claims_options=claims_options,
                 claims_cls=claims_cls,
                 leeway=leeway,
             )
-            token["userinfo"] = userinfo
+            token["id_info"] = id_info
         return token
 
     def make_logout_url(self, redirect_uri: str, id_token: str | None = None) -> str:
@@ -112,17 +116,23 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         issuer =meta["issuer"]
         if claims.get("iss") != issuer:
             raise ValueError("invalid issuer")
-        
-        aud = claims.get("aud")
-        if isinstance(aud, str):
-            aud = [aud]
 
-        if isinstance(aud, list) and len(aud)>0:
-            raise ValueError("invalid aud")
+        aud_claim = claims.get("aud")
+        if isinstance(aud_claim, str):
+            audiences = [aud_claim]
+        elif isinstance(aud_claim, list):
+            audiences = aud_claim
+        else:
+            audiences = []
 
-        if aud is None or (isinstance(aud, list) and len(aud)==0):
-            # this is an exception for keycloak. if only realm roles are assigned, the aud claim is missing.
-            if claims["azp"] != self.client_id:
+        if audiences:
+            # Accept tokens that explicitly list our client_id; reject anything else.
+            if self.client_id not in audiences:
+                raise ValueError("invalid aud")
+        else:
+            # Some providers omit `aud` for realm-only tokens; fall back to azp in that case.
+            authorized_party = claims.get("azp")
+            if authorized_party != self.client_id:
                 raise ValueError("invalid authorized party")
 
         if claims.get("azp") and claims["azp"] != self.client_id:
@@ -132,3 +142,33 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             raise ValueError("token expired")
 
         return dict(claims)
+    
+    def get_combined_userdata(self, token: dict) -> Dict[str, Any]:
+        combined: Dict[str, Any] = {}
+
+        id_info = token.get("id_info")
+        if isinstance(id_info, dict):
+            combined.update(id_info)
+
+        if settings.validate_and_parse_access_token:
+            try:
+                claims = self.access_token_claims_via_jwks(token=token)
+            except ValueError as exc:
+                # Normalize validation failures to OAuthError so the caller can handle them consistently.
+                raise OAuthError(error=str(exc)) from exc
+            
+            if claims:
+                combined.update(claims)
+
+        # userinfo = token.get("userinfo")
+        # if not isinstance(userinfo, dict):
+        #     try:
+        #         userinfo = self.userinfo(token=token)
+        #     except Exception:
+        #         userinfo = None
+
+        # if isinstance(userinfo, dict):
+        #     for key, value in userinfo.items():
+        #         combined.setdefault(key, value)
+
+        return combined

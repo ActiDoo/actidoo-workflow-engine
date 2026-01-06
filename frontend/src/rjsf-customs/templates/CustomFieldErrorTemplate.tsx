@@ -1,41 +1,41 @@
-import React, { ReactElement } from 'react';
-import Form from '@rjsf/core';
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
+import type { ReactElement } from 'react';
 import { errorId, FieldErrorProps } from '@rjsf/utils';
-import ListGroup from 'react-bootstrap/esm/ListGroup';
 
 const CustomFieldErrorTemplate = (props: FieldErrorProps): ReactElement | null => {
-    const { errors = [], idSchema } = props;
+    const { errors = [], fieldPathId, uiSchema } = props;
     if (errors.length === 0) {
         return null;
     }
 
-    const id = errorId<any>(idSchema);
+    const id = errorId(fieldPathId);
     let isSingleUpload = false
     let isMultiUpload = false
-    if (props.uiSchema && props.uiSchema["ui:field"] && props.uiSchema["ui:field"] == "AttachmentSingle") {
+    if (uiSchema && uiSchema["ui:field"] && uiSchema["ui:field"] == "AttachmentSingle") {
         isSingleUpload = true
-    } else if (props.uiSchema && props.uiSchema["ui:field"] && props.uiSchema["ui:field"] == "AttachmentMulti") {
+    } else if (uiSchema && uiSchema["ui:field"] && uiSchema["ui:field"] == "AttachmentMulti") {
         isMultiUpload = true
     }
 
-    if (isSingleUpload && props.errors && props.errors?.length > 0 && props.errors[0] == "must be object") {
-        props.errors[0] = "Bitte einen Anhang anfügen"
-    } else if (isMultiUpload && props.errors && props.errors?.length > 0 && props.errors[0] == "must NOT have fewer than 1 items") {
-        props.errors[0] = "Bitte mind. einen Anhang anfügen"
-    }
+    const normalizedErrors = errors.map((error) => {
+        if (typeof error !== 'string') return error;
+        if (isSingleUpload && error === "must be object") return "Bitte einen Anhang anfügen";
+        if (isMultiUpload && error === "must NOT have fewer than 1 items") return "Bitte mind. einen Anhang anfügen";
+        return error;
+    });
 
 
     return (
         // copied html from packages/bootstrap-4/src/FieldErrorTemplate/FieldErrorTemplate.tsx:
-        <ListGroup as='ul' id={id}>
-            {errors.map((error, i) => {
-                return (
-                    <ListGroup.Item as='li' key={i} className='border-0 m-0 p-0'>
-                        <small className='m-0 text-danger'>{error}</small>
-                    </ListGroup.Item>
-                );
-            })}
-        </ListGroup>
+        <ul id={id} className="list-group">
+            {normalizedErrors.map((error, i) => (
+                <li key={i} className="list-group-item border-0 m-0 p-0">
+                    <small className="m-0 text-danger">{error}</small>
+                </li>
+            ))}
+        </ul>
     );
 };
 

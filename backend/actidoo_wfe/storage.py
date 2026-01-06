@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import pathlib
 
 from libcloud.storage.drivers.azure_blobs import AzureBlobsStorageDriver
@@ -13,6 +16,12 @@ class UnsupportedStorageException(Exception):
 def setup_storage(
     settings: Settings
 ):
+    try:
+        StorageManager.get_default()
+        return
+    except RuntimeError:
+        pass
+
     if settings.storage_mode == 'LOCAL':
         storage_path = pathlib.Path(settings.storage_local_upload_path)
         storage_path.mkdir(exist_ok=True)
@@ -53,5 +62,4 @@ def get_file_stream(file_id):
 def get_file_content(file_id):
     iter = get_file_stream(file_id)
     return b"".join(iter)
-
 

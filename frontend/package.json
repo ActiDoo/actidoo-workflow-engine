@@ -1,6 +1,7 @@
 {
   "name": "actidoo-global",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "private": true,
   "scripts": {
     "wfe:dev": "vite --host",
@@ -27,14 +28,11 @@
   },
   "packageManager": "yarn@4.11.0",
   "dependencies": {
-    "@popperjs/core": "^2.11.8",
-    "@reduxjs/toolkit": "^1.9.5",
-    "@rjsf/bootstrap-4": "^5.12.0",
-    "@rjsf/core": "^5.12.0",
-    "@rjsf/utils": "^5.12.0",
-    "@rjsf/validator-ajv8": "^5.12.0",
-    "@types/d3": "^7.4.3",
-    "@types/react-datepicker": "^7.0.0",
+    "@popperjs/core": "2.11.8",
+    "@rjsf/core": "6.1.2",
+    "@rjsf/react-bootstrap": "6.1.2",
+    "@rjsf/utils": "6.1.2",
+    "@rjsf/validator-ajv8": "6.1.2",
     "@ui5/webcomponents": "^1.9.3",
     "@ui5/webcomponents-base": "^1.9.3",
     "@ui5/webcomponents-fiori": "^1.9.3",
@@ -45,11 +43,8 @@
     "d3": "^7.9.0",
     "feelin": "^1.0.0",
     "lodash": "^4.17.21",
-    "moment": "^2.29.4",
-    "prettier": "^2.8.8",
-    "process": "^0.11.10",
     "react": "^18.2.0",
-    "react-bootstrap": "^1.0.1",
+    "react-bootstrap": "2.10.10",
     "react-dom": "^18.2.0",
     "react-paginate": "^8.2.0",
     "react-query": "^3.39.3",
@@ -61,15 +56,16 @@
     "redux-saga": "^1.2.1"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
     "@types/eslint": "^8",
     "@types/lodash": "^4.14.191",
-    "@types/node": "^18.11.13",
+    "@types/node": "24.10.3",
     "@types/prettier": "^2",
     "@types/react": "^18.0.24",
     "@types/react-dom": "^18.0.8",
     "@typescript-eslint/eslint-plugin": "^5.48.1",
     "@typescript-eslint/parser": "^5.48.1",
-    "@vitejs/plugin-react": "^4.0.0",
+    "@vitejs/plugin-react": "5.1.2",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.31.0",
     "eslint-config-prettier": "^8.6.0",
@@ -82,10 +78,11 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-unused-imports": "^2.0.0",
     "postcss": "^8.4.20",
+    "prettier": "^2.8.8",
     "sass": "^1.56.2",
     "tailwindcss": "^3.2.4",
     "ts-node": "^10.9.1",
-    "typescript": "^4.9.4",
-    "vite": "3.2.11"
+    "typescript": "5.9.3",
+    "vite": "7.2.7"
   }
 }

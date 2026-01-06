@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """
 FastAPI Entrypoint
 """
@@ -26,11 +29,12 @@ from actidoo_wfe.auth.fastapi import router as router_auth
 from actidoo_wfe.database import run_migrations, setup_db
 from actidoo_wfe.helpers.logging import HTTPAccessLogMiddleware
 from actidoo_wfe.helpers.proxy_middleware import ProxyHeadersNetworkMiddleware
-from actidoo_wfe.helpers.tests import in_test
+from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.session import SessionMiddleware
 from actidoo_wfe.settings import settings
 from actidoo_wfe.storage import setup_storage
 from actidoo_wfe.wf.fastapi import router as router_wf
+from actidoo_wfe.venusian_scan import discover_venusian_scan_targets
 
 print(f"Setting Log-Level to {settings.log_level}")
 logging.basicConfig(
@@ -70,7 +74,8 @@ async def lifespan(app: FastAPI):
     clear_task_registry()
 
     scanner = venusian.Scanner()
-    scanner.scan(pyapp, ignore=[re.compile("test_").search])
+    for target in discover_venusian_scan_targets(default_modules=[pyapp]):
+        scanner.scan(target, ignore=[re.compile("test_").search])
 
     task_future = None
     if not in_test():

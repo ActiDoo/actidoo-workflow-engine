@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  netns:
+    image: alpine:3.19
+    command: ["sleep", "infinity"]
+
+  devcontainer:
+    network_mode: "service:netns"
+    image: wfe-devcontainer
+    command: sleep infinity
+    volumes:
+      - ..:/workspace:cached
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: appuser
+      DB_PASSWORD: appsecret
+      DB_NAME: app
+      STORAGE_MODE: LOCAL
+      OIDC_CLIENT_ID: workflow-engine
+      OIDC_CLIENT_SECRET: workflow-secret
+      OIDC_DISCOVERY_URL: http://localhost:8005/realms/workflow/.well-known/openid-configuration
+      OIDC_REDIRECT_URL: http://localhost:8080/auth/callback
+      BASE_URL: http://localhost:8080/
+      FRONTEND_PATH: /wfe/
+      API_PATH: /api/
+    depends_on:
+      netns:
+        condition: service_started
+        required: true
+      mysql:
+        condition: service_healthy
+        required: true
+      keycloak:
+        condition: service_started
+        required: true
+
+  mysql:
+    network_mode: "service:netns"
+    depends_on:
+      netns:
+        condition: service_started
+    image: mysql:8.4
+    command: --mysql-native-password=ON
+    environment:
+      MYSQL_ROOT_PASSWORD: rootsecret
+      MYSQL_DATABASE: app
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: appsecret
+      MYSQL_ROOT_HOST: "%"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --user=root --password=${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    network_mode: "service:netns"
+    image: keycloak/keycloak:26.2.5
+    command: start-dev --http-port=8005 --import-realm
+    depends_on:
+      netns:
+        condition: service_started
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_HOST: 0.0.0.0
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+    volumes:
+      - ./realm-workflow.json:/opt/keycloak/data/import/realm-workflow.json:ro

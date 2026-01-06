@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -20,6 +23,7 @@ import { WeAdminRoute } from '@/utils/components/WeAdminRoute';
 import Statistics from '@/pages/statistics/Statistics';
 import AdminInfo from '@/pages/admin/info/AdminInfo';
 import UserSettings from '@/pages/user-settings/UserSettings';
+import { useTranslation } from '@/i18n';
 
 //Actually lazy loading is not necessary, but it will help to keep the initial JS file(s) smaller and speed up the initial loading
 //To omit lazy loading you'd have to use normal imports like `import { Tasks } from ...`
@@ -59,37 +63,39 @@ const AdminWorkflowDiagram = React.lazy(
 const StartWorkflowPreview = React.lazy(
   async () => await import('@/pages/start-workflow-preview/StartWorkflowPreview')
 );
+const About = React.lazy(async () => await import('@/pages/about/About'));
 const Wrapper: React.FC = () => {
-  const appTitle = 'Workflow Engine';
+  const { t } = useTranslation();
+  const appTitle = t('layout.appTitle');
   const loginState = useSelector((state: State) => state.auth.loginState.data);
   const user = useSelector((state: State) => state.data['wfe-user']?.data);
   const brandLogoUrl = `${import.meta.env.BASE_URL}branding/logo.svg`;
 
   const navigation: PcNavigationLink[] = [
     {
-      title: 'Tasks',
+      title: t('navigation.tasks'),
       to: 'tasks/open',
       activeRoute: '/tasks',
     },
     {
-      title: 'My Workflows',
+      title: t('navigation.myWorkflows'),
       to: 'my-workflows',
     },
   ];
 
   if (loginState?.can_access_wf_admin || (user?.workflows_the_user_is_admin_for?.length ?? 0) > 0) {
     const subNav = [
-      { title: 'Workflows', to: '/admin/all-workflows' },
-      { title: 'Tasks', to: '/admin/all-tasks' },
+      { title: t('navigation.adminWorkflows'), to: '/admin/all-workflows' },
+      { title: t('navigation.adminTasks'), to: '/admin/all-tasks' },
     ];
 
     if (loginState?.can_access_wf_admin) {
-      subNav.push({ title: 'Statistics', to: '/statistics' });
-      subNav.push({ title: 'System Information', to: '/admin/sysinfo' });
+      subNav.push({ title: t('navigation.statistics'), to: '/statistics' });
+      subNav.push({ title: t('navigation.systemInformation'), to: '/admin/sysinfo' });
     }
 
     navigation.push({
-      title: 'Admin',
+      title: t('navigation.admin'),
       activeRoute: '/admin',
       sub: subNav,
     });
@@ -110,11 +116,24 @@ const Wrapper: React.FC = () => {
       onLogout={() => logout()}
       endHeaderActions={<DialogStartWorkflow />}
       user={loginState?.username}
-      settingsRoute={'/user-settings'}>
+      settingsRoute={'/user-settings'}
+      helpRoute={'/about'}>
       <Suspense fallback={<>{busy}</>}>
         <Outlet />
       </Suspense>
     </PcPageWrapper>
+  );
+};
+
+const NotFoundError: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <PcErrorView
+      titleText={t('auth.notFoundTitle')}
+      subtitleText={t('auth.notFoundSubtitle')}
+      showReload={false}
+      showHome={true}
+    />
   );
 };
 
@@ -129,14 +148,7 @@ const router = createBrowserRouter(
       // or if he is browsing route only valid for admins
       // (Real authorization check is done in the backend, of course)
       element={<AuthWrapper />}
-      errorElement={
-        <PcErrorView
-          titleText="Page not found"
-          subtitleText="Seems like this page doesn't exist."
-          showReload={false}
-          showHome={true}
-        />
-      }>
+      errorElement={<NotFoundError />}>
       <Route element={<Wrapper />}>
         <Route path="/" index element={<IndexRoute />} errorElement={<PcErrorView />} />
         <Route path="/tasks" element={<Tasks />} errorElement={<PcErrorView />}>
@@ -259,6 +271,7 @@ const router = createBrowserRouter(
           element={<StartWorkflowPreview />}
           errorElement={<PcErrorView />}
         />
+        <Route path="/about" element={<About />} errorElement={<PcErrorView />} />
 
       </Route>
     </Route>

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 from actidoo_wfe.wf.tests.helpers.dicts import are_dicts_equal
 
 

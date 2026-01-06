@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { all, call, put, takeLatest } from 'redux-saga/effects';
 import * as UiActions from '@/store/ui/actions';
 import * as AuthActions from '@/store/auth/actions';

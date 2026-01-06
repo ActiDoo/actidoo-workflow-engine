@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import datetime
 import hashlib
 import pathlib
@@ -31,6 +34,7 @@ from actidoo_wfe.wf.models import (
     WorkflowSpecFile,
     WorkflowTimeEvent,
     WorkflowUser,
+    WorkflowUserClaim,
 )
 from actidoo_wfe.wf.service_workflow import (
     _get_custom_props,
@@ -48,6 +52,7 @@ from actidoo_wfe.wf.service_workflow import (
 )
 from actidoo_wfe.wf.spiff_customized import MyIntermediateCatchEvent
 from actidoo_wfe.wf.types import TimeEvent, UserRepresentation
+from actidoo_wfe.helpers.datauri import sanitize_metadata_value
 
 
 # Repository
@@ -358,6 +363,7 @@ def load_user(db: Session, user_id: uuid.UUID) -> UserRepresentation:
         select(WorkflowUser).where(WorkflowUser.id == user_id)
     ).scalar_one()
     roles = {r.role.name for r in user.roles}
+    claims = {claim.claim_key: claim.claim_value for claim in user.claims}
 
     return UserRepresentation(
         id=user.id,
@@ -367,7 +373,8 @@ def load_user(db: Session, user_id: uuid.UUID) -> UserRepresentation:
         last_name=user.last_name,
         roles=roles,
         is_service_user=user.is_service_user,
-        locale=user.locale
+        locale=user.locale,
+        claims=claims,
     )
 
 
@@ -376,6 +383,7 @@ def load_user_by_email(db: Session, email: str) -> UserRepresentation:
         select(WorkflowUser).where(WorkflowUser.email == email)
     ).scalar_one()
     roles = {r.role.name for r in user.roles}
+    claims = {claim.claim_key: claim.claim_value for claim in user.claims}
 
     return UserRepresentation(
         id=user.id,
@@ -385,7 +393,8 @@ def load_user_by_email(db: Session, email: str) -> UserRepresentation:
         last_name=user.last_name,
         roles=roles,
         is_service_user=user.is_service_user,
-        locale=user.locale
+        locale=user.locale,
+        claims=claims,
     )
 
 
@@ -394,6 +403,7 @@ def load_user_by_username(db: Session, username: str) -> UserRepresentation:
         select(WorkflowUser).where(WorkflowUser.username == username)
     ).scalar_one()
     roles = {r.role.name for r in user.roles}
+    claims = {claim.claim_key: claim.claim_value for claim in user.claims}
 
     return UserRepresentation(
         id=user.id,
@@ -403,7 +413,8 @@ def load_user_by_username(db: Session, username: str) -> UserRepresentation:
         last_name=user.last_name,
         roles=roles,
         is_service_user=user.is_service_user,
-        locale=user.locale
+        locale=user.locale,
+        claims=claims,
     )
 
 
@@ -470,8 +481,7 @@ def store_attachment(
         obj = WorkflowAttachment()
         obj.hash = hash
         obj.first_filename = filename
-        obj.data = data # TODO: remove when File() is deployed correctly
-        obj.file = File(content=data, filename=filename, content_type=mimetype)
+        obj.file = File(content=data, filename=sanitize_metadata_value(filename), content_type=mimetype)
         db.add(obj)
 
     if mimetype is not None and obj.mimetype is None:

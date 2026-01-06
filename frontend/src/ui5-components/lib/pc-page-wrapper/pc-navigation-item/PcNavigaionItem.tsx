@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { Icon, LinkDomRef, Menu, MenuDomRef, MenuItem, Text } from '@ui5/webcomponents-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import React, { MutableRefObject, useRef } from 'react';

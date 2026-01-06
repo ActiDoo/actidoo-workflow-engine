@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 export * from './lib/pc-editable-details-section/PcEditableDetailsSection';
 export * from './lib/pc-editable-details-section/models/PcEditableDetailsSectionModels';
 export * from './lib/pc-details-page/PcDetailsPage';

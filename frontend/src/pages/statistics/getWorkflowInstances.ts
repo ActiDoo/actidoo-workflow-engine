@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { State } from '@/store';
 import { postRequest } from '@/store/generic-data/actions';
 import { WeDataKey } from '@/store/generic-data/setup';

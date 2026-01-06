@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import logging
 
 from actidoo_wfe.database import SessionLocal, setup_db

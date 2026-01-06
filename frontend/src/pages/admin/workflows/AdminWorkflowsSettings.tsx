@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import {
   AnalyticalTableColumnDefinition,
   Icon,
@@ -8,31 +11,34 @@ import { PcArrowLink, PcDateColumn, PcInputColumn, PcTableData } from '@/ui5-com
 import '@ui5/webcomponents-icons/dist/status-negative';
 import '@ui5/webcomponents-icons/dist/status-positive';
 import '@ui5/webcomponents-icons/dist/play';
-import { right } from '@popperjs/core';
+import { type useTranslation } from '@/i18n';
+
+type Translate = ReturnType<typeof useTranslation>['t'];
 
 export const adminWorkflowsColumns = (
-  tableData: PcTableData
+  tableData: PcTableData,
+  t: Translate
 ): AnalyticalTableColumnDefinition[] => [
   
   //PcInputColumn('name', 'Name', tableData),
   {
-    ...PcInputColumn('title', 'Workflow', tableData),
+    ...PcInputColumn('title', t('adminTables.workflow'), tableData),
     width: 225
   },
   {
-    ...PcInputColumn('subtitle', 'Subtitle', tableData),
+    ...PcInputColumn('subtitle', t('adminTables.subtitle'), tableData),
     minWidth: 150,
   },
   {
     minWidth: 150,
-    ...PcInputColumn('id', 'Id', tableData)
+    ...PcInputColumn('id', t('adminTables.id'), tableData)
   },
   {
-    ...PcDateColumn('created_at', 'Created at', tableData),
+    ...PcDateColumn('created_at', t('adminTables.createdAt'), tableData),
     width: 150,
   },  
   {
-    ...PcInputColumn('created_by.full_name', 'Created by', tableData),
+    ...PcInputColumn('created_by.full_name', t('adminTables.createdBy'), tableData),
     minWidth: 150,
     Cell: (instance: any) => {
       const flow = instance.row.original;
@@ -40,11 +46,11 @@ export const adminWorkflowsColumns = (
     },
   },
   {
-    ...PcInputColumn('name', 'Internal Name', tableData),
+    ...PcInputColumn('name', t('adminTables.internalName'), tableData),
     maxWidth: 220
   },  
   {
-    ...PcInputColumn('is_completed', 'Completed', tableData),
+    ...PcInputColumn('is_completed', t('adminTables.isCompleted'), tableData),
     disableFilters: true,
     width: 90,
     hAlign: TextAlign.Center,
@@ -54,7 +60,7 @@ export const adminWorkflowsColumns = (
       ) : null,
   },
   {
-    ...PcInputColumn('has_task_in_error_state', 'Error', tableData),
+    ...PcInputColumn('has_task_in_error_state', t('adminTables.hasError'), tableData),
     disableFilters: true,
     width: 70,
     hAlign: TextAlign.Center,

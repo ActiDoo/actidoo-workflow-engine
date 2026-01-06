@@ -1,6 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 import { DateSelection } from './Datepicker';
+import { useTranslation } from '@/i18n';
 export interface DataPoint {
   date: Date;
   calls: number;
@@ -17,6 +21,7 @@ export interface Props {
   endDate: Date;
 }
 const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, endDate }) => {
+  const { t, language } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
@@ -118,9 +123,9 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
 
           tooltip
             .html(
-              `Workflow: ${workflow.name}<br/>Total Instances: ${
+              `${t('common.labels.workflow')}: ${workflow.name}<br/>${t('statistics.totalInstances')}: ${
                 d.calls
-              }<br/>${d.date.toLocaleDateString()}`
+              }<br/>${d.date.toLocaleDateString(language)}`
             )
             .style('opacity', 1)
             .style('visibility', 'visible');
@@ -181,7 +186,7 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
       legendItem.append('span').attr('class', 'text-sm').text(workflow.name);
 
     });
-  }, [workflows, dimensions, visibleWorkflows]);
+  }, [workflows, dimensions, visibleWorkflows, startDate, endDate, t, language]);
   return (
   <div className='bg-white'>
     <div

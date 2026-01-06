@@ -1,12 +1,16 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { ReactElement } from 'react';
 import { evaluateHideIfAndFeel } from '@/services/FeelService';
 import { FieldProps } from '@rjsf/utils';
 import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 
 const CustomArraySchemaField = (props: FieldProps): ReactElement => {
-  const { formData, formContext, uiSchema, schema } = props;
+  const { formData, uiSchema, schema } = props;
+  const formContext = (props.registry as any)?.formContext;
   const evaluationFields = {
-    ...formContext.formData,
+    ...(formContext?.formData || {}),
     ...formData,
   };
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import sys
 import time
 from typing import Any
@@ -328,6 +331,25 @@ def _fetch_session_data(client: TestClient) -> dict[str, Any]:
         return dict(record.data)
 
 
+def test_login_redirect_respects_configured_scope(
+    oidc_environment, auth_test_client, monkeypatch
+):
+    client = auth_test_client
+    custom_scope = "openid email offline_access"
+    monkeypatch.setattr(settings, "oidc_scopes", custom_scope)
+
+    login_url = client.app.url_path_for("auth_do_login")
+    response = client.get(
+        login_url,
+        params={"redirect_url": "/after-login"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code in (302, 303, 307)
+    parsed = urlparse(response.headers["location"])
+    assert parse_qs(parsed.query)["scope"] == [custom_scope]
+
+
 def test_full_login_flow_happy_path(oidc_environment, auth_test_client):
     client = auth_test_client
     state, redirect_target = _initiate_login(client)
@@ -448,6 +470,166 @@ def test_login_callback_invalid_claims_redirects_to_original_target(
     assert response.headers["location"].endswith(redirect_target)
     session_data = _fetch_session_data(client)
     assert session_data.get("login_fails") == 1
+
+
+def test_login_callback_value_error_redirects_to_original_target(
+    oidc_environment, auth_test_client, monkeypatch
+):
+    import actidoo_wfe.auth.fastapi as auth_fastapi
+    import actidoo_wfe.auth.core as auth_core
+
+    def boom(self, token: dict):
+        raise ValueError("invalid aud")
+
+    monkeypatch.setattr(
+        auth_fastapi.client,
+        "access_token_claims_via_jwks",
+        boom.__get__(auth_fastapi.client, type(auth_fastapi.client)),
+    )
+    monkeypatch.setattr(
+        auth_core.client,
+        "access_token_claims_via_jwks",
+        boom.__get__(auth_core.client, type(auth_core.client)),
+    )
+
+    client = auth_test_client
+    state, redirect_target = _initiate_login(client)
+
+    callback_url = client.app.url_path_for("auth_login_callback")
+    response = client.get(
+        callback_url,
+        params={"code": oidc_environment["code"], "state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 303, 307)
+    assert response.headers["location"].endswith(redirect_target)
+    session_data = _fetch_session_data(client)
+    assert session_data.get("login_fails") == 1
+
+
+def test_login_callback_provider_error_redirects_to_original_target(
+    auth_test_client,
+):
+    client = auth_test_client
+    state, redirect_target = _initiate_login(client, redirect_url="/after-deny")
+
+    callback_url = client.app.url_path_for("auth_login_callback")
+    response = client.get(
+        callback_url,
+        params={"error": "access_denied", "state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 303, 307)
+    assert response.headers["location"].endswith(redirect_target)
+    session_data = _fetch_session_data(client)
+    assert session_data.get("login_fails") == 1
+
+
+def test_login_callback_can_skip_access_token_validation(
+    oidc_environment, auth_test_client, monkeypatch
+):
+    import actidoo_wfe.auth.fastapi as auth_fastapi
+    import actidoo_wfe.auth.core as auth_core
+
+    monkeypatch.setattr(settings, "validate_and_parse_access_token", False)
+
+    def unexpected_parse(self, token: dict):
+        raise AssertionError("access token parsing should be skipped")
+
+    monkeypatch.setattr(
+        auth_fastapi.client,
+        "access_token_claims_via_jwks",
+        unexpected_parse.__get__(auth_fastapi.client, type(auth_fastapi.client)),
+    )
+    monkeypatch.setattr(
+        auth_core.client,
+        "access_token_claims_via_jwks",
+        unexpected_parse.__get__(auth_core.client, type(auth_core.client)),
+    )
+
+    client = auth_test_client
+    state, redirect_target = _initiate_login(client)
+
+    callback_url = client.app.url_path_for("auth_login_callback")
+    response = client.get(
+        callback_url,
+        params={"code": oidc_environment["code"], "state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 303, 307)
+    assert response.headers["location"] == redirect_target
+
+    login_state_url = client.app.url_path_for("auth_get_login_state")
+    login_state_response = client.get(login_state_url, follow_redirects=False)
+    assert login_state_response.status_code == 200
+    payload = login_state_response.json()
+    assert payload["is_logged_in"] is True
+    assert payload["username"] == oidc_environment["user_profile"]["preferred_username"]
+
+
+def test_access_token_validation_accepts_matching_audience(monkeypatch, oidc_environment):
+    import actidoo_wfe.auth.core as auth_core
+
+    # Generate a fresh RSA key for this test to sign the access token.
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    public_jwk = JsonWebKey.import_key(public_pem).as_dict(is_private=False)
+    public_jwk["kid"] = "aud-test"
+
+    def _fetch_jwk_set(self):
+        return {"keys": [public_jwk]}
+
+    monkeypatch.setattr(
+        auth_core.client,
+        "fetch_jwk_set",
+        _fetch_jwk_set.__get__(auth_core.client, type(auth_core.client)),
+    )
+
+    metadata = auth_core.client.load_server_metadata()
+    now = int(time.time())
+    claims = {
+        "iss": metadata["issuer"],
+        "aud": [settings.oidc_client_id],
+        "azp": settings.oidc_client_id,
+        "sub": "user-audience",
+        "exp": now + 300,
+        "iat": now,
+    }
+    header = {"alg": "RS256", "kid": public_jwk["kid"]}
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    token = jwt.encode(header, claims, private_pem)
+    access_token = token.decode("utf-8") if isinstance(token, bytes) else token
+
+    parsed_claims = auth_core.client.access_token_claims_via_jwks(token={"access_token": access_token})
+    audience_claim = parsed_claims.get("aud")
+    if isinstance(audience_claim, list):
+        assert settings.oidc_client_id in audience_claim
+    else:
+        assert audience_claim == settings.oidc_client_id
+
+
+def test_auth_fallback_redirects_to_frontend(auth_test_client):
+    client = auth_test_client
+    fallback_url = client.app.url_path_for("auth_fallback")
+    response = client.get(fallback_url, follow_redirects=False)
+    assert response.status_code in (302, 303, 307)
+    assert response.headers["location"] == settings.frontend_base_url
+
+
+def test_auth_fallback_can_render_debug_view(auth_test_client, monkeypatch):
+    client = auth_test_client
+    fallback_url = client.app.url_path_for("auth_fallback")
+    monkeypatch.setattr(settings, "auth_debug_token_introspection", False)
+    response = client.get(f"{fallback_url}?debug=1")
+    assert response.status_code == 200
+    assert "Please visit target application" in response.text
 
 
 def test_initial_login(oidc_environment, auth_test_client):

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { State } from '@/store';

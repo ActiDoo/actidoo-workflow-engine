@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { WeToastContent } from '@/utils/components/WeToast';
 import { addNameToDataURL, getRandomString } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
@@ -85,7 +88,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
 
     processFile(newFile)
     .then(result => {
-      onChange(result);
+      onChange(result, []);
       setFileUploadKey(getRandomString());
     })
     .catch(() => {
@@ -94,7 +97,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
   };
 
   const removeFile = (): void => {
-    onChange(undefined);
+    onChange(undefined, []);
   };
 
   /**
@@ -132,7 +135,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
     files &&
     !(files.datauri || files.filename || files.hash || files.id || files.mimetype)
   ) {
-    console.log(`files undefined: ${props.idSchema.$id}`)
+    console.log(`files undefined: ${props.id}`)
     //remove it async, after rendering, to avoid warnings
     setTimeout(() => {
       removeFile()

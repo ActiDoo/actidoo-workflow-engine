@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { useEffect, useRef, useState } from 'react';
 import { calculatePageOffset } from '../services/PageService';
 import { PcSortItem, StringDict } from '../models/models';

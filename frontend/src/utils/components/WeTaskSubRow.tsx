@@ -1,7 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { TaskItem } from '@/models/models';
 import { Button, Text, Title, TitleLevel } from '@ui5/webcomponents-react';
 import { Link } from 'react-router-dom';
 import React from 'react';
+import { useTranslation } from '@/i18n';
 
 export const WeTaskSubRow: React.FC<{
   title: string;
@@ -9,6 +13,7 @@ export const WeTaskSubRow: React.FC<{
   userId: string | undefined;
   workflowId: string;
 }> = props => {
+  const { t } = useTranslation();
   return (
     <div className="bg-white border-t border-t-solid border-t-neutral-100 p-3 pb-6">
       <Title className="mb-2" level={TitleLevel.H5}>
@@ -18,8 +23,8 @@ export const WeTaskSubRow: React.FC<{
       <table className="text-left w-full  border-t border-t-solid border-t-neutral-100 ">
         <thead>
           <tr>
-            <th className="px-2 py-1">Name</th>
-            <th className="px-2 py-1">Assigned to</th>
+            <th className="px-2 py-1">{t('common.labels.name')}</th>
+            <th className="px-2 py-1">{t('common.labels.assignedTo')}</th>
             <th></th>
           </tr>
         </thead>

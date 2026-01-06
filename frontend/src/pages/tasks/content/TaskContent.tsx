@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState } from 'react';
 
 import { WeDataKey } from '@/store/generic-data/setup';
@@ -9,8 +12,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { MultipleTasks } from '@/pages/tasks/content/multiple-tasks/MultipleTasks';
 import { WorkflowState } from '@/models/models';
+import { useTranslation } from '@/i18n';
 
 const TaskContent: React.FC<{ state: WorkflowState }> = props => {
+  const { t } = useTranslation();
   const { workflowId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -61,8 +66,8 @@ const TaskContent: React.FC<{ state: WorkflowState }> = props => {
   return (
     <WeEmptySection
       icon="search"
-      title="Task could not be found"
-      text="Task does not exist or something went wrong."
+      title={t('taskContent.notFoundTitle')}
+      text={t('taskContent.notFoundText')}
     />
   );
 };

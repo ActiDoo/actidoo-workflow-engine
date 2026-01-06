@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState } from 'react';
 
 import { PcPage } from '@/ui5-components';
@@ -13,18 +16,16 @@ import {
   FlexBox,
   FlexBoxAlignItems
 } from '@ui5/webcomponents-react';
-
-const supportedLocales = [
-  { key: 'en', label: 'English' },
-  { key: 'de', label: 'German' },
-  // add more locales as needed
-];
+import { useTranslation } from '@/i18n';
 
 const UserSettings: React.FC = () => {
+  const { t, changeLanguage, availableLanguages } = useTranslation();
   const key = WeDataKey.USER_SETTINGS;
   const dispatch = useDispatch();
   const data = useSelector((state: State) => state.data[key]);
-  const options = data?.data?.supported_locales || [];
+  const options = data?.data?.supported_locales?.length
+    ? data.data.supported_locales
+    : availableLanguages.map(lang => ({ key: lang.key, label: lang.label }));
 
   const [locale, setLocale] = useState<string>('');
 
@@ -37,20 +38,26 @@ const UserSettings: React.FC = () => {
   useEffect(() => {
     if (data?.data?.locale) {
       setLocale(data.data.locale);
+      changeLanguage(data.data.locale);
     }
-  }, [data?.data]);
+  }, [data?.data, changeLanguage]);
 
   const handleSave = () => {
+    changeLanguage(locale);
     dispatch(postRequest(key, { locale }));
   };
 
   return (
-    <PcPage header={{ title: 'User Settings' }}>
+    <PcPage header={{ title: t('userSettings.title') }}>
       <FlexBox className="items-center mb-4" alignItems={FlexBoxAlignItems.Center}>
-        <Label className="mr-2">Your preferred localization language for workflows: </Label>
+        <Label className="mr-2">{t('userSettings.localeLabel')}</Label>
         <Select
           className="w-48"
-          onChange={(e) => setLocale(e.detail.selectedOption.getAttribute('data-key') || '')}
+          onChange={e => {
+            const nextLocale = e.detail.selectedOption.getAttribute('data-key') || '';
+            setLocale(nextLocale);
+            changeLanguage(nextLocale);
+          }}
         >
           {options.map(({ key, label }) => (
             <Option key={key} data-key={key} selected={key === locale}>
@@ -60,15 +67,11 @@ const UserSettings: React.FC = () => {
         </Select>
       </FlexBox>
       <div>
-        <Label className="mr-2">
-          This setting only affects upcoming workflows and only if they are available in multiple languages.
-          <br></br>
-          The overall user interface of the Workflow Engine is also not affected by this setting and only available in English at the moment.
-        </Label>
+        <Label className="mr-2">{t('userSettings.localeHint')}</Label>
       </div>
 
       <Button className="mt-4" design="Emphasized" onClick={handleSave}>
-        Save Settings
+        {t('userSettings.save')}
       </Button>
     </PcPage>
   );

@@ -1,15 +1,15 @@
-@import '../ui5-components/styles/ui5webcomponents.scss';
+/* SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2025 ActiDoo GmbH
+ */
 
+@use '../ui5-components/styles/ui5webcomponents.scss';
+@use 'bootstrap/scss/bootstrap' with (
+  $primary: #007C84,
+  $warning: #E00A18
+);
 
 @tailwind components;
 @tailwind utilities;
-
-
-// bootstrap for rjsf
-$primary: #007C84;
-$warning: #E00A18;
-
-@import 'bootstrap/scss/bootstrap';
 
 body {
   --bs-border-color: var(--color-border-subtle);

@@ -1,0 +1,60 @@
+{
+	"name": "Actidoo Workflow Engine",
+	"initializeCommand": ["/bin/sh", ".devcontainer/init-secrets.sh"],
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "app",
+	"workspaceFolder": "/workspace",
+	"remoteEnv": {
+		// Add Environment Variables for Proxy Settings and for certificates
+		// You MUST set the environment variables on your system, which you use here on the right side,
+		// in your system's
+		//   /etc/profile.d/proxy.sh
+		// otherwise they will be empty during post_create.sh.
+		// (it's not sufficient to set them via 'export' in your terminal before you open VSCode, even if 
+		//  VSCode's terminal will show them.)
+		"REQUESTS_CA_BUNDLE": "/etc/ssl/certs/ca-certificates.crt",
+		"HTTP_PROXY": "${localEnv:HTTP_PROXY}",
+		"HTTPS_PROXY": "${localEnv:HTTPS_PROXY}",
+		"YARN_HTTP_PROXY": "${localEnv:HTTP_PROXY}",
+		"YARN_NPM_REGISTRY_SERVER": "https://registry.npmjs.org",
+		"YARN_UNSAFE_HTTP_WHITELIST": "${localEnv:YARN_UNSAFE_HTTP_WHITELIST}",
+		"NO_PROXY": "127.0.0.0/8, localhost, keycloak, phpmyadmin, azureit",
+		"PIP_TRUSTED_HOST": "${localEnv:PIP_TRUSTED_HOST}",
+		"PIP_INDEX_URL": "${localEnv:PIP_INDEX_URL}",
+		"PIP_INDEX": "${localEnv:PIP_INDEX}",
+		"ENV_FILE": "/workspace/backend/.env.devcontainer"
+	},
+
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"python.pythonPath": "/workspace/backend/.venv/bin/python",
+				"python.defaultInterpreterPath": "/workspace/backend/.venv/bin/python",
+				"python.envFile": "/workspace/DONOTCREATEME.env" // envFile is handled by pydantic itself ; no need for vscode magic
+			},
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"PKief.material-icon-theme",
+				"GitHub.github-vscode-theme",
+				"hediet.vscode-drawio",
+				"charliermarsh.ruff"
+			]
+		}
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// This can be used to network with other containers or the host.
+	
+	"forwardPorts": [3306, 80, 8001, 8000],
+	
+	"mounts": [
+		"source=/usr/local/share/ca-certificates/,target=/usr/local/share/ca-certificates/,type=bind,consistency=cached"
+	],
+	
+	// Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": "chmod +x /workspace/.devcontainer/post_create.sh && /workspace/.devcontainer/post_create.sh",
+
+	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}

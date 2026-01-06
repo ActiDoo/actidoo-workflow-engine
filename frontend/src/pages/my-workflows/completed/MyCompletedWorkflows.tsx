@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -18,8 +21,10 @@ import { myCompletedWorkflowsColumns } from '@/pages/my-workflows/completed/MyCo
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import { ActiveTaskInstance } from '@/models/models';
 import { WeTaskSubRow } from '@/utils/components/WeTaskSubRow';
+import { useTranslation } from '@/i18n';
 
 const MyCompletedWorkflows: React.FC = () => {
+  const { t } = useTranslation();
   const key = WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES;
   const dispatch = useDispatch();
 
@@ -41,7 +46,7 @@ const MyCompletedWorkflows: React.FC = () => {
     if (completedTasks && completedTasks.length > 1) {
       return (
         <WeTaskSubRow
-          title="Tasks of workflow"
+          title={t('myWorkflows.tasksOfWorkflow')}
           tasks={completedTasks}
           userId={user?.id}
           workflowId={row.original.id}
@@ -67,7 +72,7 @@ const MyCompletedWorkflows: React.FC = () => {
       </div>
 
       <PcAnalyticalTable
-        columns={myCompletedWorkflowsColumns(tableData, user?.id)}
+        columns={myCompletedWorkflowsColumns(tableData, user?.id, t)}
         initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
         data={data?.data?.ITEMS ?? []}
         loading={loadingState}

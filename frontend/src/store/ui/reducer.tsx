@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { UiAction, UiActionType, UiState } from '@/store/ui/setup';
 
 const initState: UiState = {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { Icon } from '@ui5/webcomponents-react';
 import React from 'react';
 import '@ui5/webcomponents-icons/dist/download';

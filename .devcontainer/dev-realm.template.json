@@ -1,0 +1,113 @@
+{
+    "realm": "dev",
+    "enabled": true,
+    "users": [
+        {
+            "username": "wf-user",
+            "enabled": true,
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "__KEYCLOAK_DEFAULT_USER_PASSWORD__"
+                }
+            ],
+            "realmRoles": [
+                "wf-user",
+                "wf-admin",
+                "wf-tfmultiinstancetime-keyuser"
+            ],
+            "email" : "wf-user@example.com",
+            "firstName": "WF-User",
+            "lastName": "Smith"
+        },
+        {
+            "username": "wf-user-testflow9-owner",
+            "enabled": true,
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "__KEYCLOAK_DEFAULT_USER_PASSWORD__"
+                }
+            ],
+            "realmRoles": [
+                "wf-user",
+                "wf-owner-testflow9"
+            ],
+            "email" : "wf-user-testflow9-owner@example.com",
+            "firstName": "WF-TestFlow9",
+            "lastName": "Smith"
+        },
+        {
+            "username": "service-account-otherapp",
+            "enabled": true,
+            "serviceAccountClientId": "otherapp",
+            "clientRoles": {
+                "dev": [
+                    "wf-api"
+                ]
+            }
+        }
+    ],
+    "roles": {
+        "realm": [
+            {
+                "name": "wf-user",
+                "description": "Can access WF console"
+            },
+            {
+                "name": "wf-tfmultiinstancetime-keyuser",
+                "description": "Artikelbeschreibung Key User"
+            }
+        ],
+        "client": {
+            "dev": [
+                {
+                    "name": "wf-api",
+                    "description": "Can access WF API"
+                }
+            ]
+        }
+    },
+    "defaultRoles": [
+        "wf-user"
+    ],
+    "clients": [
+        {
+            "clientId": "dev",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "__KEYCLOAK_DEV_CLIENT_SECRET__",
+            "redirectUris": [
+                "http://localhost:8000/*",
+                "http://127.0.0.1:8000/*"
+            ],
+            "webOrigins": [],
+            "publicClient": false,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": false,
+            "authorizationServicesEnabled": false,
+            "frontchannelLogout": false,
+            "protocol": "openid-connect",
+            "fullScopeAllowed": true
+        },
+        {
+            "clientId": "otherapp",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "__KEYCLOAK_OTHERAPP_CLIENT_SECRET__",
+            "redirectUris": [],
+            "webOrigins": [],
+            "publicClient": false,
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "authorizationServicesEnabled": false,
+            "frontchannelLogout": false,
+            "protocol": "openid-connect",
+            "fullScopeAllowed": true
+        }
+    ]
+}

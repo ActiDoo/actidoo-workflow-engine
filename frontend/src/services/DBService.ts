@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 export interface StoredFormData {
   taskId: string; // Unique task identifier
   formData: Record<string, any>; // Dynamic form data

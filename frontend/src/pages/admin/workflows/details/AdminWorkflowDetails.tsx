@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState } from 'react';
 import '@/pages/admin/workflows/details/AdminWorkflowDetails.scss';
 import { PcDynamicPage } from '@/ui5-components';
@@ -14,8 +17,10 @@ import { useSelectUiLoading } from '@/store/ui/selectors';
 import { handleResponse } from '@/services/HelperService';
 import { State } from '@/store';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
+import { useTranslation } from '@/i18n';
 
 const AdminWorkflowDetails: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { workflowId } = useParams();
   const navigate = useNavigate();
@@ -40,8 +45,8 @@ const AdminWorkflowDetails: React.FC = () => {
       dispatch,
       WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE,
       cancelWorkflow?.postResponse,
-      'Workflow successfully canceld',
-      'Task could not be executed. Please try again.',
+      t('admin.cancelWorkflowSuccess'),
+      t('admin.cancelWorkflowError'),
       () => {
         setCancelDialogOpen(false);
         navigate('/admin/all-workflows', { replace: true });
@@ -71,30 +76,30 @@ const AdminWorkflowDetails: React.FC = () => {
         isDialogOpen={cancelDialogOpen}
         setDialogOpen={setCancelDialogOpen}
         isLoading={isLoading}
-        title="Cancel Workflow"
+        title={t('admin.cancelWorkflowTitle')}
         buttons={
           <>
             <Button
               disabled={isLoading}
               design={ButtonDesign.Transparent}
-              tooltip="Abort"
+              tooltip={t('common.actions.abort')}
               onClick={() => {
                 setCancelDialogOpen(false);
               }}>
-              Abort
+              {t('common.actions.abort')}
             </Button>
             <Button
               disabled={isLoading}
               design={ButtonDesign.Negative}
-              tooltip="Cancel Workflow"
+              tooltip={t('admin.cancelWorkflowTitle')}
               onClick={() => {
                 handleCancelWorkflow();
               }}>
-              Cancel Workflow
+              {t('admin.cancelWorkflowTitle')}
             </Button>
           </>
         }>
-        <Text>Do you realy want to cancel this Wokflow?</Text>
+        <Text>{t('admin.cancelWorkflowConfirm')}</Text>
       </WeAlertDialog>
     );
   };
@@ -103,16 +108,18 @@ const AdminWorkflowDetails: React.FC = () => {
     <PcDynamicPage
       id="admin-workflow-details"
       header={{
-        title: 'Workflow details ',
+        title: workflow?.title
+          ? `${t('admin.workflowDetailsTitle')}: ${workflow.title}`
+          : t('admin.workflowDetailsTitle'),
         showBack: true,
         actionSection: (
           <Button
             design={ButtonDesign.Negative}
-            title="Cancel Workflow"
+            title={t('admin.cancelWorkflowTitle')}
             onClick={() => {
               setCancelDialogOpen(true);
             }}>
-            Cancel Workflow
+            {t('admin.cancelWorkflowTitle')}
           </Button>
         ),
       }}

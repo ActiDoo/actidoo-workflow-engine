@@ -1,0 +1,136 @@
+# ----------------------------------------------------------------------
+# 1. SECURITY: define trusted sources (protect against header spoofing)
+# ----------------------------------------------------------------------
+# Defines the IPs that are allowed to send X-Forwarded-* headers.
+# By default we trust private networks (Docker, LAN, VPN).
+geo $realip_remote_addr $is_trusted_source {
+    default       0;
+    # __TRUSTED_SOURCE_START__
+    127.0.0.0/8   1; # Loopback
+    10.0.0.0/8    1; # Private Class A
+    172.16.0.0/12 1; # Private Class B (Docker default)
+    192.168.0.0/16 1; # Private Class C
+    # __TRUSTED_SOURCE_END__
+}
+
+# ----------------------------------------------------------------------
+# 2. SANITIZATION: only trust headers coming from trusted sources
+# ----------------------------------------------------------------------
+
+map $is_trusted_source $safe_x_proto {
+    1       $http_x_forwarded_proto;
+    default ""; # Ignore header when the IP is not trusted
+}
+
+map $is_trusted_source $safe_x_host {
+    1       $http_x_forwarded_host;
+    default "";
+}
+
+map $is_trusted_source $safe_x_port {
+    1       $http_x_forwarded_port;
+    default "";
+}
+
+# ----------------------------------------------------------------------
+# 3. LOGIC: derive the final values (proxy header or local fallback)
+# ----------------------------------------------------------------------
+
+# Protocol: prefer the sanitized header, otherwise fall back to the local scheme
+map $safe_x_proto $final_proto {
+    default $safe_x_proto;
+    ""      $scheme;
+}
+
+# Port: prefer the sanitized header, otherwise use the local server port
+map $safe_x_port $final_port {
+    default $safe_x_port;
+    ""      $server_port;
+}
+
+# Hostname (without port): prefer the sanitized header, otherwise rely on $host
+map $safe_x_host $final_host_name {
+    default $safe_x_host;
+    ""      $host;
+}
+
+# Generate the port suffix: append ":8080" unless we are on a default port (80/443)
+map $final_port $port_suffix {
+    80      "";
+    443     "";
+    default ":$final_port";
+}
+
+# ----------------------------------------------------------------------
+# 4. GLOBAL SETTINGS
+# ----------------------------------------------------------------------
+
+# Trust upstream reverse proxies for client IP resolution
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+
+# __REAL_IP_FROM_START__
+set_real_ip_from 127.0.0.1/8;
+set_real_ip_from 10.0.0.0/8;
+set_real_ip_from 172.16.0.0/12;
+set_real_ip_from 192.168.0.0/16;
+# __REAL_IP_FROM_END__
+
+server {
+    listen 8080;
+    listen [::]:8080;
+    server_name _;
+
+    # Logs
+    access_log /dev/stdout combined;
+    error_log /dev/stderr warn;
+
+    # Gzip
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # Important for Docker: do not let nginx generate absolute redirects (http://localhost:8080/...)
+    absolute_redirect off;
+
+    # ------------------------------------------------------------------
+    # BACKEND API
+    # ------------------------------------------------------------------
+    location /__WFE_API__/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        
+        # Important: clear the Connection header to keep the backend connection alive
+        proxy_set_header Connection "";
+
+        # --- HOST HEADER CONSTRUCTION ---
+        # Compose "example.com:8080" so the backend always receives domain:port.
+        proxy_set_header X-Forwarded-Host  $final_host_name$port_suffix;
+        proxy_set_header Host              $final_host_name$port_suffix;
+
+        # Standard forwarding headers using the sanitized values
+        proxy_set_header X-Forwarded-Proto $final_proto;
+        proxy_set_header X-Forwarded-Port  $final_port;
+        
+        # Forward the client IP (real_ip already populated $remote_addr)
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        
+        access_log off;
+    }
+
+    # ------------------------------------------------------------------
+    # FRONTEND
+    # ------------------------------------------------------------------
+
+    # __FALLBACK_START__
+    location = / {
+        return 302 /__WFE_FRONTEND__/;
+    }
+    # __FALBACK_END__
+
+    location ^~ /__WFE_FRONTEND__/ {
+        alias /srv/frontend/;
+        try_files $uri $uri/ /__WFE_FRONTEND__/index.html;
+        access_log off;
+    }
+}

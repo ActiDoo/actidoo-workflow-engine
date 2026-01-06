@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 /**
  * Holds abstractions to keep the boilerplate code low for data fetching:
  * Normally you have to handle each new request/response and its payload separately and you would have to write separate actions, sagas, reducers and selectors.

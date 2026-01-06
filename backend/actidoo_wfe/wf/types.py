@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import dataclasses
 import datetime
 import uuid
@@ -18,6 +21,7 @@ class UserRepresentation(BaseModel):
     roles: set[str]
     is_service_user: bool
     locale: str = Field(default=settings.default_locale)
+    claims: dict[str, Any] = Field(default_factory=dict)
     
     def is_same(self, other: Optional["UserRepresentation"]) -> bool:
         return other is not None and other.id == self.id

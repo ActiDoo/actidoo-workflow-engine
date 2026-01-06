@@ -1,10 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import time
 import uuid
 
 import pytest
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.helpers.tests import wait_for_results
+from actidoo_wfe.testing.utils import wait_for_results
 from actidoo_wfe.wf import events
 
 

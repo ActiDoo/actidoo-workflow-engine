@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myworkflows"
+version = "0.1.0"
+description = "Private workflow bundle for the Actidoo Workflow Engine."
+requires-python = ">=3.10"
+dependencies = ["actidoo-wfe"]
+
+[project.entry-points."actidoo_wfe.venusian_scan"]
+myworkflows = "myworkflows"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = { find = { where = ["src"] } }
+include-package-data = true
+
+[tool.setuptools.package-data]
+"myworkflows" = [
+    "workflows/**/*.bpmn",
+    "workflows/**/*.json",
+    "workflows/**/*.form"
+]

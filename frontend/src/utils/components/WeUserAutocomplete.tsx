@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useRef } from 'react';
 import { Input, InputDomRef, SuggestionItem, Ui5CustomEvent } from '@ui5/webcomponents-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -6,6 +9,7 @@ import { postRequest } from '@/store/generic-data/actions';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { State } from '@/store';
 import { InputSuggestionItemSelectEventDetail } from '@ui5/webcomponents/dist/Input';
+import { useTranslation } from '@/i18n';
 
 interface AdminUserAutocompleteProps {
   initialLabel?: string;
@@ -13,6 +17,7 @@ interface AdminUserAutocompleteProps {
 }
 
 const WeUserAutocomplete: React.FC<AdminUserAutocompleteProps> = props => {
+  const { t } = useTranslation();
   const inputEl = useRef<InputDomRef>(null);
 
   const dispatch = useDispatch();
@@ -39,7 +44,7 @@ const WeUserAutocomplete: React.FC<AdminUserAutocompleteProps> = props => {
       <Input
         className="w-full w-96"
         ref={inputEl}
-        placeholder="Search User"
+        placeholder={t('common.actions.searchUser')}
         value={props.initialLabel ?? ''}
         showSuggestions
         showClearIcon

@@ -36,3 +36,11 @@ yarn-debug.log*
 yarn-error.log*
 
 dist/
+
+# Generated third-party notices (dev server serves from public/)
+/public/licenses/
+/public/THIRD_PARTY_NOTICES.md
+/public/third-party-notices.json
+/public/wfe/licenses/
+/public/wfe/THIRD_PARTY_NOTICES.md
+/public/wfe/third-party-notices.json

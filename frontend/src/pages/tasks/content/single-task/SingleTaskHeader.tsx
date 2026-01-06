@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect } from 'react';
 import {
   Bar,
@@ -24,6 +27,7 @@ import { useSelectCurrentWorkflow } from '@/store/generic-data/selectors';
 import { handleResponse } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
+import { useTranslation } from '@/i18n';
 
 interface TaskItemHeaderProps {
   task: UserTask;
@@ -32,6 +36,7 @@ interface TaskItemHeaderProps {
 }
 
 export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
+  const { t } = useTranslation();
   const { workflowId } = useParams();
   const { task } = props;
   const dispatch = useDispatch();
@@ -62,8 +67,8 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
       dispatch,
       WeDataKey.ASSIGN_TASK_TO_ME,
       assignToMeState?.postResponse,
-      'Successfully assigned task',
-      'Task could not be assigned to you. Please try again',
+      t('singleTaskHeader.assignSuccess'),
+      t('singleTaskHeader.assignError'),
       props.reloadTask,
       props.reloadTask
     );
@@ -74,8 +79,8 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
       dispatch,
       WeDataKey.UNASSIGN_TASK_FROM_ME,
       unassignTaskFromMe?.postResponse,
-      'Successfully unassigned task',
-      'Task could not be unassigned from you. Please try again',
+      t('singleTaskHeader.unassignSuccess'),
+      t('singleTaskHeader.unassignError'),
       props.reloadTask,
       props.reloadTask
     );
@@ -86,8 +91,8 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
       dispatch,
       WeDataKey.CANCEL_WORKFLOW,
       cancelWorkflow?.postResponse,
-      'Successfully cancelled workflow',
-      'Workflow could not be cancelled. Please try again',
+      t('singleTaskHeader.cancelSuccess'),
+      t('singleTaskHeader.cancelError'),
       props.backToList,
       props.reloadTask
     );
@@ -98,8 +103,8 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
       dispatch,
       WeDataKey.DELETE_WORKFLOW,
       deleteWorkflow?.postResponse,
-      'Successfully deleted workflow',
-      'Workflow could not be deleted. Please try again',
+      t('singleTaskHeader.deleteSuccess'),
+      t('singleTaskHeader.deleteError'),
       props.backToList,
       props.reloadTask
     );
@@ -123,10 +128,10 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
           search: createSearchParams(params).toString(),
         });
       } else {
-        dispatch(addToast(<>Could not prepare workflow copy.</>));
+        dispatch(addToast(<>{t('singleTaskHeader.copyFailed')}</>));
       }
     } else {
-      dispatch(addToast(<>Could not copy workflow.</>));
+      dispatch(addToast(<>{t('singleTaskHeader.copyRequestFailed')}</>));
     }
     dispatch(resetStateForKey(WeDataKey.COPY_INSTANCE));
   }, [copyInstance?.postResponse]);
@@ -151,7 +156,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
 
   const handleCopyInstance = (): void => {
     if (!workflowInstance?.id) {
-      dispatch(addToast(<>Missing workflow identifier.</>));
+      dispatch(addToast(<>{t('singleTaskHeader.missingWorkflowId')}</>));
       return;
     }
     dispatch(postRequest(WeDataKey.COPY_INSTANCE, {}, { workflow_instance_id: workflowInstance.id }));
@@ -165,7 +170,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
       </div>
       {!task.assigned_user && (
         <MessageStrip hideCloseButton={true} design={MessageStripDesign.Warning} className="w-auto">
-          Task ist currently not assigned
+          {t('singleTaskHeader.notAssigned')}
         </MessageStrip>
       )}
       {task?.state_completed && task.assigned_to_me ? (
@@ -177,7 +182,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
               handleCopyInstance();
               //alert("The COPY feature is disabled at the moment")
             }}>
-            Start new workflow with this data
+            {t('singleTaskHeader.startNewWorkflowWithData')}
           </Button>
         </BusyIndicator>
       ) : null}
@@ -189,13 +194,13 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
             onClick={() => {
               handleAssignTaskToMe(task.id);
             }}>
-            Assign to me
+            {t('singleTaskHeader.assignToMe')}
           </Button>
         </BusyIndicator>
       ) : (
         <>
           <Text>
-            <span className="text-xs text-neutral-700">Assigned to</span>
+            <span className="text-xs text-neutral-700">{t('singleTaskHeader.assignedTo')}</span>
             <br />
             {task.assigned_user.full_name}
           </Text>
@@ -208,7 +213,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 onClick={() => {
                   handleUnassignTaskFromMe(task.id);
                 }}>
-                Unassign from me
+                {t('singleTaskHeader.unassignFromMe')}
               </Button>
             </BusyIndicator>
           ) : null}
@@ -220,24 +225,41 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 design={ButtonDesign.Transparent}
                 onClick={() => {
                   const { close } = showDialog({
-                    children: (<span>This will cancel the workflow.<br/><br/>All entered data up to this point will remain visible in the My Workflows overview.</span>),
+                    children: (
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: t('singleTaskHeader.cancelWorkflowDialogText'),
+                        }}
+                      />
+                    ),
                     footer: (
                       <Bar
                         startContent={
                           <div>
-                            <Button onClick={() => {close();}}>Close Dialog</Button>                          
+                            <Button
+                              onClick={() => {
+                                close();
+                              }}>
+                              {t('singleTaskHeader.closeDialog')}
+                            </Button>
                           </div>                          
                         }
                         endContent={
                           <div>
-                            <Button onClick={() => {handleCancelWorkflow(task.id);close();}}>Cancel Workflow</Button>
+                            <Button
+                              onClick={() => {
+                                handleCancelWorkflow(task.id);
+                                close();
+                              }}>
+                              {t('singleTaskHeader.cancelWorkflowAction')}
+                            </Button>
                           </div>                          
                         }
                       />
                     ),
                   });
                 }}>
-                Cancel workflow
+                {t('singleTaskHeader.cancelWorkflow')}
               </Button>
             </BusyIndicator>
           ) : null}
@@ -249,24 +271,41 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 design={ButtonDesign.Transparent}
                 onClick={() => {
                   const { close } = showDialog({
-                    children: (<span>This will PERMANENTLY DELETE the workflow.<br/><br/>If you have started this workflow by mistake, you can delete it without any problems.</span>),
+                    children: (
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: t('singleTaskHeader.deleteWorkflowDialogText'),
+                        }}
+                      />
+                    ),
                     footer: (
                       <Bar
                         startContent={
                           <div>
-                            <Button onClick={() => {close();}}>Close Dialog</Button>                          
+                            <Button
+                              onClick={() => {
+                                close();
+                              }}>
+                              {t('singleTaskHeader.closeDialog')}
+                            </Button>
                           </div>                          
                         }
                         endContent={
                           <div>
-                            <Button onClick={() => {handleDeleteWorkflow(task.id);close();}}>Delete Workflow</Button>
+                            <Button
+                              onClick={() => {
+                                handleDeleteWorkflow(task.id);
+                                close();
+                              }}>
+                              {t('singleTaskHeader.deleteWorkflowAction')}
+                            </Button>
                           </div>                          
                         }
                       />
                     ),
                   });
                 }}>
-                Delete workflow
+                {t('singleTaskHeader.deleteWorkflow')}
               </Button>
             </BusyIndicator>
           ) : null}

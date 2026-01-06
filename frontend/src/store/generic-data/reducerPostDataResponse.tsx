@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { GenericPostResponseAction } from '@/ui5-components';
 import { TaskItem, TaskItemResponse } from '@/models/models';
 import { WeDataAction, WeDataKey, WeDataState } from '@/store/generic-data/setup';

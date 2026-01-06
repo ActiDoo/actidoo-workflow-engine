@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import json
 import logging
 import uuid
@@ -7,7 +10,7 @@ import pytest
 import actidoo_wfe.wf.bff.bff_user_schema as bff_user_schema
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf import service_form, service_user, service_i18n
+from actidoo_wfe.wf import repository, service_form, service_user, service_i18n
 from actidoo_wfe.wf.tests.helpers.client import Client
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 from sqlalchemy.exc import StatementError
@@ -258,6 +261,13 @@ def test_update_user_settings_invalid_locale(db_engine_ctx):
                 user_id=user.id,
                 locale="xx-XX",  # invalid # type: ignore
             )
+
+
+def test_supported_locales_fit_db_column():
+    service_i18n.get_supported_locales.cache_clear()
+    locales = service_i18n.get_supported_locales()
+    assert locales  # ensure at least one locale is available
+    assert all(len(loc["key"]) <= service_i18n.MAX_LOCALE_KEY_LENGTH for loc in locales)
 
 @pytest.mark.parametrize(
     "header,expected",

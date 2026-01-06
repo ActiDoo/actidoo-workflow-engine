@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { RJSFSchema } from '@rjsf/utils';
 
 export const fileSchema: RJSFSchema = {

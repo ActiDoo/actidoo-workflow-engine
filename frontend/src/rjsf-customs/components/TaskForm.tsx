@@ -1,5 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React from 'react';
-import { Form } from '@rjsf/bootstrap-4';
+import { Form } from '@rjsf/react-bootstrap';
 import { customizeValidator } from '@rjsf/validator-ajv8';
 import type { RegistryFieldsType, RegistryWidgetsType } from '@rjsf/utils';
 

@@ -1,17 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from importlib import metadata
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Protocol, Sequence, Tuple
 
+import venusian
 from actidoo_wfe.wf.constants import BPMN_DIRECTORY
 
 log = logging.getLogger(__name__)
-
-
-ENTRY_POINT_GROUP = "actidoo_wfe.workflow_providers"
 
 
 class WorkflowProvider(Protocol):
@@ -63,19 +63,22 @@ class FileSystemWorkflowProvider:
 
 @dataclass
 class WorkflowProviderRegistry:
-    """Collects installed workflow providers and resolves workflows."""
+    """Collects installed workflow providers (built-in + venusian-registered) and resolves workflows."""
 
     providers: List[WorkflowProvider] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        self.reload()
+        builtin = FileSystemWorkflowProvider(base_path=BPMN_DIRECTORY)
+        self.providers = self._sort_providers([builtin])
 
     def reload(self) -> None:
-        discovered = self._discover_providers()
+        """Reset to builtin provider set."""
         builtin = FileSystemWorkflowProvider(base_path=BPMN_DIRECTORY)
-        self.providers = self._sort_providers([builtin, *discovered])
+        self.providers = self._sort_providers([builtin])
 
     def register(self, provider: WorkflowProvider, *, prepend: bool = False) -> None:
+        if provider in self.providers:
+            return
         if prepend:
             self.providers.insert(0, provider)
         else:
@@ -122,65 +125,60 @@ class WorkflowProviderRegistry:
                 return provider
         raise FileNotFoundError(f"No workflow named '{workflow_name}' found in registered providers.")
 
-    def _discover_providers(self) -> Sequence[WorkflowProvider]:
-        providers: List[WorkflowProvider] = []
-        try:
-            entry_points = metadata.entry_points()
-        except Exception as error:
-            log.warning("Failed to load workflow provider entry points: %s", error)
-            return providers
-
-        entries: Iterable
-        if hasattr(entry_points, "select"):
-            entries = entry_points.select(group=ENTRY_POINT_GROUP)
-        else:
-            entries = entry_points.get(ENTRY_POINT_GROUP, [])
-
-        for entry_point in entries:
-            try:
-                loaded = entry_point.load()
-            except Exception as error:
-                log.error("Unable to load workflow provider '%s': %s", entry_point.name, error)
-                continue
-
-            provider = self._normalize_provider(loaded, entry_point.name)
-            if provider is not None:
-                providers.append(provider)
-        return providers
-
-    def _normalize_provider(self, candidate, entry_point_name: str) -> Optional[WorkflowProvider]:
-        if isinstance(candidate, WorkflowProviderRegistry):
-            log.error(
-                "Entry point '%s' returned a WorkflowProviderRegistry instead of a provider.",
-                entry_point_name,
-            )
-            return None
-
-        if callable(candidate):
-            try:
-                candidate = candidate()
-            except Exception as error:
-                log.error(
-                    "Calling workflow provider factory '%s' failed: %s",
-                    entry_point_name,
-                    error,
-                )
-                return None
-
-        if all(
-            hasattr(candidate, attr)
-            for attr in ("iter_workflow_names", "get_workflow_directory", "get_module_path")
-        ):
-            return candidate
-
-        log.error("Entry point '%s' did not yield a valid workflow provider.", entry_point_name)
-        return None
-
     def _sort_providers(self, providers: Sequence[WorkflowProvider]) -> List[WorkflowProvider]:
         return sorted(providers, key=lambda provider: getattr(provider, "priority", 0), reverse=True)
 
 
 registry = WorkflowProviderRegistry()
+
+
+def _normalize_provider(candidate, label: str) -> Optional[WorkflowProvider]:
+    obj = candidate
+    if callable(candidate) and not hasattr(candidate, "iter_workflow_names"):
+        try:
+            obj = candidate()
+        except Exception as error:
+            log.error("Calling workflow provider factory '%s' failed: %s", label, error)
+            return None
+
+    if all(
+        hasattr(obj, attr)
+        for attr in ("iter_workflow_names", "get_workflow_directory", "get_module_path")
+    ):
+        return obj
+
+    log.error("Workflow provider '%s' did not yield a valid provider.", label)
+    return None
+
+
+def register_workflow_provider(*, name: str | None = None):
+    """
+    Decorator to register a workflow provider (instance or factory) via venusian scan.
+    Used by engine-internal providers and extensions that mark themselves for scanning.
+    """
+
+    def decorator(candidate):
+        label = name or getattr(candidate, "__name__", str(candidate))
+        provider_instance: WorkflowProvider | None = None
+
+        def resolve():
+            nonlocal provider_instance
+            if provider_instance is None:
+                provider_instance = _normalize_provider(candidate, label)
+            return provider_instance
+
+        def callback(scanner, _name, _ob):
+            provider = resolve()
+            if provider is not None:
+                registry.register(provider)
+
+        venusian.attach(candidate, callback)
+        provider = resolve()
+        if provider is not None:
+            registry.register(provider)
+        return candidate
+
+    return decorator
 
 
 def get_workflow_directory(workflow_name: str) -> Path:

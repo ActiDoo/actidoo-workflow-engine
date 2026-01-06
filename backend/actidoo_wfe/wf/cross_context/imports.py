@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 from actidoo_wfe.auth.cross_context.exports import (
     LoginStateSchema,
     get_login_state,

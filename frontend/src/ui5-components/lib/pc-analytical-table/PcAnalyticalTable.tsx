@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect } from 'react';
 import '@/ui5-components/lib/pc-analytical-table/PcAnalysticalTable.scss';
 import {
@@ -14,6 +17,7 @@ import '@ui5/webcomponents-icons/dist/navigation-right-arrow';
 import ReactPaginate from 'react-paginate';
 import { PcSortItem, StringDict } from '@/ui5-components/models/models';
 import { queryParamToAccessor } from '@/ui5-components/services/PageService';
+import { useTranslation } from '@/i18n';
 
 export interface PhAnalyticalTableProps extends AnalyticalTablePropTypes {
   response?: number;
@@ -27,6 +31,7 @@ export interface PhAnalyticalTableProps extends AnalyticalTablePropTypes {
 }
 
 export const PcAnalyticalTable: React.FC<PhAnalyticalTableProps> = props => {
+  const { t } = useTranslation();
   const {
     response,
     itemsCount,
@@ -59,7 +64,7 @@ export const PcAnalyticalTable: React.FC<PhAnalyticalTableProps> = props => {
   const message =
     response && response !== 200 ? (
       <MessageStrip className="mb-8" design={MessageStripDesign.Negative} hideCloseButton={true}>
-        An error has occurred while loading the table data. Reload the page to try again.
+        {t('table.loadingError')}
       </MessageStrip>
     ) : null;
   const tableRef = React.useRef(null);
@@ -81,7 +86,9 @@ export const PcAnalyticalTable: React.FC<PhAnalyticalTableProps> = props => {
       </div>
       {hasPagination ? (
         <div className="flex items-center justify-between h-16">
-          <Text>Items: {itemsCount}</Text>
+          <Text>
+            {t('table.items')}: {itemsCount}
+          </Text>
           {pageCount > 1 ? (
             <ReactPaginate
               className="pc-pagination"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { useSelector } from 'react-redux';
 import { type State } from '@/store';
 import { Icon, Text, Toast, type ToastDomRef } from '@ui5/webcomponents-react';

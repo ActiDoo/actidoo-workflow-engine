@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { PcTableData } from '@/ui5-components/models/models';
 import { AnalyticalTableColumnDefinition, InputType } from '@ui5/webcomponents-react';
 import { PcAnalyticalTableHeader } from '@/ui5-components/lib/pc-analytical-table/PcAnalyticalTableHeader';

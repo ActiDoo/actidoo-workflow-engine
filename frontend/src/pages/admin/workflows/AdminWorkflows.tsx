@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,8 +18,10 @@ import {
 import { environment } from '@/environment';
 import { adminWorkflowsColumns } from '@/pages/admin/workflows/AdminWorkflowsSettings';
 import { useSelectUiLoading } from '@/store/ui/selectors';
+import { useTranslation } from '@/i18n';
 
 const AdminWorkflows: React.FC = () => {
+  const { t } = useTranslation();
   const key = WeDataKey.ADMIN_ALL_WORKFLOWS;
   const dispatch = useDispatch();
 
@@ -43,12 +48,12 @@ const AdminWorkflows: React.FC = () => {
   return (
     <PcPage
       header={{
-        title: 'Workflows',
+        title: t('admin.workflows'),
         initialSearch: tableData.search,
         searchInput: tableData.onSearch,
       }}>
       <PcAnalyticalTable
-        columns={adminWorkflowsColumns(tableData)}
+        columns={adminWorkflowsColumns(tableData, t)}
         initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
         data={data?.data?.ITEMS ?? []}
         loading={loadingState}

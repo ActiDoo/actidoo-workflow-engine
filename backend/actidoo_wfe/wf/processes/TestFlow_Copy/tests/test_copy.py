@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import base64
 import hashlib
 
@@ -124,7 +127,9 @@ def test_copyWorkflowInstance(db_engine_ctx, mock_send_text_mail):
         assert len(db_task_attachments) == 1
         db_attachment = db_task_attachments[0]
         assert db_attachment.attachment.hash == ATTACHMENT_HASH
-        assert db_attachment.attachment.data == ATTACHMENT_CONTENT
+        assert db_attachment.attachment.file
+        from actidoo_wfe.storage import get_file_content
+        assert get_file_content(db_attachment.attachment.file.file_id) == ATTACHMENT_CONTENT
         assert db_attachment.filename == ATTACHMENT_FILENAME
 
         db_workflow_attachments = repository.find_workflow_instance_attachments_by_worfklow_instance_id(

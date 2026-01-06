@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { WidgetProps } from '@rjsf/utils';
 import React, { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { MultiValue } from 'react-select';

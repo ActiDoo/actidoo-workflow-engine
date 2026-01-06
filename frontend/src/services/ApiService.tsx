@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { environment } from '@/environment';
 import { generateApiUrlWithParams, StringDict } from '@/ui5-components';
 

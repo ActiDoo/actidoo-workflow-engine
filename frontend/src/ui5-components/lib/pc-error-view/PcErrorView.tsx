@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React from 'react';
 
 import {
@@ -8,6 +11,7 @@ import {
 } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-fiori/dist/illustrations/SimpleError.js';
 import '@ui5/webcomponents-fiori/dist/illustrations/Connection.js';
+import { useTranslation } from '@/i18n';
 
 interface ErrorViewProps {
   titleText?: string;
@@ -20,9 +24,10 @@ interface ErrorViewProps {
 }
 
 export const PcErrorView: React.FC<ErrorViewProps> = props => {
+  const { t } = useTranslation();
   const {
-    titleText = 'Page Error',
-    subtitleText = 'An error on the page has occurred. We will try to fix the problem as soon as possible',
+    titleText = t('errorView.defaultTitle'),
+    subtitleText = t('errorView.defaultSubtitle'),
     illustration = IllustrationMessageType.SimpleError,
     showReload = true,
     showHome = true,
@@ -40,7 +45,7 @@ export const PcErrorView: React.FC<ErrorViewProps> = props => {
                 window.location.reload();
               }}
               design={ButtonDesign.Emphasized}>
-              Try Again
+              {t('errorView.tryAgain')}
             </Button>
           )}
           {showHome && (
@@ -49,7 +54,7 @@ export const PcErrorView: React.FC<ErrorViewProps> = props => {
                 window.location.pathname = '';
               }}
               design={ButtonDesign.Emphasized}>
-              Go to start
+              {t('errorView.goHome')}
             </Button>
           )}
           {showLogout && (
@@ -58,7 +63,7 @@ export const PcErrorView: React.FC<ErrorViewProps> = props => {
                 if (onLogout) onLogout();
               }}
               design={ButtonDesign.Emphasized}>
-              Logout
+              {t('errorView.logout')}
             </Button>
           )}
         </div>

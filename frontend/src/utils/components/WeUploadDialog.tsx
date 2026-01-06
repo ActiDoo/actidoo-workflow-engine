@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { BusyIndicator, Dialog, ProgressIndicator, Text } from '@ui5/webcomponents-react';
 import React from 'react';
 import { createPortal } from 'react-dom';

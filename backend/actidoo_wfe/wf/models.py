@@ -1,6 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import datetime
 import uuid
-from typing import List, Literal
+from typing import Any, List, Literal
 
 import sqlalchemy.dialects.mysql as myty
 import sqlalchemy.types as ty
@@ -73,6 +76,7 @@ class WorkflowUser(Base):
         back_populates="assigned_user", foreign_keys="WorkflowInstanceTask.assigned_user_id"
     )
     roles: Mapped[List["WorkflowUserRole"]] = relationship(back_populates="user")
+    claims: Mapped[List["WorkflowUserClaim"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         UTCDateTime(), default=dt_now_naive, nullable=False, index=True
@@ -81,6 +85,19 @@ class WorkflowUser(Base):
     created_workflows: Mapped["WorkflowInstance"] = relationship(
         back_populates="created_by"
     )
+
+class WorkflowUserClaim(Base):
+    __tablename__ = "workflow_user_claims"
+    __table_args__ = (UniqueConstraint("user_id", "claim_key"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workflow_users.id", ondelete="CASCADE"), index=True, nullable=False)
+    claim_key: Mapped[str] = mapped_column(ty.String(255), nullable=False, index=True)
+    claim_value: Mapped[Any | None] = mapped_column(JSONBlob(), nullable=True)
+    source_name: Mapped[str | None] = mapped_column(ty.String(255), nullable=True)
+    fetched_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+    user: Mapped[WorkflowUser] = relationship(back_populates="claims")
 
 
 class WorkflowRole(Base):
@@ -290,8 +307,7 @@ class WorkflowAttachment(Base):
     __tablename__ = "workflow_attachments"
 
     id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
-    data: Mapped[bytes|None] = deferred(mapped_column(myty.LONGBLOB, nullable=True)) # old field, data stored in db
-    file: Mapped[File|None] = mapped_column(FileField, nullable=True) # new field
+    file: Mapped[File|None] = mapped_column(FileField, nullable=True)
     hash: Mapped[str] = mapped_column(
         ty.String(255), nullable=False, index=True, unique=True
     )

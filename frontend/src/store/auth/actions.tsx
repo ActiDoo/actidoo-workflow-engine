@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { LoginState } from '@/models/models';
 import { SimpleActionInput } from '@/ui5-components';
 import { AuthAction, AuthActionType } from '@/store/auth/setup';

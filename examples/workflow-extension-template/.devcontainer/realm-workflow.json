@@ -1,0 +1,119 @@
+{
+  "realm": "workflow",
+  "enabled": true,
+  "registrationAllowed": false,
+  "rememberMe": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "defaultRoles": [
+    "wf-user"
+  ],
+  "attributes": {
+    "frontendUrl": "http://localhost:8005/"
+  },
+  "sslRequired": "NONE",
+  "roles": {
+    "realm": [
+      {
+        "name": "wf-user",
+        "description": "Baseline access to the workflow engine"
+      },
+      {
+        "name": "wf-owner",
+        "description": "Owner role for workflow instances"
+      },
+      {
+        "name": "wf-admin",
+        "description": "Administrative access for the workflow engine"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "workflow-engine",
+      "name": "Workflow Engine (POC)",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "workflow-secret",
+      "rootUrl": "http://localhost:8080",
+      "baseUrl": "http://localhost:8080/",
+      "adminUrl": "http://localhost:8080/",
+      "redirectUris": [
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "wf-user",
+      "email": "wf-user@example.test",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Workflow",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "wf-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "wf-user"
+      ]
+    },
+    {
+      "username": "wf-owner",
+      "email": "wf-owner@example.test",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Workflow",
+      "lastName": "Owner",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "owner-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "wf-user",
+        "wf-owner"
+      ]
+    },
+    {
+      "username": "wf-admin",
+      "email": "wf-admin@example.test",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Workflow",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "wf-user",
+        "wf-admin"
+      ]
+    }
+  ]
+}

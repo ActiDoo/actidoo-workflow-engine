@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React from 'react';
 import { Icon, Input, InputDomRef, InputType } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/nav-back';

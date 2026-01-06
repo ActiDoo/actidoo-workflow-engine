@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 # We are passing roles as permission flags to the frontends
 ROLE_TO_LOGIN_STATE_MAP: dict[str, str] = {
     "can_access_wf": "wf-user",

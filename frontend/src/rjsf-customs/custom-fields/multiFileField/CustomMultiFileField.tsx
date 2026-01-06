@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { WeToastContent } from '@/utils/components/WeToast';
 import { addNameToDataURL, getRandomString } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
@@ -29,7 +32,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
   const [isDragging, handleDragOver, handleDragLeave, handleDrop] = useDragging(onDrop);
   const [fileUploadKey, setFileUploadKey] = useState<string>('');
 
-  const isDisabled = props.readonly || props.disabled;
+  const isDisabled = Boolean(props.readonly || props.disabled);
   const isRequired = props.schema?.minItems ? true : false
 
   const label = (props.schema?.title ? props.schema?.title : "File Upload") + (isRequired ? "*" : "")
@@ -93,14 +96,14 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
     )
       .then(results => {
         const nonNullResults: PcFile[] = results.filter(x => x !== null) as PcFile[];
-        onChange([...(files ?? []), ...nonNullResults]);
+        onChange([...(files ?? []), ...nonNullResults], []);
         setFileUploadKey(getRandomString());
       })
       .catch(() => { });
   };
   const removeFile = (file: PcFile): void => {
     if (files) {
-      onChange(_.remove(files, current => current.filename !== file.filename));
+      onChange(_.remove(files, current => current.filename !== file.filename), []);
     }
   };
 
@@ -117,7 +120,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
     files.length == 1 &&
     !(files[0].datauri || files[0].filename || files[0].hash || files[0].id || files[0].mimetype)
   ) {
-    console.log(`files undefined: ${props.idSchema.$id}`)
+    console.log(`files undefined: ${props.id}`)
     //remove it async, after rendering, to avoid warnings
     setTimeout(() => {
       removeFile(files[0])

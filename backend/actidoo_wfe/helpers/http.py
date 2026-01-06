@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import typing
 import unicodedata
 import urllib.parse
@@ -59,7 +62,7 @@ class HTTPSession(object):
         self.response_hook: Optional[Callable] = response_hook
 
     def __enter__(self):
-        from actidoo_wfe.helpers.tests import in_test
+        from actidoo_wfe.testing.utils import in_test
 
         if in_test() and self.testclient_fastapi_app is not None:
             self.http_client = TestClient(self.testclient_fastapi_app)

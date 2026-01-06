@@ -1,10 +1,15 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { Suspense } from 'react';
 
 import { PcDetailsPage } from '@/ui5-components';
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
 import { Outlet, useNavigate } from 'react-router-dom';
+import { useTranslation } from '@/i18n';
 
 const MyWorkflows: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const path = window.location.pathname;
   const selectedTab = path.includes('completed') ? 'completed' : 'progress';
@@ -13,7 +18,7 @@ const MyWorkflows: React.FC = () => {
     <PcDetailsPage
       mode={ObjectPageMode.IconTabBar}
       header={{
-        title: 'My Workflows',
+        title: t('myWorkflows.title'),
       }}
       selectedSectionId={selectedTab}
       onSelectedSectionChange={event => {
@@ -21,18 +26,18 @@ const MyWorkflows: React.FC = () => {
       }}>
       <ObjectPageSection
         className=" mt-8"
-        aria-label="In progress"
+        aria-label={t('myWorkflows.inProgress')}
         id="progress"
-        titleText="In progress">
+        titleText={t('myWorkflows.inProgress')}>
         <Suspense>
           <Outlet />
         </Suspense>
       </ObjectPageSection>
       <ObjectPageSection
         className=" mt-8"
-        aria-label="Completed"
+        aria-label={t('myWorkflows.completed')}
         id="completed"
-        titleText="Completed">
+        titleText={t('myWorkflows.completed')}>
         <Suspense>
           <Outlet />
         </Suspense>

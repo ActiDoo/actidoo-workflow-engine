@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 
 import copy
 import gettext
@@ -284,6 +287,9 @@ def compile_all():
                 write_mo(f, flat_catalog)
 
 
+MAX_LOCALE_KEY_LENGTH = 10  # workflow_users.locale column length
+
+
 @cache
 def get_supported_locales() -> List[dict[str, str]]:
     """
@@ -293,8 +299,11 @@ def get_supported_locales() -> List[dict[str, str]]:
     Skip any codes that don’t parse or map to a known language/country.
     """
     entries: List[dict[str, str]] = []
+    seen_keys: set[str] = set()
     for code in localedata.locale_identifiers():
         hyphenated = code.replace('_', '-')
+        if len(hyphenated) > MAX_LOCALE_KEY_LENGTH:
+            continue
         try:
             loc = BabelLocale.parse(code)
         except (ValueError, LookupError):
@@ -328,7 +337,11 @@ def get_supported_locales() -> List[dict[str, str]]:
         else:
             label = label_parts[0]
 
+        if hyphenated in seen_keys:
+            continue
+
         entries.append({'key': hyphenated, 'label': label})
+        seen_keys.add(hyphenated)
 
     # Sort alphabetically by label
     entries.sort(key=lambda x: x['label'])

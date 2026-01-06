@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """
     This module implements the application services (services which must be used by the APIs).
 """
@@ -441,6 +444,7 @@ def get_usertasks_for_user_id(
     usertasks = service_workflow.get_usertasks_for_user(
         workflow=workflow, user=user, state=state
     )
+
     usertasks = [_enrich_UserTaskRepresentationWithNestedAssignedUser(db=db, usertask=ut) for ut in usertasks]
     usertasks = [_translate_UserTaskRepresentationForms(db=db, workflow_name=workflow.spec.name, usertask=ut, locale=user.locale) for ut in usertasks]
 
@@ -663,6 +667,7 @@ def search_property_options(
 
     options.sort(key=lambda x: x[1]) # sort according to the label
     if (('new', '- New -')) in options:
+        # Workaround to always have the 'New' option at the top
         index_to_move = options.index(('new', '- New -'))
         element = options.pop(index_to_move)
         options.insert(0, element)
@@ -787,12 +792,14 @@ def find_attachment_by_hash(db: Session, workflow_instance_id: uuid.UUID, hash: 
     )
     if att is None:
         raise AttachmentNotFoundException()
+    if not att.attachment.file:
+        raise RuntimeError(f"Attachment content missing for hash={hash}")
     return Attachment(
         id=att.id,
         hash=att.attachment.hash,
         filename=att.attachment.first_filename,
         mimetype=att.attachment.mimetype,
-        data=get_file_content(att.attachment.file.file_id) if att.attachment.file else att.attachment.data,
+        data=get_file_content(att.attachment.file.file_id),
     )
 
 
@@ -800,16 +807,20 @@ def find_all_workflow_attachments(db: Session, workflow_instance_id: uuid.UUID):
     attachments = repository.find_task_attachments_by_worfklow_instance_id(
         db=db, workflow_instance_id=workflow_instance_id
     )
-    return [
-        Attachment(
-            id=att.id,
-            hash=att.attachment.hash,
-            filename=att.attachment.first_filename,
-            mimetype=att.attachment.mimetype,
-            data=get_file_content(att.attachment.file.file_id) if att.attachment.file else att.attachment.data,
+    result: list[Attachment] = []
+    for att in attachments:
+        if not att.attachment.file:
+            raise RuntimeError(f"Attachment content missing for hash={att.attachment.hash}")
+        result.append(
+            Attachment(
+                id=att.id,
+                hash=att.attachment.hash,
+                filename=att.attachment.first_filename,
+                mimetype=att.attachment.mimetype,
+                data=get_file_content(att.attachment.file.file_id),
+            )
         )
-        for att in attachments
-    ]
+    return result
 
 
 def verify_assigned_user_and_download_attachment(
@@ -838,13 +849,15 @@ def download_attachment(
     )
     if att is None:
         raise AttachmentNotFoundException()
+    if not att.attachment.file:
+        raise RuntimeError(f"Attachment content missing for hash={hash}")
 
     return Attachment(
         id=att.id,
         hash=att.attachment.hash,
         filename=att.attachment.first_filename,
         mimetype=att.attachment.mimetype,
-        data=get_file_content(att.attachment.file.file_id) if att.attachment.file else att.attachment.data,
+        data=get_file_content(att.attachment.file.file_id),
     )
 
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState } from 'react';
 import '@/pages/tasks/Tasks.scss';
 import { PcArrowLink, PcPage } from '@/ui5-components';
@@ -11,8 +14,10 @@ import { createCountforWFs } from './utils/formatWfs';
 import { filterWorkflows, mergeByTitle } from './utils/workflowUtils';
 import Graph, { Workflow } from './utils/Graph';
 import { DateSelection } from './utils/Datepicker';
+import { useTranslation } from '@/i18n';
 
 const Statistics: React.FC = () => {
+  const { t } = useTranslation();
   const key = WeDataKey.WORKFLOW_STATISTICS;
   const dispatch = useDispatch();
 
@@ -36,7 +41,7 @@ const Statistics: React.FC = () => {
   return (
     <PcPage
       header={{
-        title: 'Workflow Statistics'
+        title: t('statistics.title')
       }}>
       <Graph workflows={graph_data} startSetter={setStartDate} endSetter={setEndDate} startDate={startDate} endDate={endDate} />
 
@@ -44,30 +49,30 @@ const Statistics: React.FC = () => {
         className='mb-4'
         columns={[
           {
-            Header: 'Title',
+            Header: t('common.labels.title'),
             accessor: 'title'
           },
           {
-            Header: 'Active instances',
+            Header: t('statistics.activeInstances'),
             accessor: 'active_instances'
           },
           {
-            Header: 'Completed Instances',
+            Header: t('statistics.completedInstances'),
             accessor: 'completed_instances',
           },
           {
-            Header: 'Estimated instances per year',
+            Header: t('statistics.estimatedInstancesPerYear'),
             accessor: 'estimated_instances_per_year'
           },
           {
-            Header: 'Estimated savings per year [h]',
+            Header: t('statistics.estimatedSavingsPerYear'),
             accessor: 'estimated_savings_per_year'
           }
         ]}
         minRows={1}
         data={[
           {
-            title: 'Sum for all workflows listed below',
+            title: t('statistics.sumForAll'),
             active_instances: (data?.data?.workflows || []).reduce(
               (sum, item) => sum + item.active_instances,
               0
@@ -92,27 +97,27 @@ const Statistics: React.FC = () => {
       <AnalyticalTable
         columns={[
           {
-            Header: 'Title',
+            Header: t('common.labels.title'),
             accessor: 'title'
           },
           {
-            Header: 'Active instances',
+            Header: t('statistics.activeInstances'),
             accessor: 'active_instances'
           },
           {
-            Header: 'Completed Instances',
+            Header: t('statistics.completedInstances'),
             accessor: 'completed_instances',
           },
           {
-            Header: 'Estimated average savings per instance [min]',
+            Header: t('statistics.estimatedSavingsPerInstance'),
             accessor: 'estimated_saved_mins_per_instance'
           },
           {
-            Header: 'Estimated instances per year',
+            Header: t('statistics.estimatedInstancesPerYear'),
             accessor: 'estimated_instances_per_year'
           },
           {
-            Header: 'Estimated savings per year [h]',
+            Header: t('statistics.estimatedSavingsPerYear'),
             accessor: 'estimated_savings_per_year'
           },
           {

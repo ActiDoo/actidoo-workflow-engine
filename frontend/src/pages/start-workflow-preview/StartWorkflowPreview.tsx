@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useMemo } from 'react';
 import {
   BusyIndicator,
@@ -22,8 +25,10 @@ import { State } from '@/store';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
+import { useTranslation } from '@/i18n';
 
 const StartWorkflowPreview: React.FC = () => {
+  const { t } = useTranslation();
   const { search } = useLocation();
   const dispatch = useDispatch();
 
@@ -72,7 +77,7 @@ const StartWorkflowPreview: React.FC = () => {
       previewState?.postResponse &&
       previewState.postResponse !== 200
     ) {
-      dispatch(addToast(<WeToastContent type="error" text="Could not load workflow preview" />));
+      dispatch(addToast(<WeToastContent type="error" text={t('workflowPreview.loadError')} />));
     }
   }, [previewState?.postResponse, dispatch]);
 
@@ -114,7 +119,7 @@ const StartWorkflowPreview: React.FC = () => {
           <Text>{previewWorkflowTitle}</Text>
           <Title level={TitleLevel.H3}>{previewTask?.title ?? ''}</Title>
           <MessageStrip design={MessageStripDesign.Information} hideCloseButton={true}>
-            This is a read-only preview. You can edit the fields before submitting the data, after you have clicked the button at the bottom.
+            {t('workflowPreview.previewInfo')}
           </MessageStrip>
         </div>
       </div>
@@ -122,7 +127,7 @@ const StartWorkflowPreview: React.FC = () => {
       {parseError ? (
         <div className="mt-2">
           <MessageStrip design={MessageStripDesign.Negative} hideCloseButton={true}>
-            The provided workflow data could not be parsed.
+            {t('workflowPreview.parseError')}
           </MessageStrip>
         </div>
       ) : null}
@@ -149,7 +154,7 @@ const StartWorkflowPreview: React.FC = () => {
 
           <div className="mt-16 flex flex-row justify-end">
             <MessageStrip className="max-w-4xl" design={MessageStripDesign.Information} hideCloseButton={true}>
-              Starting the workflow will not submit the form. You can edit the data after starting the worklow, before you submit the form.
+              {t('workflowPreview.startInfo')}
             </MessageStrip>
           </div>
 
@@ -160,7 +165,7 @@ const StartWorkflowPreview: React.FC = () => {
                 design={ButtonDesign.Emphasized}
                 disabled={startLoading || cannotStartWorkflow}
                 onClick={handleStartWorkflow}>
-                Start Workflow with this data
+                {t('workflowPreview.startWithData')}
               </Button>
             </BusyIndicator>
           </div>
@@ -168,7 +173,7 @@ const StartWorkflowPreview: React.FC = () => {
       ) : (
         <div className="mt-6">
           <MessageStrip design={MessageStripDesign.Negative} hideCloseButton={true}>
-            Workflow preview data is not available.
+            {t('workflowPreview.unavailable')}
           </MessageStrip>
         </div>
       )}

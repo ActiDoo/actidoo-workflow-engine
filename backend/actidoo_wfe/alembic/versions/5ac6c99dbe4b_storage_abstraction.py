@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """storage abstraction
 
 Revision ID: 5ac6c99dbe4b

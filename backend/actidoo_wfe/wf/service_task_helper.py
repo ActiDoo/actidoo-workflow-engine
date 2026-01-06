@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 """
 This module defined a "helper" class which is passed to all script tasks.
 Script tasks are defined next to the .bpmn files.
@@ -22,6 +25,7 @@ import actidoo_wfe.helpers.mail as mail_helpers
 from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.helpers.datauri import DataURI
 from actidoo_wfe.helpers.string import get_boxed_text
+from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import repository
 from actidoo_wfe.wf.constants import (
     DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE,
@@ -222,12 +226,14 @@ class ServiceTaskHelper:
         )
         if att is None:
             raise AttachmentNotFoundException()
+        if not att.attachment.file:
+            raise RuntimeError(f"Attachment content missing for hash={hash}")
         return Attachment(
             id=att.id,
             hash=att.attachment.hash,
             filename=att.attachment.first_filename,
             mimetype=att.attachment.mimetype,
-            data=att.attachment.data,
+            data=get_file_content(att.attachment.file.file_id),
         )
 
     def set_workflow_instance_subtitle(self, subtitle):
@@ -457,6 +463,5 @@ class ServiceTaskHelper:
         )
 
     
-
 
 

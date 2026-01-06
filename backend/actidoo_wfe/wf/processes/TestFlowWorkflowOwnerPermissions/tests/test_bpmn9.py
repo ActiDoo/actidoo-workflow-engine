@@ -1,7 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import pytest
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.helpers.tests import wait_for_results
+from actidoo_wfe.testing.utils import wait_for_results
 from actidoo_wfe.wf import repository, service_application, service_workflow
 from actidoo_wfe.wf.bff import bff_admin
 from actidoo_wfe.wf.exceptions import UserMayNotAdministrateThisWorkflowException

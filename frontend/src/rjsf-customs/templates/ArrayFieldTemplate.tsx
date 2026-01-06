@@ -1,5 +1,8 @@
-import React, { ReactElement, useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom'
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
+import React, { ReactElement, useEffect, useMemo, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom'
 import {
   Bar,
   Button,
@@ -13,14 +16,15 @@ import {
 } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/duplicate';
 import {
-  ArrayFieldTemplateItemType,
   ArrayFieldTemplateProps,
   FormContextType,
-  getTemplate,
   getUiOptions,
   RJSFSchema,
   StrictRJSFSchema,
 } from '@rjsf/utils';
+import { fetchPost } from '@/ui5-components';
+import { getApiUrl } from '@/services/ApiService';
+import { PcValueLabelItem } from '@/models/models';
 
 export default function CustomArrayFieldTemplate<
   T = any,
@@ -34,14 +38,37 @@ export default function CustomArrayFieldTemplate<
   const uiOptions = getUiOptions<T, S, F>(props.uiSchema);
 
   const location = useLocation()
+  const { taskId } = useParams();
+  const [dynamicSelectLabels, setDynamicSelectLabels] = useState<Record<string, Record<string, string>>>({});
+  const itemUiSchema = (props.uiSchema as any)?.items;
+  const dynamicSelectConfigs = useMemo<Record<string, any>>(() => {
+    if (!itemUiSchema || typeof itemUiSchema !== 'object') {
+      return {};
+    }
+
+    return Object.entries(itemUiSchema).reduce((acc, [key, config]) => {
+      if (
+        config &&
+        typeof config === 'object' &&
+        (config as Record<string, unknown>)['ui:widget'] &&
+        ['SelectDynamic', 'MultiSelectDynamic'].includes(
+          (config as Record<string, unknown>)['ui:widget'] as string
+        )
+      ) {
+        acc[key] = config;
+      }
+      return acc;
+    }, {} as Record<string, any>);
+  }, [itemUiSchema]);
 
   useEffect(() => {
     // DURING THE FIRST RENDER -> ADD THE MINIMUM ITEMS, WHICH SHALL BE VISIBLE
     
     //check our uischema expectation and only do it on the open tasks page (not later on, when the workflow is completed)
-    if (uiOptions && uiOptions["defaultRepetitions"] && location?.pathname?.includes('/tasks/open/')) {
+    const defaultRepetitionsRaw = uiOptions?.["defaultRepetitions"];
+    const defaultRepetitions = typeof defaultRepetitionsRaw === 'number' ? defaultRepetitionsRaw : 0;
 
-      if (uiOptions["defaultRepetitions"] > 0) {
+    if (defaultRepetitions > 0 && location?.pathname?.includes('/tasks/open/')) {
         // uiOptions["defaultRepetitions"] -> the initial number of displayed items in a dynamic list as the user configured it
         // props.schema.minItems -> the minimum number of items the user has to submit
         // props.items -> the actual display items how RJSF calculated it (unfortunately based on props.schema.minItems)
@@ -52,10 +79,8 @@ export default function CustomArrayFieldTemplate<
         // deleted by the user, because he does NOT HAVE to submit it.
         // In this case we now insert the missing number of items:
 
-        if (!props.items) //in the tests there was always at least an empty array, but just in case let's catch the non-existence
-          props.items = []
-
-        for (let i = 0; i < (uiOptions["defaultRepetitions"] as number - props.items.length); i++) { // add as many items as needed.
+        const currentItems = props.items?.length ?? 0;
+        for (let i = 0; i < (defaultRepetitions - currentItems); i++) { // add as many items as needed.
           // Fake the adding by simulating an ADD click, because ArrayField.tsx from RJSF will take care of it
           // (no need to reimplement the code)
           // I insert a Dummy MouseEvent although an undefined is also handled by the code,
@@ -71,10 +96,82 @@ export default function CustomArrayFieldTemplate<
 
           //console.log("############# ADD")
         }
-
-      }
     }
   }, []);
+
+  const extractUniqueValues = (dataArray: any[], key: string): string[] => {
+    const values = new Set<string>();
+
+    dataArray?.forEach(item => {
+      const value = item?.[key];
+
+      if (Array.isArray(value)) {
+        value.forEach(v => {
+          if (v !== undefined && v !== null) {
+            values.add(String(v));
+          }
+        });
+      } else if (value !== undefined && value !== null) {
+        values.add(String(value));
+      }
+    });
+
+    return Array.from(values);
+  };
+
+  useEffect(() => {
+    let isActive = true;
+
+    const fetchDynamicLabels = async () => {
+      if (!Object.keys(dynamicSelectConfigs).length) {
+        setDynamicSelectLabels({});
+        return;
+      }
+
+      const dataArray = Array.isArray(props.formData) ? props.formData : [];
+      const nextLabels: Record<string, Record<string, string>> = {};
+
+      await Promise.all(
+        Object.entries(dynamicSelectConfigs).map(async ([fieldKey, fieldUiSchema]) => {
+          nextLabels[fieldKey] = {};
+          const propertyPath = (fieldUiSchema as Record<string, any>)['ui:path'];
+          const values = extractUniqueValues(dataArray, fieldKey);
+
+          if (!taskId || !propertyPath || !values.length) {
+            return;
+          }
+
+          try {
+            const response = await fetchPost(getApiUrl('user/search_property_options'), {
+              task_id: taskId,
+              property_path: propertyPath,
+              search: '',
+              include_value: values.length === 1 ? values[0] : values,
+              form_data: (props.registry as any)?.formContext?.formData,
+            });
+
+            const options = (response?.data?.options ?? []) as PcValueLabelItem[];
+
+            options.forEach(option => {
+              nextLabels[fieldKey][String(option.value)] = `${option.label} (ID: ${option.value})`;
+            });
+          } catch (error) {
+            console.error('Failed to fetch dynamic select labels for overview', error);
+          }
+        })
+      );
+
+      if (isActive) {
+        setDynamicSelectLabels(nextLabels);
+      }
+    };
+
+    fetchDynamicLabels();
+
+    return () => {
+      isActive = false;
+    };
+  }, [props.formData, dynamicSelectConfigs, taskId, (props.registry as any)?.formContext?.formData]);
 
   //console.log(props.items.length)
   const showDialog = Modals.useShowDialog();
@@ -82,87 +179,113 @@ export default function CustomArrayFieldTemplate<
     properties: Record<string, { title: string }>;
   };
 
-  const ArrayFieldItemTemplate = getTemplate<'ArrayFieldItemTemplate', T, S, F>(
-    'ArrayFieldItemTemplate',
-    props.registry,
-    uiOptions
-  );
+  const getDynamicValueLabel = (fieldKey: string, value: unknown): string | null => {
+    if (!dynamicSelectConfigs[fieldKey]) {
+      return null;
+    }
 
-  
-const renderTable = (items: any, dataArray: any[]): JSX.Element => {
-  const tableColumns = items?.properties 
-    ? Object.keys(items.properties).map((key, index) => (
-        <TableColumn key={`column-${index}`}>
-          <Label>{items.properties[key].title}</Label>
-        </TableColumn>
-      )) 
-    : null;
+    const mapping = dynamicSelectLabels[fieldKey];
+    if (!mapping) {
+      return null;
+    }
 
-  const isPdfArray = (val: any) => {
-    return Array.isArray(val) && val.length > 0 && val.some(item => item.filename && item.filename.includes('.pdf'));
+    if (Array.isArray(value)) {
+      const labels = value
+        .map(v => (v !== undefined && v !== null ? mapping[String(v)] : null))
+        .filter((v): v is string => Boolean(v));
+
+      if (!labels.length) {
+        return null;
+      }
+
+      return labels.join(', ');
+    }
+
+    const mapped = mapping[String(value)];
+    return mapped || null;
   };
 
-  const tableRows = dataArray?.map((data, rowIndex) => (
-    <TableRow key={`row-${rowIndex}`}>
-      {Object.keys(items.properties).map((key) => {
-        let val = data[key];
+  const renderTable = (items: any, dataArray: any[]): JSX.Element => {
+    const tableColumns = items?.properties
+      ? Object.keys(items.properties).map((key, index) => (
+          <TableColumn key={`column-${index}`}>
+            <Label>{items.properties[key].title}</Label>
+          </TableColumn>
+        ))
+      : null;
 
-        const property = items.properties[key];
-        if (property?.oneOf) {
-          const match = property.oneOf.find((o: any) => o.const === val);
-          if (match) val = match.title;
-        }
+    const isPdfArray = (val: any) => {
+      return (
+        Array.isArray(val) &&
+        val.length > 0 &&
+        val.some(item => item.filename && item.filename.includes('.pdf'))
+      );
+    };
 
-        // Check if the value is an array containing PDFs
-        if (isPdfArray(val)) {
+    const tableRows = dataArray?.map((data, rowIndex) => (
+      <TableRow key={`row-${rowIndex}`}>
+        {Object.keys(items.properties).map((key) => {
+          let val = data[key];
+
+          const property = items.properties[key];
+          if (property?.oneOf) {
+            const match = property.oneOf.find((o: any) => o.const === val);
+            if (match) val = match.title;
+          }
+
+          const dynamicLabel = getDynamicValueLabel(key, val);
+          if (dynamicLabel) {
+            return (
+              <TableCell key={`cell-${rowIndex}-${key}`}>
+                <Label>{dynamicLabel}</Label>
+              </TableCell>
+            );
+          }
+
+          // Check if the value is an array containing PDFs
+          if (isPdfArray(val)) {
+            return (
+              <TableCell key={`cell-${rowIndex}-${key}`}>
+                {val.map((file: any, index: number) => (
+                  <div key={index}>{file.filename}</div> // Display only the filename
+                ))}
+              </TableCell>
+            );
+          }
+
+          // General check for boolean properties
+          if (typeof val === 'boolean') {
+            return (
+              <TableCell key={`cell-${rowIndex}-${key}`}>
+                <Label>{val ? "Yes" : "No"}</Label> {/* Display "Yes" or "No" based on boolean value */}
+              </TableCell>
+            );
+          }
+
+          // Handle nested arrays recursively
+          if (property?.type === "array" && Array.isArray(val)) {
+            return (
+              <TableCell key={`cell-${rowIndex}-${key}`}>
+                {renderTable(property.items, val)} 
+              </TableCell>
+            );
+          }
+
           return (
             <TableCell key={`cell-${rowIndex}-${key}`}>
-              {val.map((file: any, index: number) => (
-                <div key={index}>{file.filename}</div> // Display only the filename
-              ))}
+              <Label>{val}</Label>
             </TableCell>
           );
-        }
+        })}
+      </TableRow>
+    ));
 
-        // General check for boolean properties
-        if (typeof val === 'boolean') {
-          return (
-            <TableCell key={`cell-${rowIndex}-${key}`}>
-              <Label>{val ? "Yes" : "No"}</Label> {/* Display "Yes" or "No" based on boolean value */}
-            </TableCell>
-          );
-        }
+    return <Table columns={<>{tableColumns}</>}>{tableRows}</Table>;
+  };
 
-        // Handle nested arrays recursively
-        if (property?.type === "array" && Array.isArray(val)) {
-          return (
-            <TableCell key={`cell-${rowIndex}-${key}`}>
-              {renderTable(property.items, val)} 
-            </TableCell>
-          );
-        }
+  const reviewContent = renderTable(items, props.formData as any[]);
 
-        return (
-          <TableCell key={`cell-${rowIndex}-${key}`}>
-            <Label>{val}</Label>
-          </TableCell>
-        );
-      })}
-    </TableRow>
-  ));
-
-  return <Table columns={<>{tableColumns}</>}>{tableRows}</Table>;
-};
-
-const reviewContent = renderTable(items, props.formData as any[]);
-
-//Temporary measure to provide a fallback  if old workflows dont provide the value. 
-//Reevaluate its necessity whenever you see this code
-  if (typeof uiOptions.arrayAllowAddRemove === 'undefined') {
-      uiOptions.arrayAllowAddRemove = "True";
-  }
-
-  console.log("Array", String(uiOptions.arrayAllowAddRemove))
+  const allowAddRemove = String((uiOptions as any)?.arrayAllowAddRemove ?? 'True') === 'True';
 
   return (
     <div>
@@ -171,14 +294,7 @@ const reviewContent = renderTable(items, props.formData as any[]);
       {/* The above out-commented stuff gives a nice background instead of a border*/}
       <div className={props.className + " relative border-[2px] border-neutral-200 border-solid rounded "}>
         {
-        props.items?.map(({ key, ...itemProps }: ArrayFieldTemplateItemType<T, S, F>) => (
-          <ArrayFieldItemTemplate key={key} {...itemProps} 
-            hasRemove={String(uiOptions.arrayAllowAddRemove) === "True"}
-            hasCopy={String(uiOptions.arrayAllowAddRemove) === "True"}
-            hasMoveDown={itemProps.hasMoveDown && String(uiOptions.arrayAllowAddRemove) === "True"}
-            hasMoveUp={itemProps.hasMoveUp && String(uiOptions.arrayAllowAddRemove) === "True"}
-          />
-        ))
+        props.items
         }
         <div className="flex gap-4 m-4 ">
           {props.items.length > 0 ? (
@@ -204,7 +320,7 @@ const reviewContent = renderTable(items, props.formData as any[]);
               {uiOptions.arrayOverviewButtonText ? (uiOptions.arrayOverviewButtonText as string) : 'Overview'}
             </Button>
           ) : null}
-          {props.canAdd && String(uiOptions.arrayAllowAddRemove) === "True" && (
+          {props.canAdd && allowAddRemove && (
             <Button
               design={ButtonDesign.Emphasized}
               onClick={props.onAddClick}

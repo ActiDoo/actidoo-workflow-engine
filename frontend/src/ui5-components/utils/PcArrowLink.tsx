@@ -1,7 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { Icon } from '@ui5/webcomponents-react';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import '@ui5/webcomponents-icons/dist/navigation-right-arrow';
+import { useTranslation } from '@/i18n';
 
 interface PcArrowLinkProps {
   link?: string;
@@ -10,10 +14,11 @@ interface PcArrowLinkProps {
   onClick?: () => {};
 }
 export const PcArrowLink: React.FC<PcArrowLinkProps> = props => {
+  const { t } = useTranslation();
   const icon = (
     <Icon
       name="navigation-right-arrow"
-      accessibleName="Show details"
+      accessibleName={t('common.actions.showDetails')}
       showTooltip={true}
       className={
         'w-6 h-full ' +

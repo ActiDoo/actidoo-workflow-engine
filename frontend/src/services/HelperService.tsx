@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import axios from 'axios';
 import { StringDict } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';

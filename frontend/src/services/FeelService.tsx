@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { log } from 'console';
 import { evaluate, InterpreterContext, unaryTest } from 'feelin';
@@ -20,7 +23,7 @@ export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
       let curProp = schema;
       const propPathQueue = [...propPath];
       let pathElement;
-      let uiPropSchema = uiSchema;
+      let uiPropSchema: any = uiSchema;
       while ((pathElement = propPathQueue.shift())) {
         if ((curProp?.type ?? '') === 'array' && curProp.items) {
           curProp = curProp.items;

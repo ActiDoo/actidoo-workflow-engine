@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { FieldProps, FormContextType, RJSFSchema, StrictRJSFSchema } from '@rjsf/utils';
 
 /** The `NullField` component is used to render a field in the schema is null. It also ensures that the `formData` is
@@ -14,7 +17,7 @@ function CustomNullField<
 
   if (formData !== null) {
     setTimeout(() => {
-      onChange(null as unknown as T);
+      onChange(null as unknown as T, []);
     });
   }
 

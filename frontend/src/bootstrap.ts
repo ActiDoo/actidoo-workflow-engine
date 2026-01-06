@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 const RUNTIME_CONFIG_EVENT = 'actidoo:runtime-config-ready';
 const RUNTIME_CONFIG_TIMEOUT_MS = 2000;
 

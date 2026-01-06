@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import copy
 import logging
 from datetime import datetime, timedelta, timezone
@@ -80,6 +83,7 @@ class WorkflowDummy:
                 for k, roles in service_users_with_roles.items()
             }
         
+
     def _create_user(self, profile: TestUserProfile, role_names=[], email: str = ""
     ) -> "UserDummy":
         if "@" not in email:

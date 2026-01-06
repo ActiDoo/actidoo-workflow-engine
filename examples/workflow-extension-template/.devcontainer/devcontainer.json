@@ -1,0 +1,36 @@
+{
+  "name": "My Workflows Template",
+  "dockerComposeFile": ["docker-compose.yml"],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "remoteEnv": {
+    "REQUESTS_CA_BUNDLE": "/etc/ssl/certs/ca-certificates.crt",
+    "HTTP_PROXY": "${localEnv:HTTP_PROXY}",
+    "HTTPS_PROXY": "${localEnv:HTTPS_PROXY}",
+    "NO_PROXY": "127.0.0.0/8, localhost, keycloak, phpmyadmin",
+    "PIP_TRUSTED_HOST": "${localEnv:PIP_TRUSTED_HOST}",
+    "PIP_INDEX_URL": "${localEnv:PIP_INDEX_URL}",
+    "PIP_INDEX": "${localEnv:PIP_INDEX}"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.pythonPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "PKief.material-icon-theme",
+        "GitHub.github-vscode-theme"
+      ]
+    }
+  },
+  "forwardPorts": [8080, 3306, 8005],
+  "mounts": [
+    "source=/usr/local/share/ca-certificates/,target=/usr/local/share/ca-certificates/,type=bind,consistency=cached"
+  ],
+  "postStartCommand": "/usr/local/bin/wfe-post-start",
+  "postCreateCommand": "/usr/local/bin/wfe-post-create",
+  "remoteUser": "vscode"
+}

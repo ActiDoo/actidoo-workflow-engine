@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React from 'react';
 import { PcPage } from '@/ui5-components';
 import { WeBpmnViewer } from '@/utils/components/WeBpmnViewer';
@@ -10,8 +13,10 @@ import { BusyIndicator, Button, ButtonDesign } from '@ui5/webcomponents-react';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { postRequest } from '@/store/generic-data/actions';
 import useWorkflowSpec from '@/utils/hooks/useWorkflowSpec';
+import { useTranslation } from '@/i18n';
 
 const WorkflowDiagram: React.FC = () => {
+  const { t } = useTranslation();
   const { name } = useParams();
   const dispatch = useDispatch()
   const { dataWorkflowSpec, dataWorkflowSpecItem, loadStateWorkflowSpec } = useWorkflowSpec(name);
@@ -19,14 +24,14 @@ const WorkflowDiagram: React.FC = () => {
   return (
     <PcPage
       header={{
-        title: `Workflow: ${dataWorkflowSpec ? dataWorkflowSpec.name : ''}`,
+        title: t('workflowDiagram.workflowTitle', { name: dataWorkflowSpec ? dataWorkflowSpec.name : '' }),
         actionSection: (
           <Button
             design={ButtonDesign.Emphasized}
             onClick={() => {
               dispatch(postRequest(WeDataKey.START_WORKFLOW, { name }));
             }}>
-            Start this workflow
+            {t('workflowDiagram.startThisWorkflow')}
           </Button>
         ),
       }}
@@ -41,14 +46,14 @@ const WorkflowDiagram: React.FC = () => {
       ) : dataWorkflowSpec ? (
         <WeEmptySection
           icon={'org-chart'}
-          title={'Workflow specification not found'}
-          text={`There is no workflow specification for this workflow`}
+          title={t('workflowDiagram.specificationNotFoundTitle')}
+          text={t('workflowDiagram.specificationNotFoundText')}
         />
       ) : (
         <WeEmptySection
           icon={'org-chart'}
-          title={'Workflow not found'}
-          text={'There is no workflow with this name'}
+          title={t('workflowDiagram.workflowNotFoundTitle')}
+          text={t('workflowDiagram.workflowNotFoundText')}
         />
       )}
     </PcPage>

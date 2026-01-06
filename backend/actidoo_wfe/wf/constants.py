@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 from pathlib import Path
 
 BPMN_DIRECTORY = Path(__file__).parent / "processes"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { Text, BusyIndicator, Button, ButtonDesign } from '@ui5/webcomponents-react';
@@ -22,6 +25,7 @@ import { handleResponse } from '@/services/HelperService';
 import { TaskActions } from '@/pages/tasks/content/TaskActions';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
+import { useTranslation } from '@/i18n';
 
 // Import IndexedDB store service functions
 import { openDB, getFormData, saveFormData, deleteFormData, deleteOldFormData } from '@/services/DBService';
@@ -33,6 +37,7 @@ interface SingleTaskProps {
 }
 
 const SingleTask: React.FC<SingleTaskProps> = props => {
+  const { t } = useTranslation();
   const { workflowId, taskId } = useParams<{ workflowId: string; taskId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -65,7 +70,9 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const isUploadLoadingDialogOpen = isSubmitLoading;
 
   const jsonschema: RJSFSchema | undefined = _.cloneDeep(task?.jsonschema);
-  const uiSchema: UiSchema<any, RJSFSchema, any> | undefined = _.cloneDeep(task?.uischema);
+  const uiSchema = (task?.uischema
+    ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>)
+    : undefined);
 
   if (jsonschema && uiSchema) {
     changeRequiredDefinitionForFieldsWithHideIfDefinition(jsonschema, uiSchema);
@@ -122,8 +129,8 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       dispatch,
       WeDataKey.SUBMIT_TASK_DATA,
       submitRequest?.postResponse,
-      'Form successfully submitted',
-      'An error occurred while submitting the form',
+      t('taskContent.submitSuccess'),
+      t('taskContent.submitError'),
       () => {
         dispatch(
           postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY })
@@ -222,30 +229,30 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
         isDialogOpen={resetToInitialStateDialogOpen}
         setDialogOpen={setResetToInitialStateDialogOpen}
         isLoading={false}
-        title="Reset to Initial State"
+        title={t('taskContent.resetDialogTitle')}
         buttons={
           <>
             <Button
               disabled={false}
               design={ButtonDesign.Transparent}
-              tooltip="Abort"
+              tooltip={t('common.actions.abort')}
               onClick={() => {
                 setResetToInitialStateDialogOpen(false);
               }}>
-              Abort
+              {t('common.actions.abort')}
             </Button>
             <Button
               disabled={false}
               design={ButtonDesign.Negative}
-              tooltip="Reset"
+              tooltip={t('common.actions.reset')}
               onClick={() => {
                 resetToInitialState();
               }}>
-              Reset
+              {t('common.actions.reset')}
             </Button>
           </>
         }>
-        <Text>This will reset all form data to the initial state. Do you want to continue?</Text>
+        <Text>{t('taskContent.resetDialogText')}</Text>
       </WeAlertDialog>
     );
   };
@@ -336,10 +343,10 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
             <WeUploadDialog
               isOpen={isUploadLoadingDialogOpen}
               progress={progress}
-              progressLabel={isSubmitLoading ? 'Form is being uploaded' : 'Draft is being uploaded'}
-              processLabel={
-                isSubmitLoading ? 'Form is being processed' : 'Draft is being processed'
+              progressLabel={
+                isSubmitLoading ? t('taskContent.uploadForm') : t('taskContent.uploadDraft')
               }
+              processLabel={isSubmitLoading ? t('taskContent.processForm') : t('taskContent.processDraft')}
             />
           </div>
         </div>
@@ -350,8 +357,8 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   return (
     <WeEmptySection
       icon="search"
-      title="Task could not be found"
-      text="Task does not exist or something went wrong."
+      title={t('taskContent.notFoundTitle')}
+      text={t('taskContent.notFoundText')}
     />
   );
 };

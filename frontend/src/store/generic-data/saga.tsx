@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { all, call, delay, put, takeEvery } from 'redux-saga/effects';
 import * as UiActions from '@/store/ui/actions';
 import * as GenericDataActions from '@/store/generic-data/actions';

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    env_file:
+      - .devcontainer-secrets.env
+    volumes:
+      - ..:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+    environment: 
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+  mysql:
+    image: mysql:8.4.7
+    restart: unless-stopped
+    volumes:
+      - mysql-data:/var/lib/mysql
+    env_file:
+      - .devcontainer-secrets.env
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+    command: --mysql-native-password=ON
+    network_mode: "service:app"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    env_file:
+      - .devcontainer-secrets.env
+    environment:
+      PMA_HOST: 127.0.0.1
+      PMA_USER: root
+    depends_on:
+      - mysql
+    network_mode: "service:app"
+
+  keycloak:
+    image: keycloak/keycloak:26.2.5
+    volumes:
+      - ../.devcontainer/dev-realm.json:/opt/keycloak/data/import/dev-realm.json:cached
+    env_file:
+      - .devcontainer-secrets.env
+    environment:
+      KEYCLOAK_ADMIN: tux
+      KC_HTTP_HOST: "0.0.0.0"
+    command: start-dev --http-port=8001 --log-level=INFO --import-realm
+    network_mode: "service:app"
+
+volumes:
+  mysql-data:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect, useState } from 'react';
 import {
   BusyIndicator,
@@ -15,6 +18,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import '@ui5/webcomponents-icons/dist/activity-2.js';
 import { postRequest } from '@/store/generic-data/actions';
 import { WorkflowState } from '@/models/models';
+import { useTranslation } from '@/i18n';
 
 interface WeSideBarListProps {
   dataKey: WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS;
@@ -24,6 +28,7 @@ interface WeSideBarListProps {
 }
 
 export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
+  const { t, language } = useTranslation();
   const { workflowId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -55,7 +60,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
 
   const errorComponent = (
     <MessageStrip className="p-12" design={MessageStripDesign.Negative} hideCloseButton={true}>
-      {props.errorMessage ?? 'Something went wrong by loading the list. Please try again.'}
+      {props.errorMessage ?? t('sidebar.loadingError')}
     </MessageStrip>
   );
 
@@ -73,6 +78,12 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
               props.state === WorkflowState.COMPLETED
                 ? instance.completed_tasks
                 : instance.active_tasks;
+            const taskCount = tasks?.length ?? 0;
+            const suffix = taskCount > 1 ? (language === 'de' ? 'n' : 's') : '';
+            const taskLabel =
+              taskCount > 1
+                ? t('sidebar.taskCount', { count: taskCount, suffix })
+                : `${t('common.labels.task')}:`;
             return (
               <StandardListItem
                 className={` h-auto pc-pl-responsive`}
@@ -90,8 +101,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                   {tasks && tasks.length > 0 && (
                     <Text className={`!text-xs !text-neutral-700 !block ml-1 `}>
                       <div className="line-clamp-1">
-                        {tasks.length > 1 ? tasks.length : ''} Task
-                        {tasks.length > 1 ? 's' : ''}:
+                        {taskLabel}
                         {tasks.map((task, index: number) => (
                           <span key={'taskname' + index}>
                             {task.title}
@@ -114,7 +124,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
       ) : (
         <div className="p-12 flex items-center gap-2">
           <Icon name="activity-2" />
-          <Text> {props.emptyMessage ?? 'No items found.'}</Text>
+          <Text> {props.emptyMessage ?? t('sidebar.noItems')}</Text>
         </div>
       )}
     </div>

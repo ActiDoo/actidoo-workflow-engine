@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 import typer
 
 from actidoo_wfe.wf import providers as workflow_providers, service_i18n

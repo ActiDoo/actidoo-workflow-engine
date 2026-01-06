@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React, { useEffect } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,8 +18,10 @@ import {
 import { environment } from '@/environment';
 import { adminTasksColumns } from '@/pages/admin/tasks/AdminTasksSettings';
 import { useSelectUiLoading } from '@/store/ui/selectors';
+import { useTranslation } from '@/i18n';
 
 const AdminTasks: React.FC = () => {
+  const { t } = useTranslation();
   const key = WeDataKey.ADMIN_ALL_TASKS;
   const dispatch = useDispatch();
 
@@ -43,12 +48,12 @@ const AdminTasks: React.FC = () => {
   return (
     <PcPage
       header={{
-        title: 'Tasks',
+        title: t('admin.tasks'),
         initialSearch: tableData.search,
         searchInput: tableData.onSearch,
       }}>
       <PcAnalyticalTable
-        columns={adminTasksColumns(tableData)}
+        columns={adminTasksColumns(tableData, t)}
         initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
         data={data?.data?.ITEMS ?? []}
         loading={loadingState}

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { initState, WeDataAction, WeDataState } from '@/store/generic-data/setup';
 import { GenericDataActionType } from '@/ui5-components';
 import { postDataResponseReducer } from '@/store/generic-data/reducerPostDataResponse';

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import Select from 'react-select';
 import React from 'react';
 import { StateManagerProps } from 'react-select/dist/declarations/src/useStateManager';

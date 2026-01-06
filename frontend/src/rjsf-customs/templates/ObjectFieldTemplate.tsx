@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import {
   FormContextType,
   getTemplate,
@@ -14,7 +17,7 @@ export function CustomObjectFieldTemplate<
   S extends StrictRJSFSchema = RJSFSchema,
   F extends FormContextType = any
 >(props: ObjectFieldTemplateProps<T, S, F>): ReactElement {
-  const { registry, properties, title, description, uiSchema, required, schema, idSchema } = props;
+  const { registry, properties, title, description, uiSchema, required, schema, fieldPathId } = props;
   // console.log("** Object Field Template ********************************************************************************************")
   // console.log(props)
   const options = getUiOptions<T, S, F>(uiSchema);
@@ -31,7 +34,7 @@ export function CustomObjectFieldTemplate<
     <div>
       {title && (
         <TitleFieldTemplate
-          id={titleId<T>(idSchema)}
+          id={titleId(fieldPathId)}
           title={title}
           required={required}
           schema={schema}

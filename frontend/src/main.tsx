@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
@@ -14,6 +17,7 @@ import '@/styles/index.scss';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { WeDialog } from '@/utils/components/WeDialog';
 import { WeToast } from '@/utils/components/WeToast';
+import { I18nProvider } from '@/i18n';
 
 // set theme of ui5 webcomponents
 void setTheme('sap_horizon').then(); // no effect?
@@ -22,18 +26,20 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 const queryClient = new QueryClient();
 
 root.render(
-  <Provider store={store}>
-    {/* PersistGate is a layer to persist the Store in the LocalStorage. Currently not used by the application. */}
-    {/* A use case in the future might be to persist the ui Store, so a Refresh will not empty all input fields. */}
-    {/* You can add your own config for each store (i.e. ui/generic-data/auth) */}
-    <PersistGate loading={null} persistor={persistor}>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-          <WeToast />
-          <WeDialog />
-        </QueryClientProvider>
-      </ThemeProvider>
-    </PersistGate>
-  </Provider>
+  <I18nProvider>
+    <Provider store={store}>
+      {/* PersistGate is a layer to persist the Store in the LocalStorage. Currently not used by the application. */}
+      {/* A use case in the future might be to persist the ui Store, so a Refresh will not empty all input fields. */}
+      {/* You can add your own config for each store (i.e. ui/generic-data/auth) */}
+      <PersistGate loading={null} persistor={persistor}>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+            <WeToast />
+            <WeDialog />
+          </QueryClientProvider>
+        </ThemeProvider>
+      </PersistGate>
+    </Provider>
+  </I18nProvider>
 );

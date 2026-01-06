@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 export interface LoginState {
   username?: string;
   is_logged_in?: boolean;

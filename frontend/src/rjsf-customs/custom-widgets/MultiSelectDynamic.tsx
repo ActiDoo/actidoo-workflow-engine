@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import { WidgetProps } from '@rjsf/utils';
 import React, { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { MultiValue, SingleValue } from 'react-select';
@@ -32,7 +35,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
         property_path: props.uiSchema['ui:path'],
         search,
         include_value: props?.value,
-        form_data: props?.formContext.formData,
+        form_data: (props.registry as any)?.formContext?.formData,
       });
 
       //console.log(`opts = ${JSON.stringify(res.data)}`)
@@ -102,10 +105,11 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
 
   if (props.uiSchema && 'ui:dependsOn' in props.uiSchema) {
     const dependsOn = props.uiSchema['ui:dependsOn'];
+    const formContextFormData = (props.registry as any)?.formContext?.formData;
     // Create the dependency array directly using map and includes methods
     const effectDeps = dependsOn.map((dep: string) =>
-      Object.prototype.hasOwnProperty.call(props.formContext?.formData, dep)
-        ? props.formContext.formData[dep]
+      formContextFormData && Object.prototype.hasOwnProperty.call(formContextFormData, dep)
+        ? formContextFormData[dep]
         : null
     );
 

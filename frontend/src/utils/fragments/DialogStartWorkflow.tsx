@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 ActiDoo GmbH
+
 import {
   BusyIndicator,
   Button,
@@ -20,8 +23,10 @@ import { WeToastContent } from '@/utils/components/WeToast';
 import '@ui5/webcomponents-icons/dist/org-chart';
 import { WorkflowState } from '@/models/models';
 import { environment } from '@/environment';
+import { useTranslation } from '@/i18n';
 
 export const DialogStartWorkflow: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [open, setDialogOpen] = useState(false);
@@ -43,12 +48,12 @@ export const DialogStartWorkflow: React.FC = () => {
       dispatch(
         postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY })
       );
-      dispatch(addToast(<WeToastContent type="success" text="Workflow successfully started" />));
+      dispatch(addToast(<WeToastContent type="success" text={t('dialogStartWorkflow.success')} />));
       setDialogOpen(false);
       if (startData.data?.workflow_instance_id)
         navigate(`/tasks/open/${startData.data?.workflow_instance_id}`);
     } else if (startData?.postResponse && startData?.postResponse !== 200) {
-      dispatch(addToast(<>Could not create new workflow. Please try again</>));
+      dispatch(addToast(<>{t('dialogStartWorkflow.error')}</>));
     }
     dispatch(resetStateForKey(WeDataKey.START_WORKFLOW));
   }, [startData?.postResponse]);
@@ -71,7 +76,7 @@ export const DialogStartWorkflow: React.FC = () => {
         onClick={() => {
           setDialogOpen(true);
         }}>
-        Start workflow
+        {t('dialogStartWorkflow.startWorkflow')}
       </Button>
       {createPortal(
         <Dialog
@@ -79,7 +84,7 @@ export const DialogStartWorkflow: React.FC = () => {
           header={
             <div className="w-full flex items-center gap-2">
               <Title level={TitleLevel.H5} className="w-full py-2">
-                Workflows
+                {t('dialogStartWorkflow.header')}
               </Title>
               <Icon
                 className="cursor-pointer "
@@ -120,14 +125,14 @@ export const DialogStartWorkflow: React.FC = () => {
                       onClick={() => {
                         dispatch(postRequest(WeDataKey.START_WORKFLOW, { name: w.name }));
                       }}>
-                      Start
+                      {t('dialogStartWorkflow.start')}
                     </Text>
                   </div>
                 ))}
               </div>
             </BusyIndicator>
           ) : (
-            <Text>No Workflows found</Text>
+            <Text>{t('dialogStartWorkflow.noneFound')}</Text>
           )}
         </Dialog>,
         document.body

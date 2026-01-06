@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 ActiDoo GmbH
+
 from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.wf import service_application, service_i18n
 from actidoo_wfe.wf.bff.bff_user import WorkflowInstancesBffTableQuerySchema
