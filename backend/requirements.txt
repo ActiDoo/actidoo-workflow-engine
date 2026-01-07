@@ -69,6 +69,8 @@ fastapi-cloud-cli==0.8.0
     # via fastapi-cli
 fastar==0.8.0
     # via fastapi-cloud-cli
+fasteners==0.20
+    # via actidoo-wfe (pyproject.toml)
 fqdn==1.5.1
     # via jsonschema
 greenlet==3.3.0
