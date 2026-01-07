@@ -11,7 +11,7 @@ PIP_INDEX_URL="${PIP_INDEX_URL:-}"
 PIP_INDEX="${PIP_INDEX:-}"
 WORKSPACE_DIR="${WORKSPACE_DIR:-/workspace}"
 VENV_PATH="${VENV_PATH:-/opt/venv}"
-BACKEND_DIR="${BACKEND_DIR:-${WORKSPACE_DIR}/backend}"
+BACKEND_DIR="${BACKEND_DIR:-${WORKSPACE_DIR}}"
 
 log_section() {
     echo '------------------------------------------------------------------'
