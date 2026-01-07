@@ -11,6 +11,7 @@
 backend/.venv
 backend/log.txt
 frontend/node_modules
+frontend/dist
 frontend/packages/**/node_modules
 frontend/packages/**/dist
 frontend/.turbo

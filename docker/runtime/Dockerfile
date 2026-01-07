@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 
 # Multi-stage image that assembles the workflow engine frontend, the FastAPI backend,
 # and a thin nginx+tini runtime to run both behind the same container.
@@ -7,7 +7,9 @@ ARG BASE_IMAGE=debian:trixie-slim
 # --- Frontend stage ---------------------------------------------------------
 # Wir nutzen das offizielle Node Image für schnelleren Build (Build-Stage only)
 FROM node:24-bookworm-slim AS frontend-build
-ENV YARN_ENABLE_IMMUTABLE_INSTALLS=1
+ARG TARGETPLATFORM
+ENV YARN_ENABLE_IMMUTABLE_INSTALLS=1 \
+    YARN_CACHE_FOLDER=/usr/local/share/.cache/yarn
 
 WORKDIR /opt/workspace/frontend
 
@@ -16,41 +18,71 @@ RUN corepack enable
 
 COPY frontend/package.json frontend/yarn.lock frontend/.yarnrc.yml ./
 COPY frontend/.yarn ./.yarn
-RUN yarn install --immutable
+RUN --mount=type=cache,sharing=locked,id=yarn-cache-${TARGETPLATFORM},target=/usr/local/share/.cache/yarn \
+    yarn install --immutable
 
-# Hier wird das Syntax-Feature genutzt
-COPY --exclude=dist frontend/ ./
+# App sources (built artifacts are ignored via .dockerignore)
+COPY frontend/ ./
 RUN yarn wfe:build
 
 # --- Backend stage ----------------------------------------------------------
 # Creates Python wheels for the backend
 FROM ${BASE_IMAGE} AS backend-build
+ARG TARGETPLATFORM
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # FIX: sharing=locked verhindert Race-Conditions bei Multi-Arch Builds
-RUN --mount=type=cache,sharing=locked,target=/var/cache/apt \
-    --mount=type=cache,sharing=locked,target=/var/lib/apt/lists \
+RUN --mount=type=cache,sharing=locked,id=apt-cache-${TARGETPLATFORM},target=/var/cache/apt \
+    --mount=type=cache,sharing=locked,id=apt-lists-${TARGETPLATFORM},target=/var/lib/apt/lists \
     apt-get update \
     && apt-get install -y --no-install-recommends \
        python3 python3-venv python3-pip python3-dev \
        build-essential git libffi-dev libssl-dev libxml2-dev libxslt1-dev pkg-config
 
 WORKDIR /opt/workspace/backend
-COPY backend/pyproject.toml ./pyproject.toml
-COPY backend/actidoo_wfe ./actidoo_wfe
+COPY backend/pyproject.toml backend/requirements.txt ./
 
-# FIX: sharing=locked auch für pip cache
-RUN --mount=type=cache,sharing=locked,target=/root/.cache/pip \
+# Build dependency wheels in a layer that only changes when the lockfile changes
+RUN --mount=type=cache,sharing=locked,id=pip-cache-${TARGETPLATFORM},target=/root/.cache/pip \
     python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip wheel --wheel-dir /tmp/wheels .
+    && /opt/venv/bin/pip wheel --wheel-dir /tmp/wheels -r requirements.txt
+
+# Build the application wheel separately so code changes don't invalidate deps
+COPY backend/actidoo_wfe ./actidoo_wfe
+RUN --mount=type=cache,sharing=locked,id=pip-cache-${TARGETPLATFORM},target=/root/.cache/pip \
+    /opt/venv/bin/pip wheel --no-deps --wheel-dir /tmp/wheels .
+
+# --- Runtime base stage -----------------------------------------------------
+# Contains system deps + prebuilt venv; stays cacheable across app changes.
+FROM ${BASE_IMAGE} AS runtime-base
+
+ARG TARGETPLATFORM
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:${PATH}"
+
+RUN --mount=type=cache,sharing=locked,id=apt-cache-${TARGETPLATFORM},target=/var/cache/apt \
+    --mount=type=cache,sharing=locked,id=pip-cache-${TARGETPLATFORM},target=/root/.cache/pip \
+    apt-get update \
+    && apt-get install -y --no-install-recommends \
+       python3 python3-venv python3-pip nginx-light supervisor tini ca-certificates curl \
+    && rm -f /etc/nginx/sites-enabled/default \
+    && python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --upgrade pip \
+    && apt-get purge -y python3-pip curl \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # --- Runtime stage ----------------------------------------------------------
-FROM ${BASE_IMAGE} AS runtime
+FROM runtime-base AS runtime
 
+ARG TARGETPLATFORM
 ARG BASE_URL
 ARG FRONTEND_PATH=/wfe/
 ARG API_PATH=/api/
@@ -74,35 +106,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR ${APP_HOME}
 
-# License (helpful for redistributed artifacts like container images)
-COPY LICENSE ./LICENSE
-COPY NOTICE ./NOTICE
-COPY THIRD_PARTY_NOTICES.md ./THIRD_PARTY_NOTICES.md
-
-# Copy wheels EARLY so they are available for the single RUN block
+# Backend install from wheelhouse (keeps apt layer cacheable)
 COPY --from=backend-build /tmp/wheels /tmp/wheels
-
-# OPTIMIZED RUN BLOCK
-# 1. Installiert System-Deps
-# 2. Installiert Python-App (im selben Layer)
-# 3. Löscht Build-Tools (im selben Layer) -> Spart Speicherplatz
-# FIX: sharing=locked hinzugefügt
-RUN --mount=type=cache,sharing=locked,target=/var/cache/apt \
-    --mount=type=cache,sharing=locked,target=/var/lib/apt/lists \
-    --mount=type=cache,sharing=locked,target=/root/.cache/pip \
-    apt-get update \
-    && apt-get install -y --no-install-recommends \
-       python3 python3-venv python3-pip nginx-light supervisor tini ca-certificates curl \
-    && rm -f /etc/nginx/sites-enabled/default \
-    # --- Backend Installation ---
-    && python3 -m venv /opt/venv \
-    && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install --no-index --find-links=/tmp/wheels actidoo-wfe \
-    # --- Cleanup ---
-    && apt-get purge -y python3-pip curl \
-    && apt-get autoremove -y \
-    && rm -rf /tmp/wheels \
-    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,sharing=locked,id=pip-cache-${TARGETPLATFORM},target=/root/.cache/pip \
+    /opt/venv/bin/pip install --no-index --find-links=/tmp/wheels actidoo-wfe \
+    && rm -rf /tmp/wheels
 
 RUN mkdir -p ${FRONTEND_DIST_TEMPLATE} ${FRONTEND_DIST}
 
@@ -122,6 +130,11 @@ RUN if [ "${RENDER_RUNTIME_AT_BUILD}" = "true" ]; then \
       eval "$(/opt/app/runtime-paths.py)"; \
       /opt/app/render-runtime-assets.py; \
     fi
+
+# License (helpful for redistributed artifacts like container images)
+COPY LICENSE ./LICENSE
+COPY NOTICE ./NOTICE
+COPY THIRD_PARTY_NOTICES.md ./THIRD_PARTY_NOTICES.md
 
 EXPOSE 8080
 ENTRYPOINT ["/usr/bin/tini","--"]

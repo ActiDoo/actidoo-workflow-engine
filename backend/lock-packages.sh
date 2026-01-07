@@ -5,4 +5,4 @@
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
-pip-compile --upgrade --output-file=requirements.txt pyproject.toml
+pip-compile --upgrade --no-strip-extras --output-file=requirements.txt pyproject.toml
