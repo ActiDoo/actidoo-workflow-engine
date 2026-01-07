@@ -391,15 +391,19 @@ def get_workflow_spec(db: Session, name: str, version: int|None):
 
 def get_workflows_with_usertasks(
     db: Session,
-    user: WorkflowUser
+    user: WorkflowUser | UserRepresentation
 ):
-    role_names = set([r.role.name for r in user.roles])
+    user_id = user.id
+    if isinstance(user, WorkflowUser):
+        role_names = {r.role.name for r in user.roles}
+    else:
+        role_names = set(user.roles)
 
     sq_where = [
         WorkflowInstanceTask.manual == true(),
         WorkflowInstanceTask.state_ready == true(),
         or_(
-            WorkflowInstanceTask.assigned_user == user,
+            WorkflowInstanceTask.assigned_user_id == user_id,
             and_(
                 select(WorkflowInstanceTaskRole)
                 .where(
@@ -408,7 +412,7 @@ def get_workflows_with_usertasks(
                     WorkflowInstanceTaskRole.name.in_(role_names),
                 )
                 .exists(),
-                WorkflowInstanceTask.assigned_user == null(), 
+                WorkflowInstanceTask.assigned_user_id == null(), 
             ),
         )
     ]
