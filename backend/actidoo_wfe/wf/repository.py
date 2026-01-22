@@ -14,7 +14,7 @@ from SpiffWorkflow.bpmn.specs.mixins.events.event_types import CatchingEvent
 from SpiffWorkflow.bpmn.workflow import BpmnWorkflow
 from SpiffWorkflow.task import Task, TaskState
 from sqlalchemy import and_, delete, func, null, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy_file import File
 
 from actidoo_wfe.helpers.time import dt_now_naive
@@ -35,13 +35,18 @@ from actidoo_wfe.wf.models import (
     WorkflowTimeEvent,
     WorkflowUser,
     WorkflowUserClaim,
+    WorkflowUserRole,
 )
 from actidoo_wfe.wf.service_workflow import (
     _get_custom_props,
     can_be_unassigned,
     dump,
+    get_assigned_delegate_user,
     get_assigned_user,
+    get_completed_by_delegate_user,
+    get_completed_by_user,
     get_created_by_id,
+    get_delegate_submit_comment,
     get_lane_mapping,
     get_react_json_schema_form_data,
     get_stacktrace,
@@ -203,6 +208,18 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
 
         assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
         db_task.assigned_user_id = assigned_user_id
+        db_task.assigned_delegate_user_id = get_assigned_delegate_user(
+            workflow=workflow, task_id=task.id
+        )
+        db_task.completed_by_user_id = get_completed_by_user(
+            workflow=workflow, task_id=task.id
+        )
+        db_task.completed_by_delegate_user_id = get_completed_by_delegate_user(
+            workflow=workflow, task_id=task.id
+        )
+        db_task.delegate_submit_comment = get_delegate_submit_comment(
+            workflow=workflow, task_id=task.id
+        )
 
         ### Conditionally fire UserAssignedToReadyTaskEvent
         # Define conditions for readability
@@ -416,6 +433,34 @@ def load_user_by_username(db: Session, username: str) -> UserRepresentation:
         locale=user.locale,
         claims=claims,
     )
+
+
+def load_users_by_ids(
+    db: Session, user_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, UserRepresentation]:
+    if not user_ids:
+        return {}
+
+    users = db.execute(
+        select(WorkflowUser)
+        .options(selectinload(WorkflowUser.roles).selectinload(WorkflowUserRole.role))
+        .where(WorkflowUser.id.in_(user_ids))
+    ).scalars().all()
+
+    result: dict[uuid.UUID, UserRepresentation] = {}
+    for user in users:
+        roles = {r.role.name for r in user.roles}
+        result[user.id] = UserRepresentation(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            roles=roles,
+            is_service_user=user.is_service_user,
+            locale=user.locale,
+        )
+    return result
 
 
 def upsert_user(

@@ -65,5 +65,9 @@ class ValidationResultContainsErrors(Exception):
 class UserMayNotAdministrateThisWorkflowException(Exception):
     pass
 
+
+class UserMayNotAdministrateUsersException(Exception):
+    pass
+
 class TaskIsNotErroneousException(Exception):
     pass

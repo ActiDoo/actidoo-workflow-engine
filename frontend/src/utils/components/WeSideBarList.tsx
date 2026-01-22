@@ -37,6 +37,9 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
 
   const data = useSelector((state: State) => state.data[props.dataKey]);
   const isLoading = useSelector((state: State) => state.ui.loading[`${props.dataKey}POST`]);
+  const currentUserId = useSelector(
+    (state: State) => state.data[WeDataKey.WFE_USER]?.data?.id
+  );
 
   useEffect(() => {
     dispatch(postRequest(props.dataKey, {}, { state: props.state }));
@@ -78,6 +81,18 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
               props.state === WorkflowState.COMPLETED
                 ? instance.completed_tasks
                 : instance.active_tasks;
+            const delegationTask =
+              currentUserId && tasks
+                ? tasks.find(task => {
+                    const assignedUserId = task.assigned_user?.id;
+                    const assignedToOther =
+                      assignedUserId !== undefined && assignedUserId !== currentUserId;
+                    if (!assignedToOther) return false;
+                    const delegateIsMe = task.assigned_delegate_user?.id === currentUserId;
+                    return delegateIsMe || !!task.can_be_assigned_as_delegate;
+                  })
+                : undefined;
+            const isDelegationHighlight = !!delegationTask;
             const taskCount = tasks?.length ?? 0;
             const suffix = taskCount > 1 ? (language === 'de' ? 'n' : 's') : '';
             const taskLabel =
@@ -86,7 +101,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                 : `${t('common.labels.task')}:`;
             return (
               <StandardListItem
-                className={` h-auto pc-pl-responsive`}
+                className={` h-auto pc-pl-responsive ${isDelegationHighlight ? 'bg-orange-50' : ''}`}
                 key={`task-item-${instance.id}`}
                 onClick={() => {
                   navigate(`${instance.id}`);
@@ -103,7 +118,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                       <div className="line-clamp-1">
                         {taskLabel}
                         {tasks.map((task, index: number) => (
-                          <span key={'taskname' + index}>
+                          <span key={`taskname-${instance.id}-${index}`}>
                             {task.title}
                             {tasks && tasks.length > index + 1 ? ', ' : ''}
                           </span>
@@ -111,6 +126,11 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                       </div>
                     </Text>
                   )}
+                  {isDelegationHighlight && delegationTask?.assigned_user?.full_name ? (
+                    <Text className="!text-xs !text-orange-800 !block ml-1 mt-1">
+                      {t('taskContent.delegateActingFor')} {delegationTask.assigned_user.full_name}
+                    </Text>
+                  ) : null}
                 </div>
                 {isSelected ? (
                   <div className="bg-brand-primary w-1 absolute right-0 top-0.5 bottom-0.5"></div>

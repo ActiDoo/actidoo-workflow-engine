@@ -68,11 +68,17 @@ class GetUserTasksResponseUserTasks(BaseModel):
     lane: Optional[str]
     assigned_user: Optional["InlineUserResponse"]
     assigned_to_me: bool
+    assigned_delegate_user: Optional["InlineUserResponse"]
+    assigned_to_me_as_delegate: bool
+    can_be_assigned_as_delegate: bool
     can_be_unassigned: bool
     can_cancel_workflow: bool
     can_delete_workflow: bool
     state_completed: bool
     data: dict | list | None
+    completed_by_user: Optional["InlineUserResponse"]
+    completed_by_delegate_user: Optional["InlineUserResponse"]
+    delegate_submit_comment: str | None = Field(default=None)
 
 
 class StartWorkflowWithDataResponse(BaseModel):
@@ -91,6 +97,11 @@ class GetWorkflowInstancesResponseItemTask(BaseModel):
     name: str
     title: str
     assigned_user: Optional["InlineUserResponse"]
+    assigned_delegate_user: Optional["InlineUserResponse"]
+    completed_by_user: Optional["InlineUserResponse"]
+    completed_by_delegate_user: Optional["InlineUserResponse"]
+    delegate_submit_comment: str | None = Field(default=None)
+    can_be_assigned_as_delegate: bool
 
 
 class GetWorkflowInstancesResponseItem(BaseModel):
@@ -254,6 +265,7 @@ class DeleteWorkflowResponse(BaseModel):
 class SaveUserSettingsRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     locale: str
+    delegations: List["UserDelegationRequest"] | None = Field(default=None)
 
 class LocaleItem(BaseModel):
     key: str
@@ -263,6 +275,18 @@ class UserSettingsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     locale: str
     supported_locales: List[LocaleItem]
+    delegations: List["UserDelegationResponse"]
+
+
+class UserDelegationRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    delegate_user_id: uuid.UUID
+    valid_until: datetime.datetime | None = Field(default=None)
+
+
+class UserDelegationResponse(UserDelegationRequest):
+    delegate: "InlineUserResponse"
 
 
 for x in list(globals().values()):

@@ -2,11 +2,15 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 import logging
+from datetime import timedelta
 
 import pytest
 
+from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.settings import settings
+from actidoo_wfe.wf import service_application
+from actidoo_wfe.wf.bff import bff_admin
 from actidoo_wfe.wf.bff.bff_admin_schema import (
     CancelWorkflowInstanceResponse,
     GetAllTasksResponse,
@@ -149,3 +153,53 @@ def test_admin_assign(db_engine_ctx):
             )
 
         assert json_resp.task.assigned_user is not None and str(json_resp.task.assigned_user.id) == str(workflow.user("initiator").user.id)
+
+
+def test_admin_user_listing_and_delegations(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        dummy = WorkflowDummy(
+            db_session=db,
+            users_with_roles={
+                "admin": ["wf-admin"],
+                "principal": ["wf-user"],
+                "delegate": ["wf-user"],
+            },
+        )
+
+        admin = dummy.user("admin").user
+        principal = dummy.user("principal").user
+        delegate = dummy.user("delegate").user
+
+        table_params = bff_admin.AdminWorkflowUsersBffTableQuerySchema.parse_obj({})
+        users = service_application.bff_admin_get_all_users(
+            db=db,
+            user_id=admin.id,
+            bff_table_request_params=table_params,
+        )
+        assert any(u.id == principal.id for u in users.ITEMS)
+
+        detail = service_application.admin_get_user_detail(
+            db=db, admin_user_id=admin.id, target_user_id=principal.id
+        )
+        assert detail.user.id == principal.id
+
+        updated_detail = service_application.admin_set_user_delegations(
+            db=db,
+            admin_user_id=admin.id,
+            principal_user_id=principal.id,
+            delegations=[(delegate.id, dt_now_naive() + timedelta(days=1))],
+        )
+
+        assert any(d.delegate.id == delegate.id for d in updated_detail.delegations)
+
+        filtered_params = bff_admin.AdminWorkflowUsersBffTableQuerySchema.parse_obj(
+            {"f_roles": "wf-admin"}
+        )
+        filtered_users = service_application.bff_admin_get_all_users(
+            db=db,
+            user_id=admin.id,
+            bff_table_request_params=filtered_params,
+        )
+        assert any(u.id == admin.id for u in filtered_users.ITEMS)
+        assert all("wf-admin" in u.roles for u in filtered_users.ITEMS)

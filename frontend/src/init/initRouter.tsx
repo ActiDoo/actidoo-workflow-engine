@@ -54,6 +54,10 @@ const AdminTaskDetails = React.lazy(
 const AdminWorkflowDetails = React.lazy(
   async () => await import('@/pages/admin/workflows/details/AdminWorkflowDetails')
 );
+const AdminUsers = React.lazy(async () => await import('@/pages/admin/users/AdminUsers'));
+const AdminUserDetails = React.lazy(
+  async () => await import('@/pages/admin/users/details/AdminUserDetails')
+);
 const WorkflowDiagram = React.lazy(
   async () => await import('@/pages/workflow-diagram/WorkflowDiagram')
 );
@@ -87,6 +91,7 @@ const Wrapper: React.FC = () => {
     const subNav = [
       { title: t('navigation.adminWorkflows'), to: '/admin/all-workflows' },
       { title: t('navigation.adminTasks'), to: '/admin/all-tasks' },
+      { title: t('navigation.adminUsers'), to: '/admin/all-users' },
     ];
 
     if (loginState?.can_access_wf_admin) {
@@ -241,6 +246,24 @@ const router = createBrowserRouter(
           element={
             <WeAdminRoute>
               <AdminWorkflows />
+            </WeAdminRoute>
+          }
+          errorElement={<PcErrorView />}
+        />
+        <Route
+          path="/admin/all-users"
+          element={
+            <WeAdminRoute>
+              <AdminUsers />
+            </WeAdminRoute>
+          }
+          errorElement={<PcErrorView />}
+        />
+        <Route
+          path="/admin/all-users/:userId"
+          element={
+            <WeAdminRoute>
+              <AdminUserDetails />
             </WeAdminRoute>
           }
           errorElement={<PcErrorView />}

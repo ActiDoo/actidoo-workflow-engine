@@ -30,6 +30,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     GetWorkflowsResponseItem,
     GetWorkflowStatisticsResponse,
     GetWorkflowStatisticsResponseItem,
+    InlineUserResponse,
     GetWorkflowCopyDataResponse,
     LocaleItem,
     RefreshGetWorkflowSpecRequest,
@@ -42,6 +43,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     StartWorkflowWithDataRequest,
     StartWorkflowWithDataResponse,
     SubmitTaskDataErrorResponse,
+    UserDelegationResponse,
     UserSettingsResponse,
     WorkflowSpecResponse,
 )
@@ -192,11 +194,12 @@ def submit_task_data(
     task_data: dict,
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
-    response: Response
+    response: Response,
+    delegate_comment: str | None = None,
 ) -> GetUserTasksResponse|SubmitTaskDataErrorResponse:
     try:
         success, workflow_instance_id = service_application.submit_task_data(
-            db=db, user_id=user.id, task_id=task_id, task_data=task_data
+            db=db, user_id=user.id, task_id=task_id, task_data=task_data, delegate_comment=delegate_comment
         )
         
         tasks: list[UserTaskRepresentation] = service_application.get_usertasks_for_user_id(
@@ -407,6 +410,27 @@ def get_workflow_statistics(db: Annotated[Session, Depends(get_db)], user: Annot
     )
 
 
+
+
+def _serialize_user_delegations(db: Session, user_id: uuid.UUID) -> list[UserDelegationResponse]:
+    delegations = service_user.list_user_delegations(db=db, principal_user_id=user_id)
+    responses: list[UserDelegationResponse] = []
+    for delegation in delegations:
+        delegate = delegation.delegate
+        responses.append(
+            UserDelegationResponse(
+                delegate_user_id=delegation.delegate_user_id,
+                valid_until=delegation.valid_until,
+                delegate=InlineUserResponse(
+                    id=delegate.id,
+                    full_name=delegate.full_name,
+                    username=delegate.username,
+                    email=delegate.email,
+                ),
+            )
+        )
+    return responses
+
 @router.post("/user_settings", name="save_user_settings")
 def save_user_settings(
     db: Annotated[Session, Depends(get_db)],
@@ -414,15 +438,27 @@ def save_user_settings(
     reqdata: SaveUserSettingsRequest,
 ) -> UserSettingsResponse:
 
-    user = service_user.update_user_settings(
+    delegations = (
+        [(d.delegate_user_id, d.valid_until) for d in reqdata.delegations]
+        if reqdata.delegations is not None
+        else None
+    )
+
+    updated_user = service_user.update_user_settings(
         db=db,
         user_id=user.id,
         locale=reqdata.locale,
+        delegations=delegations,
     )
 
     locales = service_i18n.get_supported_locales()
+    delegation_responses = _serialize_user_delegations(db=db, user_id=user.id)
 
-    return UserSettingsResponse(locale=user.locale, supported_locales=[LocaleItem(**l) for l in locales])
+    return UserSettingsResponse(
+        locale=updated_user.locale,
+        supported_locales=[LocaleItem(**l) for l in locales],
+        delegations=delegation_responses,
+    )
 
 @router.get("/user_settings", name="get_user_settings")
 def get_user_settings(
@@ -435,6 +471,10 @@ def get_user_settings(
     )
 
     locales = service_i18n.get_supported_locales()
+    delegation_responses = _serialize_user_delegations(db=db, user_id=user.id)
 
-    return UserSettingsResponse(locale=user.locale, supported_locales=[LocaleItem(**l) for l in locales]
-)
+    return UserSettingsResponse(
+        locale=user.locale,
+        supported_locales=[LocaleItem(**l) for l in locales],
+        delegations=delegation_responses,
+    )

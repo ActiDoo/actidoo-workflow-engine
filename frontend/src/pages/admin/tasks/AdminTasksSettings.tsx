@@ -39,6 +39,14 @@ export const adminTasksColumns = (
     },
   },
   {
+    ...PcInputColumn(
+      'assigned_delegate_user.full_name',
+      t('adminTables.assignedDelegate'),
+      tableData
+    ),
+    Cell: (instance: any) => instance.row.original.assigned_delegate_user?.full_name ?? '',
+  },
+  {
     ...PcInputColumn('state_cancelled', t('adminTables.canceled'), tableData),
     disableFilters: true,
     width: 90,

@@ -20,18 +20,28 @@ export const MultipleTasks: React.FC<MultipleTaskListProps> = props => {
           <Title level={TitleLevel.H3}>{t('taskContent.multipleAvailable')}</Title>
         </div>
         {props.userTasks.map(task => {
+          const isDelegated = task.assigned_to_me_as_delegate;
           return (
             <div
               key={task.id}
-              className="bg-white p-4 flex items-center gap-2 cursor-pointer hover:shadow-sm transition-all"
+              className={`p-4 flex items-center gap-2 cursor-pointer hover:shadow-sm transition-all rounded ${
+                isDelegated ? 'bg-orange-50 border-l-4 border-orange-400' : 'bg-white'
+              }`}
               onClick={() => {
                 navigate(task.id);
               }}>
               <Text className="flex-1">
                 {task.name}
                 <div className="text-sm text-neutral-400">
-                  {task.assigned_user ? `${task.assigned_user.full_name}` : t('taskContent.unassigned')}
+                  {isDelegated && task.assigned_user
+                    ? `${t('taskContent.delegateActingFor')} ${task.assigned_user.full_name}`
+                    : task.assigned_user
+                    ? `${task.assigned_user.full_name}`
+                    : t('taskContent.unassigned')}
                 </div>
+                {isDelegated ? (
+                  <div className="text-xs text-orange-700">{t('taskContent.delegatedBadge')}</div>
+                ) : null}
               </Text>
               <Icon name="navigation-right-arrow" />
             </div>

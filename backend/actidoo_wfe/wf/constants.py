@@ -9,9 +9,13 @@ MAIL_TEMPLATE_DIR = Path(__file__).parent / "templates" / "mails"
 
 # set_internal_data in tasks
 INTERNAL_DATA_KEY_ASSIGNED_USER = "assigned_user_id"
+INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER = "assigned_delegate_user_id"
 INTERNAL_DATA_KEY_ALLOW_UNASSIGN = "allow_unassign"
 INTERNAL_DATA_KEY_ASSIGNED_ROLES = "assigned_roles"
 INTERNAL_DATA_KEY_STACKTRACE = "stacktrace"
+INTERNAL_DATA_KEY_COMPLETED_BY_USER = "completed_by_user_id"
+INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER = "completed_by_delegate_user_id"
+INTERNAL_DATA_KEY_DELEGATE_COMMENT = "delegate_submit_comment"
 
 # set_data in workflow instances
 DATA_KEY_CREATED_BY = "_created_by_id"

@@ -17,6 +17,13 @@ from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase
 from actidoo_wfe.helpers.schema import PaginatedDataSchema
 from actidoo_wfe.helpers.time import dt_ago_naive, dt_now_naive
 from actidoo_wfe.wf.exceptions import TaskNotFoundException
+from actidoo_wfe.wf.bff.bff_admin_schema import (
+    GetAllUsersResponseItem,
+    GetUserDetailResponse,
+    InlineUserAdminResponse,
+    InlineUserResponse,
+    UserDelegationResponse,
+)
 from actidoo_wfe.wf.models import (
     WorkflowInstance,
     WorkflowInstanceTask,
@@ -24,7 +31,9 @@ from actidoo_wfe.wf.models import (
     WorkflowMessageSubscription,
     WorkflowSpec,
     WorkflowUser,
+    WorkflowUserDelegate,
     WorkflowUserRole,
+    WorkflowRole,
 )
 from actidoo_wfe.wf.types import (
     InlineUserRepresentation,
@@ -51,6 +60,18 @@ def bff_get_workflows_with_usertasks(
     ).scalar_one()
 
     role_names = set([r.role.name for r in user.roles])
+    now = dt_now_naive()
+    delegate_principals_subquery = (
+        select(WorkflowUserDelegate.principal_user_id)
+        .where(
+            WorkflowUserDelegate.delegate_user_id == user_id,
+            or_(
+                WorkflowUserDelegate.valid_until == null(),
+                WorkflowUserDelegate.valid_until >= now,
+            ),
+        )
+        .scalar_subquery()
+    )
 
     sq_where = [
         WorkflowInstanceTask.manual == true(),
@@ -61,6 +82,11 @@ def bff_get_workflows_with_usertasks(
         sq_where.append(
             or_(
                 WorkflowInstanceTask.assigned_user == user,
+                WorkflowInstanceTask.assigned_delegate_user_id == user_id,
+                and_(
+                    WorkflowInstanceTask.assigned_user_id.is_not(null()),
+                    WorkflowInstanceTask.assigned_user_id.in_(delegate_principals_subquery),
+                ),
                 and_(
                     select(WorkflowInstanceTaskRole)
                     .where(
@@ -77,7 +103,11 @@ def bff_get_workflows_with_usertasks(
     elif state == "completed":
         sq_where.append(WorkflowInstanceTask.state_completed == true())
         sq_where.append(
-            WorkflowInstanceTask.assigned_user == user,
+            or_(
+                WorkflowInstanceTask.assigned_user == user,
+                WorkflowInstanceTask.completed_by_user_id == user_id,
+                WorkflowInstanceTask.completed_by_delegate_user_id == user_id,
+            )
         )
 
     q1 = (
@@ -111,8 +141,26 @@ def bff_get_workflows_with_usertasks(
             selectinload(WorkflowInstance.active_tasks).selectinload(
                 WorkflowInstanceTask.assigned_user
             ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.assigned_delegate_user
+            ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_user
+            ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_delegate_user
+            ),
             selectinload(WorkflowInstance.completed_tasks).selectinload(
                 WorkflowInstanceTask.assigned_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.assigned_delegate_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_delegate_user
             ),
             selectinload(WorkflowInstance.created_by),
         )
@@ -159,8 +207,26 @@ def bff_user_get_initiated_workflows(
             selectinload(WorkflowInstance.active_tasks).selectinload(
                 WorkflowInstanceTask.assigned_user
             ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.assigned_delegate_user
+            ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_user
+            ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_delegate_user
+            ),
             selectinload(WorkflowInstance.completed_tasks).selectinload(
                 WorkflowInstanceTask.assigned_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.assigned_delegate_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_delegate_user
             ),
             selectinload(WorkflowInstance.created_by),
         )
@@ -205,18 +271,23 @@ def bff_user_get_initiated_workflows(
 def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
 
     AssignedUser = aliased(WorkflowUser)
+    AssignedDelegateUser = aliased(WorkflowUser)
     TriggeredByUser = aliased(WorkflowUser)
     AssociatedWorkflow = aliased(WorkflowInstance)
 
     q = select(WorkflowInstanceTask)\
         .join(WorkflowInstanceTask.workflow_instance) \
         .join(AssignedUser, WorkflowInstanceTask.assigned_user_id == AssignedUser.id, isouter=True)\
+        .join(AssignedDelegateUser, WorkflowInstanceTask.assigned_delegate_user_id == AssignedDelegateUser.id, isouter=True)\
         .join(TriggeredByUser, WorkflowInstanceTask.triggered_by_id == TriggeredByUser.id, isouter=True)\
         .join(AssociatedWorkflow, WorkflowInstanceTask.workflow_instance_id == AssociatedWorkflow.id, isouter=True)\
         .options(
             selectinload(WorkflowInstanceTask.workflow_instance),
             contains_eager(WorkflowInstanceTask.assigned_user, alias=AssignedUser),
+            contains_eager(WorkflowInstanceTask.assigned_delegate_user, alias=AssignedDelegateUser),
             contains_eager(WorkflowInstanceTask.triggered_by, alias=TriggeredByUser),
+            selectinload(WorkflowInstanceTask.completed_by_user),
+            selectinload(WorkflowInstanceTask.completed_by_delegate_user),
             selectinload(WorkflowInstanceTask.lane_roles),
         )\
         .where(WorkflowInstance.name.in_(allowed_workflow_names))
@@ -228,6 +299,7 @@ def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuery
         field_to_dbfield_map={
             "workflow_instance___id": WorkflowInstanceTask.workflow_instance_id,
             "assigned_user___full_name": AssignedUser.full_name,
+            "assigned_delegate_user___full_name": AssignedDelegateUser.full_name,
             "workflow_instance___title": AssociatedWorkflow.title,
             "workflow_instance___subtitle": AssociatedWorkflow.subtitle,
         },
@@ -281,6 +353,15 @@ def bff_admin_get_all_workflow_instances(db: Session, bff_table_request_params: 
             selectinload(WorkflowInstance.tasks).selectinload(
                 WorkflowInstanceTask.assigned_user
             ),
+            selectinload(WorkflowInstance.tasks).selectinload(
+                WorkflowInstanceTask.assigned_delegate_user
+            ),
+            selectinload(WorkflowInstance.tasks).selectinload(
+                WorkflowInstanceTask.completed_by_user
+            ),
+            selectinload(WorkflowInstance.tasks).selectinload(
+                WorkflowInstanceTask.completed_by_delegate_user
+            ),
             selectinload(WorkflowInstance.active_tasks),
             selectinload(WorkflowInstance.completed_tasks),
             selectinload(WorkflowInstance.created_by),
@@ -317,6 +398,9 @@ def admin_get_single_task(db: Session, task_id: uuid.UUID) -> WorkflowInstanceTa
     q = select(WorkflowInstanceTask).options(
         selectinload(WorkflowInstanceTask.workflow_instance),
         selectinload(WorkflowInstanceTask.assigned_user),
+        selectinload(WorkflowInstanceTask.assigned_delegate_user),
+        selectinload(WorkflowInstanceTask.completed_by_user),
+        selectinload(WorkflowInstanceTask.completed_by_delegate_user),
         selectinload(WorkflowInstanceTask.triggered_by),
         selectinload(WorkflowInstanceTask.lane_roles),
     ).filter(
@@ -339,6 +423,100 @@ def admin_get_single_task(db: Session, task_id: uuid.UUID) -> WorkflowInstanceTa
             ),
         )
     )
+
+
+def bff_admin_get_all_users(db: Session, bff_table_request_params: BffTableQuerySchemaBase):
+    Role = aliased(WorkflowRole)
+
+    q = (
+        select(WorkflowUser)
+        .distinct(WorkflowUser.id)
+        .join(WorkflowUserRole, WorkflowUserRole.user_id == WorkflowUser.id, isouter=True)
+        .join(Role, WorkflowUserRole.role_id == Role.id, isouter=True)
+        .options(
+            selectinload(WorkflowUser.roles).selectinload(WorkflowUserRole.role),
+            selectinload(WorkflowUser.delegations_as_principal).selectinload(WorkflowUserDelegate.delegate),
+        )
+    )
+
+    bff_table = BFFTable(
+        db=db,
+        request_params=bff_table_request_params,
+        query=q,
+        field_to_dbfield_map={
+            "full_name": WorkflowUser.full_name,
+            "roles": Role.name,
+        },
+        default_order_by=WorkflowUser.created_at.desc(),
+    )
+
+    paginated_data = bff_table.get_paginated_data()
+
+    for row in paginated_data.items:
+        db.expunge(row)
+
+    res_representation = PaginatedDataSchema(
+        ITEMS=[
+            GetAllUsersResponseItem.model_validate(
+                dict(
+                    id=x.id,
+                    username=x.username,
+                    email=x.email,
+                    first_name=x.first_name,
+                    last_name=x.last_name,
+                    full_name=x.full_name,
+                    is_service_user=x.is_service_user,
+                    created_at=x.created_at,
+                    roles=[r.role.name for r in x.roles],
+                )
+            )
+            for x in paginated_data.items
+        ],
+        COUNT=paginated_data.count,
+    )
+
+    return res_representation
+
+
+def admin_get_user_detail(db: Session, user_id: uuid.UUID) -> GetUserDetailResponse:
+    q = (
+        select(WorkflowUser)
+        .options(
+            selectinload(WorkflowUser.roles).selectinload(WorkflowUserRole.role),
+            selectinload(WorkflowUser.delegations_as_principal).selectinload(WorkflowUserDelegate.delegate),
+        )
+        .where(WorkflowUser.id == user_id)
+    )
+
+    user = db.execute(q).scalar_one_or_none()
+    if user is None:
+        raise ValueError("User not found")
+
+    db.expunge(user)
+
+    delegations = [
+        UserDelegationResponse(
+            delegate=InlineUserResponse.model_validate(d.delegate),
+            valid_until=d.valid_until,
+        )
+        for d in user.delegations_as_principal
+    ]
+
+    user_rep = InlineUserAdminResponse.model_validate(
+        dict(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            full_name=user.full_name,
+            is_service_user=user.is_service_user,
+            created_at=user.created_at,
+            roles=[r.role.name for r in user.roles],
+        )
+    )
+
+    return GetUserDetailResponse(user=user_rep, delegations=delegations)
 
 def admin_get_task_states_per_workflow(db: Session, wf_name: str, allowed_workflow_names: set[str] = set()) -> WorkflowStateResponse:
     instances_with_tasks = db.query(WorkflowInstance).options(
@@ -448,8 +626,26 @@ def get_workflows_with_usertasks(
             selectinload(WorkflowInstance.active_tasks).selectinload(
                 WorkflowInstanceTask.assigned_user
             ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.assigned_delegate_user
+            ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_user
+            ),
+            selectinload(WorkflowInstance.active_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_delegate_user
+            ),
             selectinload(WorkflowInstance.completed_tasks).selectinload(
                 WorkflowInstanceTask.assigned_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.assigned_delegate_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_user
+            ),
+            selectinload(WorkflowInstance.completed_tasks).selectinload(
+                WorkflowInstanceTask.completed_by_delegate_user
             ),
             selectinload(WorkflowInstance.created_by),
         )

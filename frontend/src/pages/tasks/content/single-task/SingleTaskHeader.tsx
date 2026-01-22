@@ -62,6 +62,14 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   );
   const copyInstanceLoadState = useSelectUiLoading(WeDataKey.COPY_INSTANCE, 'POST');
 
+  const isActingAsDelegate = task.assigned_to_me_as_delegate;
+  const isDelegatedToMyDelegate =
+    !!(task.assigned_to_me && task.assigned_delegate_user && !task.assigned_to_me_as_delegate);
+  const canShowAssignButton =
+    (!task.assigned_user || task.can_be_assigned_as_delegate) && !task.assigned_to_me;
+  const canUnassignTask =
+    task.can_be_unassigned || task.assigned_to_me_as_delegate || isDelegatedToMyDelegate;
+
   useEffect(() => {
     handleResponse(
       dispatch,
@@ -163,154 +171,222 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   };
 
   return (
-    <div className="flex justify-between items-center mb-2 bg-white py-3 px-12 gap-4">
-      <div className="flex-1">
-        <Text>{workflowInstance?.title}</Text>
-        <Title level={TitleLevel.H3}>{task.title}</Title>
+    <div className="bg-white mb-2 py-3 px-12">
+      <div className="flex justify-between items-center gap-4">
+        <div className="flex-1">
+          <Text>{workflowInstance?.title}</Text>
+          <Title level={TitleLevel.H3}>{task.title}</Title>
+        </div>
+        {!task.assigned_user && (
+          <MessageStrip hideCloseButton={true} design={MessageStripDesign.Warning} className="w-auto">
+            {t('singleTaskHeader.notAssigned')}
+          </MessageStrip>
+        )}
+        {task?.state_completed && task.assigned_to_me ? (
+          <BusyIndicator active={copyInstanceLoadState} delay={0} className="text-white">
+            <Button
+              disabled={copyInstanceLoadState}
+              design={ButtonDesign.Emphasized}
+              onClick={() => {
+                handleCopyInstance();
+              }}>
+              {t('singleTaskHeader.startNewWorkflowWithData')}
+            </Button>
+          </BusyIndicator>
+        ) : null}
+        {!task.assigned_user ? (
+          <BusyIndicator active={assignTaskToMeLoadState} delay={0} className="text-white">
+            <Button
+              disabled={assignTaskToMeLoadState}
+              design={ButtonDesign.Emphasized}
+              onClick={() => {
+                handleAssignTaskToMe(task.id);
+              }}>
+              {t('singleTaskHeader.assignToMe')}
+            </Button>
+          </BusyIndicator>
+        ) : (
+          <>
+            <Text>
+              <span className="text-xs text-neutral-700">{t('singleTaskHeader.assignedTo')}</span>
+              <br />
+              {task.assigned_delegate_user
+                ? `${task.assigned_delegate_user.full_name} (${t('singleTaskHeader.assignedTo')} ${task.assigned_user.full_name})`
+                : task.assigned_user.full_name}
+            </Text>
+            {canUnassignTask ? (
+              <BusyIndicator active={unassignTaskFromMeLoadState} delay={0} className="">
+                <Button
+                  icon="employee-rejections"
+                  disabled={unassignTaskFromMeLoadState}
+                  design={ButtonDesign.Transparent}
+                  onClick={() => {
+                    handleUnassignTaskFromMe(task.id);
+                  }}>
+                  {isDelegatedToMyDelegate ? 'Unassign delegate' : t('singleTaskHeader.unassignFromMe')}
+                </Button>
+              </BusyIndicator>
+            ) : null}
+            {task.can_cancel_workflow && !task.can_delete_workflow ? (
+              <BusyIndicator active={cancelWorkflowLoadState} delay={0} className="">
+                <Button
+                  icon="employee-rejections"
+                  disabled={cancelWorkflowLoadState}
+                  design={ButtonDesign.Transparent}
+                  onClick={() => {
+                    const { close } = showDialog({
+                      children: (
+                        <span
+                          dangerouslySetInnerHTML={{
+                            __html: t('singleTaskHeader.cancelWorkflowDialogText'),
+                          }}
+                        />
+                      ),
+                      footer: (
+                        <Bar
+                          startContent={
+                            <div>
+                              <Button
+                                onClick={() => {
+                                  close();
+                                }}>
+                                {t('singleTaskHeader.closeDialog')}
+                              </Button>
+                            </div>
+                          }
+                          endContent={
+                            <div>
+                              <Button
+                                onClick={() => {
+                                  handleCancelWorkflow(task.id);
+                                  close();
+                                }}>
+                                {t('singleTaskHeader.cancelWorkflowAction')}
+                              </Button>
+                            </div>
+                          }
+                        />
+                      ),
+                    });
+                  }}>
+                  {t('singleTaskHeader.cancelWorkflow')}
+                </Button>
+              </BusyIndicator>
+            ) : null}
+            {task.can_delete_workflow ? (
+              <BusyIndicator active={deleteWorkflowLoadState} delay={0} className="">
+                <Button
+                  icon="employee-rejections"
+                  disabled={deleteWorkflowLoadState}
+                  design={ButtonDesign.Transparent}
+                  onClick={() => {
+                    const { close } = showDialog({
+                      children: (
+                        <span
+                          dangerouslySetInnerHTML={{
+                            __html: t('singleTaskHeader.deleteWorkflowDialogText'),
+                          }}
+                        />
+                      ),
+                      footer: (
+                        <Bar
+                          startContent={
+                            <div>
+                              <Button
+                                onClick={() => {
+                                  close();
+                                }}>
+                                {t('singleTaskHeader.closeDialog')}
+                              </Button>
+                            </div>
+                          }
+                          endContent={
+                            <div>
+                              <Button
+                                onClick={() => {
+                                  handleDeleteWorkflow(task.id);
+                                  close();
+                                }}>
+                                {t('singleTaskHeader.deleteWorkflowAction')}
+                              </Button>
+                            </div>
+                          }
+                        />
+                      ),
+                    });
+                  }}>
+                  {t('singleTaskHeader.deleteWorkflow')}
+                </Button>
+              </BusyIndicator>
+            ) : null}
+            {canShowAssignButton ? (
+              <BusyIndicator active={assignTaskToMeLoadState} delay={0} className="">
+                <Button
+                  design={ButtonDesign.Emphasized}
+                  disabled={assignTaskToMeLoadState}
+                  onClick={() => {
+                    handleAssignTaskToMe(task.id);
+                  }}>
+                  {t('singleTaskHeader.assignToMe')}
+                </Button>
+              </BusyIndicator>
+            ) : null}
+          </>
+        )}
       </div>
-      {!task.assigned_user && (
-        <MessageStrip hideCloseButton={true} design={MessageStripDesign.Warning} className="w-auto">
-          {t('singleTaskHeader.notAssigned')}
-        </MessageStrip>
-      )}
-      {task?.state_completed && task.assigned_to_me ? (
-        <BusyIndicator active={copyInstanceLoadState} delay={0} className="text-white">
-          <Button
-            disabled={copyInstanceLoadState}
-            design={ButtonDesign.Emphasized}
-            onClick={() => {
-              handleCopyInstance();
-              //alert("The COPY feature is disabled at the moment")
-            }}>
-            {t('singleTaskHeader.startNewWorkflowWithData')}
-          </Button>
-        </BusyIndicator>
-      ) : null}
-      {!task.assigned_user ? (
-        <BusyIndicator active={assignTaskToMeLoadState} delay={0} className="text-white">
-          <Button
-            disabled={assignTaskToMeLoadState}
-            design={ButtonDesign.Emphasized}
-            onClick={() => {
-              handleAssignTaskToMe(task.id);
-            }}>
-            {t('singleTaskHeader.assignToMe')}
-          </Button>
-        </BusyIndicator>
-      ) : (
-        <>
-          <Text>
-            <span className="text-xs text-neutral-700">{t('singleTaskHeader.assignedTo')}</span>
-            <br />
-            {task.assigned_user.full_name}
-          </Text>
-          {task.can_be_unassigned ? (
-            <BusyIndicator active={unassignTaskFromMeLoadState} delay={0} className="">
-              <Button
-                icon="employee-rejections"
-                disabled={unassignTaskFromMeLoadState}
-                design={ButtonDesign.Transparent}
-                onClick={() => {
-                  handleUnassignTaskFromMe(task.id);
-                }}>
-                {t('singleTaskHeader.unassignFromMe')}
-              </Button>
-            </BusyIndicator>
-          ) : null}
-          {task.can_cancel_workflow && !task.can_delete_workflow ? (
-            <BusyIndicator active={cancelWorkflowLoadState} delay={0} className="">
-              <Button
-                icon="employee-rejections"
-                disabled={cancelWorkflowLoadState}
-                design={ButtonDesign.Transparent}
-                onClick={() => {
-                  const { close } = showDialog({
-                    children: (
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('singleTaskHeader.cancelWorkflowDialogText'),
-                        }}
-                      />
-                    ),
-                    footer: (
-                      <Bar
-                        startContent={
-                          <div>
-                            <Button
-                              onClick={() => {
-                                close();
-                              }}>
-                              {t('singleTaskHeader.closeDialog')}
-                            </Button>
-                          </div>                          
-                        }
-                        endContent={
-                          <div>
-                            <Button
-                              onClick={() => {
-                                handleCancelWorkflow(task.id);
-                                close();
-                              }}>
-                              {t('singleTaskHeader.cancelWorkflowAction')}
-                            </Button>
-                          </div>                          
-                        }
-                      />
-                    ),
-                  });
-                }}>
-                {t('singleTaskHeader.cancelWorkflow')}
-              </Button>
-            </BusyIndicator>
-          ) : null}
-          {task.can_delete_workflow ? (
-            <BusyIndicator active={deleteWorkflowLoadState} delay={0} className="">
-              <Button
-                icon="employee-rejections"
-                disabled={deleteWorkflowLoadState}
-                design={ButtonDesign.Transparent}
-                onClick={() => {
-                  const { close } = showDialog({
-                    children: (
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('singleTaskHeader.deleteWorkflowDialogText'),
-                        }}
-                      />
-                    ),
-                    footer: (
-                      <Bar
-                        startContent={
-                          <div>
-                            <Button
-                              onClick={() => {
-                                close();
-                              }}>
-                              {t('singleTaskHeader.closeDialog')}
-                            </Button>
-                          </div>                          
-                        }
-                        endContent={
-                          <div>
-                            <Button
-                              onClick={() => {
-                                handleDeleteWorkflow(task.id);
-                                close();
-                              }}>
-                              {t('singleTaskHeader.deleteWorkflowAction')}
-                            </Button>
-                          </div>                          
-                        }
-                      />
-                    ),
-                  });
-                }}>
-                {t('singleTaskHeader.deleteWorkflow')}
-              </Button>
-            </BusyIndicator>
-          ) : null}
-        </>
-      )}
+      <div>
+        {(isDelegatedToMyDelegate ||
+          (isActingAsDelegate && !task.state_completed) ||
+          task.delegate_submit_comment) && (
+          <div className="flex flex-col gap-2 mt-2">
+            {isDelegatedToMyDelegate ? (
+              <MessageStrip
+                hideCloseButton
+                design={MessageStripDesign.Warning}
+                className="w-auto">
+                This task is currently assigned to your delegate
+                {task.assigned_delegate_user?.full_name ? (
+                  <>
+                    {' '}
+                    <span className="font-semibold">{task.assigned_delegate_user.full_name}</span>
+                  </>
+                ) : null}
+                . Unassign the delegate to work on it yourself.
+              </MessageStrip>
+            ) : null}
+
+            {isActingAsDelegate && !task.state_completed ? (
+              <MessageStrip
+                hideCloseButton
+                design={MessageStripDesign.Information}
+                className="w-auto">
+                You are working on behalf of{' '}
+                <span className="font-semibold">{task.assigned_user?.full_name ?? 'this user'}</span>.
+              </MessageStrip>
+            ) : null}
+
+            {task.completed_by_delegate_user ? (
+              <MessageStrip
+                hideCloseButton
+                design={MessageStripDesign.Information}
+                className="w-auto">
+                <span className="font-semibold mr-1">This task was completed by the delegate user:</span>
+                {task.completed_by_delegate_user.full_name}
+              </MessageStrip>
+            ) : null}
+
+            {task.delegate_submit_comment && task.completed_by_delegate_user ? (
+              <MessageStrip
+                hideCloseButton
+                design={MessageStripDesign.Information}
+                className="w-auto">
+                <span className="font-semibold mr-1">Comment by {task.completed_by_delegate_user.full_name}:</span>
+                {task.delegate_submit_comment}
+              </MessageStrip>
+            ) : null}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

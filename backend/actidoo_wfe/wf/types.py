@@ -74,15 +74,24 @@ class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     uischema: dict | None
     assigned_user_id: uuid.UUID | None
     assigned_to_me: bool
+    assigned_delegate_user_id: uuid.UUID | None = Field(default=None)
+    assigned_to_me_as_delegate: bool = Field(default=False)
+    can_be_assigned_as_delegate: bool = Field(default=False)
     can_be_unassigned: bool
     can_cancel_workflow: bool
     can_delete_workflow: bool
     state_completed: bool
     data: dict | list | None
+    completed_by_user_id: uuid.UUID | None = Field(default=None)
+    completed_by_delegate_user_id: uuid.UUID | None = Field(default=None)
+    delegate_submit_comment: str | None = Field(default=None)
 
 class UserTaskRepresentation(UserTaskWithoutNestedAssignedUserRepresentation):
     model_config = ConfigDict(from_attributes=True)
     assigned_user: UserRepresentation | None
+    assigned_delegate_user: UserRepresentation | None = Field(default=None)
+    completed_by_user: UserRepresentation | None = Field(default=None)
+    completed_by_delegate_user: UserRepresentation | None = Field(default=None)
     
 
 class ReactJsonSchemaFormData(NamedTuple):
@@ -97,6 +106,11 @@ class WorkflowInstanceTaskInlineRepresentation(BaseModel):
     name: str
     title: str
     assigned_user: InlineUserRepresentation | None
+    assigned_delegate_user: InlineUserRepresentation | None = Field(default=None)
+    completed_by_user: InlineUserRepresentation | None = Field(default=None)
+    completed_by_delegate_user: InlineUserRepresentation | None = Field(default=None)
+    delegate_submit_comment: str | None = Field(default=None)
+    can_be_assigned_as_delegate: bool = Field(default=False)
 
 
 class WorkflowInstanceRepresentation(BaseModel):
@@ -203,7 +217,11 @@ class WorkflowInstanceTaskAdminRepresentation(BaseModel):
     jsonschema: dict | None
     uischema: dict | None
     assigned_user: InlineUserRepresentation | None
+    assigned_delegate_user: InlineUserRepresentation | None = Field(default=None)
     triggered_by: InlineUserRepresentation | None
+    completed_by_user: InlineUserRepresentation | None = Field(default=None)
+    completed_by_delegate_user: InlineUserRepresentation | None = Field(default=None)
+    delegate_submit_comment: str | None = Field(default=None)
     can_be_unassigned: bool
     data: dict | list | None
     state_ready: bool

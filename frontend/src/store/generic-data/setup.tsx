@@ -15,9 +15,11 @@ import {
 } from '@/ui5-components';
 import {
   AdminGraphInstance,
+  AdminUser,
   AdminWorkflowInstance,
   ExecuteErroneousTaskRequestData,
   GetSystemInformationResponse,
+  GetUserDetailResponse,
   GetUserTasksResponse,
   GetWorkflowResponse,
   GetWorkflowStatisticsResponse,
@@ -58,12 +60,15 @@ export enum WeDataKey {
   WORKFLOW_STATISTICS = 'workflow_statistics',
   ADMIN_ALL_TASKS = 'admin_all_tasks',
   ADMIN_ALL_WORKFLOWS = 'admin_all_workflows',
+  ADMIN_ALL_USERS = 'admin_all_users',
   ADMIN_GRAPH_OBJECTS = 'admin_all_graph_objects',
   ADMIN_TASKS_OF_WORKFLOW = 'admin_tasks_of_workflow',
   ADMIN_REPLACE_TASK_DATA = 'admin_replace_task_data',
   ADMIN_EXECUTE_ERRONEOUS_TASK = 'admin_execute_erroneous_task',
   ADMIN_ASSIGN_TASK = 'admin_assign_task',
   ADMIN_UNASSIGN_TASK = 'admin_unassign_task',
+  ADMIN_USER_DETAIL = 'admin_user_detail',
+  ADMIN_SET_USER_DELEGATIONS = 'admin_set_user_delegations',
   ADMIN_SEARCH_WF_USERS = 'admin_search_wf_users',
   ADMIN_CANCEL_WORKFLOW_INSTANCE = 'admin_cancel_workflow_instance',
   ADMIN_GET_SYSTEM_INFORMATION = 'admin_get_system_information',
@@ -78,6 +83,8 @@ interface MyInitiatedWorkflowInstanceTable
 interface AllTasksTable extends ItemsAndCountResponse<TaskItem> {}
 
 interface AllWorkflowsTable extends ItemsAndCountResponse<AdminWorkflowInstance> {}
+
+interface AllUsersTable extends ItemsAndCountResponse<AdminUser> {}
 
 interface AllGraphObjects extends ItemsAndCountResponse<AdminGraphInstance> {}
 
@@ -105,12 +112,15 @@ export interface WeDataState {
   [WeDataKey.WORKFLOW_STATISTICS]: GenericDataEntry<GetWorkflowStatisticsResponse> | null;
   [WeDataKey.ADMIN_ALL_TASKS]: GenericDataEntry<AllTasksTable> | null;
   [WeDataKey.ADMIN_ALL_WORKFLOWS]: GenericDataEntry<AllWorkflowsTable> | null;
+  [WeDataKey.ADMIN_ALL_USERS]: GenericDataEntry<AllUsersTable> | null;
   [WeDataKey.ADMIN_GRAPH_OBJECTS]: GenericDataEntry<AllGraphObjects> | null;
   [WeDataKey.ADMIN_TASKS_OF_WORKFLOW]: GenericDataEntry<AllTasksTable> | null;
   [WeDataKey.ADMIN_REPLACE_TASK_DATA]: GenericDataEntry<ReplaceTaskDataRequestData> | null;
   [WeDataKey.ADMIN_EXECUTE_ERRONEOUS_TASK]: GenericDataEntry<ExecuteErroneousTaskRequestData> | null;
   [WeDataKey.ADMIN_ASSIGN_TASK]: GenericDataEntry<TaskItem> | null;
   [WeDataKey.ADMIN_UNASSIGN_TASK]: GenericDataEntry<TaskItem> | null;
+  [WeDataKey.ADMIN_USER_DETAIL]: GenericDataEntry<GetUserDetailResponse> | null;
+  [WeDataKey.ADMIN_SET_USER_DELEGATIONS]: GenericDataEntry<GetUserDetailResponse> | null;
   [WeDataKey.ADMIN_SEARCH_WF_USERS]: GenericDataEntry<SearchWfUsersResponse> | null;
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: GenericDataEntry<object> | null;
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: GenericDataEntry<GetSystemInformationResponse> | null;
@@ -162,6 +172,8 @@ export const WeApiUrl = (
       return 'admin/all_tasks';
     case WeDataKey.ADMIN_ALL_WORKFLOWS:
       return 'admin/all_workflow_instances';
+    case WeDataKey.ADMIN_ALL_USERS:
+      return 'admin/all_users';
     case WeDataKey.ADMIN_GRAPH_OBJECTS:
       return 'admin/statistics_information'
     case WeDataKey.ADMIN_REPLACE_TASK_DATA:
@@ -172,6 +184,10 @@ export const WeApiUrl = (
       return 'admin/assign_task';
     case WeDataKey.ADMIN_UNASSIGN_TASK:
       return 'admin/unassign_task';
+    case WeDataKey.ADMIN_USER_DETAIL:
+      return 'admin/user_detail';
+    case WeDataKey.ADMIN_SET_USER_DELEGATIONS:
+      return 'admin/set_user_delegations';
     case WeDataKey.ADMIN_SEARCH_WF_USERS:
       return 'admin/search_wf_users';
     case WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE:
@@ -205,12 +221,15 @@ export const initState: WeDataState = {
   [WeDataKey.WORKFLOW_STATISTICS]: null,
   [WeDataKey.ADMIN_ALL_TASKS]: null,
   [WeDataKey.ADMIN_ALL_WORKFLOWS]: null,
+  [WeDataKey.ADMIN_ALL_USERS]: null,
   [WeDataKey.ADMIN_TASKS_OF_WORKFLOW]: null,
   [WeDataKey.ADMIN_GRAPH_OBJECTS]: null,
   [WeDataKey.ADMIN_REPLACE_TASK_DATA]: null,
   [WeDataKey.ADMIN_EXECUTE_ERRONEOUS_TASK]: null,
   [WeDataKey.ADMIN_ASSIGN_TASK]: null,
   [WeDataKey.ADMIN_UNASSIGN_TASK]: null,
+  [WeDataKey.ADMIN_USER_DETAIL]: null,
+  [WeDataKey.ADMIN_SET_USER_DELEGATIONS]: null,
   [WeDataKey.ADMIN_SEARCH_WF_USERS]: null,
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: null,
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: null,
@@ -228,6 +247,8 @@ export type WeDataGetResponseTypes =
   | GetWorkflowStatisticsResponse
   | GetSystemInformationResponse
   | TaskItemResponse
+  | GetUserDetailResponse
+  | ItemsAndCountResponse<AdminUser>
   | string;
 
 export type WeDataAction = GenericDataAction<WeDataKey, WeDataGetResponseTypes>;

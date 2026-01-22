@@ -75,7 +75,16 @@ class WorkflowUser(Base):
     assigned_tasks: Mapped[List["WorkflowInstanceTask"]] = relationship(
         back_populates="assigned_user", foreign_keys="WorkflowInstanceTask.assigned_user_id"
     )
+    delegated_tasks: Mapped[List["WorkflowInstanceTask"]] = relationship(
+        back_populates="assigned_delegate_user", foreign_keys="WorkflowInstanceTask.assigned_delegate_user_id"
+    )
     roles: Mapped[List["WorkflowUserRole"]] = relationship(back_populates="user")
+    delegations_as_principal: Mapped[List["WorkflowUserDelegate"]] = relationship(
+        back_populates="principal", foreign_keys="WorkflowUserDelegate.principal_user_id"
+    )
+    delegations_as_delegate: Mapped[List["WorkflowUserDelegate"]] = relationship(
+        back_populates="delegate", foreign_keys="WorkflowUserDelegate.delegate_user_id"
+    )
     claims: Mapped[List["WorkflowUserClaim"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     created_at: Mapped[datetime.datetime] = mapped_column(
@@ -126,6 +135,30 @@ class WorkflowUserRole(Base):
     role: Mapped[WorkflowRole] = relationship(back_populates="users")
 
 
+class WorkflowUserDelegate(Base):
+    __tablename__ = "workflow_user_delegates"
+    __table_args__ = (UniqueConstraint("principal_user_id", "delegate_user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
+    principal_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(WorkflowUser.id, ondelete="CASCADE"), index=True
+    )
+    delegate_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(WorkflowUser.id, ondelete="CASCADE"), index=True
+    )
+    valid_until: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime(), nullable=True, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        UTCDateTime(), default=dt_now_naive, nullable=False
+    )
+
+    principal: Mapped[WorkflowUser] = relationship(
+        back_populates="delegations_as_principal", foreign_keys=[principal_user_id]
+    )
+    delegate: Mapped[WorkflowUser] = relationship(
+        back_populates="delegations_as_delegate", foreign_keys=[delegate_user_id]
+    )
+
+
 class WorkflowInstanceTask(Base):
     __tablename__ = "workflow_instance_tasks"
 
@@ -149,6 +182,12 @@ class WorkflowInstanceTask(Base):
     )
     assigned_user: Mapped[WorkflowUser | None] = relationship(
         back_populates="assigned_tasks", foreign_keys="WorkflowInstanceTask.assigned_user_id"
+    )
+    assigned_delegate_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workflow_users.id"), nullable=True, index=True
+    )
+    assigned_delegate_user: Mapped[WorkflowUser | None] = relationship(
+        back_populates="delegated_tasks", foreign_keys="WorkflowInstanceTask.assigned_delegate_user_id"
     )
     can_be_unassigned: Mapped[bool] = mapped_column(
         ty.Boolean, nullable=False, index=True, default=False, server_default="0"
@@ -192,6 +231,19 @@ class WorkflowInstanceTask(Base):
     jsonschema: Mapped[dict] = mapped_column(ZlibJSONBlob(), nullable=True)
     uischema: Mapped[dict] = mapped_column(ZlibJSONBlob(), nullable=True)
     error_stacktrace: Mapped[str | None] = mapped_column(myty.LONGTEXT, nullable=True)
+    completed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workflow_users.id"), nullable=True, index=True
+    )
+    completed_by_user: Mapped[WorkflowUser | None] = relationship(
+        foreign_keys="WorkflowInstanceTask.completed_by_user_id"
+    )
+    completed_by_delegate_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workflow_users.id"), nullable=True, index=True
+    )
+    completed_by_delegate_user: Mapped[WorkflowUser | None] = relationship(
+        foreign_keys="WorkflowInstanceTask.completed_by_delegate_user_id"
+    )
+    delegate_submit_comment: Mapped[str | None] = mapped_column(ty.Text(), nullable=True)
 
 
 class WorkflowSpec(Base):

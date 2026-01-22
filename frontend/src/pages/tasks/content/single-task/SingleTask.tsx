@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { WeDataKey } from '@/store/generic-data/setup';
-import { Text, BusyIndicator, Button, ButtonDesign } from '@ui5/webcomponents-react';
+import { Text, BusyIndicator, Button, ButtonDesign, TextArea } from '@ui5/webcomponents-react';
 import { getRequest, postRequest } from '@/store/generic-data/actions';
 import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
@@ -26,6 +26,7 @@ import { TaskActions } from '@/pages/tasks/content/TaskActions';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { useTranslation } from '@/i18n';
+import { StringDict } from '@/ui5-components';
 
 // Import IndexedDB store service functions
 import { openDB, getFormData, saveFormData, deleteFormData, deleteOldFormData } from '@/services/DBService';
@@ -48,6 +49,9 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const [errorSchema, setErrorSchema] = useState<ErrorSchema | undefined>(undefined);
   const [resetToInitialStateDialogOpen, setResetToInitialStateDialogOpen] = useState(false);
   const [formRenderIndex, setFormRenderIndex] = useState(0);
+  const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+  const [delegateComment, setDelegateComment] = useState('');
+  const [pendingDelegateFormData, setPendingDelegateFormData] = useState<object | null>(null);
   const dbRef = useRef<IDBDatabase | null>(null); // Ref to hold the DB instance
 
   // Refs to hold the latest formData and task
@@ -73,6 +77,11 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const uiSchema = (task?.uischema
     ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>)
     : undefined);
+  const isBlockedByDelegateAssignment =
+    !!(task?.assigned_to_me && task?.assigned_delegate_user && !task?.assigned_to_me_as_delegate);
+  const canSubmitTask =
+    !!(task?.assigned_to_me || task?.assigned_to_me_as_delegate) && !isBlockedByDelegateAssignment;
+  const isDelegateSubmission = !!task?.assigned_to_me_as_delegate;
 
   if (jsonschema && uiSchema) {
     changeRequiredDefinitionForFieldsWithHideIfDefinition(jsonschema, uiSchema);
@@ -207,20 +216,91 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   // Debounced version of saveDraft to prevent excessive writes
   const debouncedSaveDraft = useRef(_.debounce(saveDraft, 100)).current;
 
-  const submitData = (data: any): void => {
+  const submitData = (data: any, delegateCommentValue?: string): void => {
     if (data && task?.id) {
-      // Dispatch Redux action
+      const queryParams: StringDict = { task_id: task.id };
+      if (delegateCommentValue && delegateCommentValue.trim().length > 0) {
+        queryParams.delegate_comment = delegateCommentValue.trim();
+      }
       dispatch(
         postRequest(
           WeDataKey.SUBMIT_TASK_DATA,
           data,
           undefined,
-          { task_id: task.id },
+          queryParams,
           undefined,
           uploadProgress
         )
       );
     }
+  };
+
+  const closeDelegateDialog = (): void => {
+    setDelegateDialogOpen(false);
+    setDelegateComment('');
+    setPendingDelegateFormData(null);
+  };
+
+  const handleDelegateConfirm = (): void => {
+    if (pendingDelegateFormData) {
+      submitData(pendingDelegateFormData, delegateComment);
+      closeDelegateDialog();
+    }
+  };
+
+  const renderDelegateConfirmationDialog = (): React.ReactElement => {
+    if (!task) return <></>;
+    return (
+      <WeAlertDialog
+        title="Confirm delegated submission"
+        isDialogOpen={delegateDialogOpen}
+        isLoading={isSubmitLoading}
+        setDialogOpen={isOpen => {
+          if (!isOpen) {
+            closeDelegateDialog();
+          } else {
+            setDelegateDialogOpen(true);
+          }
+        }}
+        buttons={
+          <>
+            <Button
+              design={ButtonDesign.Transparent}
+              onClick={() => {
+                closeDelegateDialog();
+              }}>
+              Cancel
+            </Button>
+            <Button
+              design={ButtonDesign.Emphasized}
+              disabled={!pendingDelegateFormData || isSubmitLoading}
+              onClick={() => {
+                handleDelegateConfirm();
+              }}>
+              Confirm & Submit
+            </Button>
+          </>
+        }>
+        <div className="flex flex-col gap-2">
+          <Text>
+            You are acting as a delegate for{' '}
+            <span className="font-semibold">{task.assigned_user?.full_name ?? 'this user'}</span>.
+            Please confirm that you are authorized to submit this task on their behalf.
+          </Text>
+          <div className="flex flex-col gap-1">
+            <Text className="text-sm text-neutral-700">Comment for the task owner (optional)</Text>
+            <TextArea
+              value={delegateComment}
+              rows={3}
+              placeholder="Add an optional comment"
+              onInput={event => {
+                setDelegateComment(event.currentTarget.value);
+              }}
+            />
+          </div>
+        </div>
+      </WeAlertDialog>
+    );
   };
 
   const renderResetToInitialStateDialog = (): React.ReactElement => {
@@ -308,16 +388,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
             <TaskForm
               key={`form_${formRenderIndex}`}
               formData={formData}
-              className={`max-w-7xl ${!task.assigned_user || isLoading ? 'opacity-30' : ''}`}
-              disabled={
-                !task.assigned_to_me || isLoading || props.state === WorkflowState.COMPLETED
-              }
+              className={`max-w-7xl ${!canSubmitTask || isLoading ? 'opacity-30' : ''}`}
+              disabled={!canSubmitTask || isLoading || props.state === WorkflowState.COMPLETED}
               schema={jsonschema}
               uiSchema={uiSchema}
               extraErrors={errorSchema}
               showErrorList={false}
               onChange={handleFormChange}
               onSubmit={data => {
+                if (isDelegateSubmission) {
+                  setPendingDelegateFormData(data.formData);
+                  setDelegateDialogOpen(true);
+                  return;
+                }
                 submitData(data.formData);
               }}
               onError={() => {
@@ -329,7 +412,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
                 schema: task.jsonschema,
                 uiSchema: task.uischema,
               }}>
-              {task.assigned_to_me && props.state !== WorkflowState.COMPLETED ? (
+              {canSubmitTask && props.state !== WorkflowState.COMPLETED ? (
                 <TaskActions
                   disabled={isLoading}
                   onReset={() => {
@@ -350,6 +433,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
             />
           </div>
         </div>
+        {renderDelegateConfirmationDialog()}
         {renderResetToInitialStateDialog()}
       </>
     );

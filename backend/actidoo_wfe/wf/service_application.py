@@ -6,6 +6,7 @@
 """
 
 import hashlib
+import datetime
 import logging
 import uuid
 from typing import Any, Literal
@@ -18,12 +19,16 @@ from actidoo_wfe.helpers.schema import PaginatedDataSchema
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import providers as workflow_providers
-from actidoo_wfe.wf import repository, service_form, service_i18n, service_workflow, views
+from actidoo_wfe.wf import repository, service_form, service_i18n, service_user, service_workflow, views
 from actidoo_wfe.wf.exceptions import (
     AttachmentNotFoundException,
     InvalidWorkflowSpecException,
+    TaskAlreadyAssignedToDifferentUserException,
+    TaskCannotBeUnassignedException,
     TaskIsNotInReadyUsertasksException,
+    TaskNotFoundException,
     UserMayNotAdministrateThisWorkflowException,
+    UserMayNotAdministrateUsersException,
     UserMayNotCopyWorkflowException,
     UserMayNotStartWorkflowException,
     ValidationResultContainsErrors,
@@ -162,10 +167,10 @@ def get_workflow_preview(
         )
         first_task.data = cleaned_task_data
 
-    enriched_task = _enrich_UserTaskRepresentationWithNestedAssignedUser(
+    enriched_task = _enrich_user_tasks_with_nested_users(
         db=db,
-        usertask=first_task,
-    )
+        usertasks=[first_task],
+    )[0]
     enriched_task = _translate_UserTaskRepresentationForms(
         db=db,
         workflow_name=workflow.spec.name,
@@ -402,23 +407,53 @@ def bff_get_workflows_with_usertasks(
     state: Literal["ready", "completed"],
 ):
     user = get_user(db=db, user_id=user_id)
+    delegate_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
     instances: PaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_get_workflows_with_usertasks(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id, state=state)
 
     for instance in instances.ITEMS:
         instance.title = service_i18n.translate_string(msgid=instance.title, workflow_name=instance.name, locale=user.locale)
         for task in instance.active_tasks:
             task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
+            assigned_user_id = task.assigned_user.id if task.assigned_user else None
+            task.can_be_assigned_as_delegate = (
+                (assigned_user_id in delegate_targets and task.assigned_delegate_user is None)
+                if assigned_user_id
+                else False
+            )
+        for task in instance.completed_tasks:
+            task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
+            task.can_be_assigned_as_delegate = False
 
     return instances
 
-def _enrich_UserTaskRepresentationWithNestedAssignedUser(db: Session, usertask: UserTaskWithoutNestedAssignedUserRepresentation)->UserTaskRepresentation:
-    if usertask.assigned_user_id:
-        user = get_user(db=db, user_id=usertask.assigned_user_id)
-        new_usertask = UserTaskRepresentation(**usertask.model_dump(), assigned_user=user)
-    else:
-        new_usertask = UserTaskRepresentation(**usertask.model_dump(), assigned_user=None)
+def _enrich_user_tasks_with_nested_users(
+    db: Session, usertasks: list[UserTaskWithoutNestedAssignedUserRepresentation]
+) -> list[UserTaskRepresentation]:
+    user_ids: set[uuid.UUID] = set()
+    for ut in usertasks:
+        for candidate in (
+            ut.assigned_user_id,
+            ut.assigned_delegate_user_id,
+            ut.completed_by_user_id,
+            ut.completed_by_delegate_user_id,
+        ):
+            if candidate is not None:
+                user_ids.add(candidate)
 
-    return new_usertask
+    users_by_id = repository.load_users_by_ids(db=db, user_ids=user_ids)
+
+    enriched: list[UserTaskRepresentation] = []
+    for ut in usertasks:
+        enriched.append(
+            UserTaskRepresentation(
+                **ut.model_dump(),
+                assigned_user=users_by_id.get(ut.assigned_user_id),
+                assigned_delegate_user=users_by_id.get(ut.assigned_delegate_user_id),
+                completed_by_user=users_by_id.get(ut.completed_by_user_id),
+                completed_by_delegate_user=users_by_id.get(ut.completed_by_delegate_user_id),
+            )
+        )
+    return enriched
 
 def _translate_UserTaskRepresentationForms(db: Session, workflow_name: str, usertask: UserTaskRepresentation, locale) -> UserTaskRepresentation:
     if usertask.jsonschema and usertask.uischema:
@@ -433,6 +468,10 @@ def _translate_UserTaskRepresentationForms(db: Session, workflow_name: str, user
     return usertask
 
 
+def _get_delegate_targets_for_user(db: Session, user_id: uuid.UUID) -> set[uuid.UUID]:
+    return service_user.get_active_principals_for_delegate(db=db, delegate_user_id=user_id)
+
+
 def get_usertasks_for_user_id(
     db: Session,
     user_id: uuid.UUID,
@@ -441,11 +480,12 @@ def get_usertasks_for_user_id(
 ) -> list[UserTaskRepresentation]:
     user = repository.load_user(db=db, user_id=user_id)
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
+    delegate_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
     usertasks = service_workflow.get_usertasks_for_user(
-        workflow=workflow, user=user, state=state
+        workflow=workflow, user=user, state=state, delegation_targets=delegate_targets
     )
 
-    usertasks = [_enrich_UserTaskRepresentationWithNestedAssignedUser(db=db, usertask=ut) for ut in usertasks]
+    usertasks = _enrich_user_tasks_with_nested_users(db=db, usertasks=usertasks)
     usertasks = [_translate_UserTaskRepresentationForms(db=db, workflow_name=workflow.spec.name, usertask=ut, locale=user.locale) for ut in usertasks]
 
     return usertasks
@@ -551,15 +591,23 @@ def _persist_copied_attachments(
                 filename=attachment.filename,
             )
 
-def submit_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, task_data: dict):
+def submit_task_data(
+    db: Session,
+    user_id: uuid.UUID,
+    task_id: uuid.UUID,
+    task_data: dict,
+    delegate_comment: str | None = None,
+):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     user = repository.load_user(db=db, user_id=user_id)
+    delegation_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
 
     # prohibit misuse of the API, by checking that the task_id is really a ready task of the user who submitted data for it:
     usertasks: list[UserTaskWithoutNestedAssignedUserRepresentation] = service_workflow.get_usertasks_for_user(
         workflow=workflow,
         user=user,
         state="ready",
+        delegation_targets=delegation_targets,
     )
     if task_id not in [t.id for t in usertasks]:
         raise TaskIsNotInReadyUsertasksException()
@@ -589,7 +637,36 @@ def submit_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, task_d
     _delete_unused_attachments(db, workflow.task_tree.id, task.id, attachements)
     # process attachments END
 
-    result = service_workflow.execute_user_task(workflow, user, task_id, cleaned_task_data)
+    assigned_delegate_user_id = service_workflow.get_assigned_delegate_user(
+        workflow=workflow, task_id=task_id
+    )
+    assigned_user_id = service_workflow.get_assigned_user(
+        workflow=workflow, task_id=task_id
+    )
+
+    if (
+        assigned_delegate_user_id is not None
+        and assigned_user_id == user.id
+        and assigned_delegate_user_id != user.id
+    ):
+        raise TaskIsNotInReadyUsertasksException()
+
+    acting_user_id: uuid.UUID | None = None
+    comment_to_store: str | None = None
+    if assigned_user_id is not None and assigned_user_id != user.id:
+        if assigned_delegate_user_id != user.id:
+            raise TaskIsNotInReadyUsertasksException()
+        acting_user_id = assigned_user_id
+        comment_to_store = delegate_comment
+
+    result = service_workflow.execute_user_task(
+        workflow,
+        user,
+        task_id,
+        cleaned_task_data,
+        acting_user_id=acting_user_id,
+        delegate_comment=comment_to_store,
+    )
     repository.store_workflow_instance(db, workflow, user.id)
     return result, workflow.task_tree.id
 
@@ -611,20 +688,51 @@ def get_allowed_workflows_to_start(db: Session, user_id: uuid.UUID):
 def assign_task_to_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     user = repository.load_user(db=db, user_id=user_id)
-    service_workflow.assign_task(workflow=workflow, task_id=task_id, user=user)
-    service_workflow.set_allow_unassign(workflow=workflow, task_id=task_id)
-    repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
+    assigned_user_id = service_workflow.get_assigned_user(
+        workflow=workflow, task_id=task_id
+    )
+
+    if assigned_user_id is None:
+        service_workflow.assign_task(workflow=workflow, task_id=task_id, user=user)
+        service_workflow.set_allow_unassign(workflow=workflow, task_id=task_id)
+        repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
+    elif assigned_user_id != user.id:
+        if not service_user.is_active_delegate_for(
+            db=db, delegate_user_id=user.id, principal_user_id=assigned_user_id
+        ):
+            raise TaskAlreadyAssignedToDifferentUserException()
+
+        principal_user = repository.load_user(db=db, user_id=assigned_user_id)
+        service_workflow.assign_task(
+            workflow=workflow,
+            task_id=task_id,
+            user=principal_user,
+            delegate_user=user,
+        )
+        repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
 
 
 def unassign_task_from_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    task = workflow.get_task_from_id(task_id=task_id)
+    
+    if service_workflow.is_task_completed(workflow=workflow, task_id=task_id):
+        raise TaskCannotBeUnassignedException()
+
     assigned_user_id = service_workflow.get_assigned_user(
+        workflow=workflow, task_id=task_id
+    )
+    assigned_delegate_user_id = service_workflow.get_assigned_delegate_user(
         workflow=workflow, task_id=task_id
     )
     can_unassign = service_workflow.can_be_unassigned(
         workflow=workflow, task_id=task_id
     )
-    if can_unassign and assigned_user_id == user_id:
+    if assigned_delegate_user_id == user_id:
+        service_workflow.unassign_delegate_from_task(workflow=workflow, task_id=task_id)
+    elif assigned_user_id == user_id and assigned_delegate_user_id is not None:
+        service_workflow.unassign_delegate_from_task(workflow=workflow, task_id=task_id)
+    elif can_unassign and assigned_user_id == user_id:
         service_workflow.unassign_task(workflow=workflow, task_id=task_id)
     repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
 
@@ -640,9 +748,10 @@ def search_property_options(
 ) -> list[tuple[str, str]]:
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     user = repository.load_user(db=db, user_id=user_id)
+    delegation_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
 
     usertasks: list[UserTaskWithoutNestedAssignedUserRepresentation] = service_workflow.get_usertasks_for_user(
-        workflow=workflow, user=user, state=["ready", "completed"]
+        workflow=workflow, user=user, state=["ready", "completed"], delegation_targets=delegation_targets
     )
     if task_id not in [t.id for t in usertasks]:
         raise TaskIsNotInReadyUsertasksException()
@@ -831,6 +940,9 @@ def verify_assigned_user_and_download_attachment(
         service_workflow.is_assigned_to_task(
             workflow=workflow, task_id=task_id, user_id=user_id
         )
+        or service_workflow.is_delegate_assigned_to_task(
+            workflow=workflow, task_id=task_id, user_id=user_id
+        )
     )
 
     return download_attachment(db=db, task_id=task_id, hash=hash)
@@ -1005,6 +1117,36 @@ def bff_admin_get_all_workflow_instances(db: Session, user_id: uuid.UUID, bff_ta
     return views.bff_admin_get_all_workflow_instances(
         db=db, bff_table_request_params=bff_table_request_params, allowed_workflow_names = allowed_workflow_names
     )
+
+
+def bff_admin_get_all_users(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
+    if not is_global_admin(db=db, user_id=user_id):
+        raise UserMayNotAdministrateUsersException()
+    return views.bff_admin_get_all_users(db=db, bff_table_request_params=bff_table_request_params)
+
+
+def admin_get_user_detail(db: Session, admin_user_id: uuid.UUID, target_user_id: uuid.UUID):
+    if not is_global_admin(db=db, user_id=admin_user_id):
+        raise UserMayNotAdministrateUsersException()
+    return views.admin_get_user_detail(db=db, user_id=target_user_id)
+
+
+def admin_set_user_delegations(
+    db: Session,
+    admin_user_id: uuid.UUID,
+    principal_user_id: uuid.UUID,
+    delegations: list[tuple[uuid.UUID, datetime.datetime | None]],
+):
+    if not is_global_admin(db=db, user_id=admin_user_id):
+        raise UserMayNotAdministrateUsersException()
+
+    service_user.set_user_delegations(
+        db=db,
+        principal_user_id=principal_user_id,
+        delegations=[(delegate_id, valid_until) for delegate_id, valid_until in delegations],
+    )
+
+    return views.admin_get_user_detail(db=db, user_id=principal_user_id)
 
 def admin_get_single_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)

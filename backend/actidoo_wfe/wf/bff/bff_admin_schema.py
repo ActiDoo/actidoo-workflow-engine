@@ -19,6 +19,14 @@ class InlineUserResponse(BaseModel):
     email: str | None = Field(default_factory=lambda: None)
 
 
+class InlineUserAdminResponse(InlineUserResponse):
+    first_name: str | None = Field(default_factory=lambda: None)
+    last_name: str | None = Field(default_factory=lambda: None)
+    is_service_user: bool | None = Field(default_factory=lambda: None)
+    created_at: datetime.datetime | None = Field(default=None)
+    roles: list[str] = Field(default_factory=list)
+
+
 class InlineWorkflowInstance(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -43,9 +51,12 @@ class GetAllTasksResponseItem(BaseModel):
     lane_initiator: bool
     jsonschema: dict | None
     uischema: dict | None
-    lane: Optional[str]
     assigned_user: Optional["InlineUserResponse"]
+    assigned_delegate_user: Optional["InlineUserResponse"]
     triggered_by: Optional["InlineUserResponse"]
+    completed_by_user: Optional["InlineUserResponse"]
+    completed_by_delegate_user: Optional["InlineUserResponse"]
+    delegate_submit_comment: str | None = Field(default=None)
     can_be_unassigned: bool
     data: dict | list | None
     state_ready: bool
@@ -153,3 +164,44 @@ class CancelWorkflowInstanceResponse(BaseModel):
 class GetSystemInformationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     build_number: str = Field(default_factory=lambda: "dev")
+
+
+class GetAllUsersResponseItem(InlineUserAdminResponse):
+    pass
+
+
+GetAllUsersResponse = PaginatedDataSchema[GetAllUsersResponseItem]
+
+
+class GetUserDetailRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: uuid.UUID
+
+
+class DelegationInput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    delegate_user_id: uuid.UUID
+    valid_until: datetime.datetime | None
+
+
+class SetUserDelegationsRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: uuid.UUID
+    delegations: list["DelegationInput"] = Field(default_factory=list)
+
+
+class UserDelegationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    delegate: InlineUserResponse
+    valid_until: datetime.datetime | None
+
+
+class GetUserDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user: InlineUserAdminResponse
+    delegations: list["UserDelegationResponse"] = Field(default_factory=list)

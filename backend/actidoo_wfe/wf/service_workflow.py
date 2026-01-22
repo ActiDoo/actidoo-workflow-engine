@@ -37,8 +37,12 @@ from actidoo_wfe.wf.constants import (
     DATA_KEY_CREATED_BY,
     DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE,
     INTERNAL_DATA_KEY_ALLOW_UNASSIGN,
+    INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER,
     INTERNAL_DATA_KEY_ASSIGNED_ROLES,
     INTERNAL_DATA_KEY_ASSIGNED_USER,
+    INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER,
+    INTERNAL_DATA_KEY_COMPLETED_BY_USER,
+    INTERNAL_DATA_KEY_DELEGATE_COMMENT,
     INTERNAL_DATA_KEY_STACKTRACE,
 )
 from actidoo_wfe.wf import providers as workflow_providers
@@ -233,11 +237,26 @@ def execute_user_task(
     user: UserRepresentation,
     task_id: uuid.UUID,
     cleaned_task_data: dict,
+    acting_user_id: uuid.UUID | None = None,
+    delegate_comment: str | None = None,
 ):
     """Runs a user task, afterwards proceeds with run_workflow"""
     task: Task = workflow.get_task_from_id(task_id)
 
-    assert is_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id)
+    # Ensure the acting user is either the assignee or the delegate.
+    assert is_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id) or \
+        is_delegate_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id)
+
+    assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
+    assigned_delegate_user_id = get_assigned_delegate_user(
+        workflow=workflow, task_id=task.id
+    )
+    # Prevent the principal from working while a different delegate is assigned.
+    assert not (
+        assigned_delegate_user_id is not None
+        and assigned_user_id == user.id
+        and assigned_delegate_user_id != user.id
+    )
 
     # Deep-Update task.data with cleaned_task_data
     update(task.data, cleaned_task_data)
@@ -248,6 +267,18 @@ def execute_user_task(
 
     result = task.run()
     logging.debug(result)
+
+    effective_principal_id = acting_user_id or user.id
+    delegate_user_id = user.id if acting_user_id and acting_user_id != user.id else None
+    task._set_internal_data(
+        **{
+            INTERNAL_DATA_KEY_COMPLETED_BY_USER: str(effective_principal_id),
+            INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER: str(delegate_user_id)
+            if delegate_user_id
+            else None,
+            INTERNAL_DATA_KEY_DELEGATE_COMMENT: delegate_comment if delegate_user_id else None,
+        }
+    )
 
     # TODO: This logic could be moved to application service, as we might want to persist after each step?!?
     return run_workflow(workflow=workflow)
@@ -273,6 +304,7 @@ def get_usertasks_for_user(
     workflow: BpmnWorkflow,
     user: UserRepresentation,
     state: Literal["ready", "completed"] | list[Literal["ready", "completed"]],
+    delegation_targets: set[uuid.UUID] | None = None,
 ):
     tasks = []
     if "ready" in state :
@@ -284,17 +316,49 @@ def get_usertasks_for_user(
     available_tasks: list[UserTaskWithoutNestedAssignedUserRepresentation] = []
     for task in tasks:
         assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
+        assigned_delegate_user_id = get_assigned_delegate_user(
+            workflow=workflow, task_id=task.id
+        )
+        completed_by_user_id = get_completed_by_user(
+            workflow=workflow, task_id=task.id
+        )
+        completed_by_delegate_user_id = get_completed_by_delegate_user(
+            workflow=workflow, task_id=task.id
+        )
+        delegate_comment = get_delegate_submit_comment(
+            workflow=workflow, task_id=task.id
+        )
         assigned = user.id == assigned_user_id
+        assigned_as_delegate = user.id == assigned_delegate_user_id
         task_roles = get_task_roles(workflow=workflow, task_id=task.id)
         lane_is_initiator = is_initiator_lane(
             workflow=workflow, lane_name=task.task_spec.lane
         )
         created_by_id = get_created_by_id(workflow=workflow)
 
+        delegate_target_access = (
+            delegation_targets is not None
+            and assigned_user_id is not None
+            and assigned_user_id in delegation_targets
+        )
+        delegate_assignment_possible = (
+            delegate_target_access
+            and task.has_state(TaskState.READY)
+            and assigned_delegate_user_id is None
+        )
+
+        completed_for_user = task.has_state(TaskState.COMPLETED) and (
+            completed_by_user_id == user.id
+            or completed_by_delegate_user_id == user.id
+        )
+
         task_is_available_for_this_user = (
             assigned
             or len(task_roles & user.roles) > 0
             or (lane_is_initiator and user.id == created_by_id)
+            or assigned_as_delegate
+            or delegate_target_access
+            or completed_for_user
         )
 
         assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
@@ -313,6 +377,9 @@ def get_usertasks_for_user(
                         lane_initiator=lane_is_initiator,
                         assigned_user_id=assigned_user_id,
                         assigned_to_me=assigned,
+                        assigned_delegate_user_id=assigned_delegate_user_id,
+                        assigned_to_me_as_delegate=assigned_as_delegate,
+                        can_be_assigned_as_delegate=delegate_assignment_possible,
                         can_be_unassigned=can_be_unassigned(
                             workflow=workflow, task_id=task.id
                         ),
@@ -323,6 +390,9 @@ def get_usertasks_for_user(
                             workflow=workflow, task_id=task.id, user_id=user.id
                         ),
                         state_completed=task.has_state(TaskState.COMPLETED),
+                        completed_by_user_id=completed_by_user_id,
+                        completed_by_delegate_user_id=completed_by_delegate_user_id,
+                        delegate_submit_comment=delegate_comment,
                         **formspec._asdict(),
                         data=get_task_data(task),
                     )
@@ -509,6 +579,17 @@ def get_assigned_user(
     return assigned_user_uuid
 
 
+def get_assigned_delegate_user(
+    workflow: BpmnWorkflow, task_id: uuid.UUID
+) -> uuid.UUID | None:
+    task: Task = workflow.get_task_from_id(task_id)
+    delegate_user_id: str | None = task._get_internal_data(
+        name=INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER, default=None
+    )
+    delegate_uuid = uuid.UUID(delegate_user_id) if delegate_user_id is not None else None
+    return delegate_uuid
+
+
 def is_assigned_to_task(workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID):
     """Returns whether a user is assigned to the task"""
     assigned_user_id = get_assigned_user(
@@ -516,11 +597,62 @@ def is_assigned_to_task(workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uui
     )
     return assigned_user_id == user_id
 
+def is_task_completed(workflow: BpmnWorkflow, task_id: uuid.UUID) -> bool:
+    """Returns whether the task is completed (domain helper for external callers)."""
+    task = workflow.get_task_from_id(task_id=task_id)
+    return task.has_state(TaskState.COMPLETED)
 
-def assign_task(workflow: BpmnWorkflow, task_id: uuid.UUID, user: UserRepresentation):
-    """Assign a user to the task"""
 
-    usertasks = get_usertasks_for_user(workflow=workflow, user=user, state="ready")
+def is_delegate_assigned_to_task(
+    workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID
+):
+    delegate_user_id = get_assigned_delegate_user(workflow=workflow, task_id=task_id)
+    return delegate_user_id == user_id
+
+
+def get_completed_by_user(
+    workflow: BpmnWorkflow, task_id: uuid.UUID
+) -> uuid.UUID | None:
+    task: Task = workflow.get_task_from_id(task_id)
+    completed_by_id: str | None = task._get_internal_data(
+        name=INTERNAL_DATA_KEY_COMPLETED_BY_USER, default=None
+    )
+    return uuid.UUID(completed_by_id) if completed_by_id is not None else None
+
+
+def get_completed_by_delegate_user(
+    workflow: BpmnWorkflow, task_id: uuid.UUID
+) -> uuid.UUID | None:
+    task: Task = workflow.get_task_from_id(task_id)
+    delegate_id: str | None = task._get_internal_data(
+        name=INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER, default=None
+    )
+    return uuid.UUID(delegate_id) if delegate_id is not None else None
+
+
+def get_delegate_submit_comment(workflow: BpmnWorkflow, task_id: uuid.UUID) -> str | None:
+    task: Task = workflow.get_task_from_id(task_id)
+    return task._get_internal_data(name=INTERNAL_DATA_KEY_DELEGATE_COMMENT, default=None)
+
+
+def assign_task(
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
+    user: UserRepresentation,
+    delegate_user: UserRepresentation | None = None,
+):
+    """Assign a user to the task, optionally via a delegated actor"""
+
+    # In the delegation case, the logged in user is the delegate_user and the principal-user is the user
+    acting_user = delegate_user or user  # The acting user is the currently logged in one
+    delegation_targets = {user.id} if delegate_user else None
+    
+    usertasks = get_usertasks_for_user(
+        workflow=workflow,
+        user=acting_user,
+        state="ready",
+        delegation_targets=delegation_targets,
+    )
 
     task: UserTaskWithoutNestedAssignedUserRepresentation | None = next(
         (t for t in usertasks if t.id == task_id), None
@@ -537,7 +669,12 @@ def assign_task(workflow: BpmnWorkflow, task_id: uuid.UUID, user: UserRepresenta
         raise TaskAlreadyAssignedToDifferentUserException()
 
     workflow.get_task_from_id(task_id=task.id)._set_internal_data(
-        **{INTERNAL_DATA_KEY_ASSIGNED_USER: str(user.id)}
+        **{
+            INTERNAL_DATA_KEY_ASSIGNED_USER: str(user.id),
+            INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: (
+                str(delegate_user.id) if delegate_user else None
+            ),
+        }
     )
 
 
@@ -554,9 +691,17 @@ def assign_task_without_checks(
         )
 
     workflow.get_task_from_id(task_id=task.id)._set_internal_data(
-        **{INTERNAL_DATA_KEY_ASSIGNED_USER: str(user_id)}
+        **{
+            INTERNAL_DATA_KEY_ASSIGNED_USER: str(user_id),
+            INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: None,
+        }
     )
     
+
+def unassign_delegate_from_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
+    task: Task = workflow.get_task_from_id(task_id)
+    task._set_internal_data(**{INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: None})
+
 
 def set_allow_unassign(workflow: BpmnWorkflow, task_id: uuid.UUID):
     workflow.get_task_from_id(task_id=task_id)._set_internal_data(
@@ -565,27 +710,38 @@ def set_allow_unassign(workflow: BpmnWorkflow, task_id: uuid.UUID):
 
 
 def can_be_unassigned(workflow: BpmnWorkflow, task_id: uuid.UUID):
-    return workflow.get_task_from_id(task_id=task_id)._get_internal_data(
-        INTERNAL_DATA_KEY_ALLOW_UNASSIGN, False
-    )
+    task = workflow.get_task_from_id(task_id=task_id)
+    if task.has_state(TaskState.COMPLETED):
+        return False
+
+    return task._get_internal_data(INTERNAL_DATA_KEY_ALLOW_UNASSIGN, False)
+
 
 def _get_custom_props(task):
     custom_props = getattr(task.task_spec, "custom_props", {})
     return custom_props
 
+
 def can_user_cancel_workflow(workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID):
     task = workflow.get_task_from_id(task_id=task_id)
     return task is not None and task.has_state(TaskState.READY) and _get_custom_props(task).get("can_user_cancel_workflow", None) == "1" and is_assigned_to_task(workflow=workflow, task_id=task_id, user_id=user_id)
+
 
 def can_user_delete_workflow(workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID):
     task = workflow.get_task_from_id(task_id=task_id)
     return task is not None and task.has_state(TaskState.READY) and _get_custom_props(task).get("can_user_delete_workflow", None) == "1" and is_assigned_to_task(workflow=workflow, task_id=task_id, user_id=user_id)
 
+
 def unassign_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
     """Unassign a user from a task"""
     if can_be_unassigned(workflow=workflow, task_id=task_id):
         task: Task = workflow.get_task_from_id(task_id)
-        task._set_internal_data(**{INTERNAL_DATA_KEY_ASSIGNED_USER: None})
+        task._set_internal_data(
+            **{
+                INTERNAL_DATA_KEY_ASSIGNED_USER: None,
+                INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: None,
+            }
+        )
     else:
         raise TaskCannotBeUnassignedException()
 
@@ -593,7 +749,12 @@ def unassign_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
 def unassign_task_without_checks(workflow: BpmnWorkflow, task_id: uuid.UUID):
     """Unassign a user from a task"""
     task: Task = workflow.get_task_from_id(task_id)
-    task._set_internal_data(**{INTERNAL_DATA_KEY_ASSIGNED_USER: None})
+    task._set_internal_data(
+        **{
+            INTERNAL_DATA_KEY_ASSIGNED_USER: None,
+            INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: None,
+        }
+    )
 
 
 def is_initiator_lane(workflow: BpmnWorkflow, lane_name: str | None) -> bool:

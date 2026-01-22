@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+import datetime
 import logging
 import uuid
 from typing import List, Sequence
@@ -9,9 +10,10 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from actidoo_wfe.database import eilike, search_uuid_by_prefix
+from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import repository
-from actidoo_wfe.wf.models import WorkflowRole, WorkflowUser, WorkflowUserRole
+from actidoo_wfe.wf.models import WorkflowRole, WorkflowUser, WorkflowUserDelegate, WorkflowUserRole
 from actidoo_wfe.wf.types import UserRepresentation
 
 log = logging.getLogger(__name__)
@@ -201,17 +203,110 @@ def get_users_of_role(db: Session, role_name: str):
 
     return users
 
+def set_user_delegations(
+    db: Session,
+    principal_user_id: uuid.UUID,
+    delegations: list[tuple[uuid.UUID, datetime.datetime | None]],
+) -> None:
+    principal = get_user(db=db, user_id=principal_user_id)
+    if principal is None:
+        raise ValueError("Principal user does not exist")
+
+    existing = {
+        d.delegate_user_id: d
+        for d in db.execute(
+            select(WorkflowUserDelegate)
+            .options(selectinload(WorkflowUserDelegate.delegate))
+            .where(WorkflowUserDelegate.principal_user_id == principal_user_id)
+        ).scalars()
+    }
+
+    seen: set[uuid.UUID] = set()
+    for delegate_user_id, valid_until in delegations:
+        if delegate_user_id == principal_user_id:
+            raise ValueError("Users cannot delegate to themselves")
+
+        delegate = get_user(db=db, user_id=delegate_user_id)
+        if delegate is None:
+            raise ValueError("Delegate user does not exist")
+
+        normalized = valid_until
+        if delegate_user_id in existing:
+            existing[delegate_user_id].valid_until = normalized
+        else:
+            record = WorkflowUserDelegate()
+            record.principal_user_id = principal_user_id
+            record.delegate_user_id = delegate_user_id
+            record.valid_until = normalized
+            db.add(record)
+        seen.add(delegate_user_id)
+
+    for delegate_user_id, record in existing.items():
+        if delegate_user_id not in seen:
+            db.delete(record)
+
+    db.flush()
+
+
+def list_user_delegations(db: Session, principal_user_id: uuid.UUID) -> list[WorkflowUserDelegate]:
+    delegations = db.execute(
+        select(WorkflowUserDelegate)
+        .options(selectinload(WorkflowUserDelegate.delegate))
+        .where(WorkflowUserDelegate.principal_user_id == principal_user_id)
+    ).scalars().all()
+
+    for d in delegations:
+        db.expunge(d)
+
+    return delegations
+
+
+def get_active_principals_for_delegate(
+    db: Session, delegate_user_id: uuid.UUID, reference_time: datetime.datetime | None = None
+) -> set[uuid.UUID]:
+    now = reference_time or dt_now_naive()
+    principal_ids = db.execute(
+        select(WorkflowUserDelegate.principal_user_id)
+        .where(
+            WorkflowUserDelegate.delegate_user_id == delegate_user_id,
+            or_(WorkflowUserDelegate.valid_until == None, WorkflowUserDelegate.valid_until >= now),
+        )
+    ).scalars()
+    return {pid for pid in principal_ids}
+
+
+def is_active_delegate_for(
+    db: Session,
+    delegate_user_id: uuid.UUID,
+    principal_user_id: uuid.UUID,
+    reference_time: datetime.datetime | None = None,
+) -> bool:
+    now = reference_time or dt_now_naive()
+    exists = db.execute(
+        select(WorkflowUserDelegate.id)
+        .where(
+            WorkflowUserDelegate.principal_user_id == principal_user_id,
+            WorkflowUserDelegate.delegate_user_id == delegate_user_id,
+            or_(WorkflowUserDelegate.valid_until == None, WorkflowUserDelegate.valid_until >= now),
+        )
+    ).first()
+    return exists is not None
+
 
 def update_user_settings(
     db: Session,
     user_id: uuid.UUID,
-    locale: str
+    locale: str,
+    delegations: list[tuple[uuid.UUID, datetime.datetime | None]] | None = None,
 ) -> WorkflowUser:
     user = db.execute(
         select(WorkflowUser).where(WorkflowUser.id == user_id)
     ).scalar_one()
 
     user.locale = locale
+
+    if delegations is not None:
+        set_user_delegations(db=db, principal_user_id=user_id, delegations=delegations)
 
     db.flush()
     db.expire(user)

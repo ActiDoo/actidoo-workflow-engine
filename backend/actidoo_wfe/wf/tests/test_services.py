@@ -1,19 +1,26 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
-import json
 import logging
-import uuid
+from datetime import timedelta
 
 import pytest
+from sqlalchemy import select
 
 import actidoo_wfe.wf.bff.bff_user_schema as bff_user_schema
 from actidoo_wfe.database import SessionLocal, setup_db
+from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf import repository, service_form, service_user, service_i18n
+from actidoo_wfe.wf import repository, service_application, service_form, service_i18n, service_user
+from actidoo_wfe.wf.bff.bff_user import WorkflowInstancesBffTableQuerySchema
+from actidoo_wfe.wf.exceptions import (
+    TaskAlreadyAssignedToDifferentUserException,
+    TaskCannotBeUnassignedException,
+    TaskIsNotInReadyUsertasksException,
+)
+from actidoo_wfe.wf.models import WorkflowInstanceTask
 from actidoo_wfe.wf.tests.helpers.client import Client
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
-from sqlalchemy.exc import StatementError
 
 log: logging.Logger = logging.getLogger(__name__)
 
@@ -262,6 +269,317 @@ def test_update_user_settings_invalid_locale(db_engine_ctx):
                 locale="xx-XX",  # invalid # type: ignore
             )
 
+
+def test_update_user_settings_with_delegations(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"principal": ["wf-user"], "delegate": ["wf-user"]},
+        )
+        principal = workflow.user("principal").user
+        delegate = workflow.user("delegate").user
+
+        service_user.update_user_settings(
+            db=db,
+            user_id=principal.id,
+            locale="en-US",
+            delegations=[(delegate.id, dt_now_naive() + timedelta(days=5))],
+        )
+
+        delegations = service_user.list_user_delegations(db=db, principal_user_id=principal.id)
+        assert len(delegations) == 1
+        assert delegations[0].delegate_user_id == delegate.id
+
+        service_user.update_user_settings(
+            db=db,
+            user_id=principal.id,
+            locale="en-US",
+            delegations=[],
+        )
+
+        delegations = service_user.list_user_delegations(db=db, principal_user_id=principal.id)
+        assert delegations == []
+
+
+def test_delegate_can_assign_and_submit_task(db_engine_ctx, mock_send_text_mail):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "deputy": ["wf-user"]},
+            workflow_name="TestFlow_Copy",
+            start_user="initiator",
+        )
+
+        principal = workflow.user("initiator").user
+        delegate = workflow.user("deputy").user
+
+        service_user.set_user_delegations(
+            db=db,
+            principal_user_id=principal.id,
+            delegations=[(delegate.id, dt_now_naive() + timedelta(days=1))],
+        )
+
+        delegate_tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=delegate.id,
+            workflow_instance_id=workflow.workflow_instance_id,  # type: ignore[arg-type]
+            state="ready",
+        )
+
+        assert len(delegate_tasks) == 1
+        assert delegate_tasks[0].assigned_user is not None
+        assert delegate_tasks[0].assigned_user.id == principal.id
+        assert delegate_tasks[0].can_be_assigned_as_delegate is True
+
+        table_params = WorkflowInstancesBffTableQuerySchema.parse_obj({})
+        ready_workflows = service_application.bff_get_workflows_with_usertasks(
+            db=db,
+            bff_table_request_params=table_params,
+            user_id=delegate.id,
+            state="ready",
+        )
+        assert any(
+            any(
+                t.id == delegate_tasks[0].id
+                and t.can_be_assigned_as_delegate is True
+                for t in wf.active_tasks
+            )
+            for wf in ready_workflows.ITEMS
+        )
+
+        task_id = delegate_tasks[0].id
+        service_application.assign_task_to_me(db=db, user_id=delegate.id, task_id=task_id)
+
+        db_task = db.execute(
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+        ).scalar_one()
+        assert db_task.assigned_user_id == principal.id
+        assert db_task.assigned_delegate_user_id == delegate.id
+
+        service_application.unassign_task_from_me(db=db, user_id=delegate.id, task_id=task_id)
+        db_task = db.execute(
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+        ).scalar_one()
+        assert db_task.assigned_user_id == principal.id
+        assert db_task.assigned_delegate_user_id is None
+
+        service_application.assign_task_to_me(db=db, user_id=delegate.id, task_id=task_id)
+        db_task = db.execute(
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+        ).scalar_one()
+        assert db_task.assigned_delegate_user_id == delegate.id
+
+        service_application.submit_task_data(
+            db=db,
+            user_id=delegate.id,
+            task_id=task_id,
+            task_data={"text1": "handled"},
+            delegate_comment="handled while away",
+        )
+
+        db_task = db.execute(
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+        ).scalar_one()
+        assert db_task.completed_by_user_id == principal.id
+        assert db_task.completed_by_delegate_user_id == delegate.id
+        assert db_task.delegate_submit_comment == "handled while away"
+
+        delegate_completed = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=delegate.id,
+            workflow_instance_id=workflow.workflow_instance_id,  # type: ignore[arg-type]
+            state="completed",
+        )
+        assert len(delegate_completed) == 1
+        assert delegate_completed[0].completed_by_delegate_user is not None
+        assert delegate_completed[0].completed_by_delegate_user.id == delegate.id
+        assert delegate_completed[0].can_be_assigned_as_delegate is False
+
+        principal_completed = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=principal.id,
+            workflow_instance_id=workflow.workflow_instance_id,  # type: ignore[arg-type]
+            state="completed",
+        )
+        assert len(principal_completed) == 1
+        assert principal_completed[0].completed_by_user is not None
+        assert principal_completed[0].completed_by_user.id == principal.id
+        assert principal_completed[0].can_be_assigned_as_delegate is False
+
+        delegate_workflows = service_application.bff_get_workflows_with_usertasks(
+            db=db,
+            bff_table_request_params=table_params,
+            user_id=delegate.id,
+            state="completed",
+        )
+        principal_workflows = service_application.bff_get_workflows_with_usertasks(
+            db=db,
+            bff_table_request_params=table_params,
+            user_id=principal.id,
+            state="completed",
+        )
+
+        assert any(
+            any(t.id == task_id for t in wf.completed_tasks)
+            for wf in delegate_workflows.ITEMS
+        )
+        assert any(
+            any(t.id == task_id for t in wf.completed_tasks)
+            for wf in principal_workflows.ITEMS
+        )
+
+
+def test_delegate_cannot_assign_without_permission(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "colleague": ["wf-user"]},
+            workflow_name="TestFlow_Copy",
+            start_user="initiator",
+        )
+
+        principal = workflow.user("initiator").user
+        colleague = workflow.user("colleague").user
+
+        ready_tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=principal.id,
+            workflow_instance_id=workflow.workflow_instance_id,  # type: ignore[arg-type]
+            state="ready",
+        )
+        task_id = ready_tasks[0].id
+
+        with pytest.raises(TaskAlreadyAssignedToDifferentUserException):
+            service_application.assign_task_to_me(db=db, user_id=colleague.id, task_id=task_id)
+
+        service_user.set_user_delegations(
+            db=db,
+            principal_user_id=principal.id,
+            delegations=[(colleague.id, dt_now_naive() - timedelta(days=1))],
+        )
+
+        with pytest.raises(TaskAlreadyAssignedToDifferentUserException):
+            service_application.assign_task_to_me(db=db, user_id=colleague.id, task_id=task_id)
+
+
+def test_delegate_unassign_active_assignment(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "helper": ["wf-user"]},
+            workflow_name="TestFlow_Copy",
+            start_user="initiator",
+        )
+
+        principal = workflow.user("initiator").user
+        helper = workflow.user("helper").user
+
+        service_user.set_user_delegations(
+            db=db,
+            principal_user_id=principal.id,
+            delegations=[(helper.id, dt_now_naive() + timedelta(days=1))],
+        )
+
+        ready_tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=helper.id,
+            workflow_instance_id=workflow.workflow_instance_id,  # type: ignore[arg-type]
+            state="ready",
+        )
+        task_id = ready_tasks[0].id
+
+        service_application.unassign_task_from_me(db=db, user_id=helper.id, task_id=task_id)
+        db_task = db.execute(
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+        ).scalar_one()
+        assert db_task.assigned_user_id == principal.id
+        assert db_task.assigned_delegate_user_id is None
+
+
+def test_principal_must_unassign_delegate_before_submit(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "helper": ["wf-user"]},
+            workflow_name="TestFlow_Copy",
+            start_user="initiator",
+        )
+
+        principal = workflow.user("initiator").user
+        helper = workflow.user("helper").user
+
+        service_user.set_user_delegations(
+            db=db,
+            principal_user_id=principal.id,
+            delegations=[(helper.id, dt_now_naive() + timedelta(days=1))],
+        )
+
+        delegate_tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=helper.id,
+            workflow_instance_id=workflow.workflow_instance_id,  # type: ignore[arg-type]
+            state="ready",
+        )
+        task_id = delegate_tasks[0].id
+
+        service_application.assign_task_to_me(db=db, user_id=helper.id, task_id=task_id)
+
+        with pytest.raises(TaskIsNotInReadyUsertasksException):
+            service_application.submit_task_data(
+                db=db,
+                user_id=principal.id,
+                task_id=task_id,
+                task_data={"text1": "handled"},
+            )
+
+        service_application.unassign_task_from_me(db=db, user_id=helper.id, task_id=task_id)
+        service_application.submit_task_data(
+            db=db,
+            user_id=principal.id,
+            task_id=task_id,
+            task_data={"text1": "handled"},
+        )
+
+
+def test_cannot_unassign_completed_task(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"]},
+            workflow_name="TestFlow_Copy",
+            start_user="initiator",
+        )
+
+        principal = workflow.user("initiator").user
+        ready_tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=principal.id,
+            workflow_instance_id=workflow.workflow_instance_id,  # type: ignore[arg-type]
+            state="ready",
+        )
+        task_id = ready_tasks[0].id
+
+        service_application.assign_task_to_me(db=db, user_id=principal.id, task_id=task_id)
+        service_application.submit_task_data(
+            db=db,
+            user_id=principal.id,
+            task_id=task_id,
+            task_data={"text1": "handled"},
+        )
+
+        with pytest.raises(TaskCannotBeUnassignedException):
+            service_application.unassign_task_from_me(db=db, user_id=principal.id, task_id=task_id)
+        db_task = db.execute(
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+        ).scalar_one()
+        assert db_task.assigned_user_id == principal.id
+        assert db_task.assigned_delegate_user_id is None
 
 def test_supported_locales_fit_db_column():
     service_i18n.get_supported_locales.cache_clear()

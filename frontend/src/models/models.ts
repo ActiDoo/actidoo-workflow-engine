@@ -19,18 +19,24 @@ export interface UserTask {
   jsonschema: object;
   uischema: object;
   lane: string;
-  assigned_to_me?: boolean;
-  can_be_unassigned?: boolean;
-  can_cancel_workflow?: boolean;
-  can_delete_workflow?: boolean;
-  state_completed?: boolean;
   assigned_user?: {
     id: string;
     full_name: string;
     username?: string;
     email?: string;
   };
+  assigned_delegate_user?: { id: string; full_name: string } | null;
+  assigned_to_me?: boolean;
+  assigned_to_me_as_delegate?: boolean;
+  can_be_assigned_as_delegate?: boolean;
+  can_be_unassigned?: boolean;
+  can_cancel_workflow?: boolean;
+  can_delete_workflow?: boolean;
+  state_completed?: boolean;
   data?: object;
+  completed_by_user?: { id: string; full_name: string } | null;
+  completed_by_delegate_user?: { id: string; full_name: string } | null;
+  delegate_submit_comment?: string | null;
 }
 
 export interface GetUserTasksResponse {
@@ -116,6 +122,11 @@ export interface ActiveTaskInstance {
   name?: string;
   title?: string;
   assigned_user?: User;
+  assigned_delegate_user?: User | null;
+  completed_by_user?: User | null;
+  completed_by_delegate_user?: User | null;
+  delegate_submit_comment?: string | null;
+  can_be_assigned_as_delegate?: boolean;
 }
 
 export interface TaskItem {
@@ -128,6 +139,10 @@ export interface TaskItem {
   jsonschema?: object;
   uischema?: object;
   assigned_user?: User;
+  assigned_delegate_user?: User | null;
+  completed_by_user?: User | null;
+  completed_by_delegate_user?: User | null;
+  delegate_submit_comment?: string | null;
   triggered_by?: User;
   data?: object;
   state_ready?: boolean;
@@ -147,6 +162,45 @@ export interface User {
   workflows_the_user_is_admin_for: string[];
 }
 
+export interface AdminUser {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+  is_service_user?: boolean | null;
+  created_at?: string | null;
+  roles?: string[];
+}
+
+export interface UserDelegation {
+  delegate_user_id: string;
+  valid_until?: string | null;
+  delegate?: {
+    id: string;
+    full_name: string;
+    email?: string;
+  };
+}
+
+export interface AdminUserDelegation {
+  delegate?:
+    | {
+        id: string;
+        full_name?: string | null;
+        email?: string | null;
+        username?: string | null;
+      }
+    | null;
+  valid_until?: string | null;
+}
+
+export interface GetUserDetailResponse {
+  user?: AdminUser;
+  delegations?: AdminUserDelegation[];
+}
+
 export interface LocaleItem {
   /** IETF BCP-47 locale code, e.g. "en", "de-DE", "fr-CH" */
   key: string;
@@ -157,6 +211,7 @@ export interface LocaleItem {
 export interface UserSettings {
   locale: string;
   supported_locales: LocaleItem[];
+  delegations: UserDelegation[];
 }
 
 export interface PcValueLabelItem {

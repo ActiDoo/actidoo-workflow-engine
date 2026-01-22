@@ -2254,6 +2254,7 @@ __metadata:
     eslint-plugin-unused-imports: "npm:^2.0.0"
     feelin: "npm:^1.0.0"
     lodash: "npm:^4.17.21"
+    moment: "npm:^2.30.1"
     postcss: "npm:^8.4.20"
     prettier: "npm:^2.8.8"
     react: "npm:^18.2.0"
@@ -5686,6 +5687,13 @@ __metadata:
   dependencies:
     min-dash: "npm:^4.0.0"
   checksum: 10/3fe64600e072b1dd044c19e1704e712064c501844dd24355183de960fc99da6da471a98c78a60e05f608040999d1b05dd2c8c795e688573bbee0d8aff6c79ecc
+  languageName: node
+  linkType: hard
+
+"moment@npm:^2.30.1":
+  version: 2.30.1
+  resolution: "moment@npm:2.30.1"
+  checksum: 10/ae42d876d4ec831ef66110bdc302c0657c664991e45cf2afffc4b0f6cd6d251dde11375c982a5c0564ccc0fa593fc564576ddceb8c8845e87c15f58aa6baca69
   languageName: node
   linkType: hard
 

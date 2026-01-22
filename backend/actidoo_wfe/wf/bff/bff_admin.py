@@ -22,17 +22,21 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     ExecuteErroneousTaskRequest,
     GetAllTasksResponse,
     GetAllWorkflowInstancesResponse,
+    GetAllUsersResponse,
     GetSingleTaskResponse,
     GetSystemInformationResponse,
+    GetUserDetailRequest,
+    GetUserDetailResponse,
     ReplaceTaskDataRequest,
     SearchUsersRequest,
     SearchUsersResponse,
     SearchUsersResponseItem,
+    SetUserDelegationsRequest,
     UnassignUserRequest,
 )
 from actidoo_wfe.wf.bff.deps import get_user
 from actidoo_wfe.wf.cross_context.imports import require_realm_role
-from actidoo_wfe.wf.exceptions import UserMayNotAdministrateThisWorkflowException
+from actidoo_wfe.wf.exceptions import UserMayNotAdministrateThisWorkflowException, UserMayNotAdministrateUsersException
 from actidoo_wfe.wf.models import WorkflowUser
 from actidoo_wfe.wf.service_user import search_users
 from actidoo_wfe.wf.types import Attachment, ReducedWorkflowInstanceResponse, WorkflowInstanceRepresentation, WorkflowInstanceTaskAdminRepresentation, WorkflowStateResponse
@@ -62,7 +66,9 @@ AdminWorkflowInstanceTasksBffTableQuerySchema = bff_table.get_bff_table_query_sc
         "workflow_instance___title",
         "workflow_instance___subtitle",
         "lane",
-        "sort"
+        "sort",
+        "assigned_user___full_name",
+        "assigned_delegate_user___full_name",
     ],
     filter_fields=[
         bff_table.UUidSearchFilterField(name="id"),
@@ -79,6 +85,7 @@ AdminWorkflowInstanceTasksBffTableQuerySchema = bff_table.get_bff_table_query_sc
         bff_table.TextSearchFilterField(name="workflow_instance___subtitle"),
         bff_table.TextSearchFilterField(name="lane"),
         bff_table.TextSearchFilterField(name="assigned_user___full_name"),
+        bff_table.TextSearchFilterField(name="assigned_delegate_user___full_name"),
         # bff_table.BooleanFilterField(name="is_completed")
     ],
     add_global_search_filter=True,
@@ -160,6 +167,32 @@ AdminWorkflowInstancesBffTableQuerySchema = bff_table.get_bff_table_query_schema
 )
 
 
+AdminWorkflowUsersBffTableQuerySchema = bff_table.get_bff_table_query_schema(
+    schema_name="AdminWorkflowUsersBffTableQuerySchema",
+    sorting_fields=[
+        "id",
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "full_name",
+        "created_at",
+        "is_service_user",
+    ],
+    filter_fields=[
+        bff_table.UUidSearchFilterField(name="id"),
+        bff_table.TextSearchFilterField(name="username"),
+        bff_table.TextSearchFilterField(name="email"),
+        bff_table.TextSearchFilterField(name="first_name"),
+        bff_table.TextSearchFilterField(name="last_name"),
+        bff_table.TextSearchFilterField(name="full_name"),
+        bff_table.BooleanFilterField(name="is_service_user"),
+        bff_table.TextSearchFilterField(name="roles"),
+    ],
+    add_global_search_filter=True,
+)
+
+
 @router.post("/all_workflow_instances", name="bff_admin_get_all_workflow_instances")
 def get_all_workflow_instances(
     db: Annotated[Session, Depends(get_db)],
@@ -192,6 +225,61 @@ def get_all_workflow_instances(
     )
 
     return GetAllWorkflowInstancesResponse.model_validate(tasks)
+
+
+@router.post("/all_users", name="bff_admin_get_all_users")
+def get_all_users(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    bff_table_request_params: Annotated[
+        bff_table.BffTableQuerySchemaBase,
+        Depends(AdminWorkflowUsersBffTableQuerySchema),
+    ],  # type: ignore
+) -> GetAllUsersResponse:
+    try:
+        users = service_application.bff_admin_get_all_users(
+            db=db, user_id=user.id, bff_table_request_params=bff_table_request_params
+        )
+    except UserMayNotAdministrateUsersException:
+        raise HTTPException(status_code=403)
+    return GetAllUsersResponse.model_validate(users)
+
+
+@router.post("/user_detail", name="bff_admin_get_user_detail")
+def get_user_detail(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    req_data: Annotated[GetUserDetailRequest, Body()],
+) -> GetUserDetailResponse:
+    try:
+        detail = service_application.admin_get_user_detail(
+            db=db, admin_user_id=user.id, target_user_id=req_data.user_id
+        )
+    except UserMayNotAdministrateUsersException:
+        raise HTTPException(status_code=403)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    return GetUserDetailResponse.model_validate(detail)
+
+
+@router.post("/set_user_delegations", name="bff_admin_set_user_delegations")
+def set_user_delegations(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    req_data: Annotated[SetUserDelegationsRequest, Body()],
+) -> GetUserDetailResponse:
+    try:
+        detail = service_application.admin_set_user_delegations(
+            db=db,
+            admin_user_id=user.id,
+            principal_user_id=req_data.user_id,
+            delegations=[(d.delegate_user_id, d.valid_until) for d in req_data.delegations],
+        )
+    except UserMayNotAdministrateUsersException:
+        raise HTTPException(status_code=403)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    return GetUserDetailResponse.model_validate(detail)
 
 
 @router.post("/replace_task_data", name="bff_admin_replace_task_data")

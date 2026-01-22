@@ -13,7 +13,8 @@ import { useTranslation } from '@/i18n';
 
 interface AdminUserAutocompleteProps {
   initialLabel?: string;
-  onSelectUser?: (userId: string | undefined) => void;
+  onSelectUser?: (userId: string | undefined, label?: string) => void;
+  excludeUserIds?: string[];
 }
 
 const WeUserAutocomplete: React.FC<AdminUserAutocompleteProps> = props => {
@@ -24,6 +25,10 @@ const WeUserAutocomplete: React.FC<AdminUserAutocompleteProps> = props => {
 
   const searchWfUsers =
     useSelector((state: State) => state.data[WeDataKey.ADMIN_SEARCH_WF_USERS])?.data?.options ?? [];
+  const filteredUsers =
+    props.excludeUserIds && props.excludeUserIds.length > 0
+      ? searchWfUsers.filter(user => !props.excludeUserIds?.includes(user.value))
+      : searchWfUsers;
 
   useEffect(() => {
     void Suggestions.init();
@@ -52,16 +57,16 @@ const WeUserAutocomplete: React.FC<AdminUserAutocompleteProps> = props => {
           event: Ui5CustomEvent<InputDomRef, InputSuggestionItemSelectEventDetail>
         ) => {
           if (props.onSelectUser && event.detail.item.dataset.value) {
-            props.onSelectUser(event.detail.item.dataset.value);
+            props.onSelectUser(event.detail.item.dataset.value, event.detail.item.text);
           }
         }}
         onInput={() => {
           fetchUserData();
           if (props.onSelectUser) {
-            props.onSelectUser(undefined);
+            props.onSelectUser(undefined, undefined);
           }
         }}>
-        {searchWfUsers.map(user => {
+        {filteredUsers.map(user => {
           return (
             <SuggestionItem
               key={`suggest_user_${user.value}`}
