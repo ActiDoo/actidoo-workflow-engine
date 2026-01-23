@@ -9,7 +9,9 @@ START_CMD="${START_CMD:-/opt/app/start.sh --only=frontend}"
 CHECK_PATTERN="${CHECK_PATTERN:-supervisord|nginx: master process}"
 APP_HOME="${APP_HOME:-/opt/app}"
 
-touch "${LOG_FILE}"
+sudo -n touch "${LOG_FILE}"
+sudo -n chown root:root "${LOG_FILE}"
+sudo -n chmod 644 "${LOG_FILE}"
 
 if [[ ! -d "${APP_HOME}" ]]; then
     echo "App home ${APP_HOME} not found; aborting frontend autostart."

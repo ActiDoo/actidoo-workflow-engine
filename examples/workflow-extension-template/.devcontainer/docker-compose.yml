@@ -11,6 +11,8 @@ services:
     command: sleep infinity
     volumes:
       - ..:/workspace:cached
+    tmpfs:
+      - /tmp:rw,mode=1777
     environment:
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
