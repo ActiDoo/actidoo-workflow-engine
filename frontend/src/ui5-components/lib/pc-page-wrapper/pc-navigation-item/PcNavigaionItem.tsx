@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { Icon, LinkDomRef, Menu, MenuDomRef, MenuItem, Text } from '@ui5/webcomponents-react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import React, { MutableRefObject, useRef } from 'react';
+import { Icon, Menu, MenuDomRef, MenuItem } from '@ui5/webcomponents-react';
+import { matchPath, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import React, { useRef } from 'react';
 import '@ui5/webcomponents-icons/dist/navigation-down-arrow';
 import { PcNavigationLink } from '@/ui5-components/lib/pc-page-wrapper/PcPageWrapper';
 
@@ -15,21 +15,27 @@ interface PcNavigationItemProps {
 export const PcNavigationItem: React.FC<PcNavigationItemProps> = (props: PcNavigationItemProps) => {
   const { item } = props;
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const menuRef: MutableRefObject<MenuDomRef> | undefined = useRef() as
-    | MutableRefObject<MenuDomRef>
-    | undefined;
-  const buttonRef: MutableRefObject<LinkDomRef> | undefined = useRef() as
-    | MutableRefObject<LinkDomRef>
-    | undefined;
+  const menuRef = useRef<MenuDomRef>(null);
+  const buttonRef = useRef<HTMLSpanElement>(null);
 
   const linkClass = (isActive: boolean): string =>
-    `mr-4 h-11 !inline-flex items-center no-underline cursor-pointer ${
-      isActive ? 'shadow-[inset_0px_-4px_0px_var(--pc-color-blue-primary)]' : 'link'
+    `mr-4 h-11 !inline-flex items-center no-underline cursor-pointer border-b-4 ${
+      isActive
+        ? 'border-brand-primary text-brand-primary font-semibold'
+        : 'border-transparent text-neutral-700 hover:text-neutral-900'
     }`;
 
-  const isRouteActive = (activeRoute?: string): boolean =>
-    activeRoute ? window.location.pathname?.includes(activeRoute) : false;
+  const normalizePath = (path?: string): string | undefined =>
+    path ? (path.startsWith('/') ? path : `/${path}`) : undefined;
+
+  const isRouteActive = (path?: string): boolean => {
+    const normalizedPath = normalizePath(path);
+    return normalizedPath
+      ? matchPath({ path: normalizedPath, end: false }, location.pathname) !== null
+      : false;
+  };
 
   const handleMenuCLick = (text: string): void => {
     const to = item.sub?.find(s => s.title === text)?.to;
@@ -37,28 +43,37 @@ export const PcNavigationItem: React.FC<PcNavigationItemProps> = (props: PcNavig
     if (to) navigate(to);
   };
 
+  const isActive = isRouteActive(item.activeRoute ?? item.to);
+
   const DefaultLink = (
     <NavLink
-      className={({ isActive }) =>
-        item.activeRoute ? linkClass(isRouteActive(item.activeRoute)) : linkClass(isActive)
-      }
+      aria-current={isActive ? 'page' : undefined}
+      className={linkClass(isActive)}
       to={item.to ?? ''}
       onClick={props.onNavigate}>
-      <Text>{item.title}</Text>
+      <span>{item.title}</span>
     </NavLink>
   );
 
   const LinkWithSub = (
     <>
-      <Text
+      <span
         ref={buttonRef}
-        className={linkClass(isRouteActive(item.activeRoute))}
+        className={linkClass(isActive)}
         onClick={() => {
-          menuRef?.current.showAt(buttonRef?.current as HTMLElement);
-        }}>
+          if (buttonRef.current) menuRef.current?.showAt(buttonRef.current);
+        }}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            if (buttonRef.current) menuRef.current?.showAt(buttonRef.current);
+          }
+        }}
+        role="button"
+        tabIndex={0}>
         {item.title}
         <Icon name="navigation-down-arrow" />
-      </Text>
+      </span>
       <Menu
         ref={menuRef}
         onItemClick={e => {

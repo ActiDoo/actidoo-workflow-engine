@@ -78,12 +78,13 @@ const Wrapper: React.FC = () => {
   const navigation: PcNavigationLink[] = [
     {
       title: t('navigation.tasks'),
-      to: 'tasks/open',
+      to: '/tasks/open',
       activeRoute: '/tasks',
     },
     {
       title: t('navigation.myWorkflows'),
-      to: 'my-workflows',
+      to: '/my-workflows',
+      activeRoute: '/my-workflows',
     },
   ];
 
