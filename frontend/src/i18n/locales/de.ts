@@ -78,6 +78,7 @@ export const de = {
       task: 'Aufgabe',
       open: 'Offen',
       completed: 'Abgeschlossen',
+      completedBy: 'Abgeschlossen von',
       workflow: 'Workflow',
       workflows: 'Workflows',
       tasks: 'Aufgaben',
@@ -193,6 +194,10 @@ export const de = {
     completed: 'Abgeschlossen',
     activeTasksOfWorkflow: 'Aktive Aufgaben des Workflows',
     tasksOfWorkflow: 'Aufgaben des Workflows',
+    completedTasksOfWorkflow: 'Abgeschlossene Aufgaben des Workflows',
+    submittedFormTitle: 'Abgeschicktes Formular',
+    submittedFormTitleWithTask: 'Abgeschicktes Formular: {{title}}',
+    submittedFormUnavailable: 'Formulardaten konnten nicht geladen werden.',
   },
   myWorkflowsTable: {
     workflow: 'Workflow',

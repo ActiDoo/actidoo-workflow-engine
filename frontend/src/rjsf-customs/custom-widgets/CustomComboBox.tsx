@@ -24,6 +24,7 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
   const isDisabled = props.disabled ?? props.readonly;
   const lastValueChangeRef = useRef(Date.now());
   const { taskId } = useParams();
+  const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
   const optionsQuery = useMutation({
     mutationFn: async () => {
@@ -31,8 +32,12 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
         return {};
       }
 
+      if (!effectiveTaskId) {
+        return { options: [] };
+      }
+
       const res = await fetchPost(getApiUrl('user/search_property_options'), {
-        task_id: taskId,
+        task_id: effectiveTaskId,
         property_path: props.uiSchema['ui:path'],
         search,
         include_value: props?.value,
@@ -53,7 +58,7 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
     debounce(() => {
       optionsQuery.mutate();
     }, 300),
-    [taskId, props.uiSchema ? props.uiSchema['ui:path'] : null]
+    [effectiveTaskId, props.uiSchema ? props.uiSchema['ui:path'] : null]
   );
 
   useEffect(() => {

@@ -39,6 +39,7 @@ export default function CustomArrayFieldTemplate<
 
   const location = useLocation()
   const { taskId } = useParams();
+  const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
   const [dynamicSelectLabels, setDynamicSelectLabels] = useState<Record<string, Record<string, string>>>({});
   const itemUiSchema = (props.uiSchema as any)?.items;
   const dynamicSelectConfigs = useMemo<Record<string, any>>(() => {
@@ -137,13 +138,13 @@ export default function CustomArrayFieldTemplate<
           const propertyPath = (fieldUiSchema as Record<string, any>)['ui:path'];
           const values = extractUniqueValues(dataArray, fieldKey);
 
-          if (!taskId || !propertyPath || !values.length) {
+          if (!effectiveTaskId || !propertyPath || !values.length) {
             return;
           }
 
           try {
             const response = await fetchPost(getApiUrl('user/search_property_options'), {
-              task_id: taskId,
+              task_id: effectiveTaskId,
               property_path: propertyPath,
               search: '',
               include_value: values.length === 1 ? values[0] : values,
@@ -171,7 +172,12 @@ export default function CustomArrayFieldTemplate<
     return () => {
       isActive = false;
     };
-  }, [props.formData, dynamicSelectConfigs, taskId, (props.registry as any)?.formContext?.formData]);
+  }, [
+    props.formData,
+    dynamicSelectConfigs,
+    effectiveTaskId,
+    (props.registry as any)?.formContext?.formData,
+  ]);
 
   //console.log(props.items.length)
   const showDialog = Modals.useShowDialog();

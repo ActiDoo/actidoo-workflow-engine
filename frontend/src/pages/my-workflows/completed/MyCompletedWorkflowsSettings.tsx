@@ -4,7 +4,7 @@
 import { AnalyticalTableColumnDefinition, Button } from '@ui5/webcomponents-react';
 import { PcDateColumn, PcInputColumn, PcTableData } from '@/ui5-components';
 import { Link } from 'react-router-dom';
-import '@ui5/webcomponents-icons/dist/show';
+import '@ui5/webcomponents-icons/dist/edit';
 import { type useTranslation } from '@/i18n';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
@@ -32,7 +32,7 @@ export const myCompletedWorkflowsColumns = (
           <Link
             to={`/tasks/completed/${data.id}/${data.completed_tasks[0].id}`}
             className="w-full text-center ">
-            <Button icon="show" />
+            <Button icon="edit" />
           </Link>
         );
       }

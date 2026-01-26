@@ -71,22 +71,24 @@ const MyCompletedWorkflows: React.FC = () => {
         <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
       </div>
 
-      <PcAnalyticalTable
-        columns={myCompletedWorkflowsColumns(tableData, user?.id, t)}
-        initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
-        data={data?.data?.ITEMS ?? []}
-        loading={loadingState}
-        response={data?.response}
-        pageChange={tableData.onPageClick}
-        filter={tableData.filter}
-        sort={tableData.sort}
-        onSort={tableData.onSort}
-        itemsCount={data?.data?.COUNT}
-        limit={environment.tableCount}
-        forcePage={tableData.forcePage}
-        filterable={true}
-        renderRowSubComponent={renderRowSubComponent}
-      />
+      <div className="my-workflows-table">
+        <PcAnalyticalTable
+          columns={myCompletedWorkflowsColumns(tableData, user?.id, t)}
+          initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
+          data={data?.data?.ITEMS ?? []}
+          loading={loadingState}
+          response={data?.response}
+          pageChange={tableData.onPageClick}
+          filter={tableData.filter}
+          sort={tableData.sort}
+          onSort={tableData.onSort}
+          itemsCount={data?.data?.COUNT}
+          limit={environment.tableCount}
+          forcePage={tableData.forcePage}
+          filterable={true}
+          renderRowSubComponent={renderRowSubComponent}
+        />
+      </div>
     </>
   );
 };

@@ -77,6 +77,7 @@ export const en = {
       task: 'Task',
       open: 'Open',
       completed: 'Completed',
+      completedBy: 'Completed by',
       workflow: 'Workflow',
       workflows: 'Workflows',
       tasks: 'Tasks',
@@ -191,6 +192,10 @@ export const en = {
     completed: 'Completed',
     activeTasksOfWorkflow: 'Active tasks of workflow',
     tasksOfWorkflow: 'Tasks of workflow',
+    completedTasksOfWorkflow: 'Completed tasks of workflow',
+    submittedFormTitle: 'Submitted form',
+    submittedFormTitleWithTask: 'Submitted form: {{title}}',
+    submittedFormUnavailable: 'Submitted form data could not be loaded.',
   },
   myWorkflowsTable: {
     workflow: 'Workflow',

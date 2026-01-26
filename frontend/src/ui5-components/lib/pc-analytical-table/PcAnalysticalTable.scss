@@ -12,6 +12,11 @@
    margin-right: 8px
 }
 
+.my-workflows-table [class*='AnalyticalTable_tr_']:hover:not([data-empty-row]),
+.my-workflows-table [class*='AnalyticalTable_tr_']:hover:not([data-empty-row]) td {
+   background-color: inherit !important;
+}
+
 
 div[class*='TableColumnHeader'] > ui5-icon[name='sort-ascending'],
 div[class*='TableColumnHeader'] > ui5-icon[name='sort-descending']
