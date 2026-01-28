@@ -18,4 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack enable \
     && corepack prepare yarn@stable --activate \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-    
+
+# Install Playwright and Playwright MCP Server
+RUN npm install -g @playwright/mcp playwright \
+    && npx playwright install --with-deps
+
+# Install Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code

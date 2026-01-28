@@ -5,12 +5,13 @@ import React, { ReactElement } from 'react';
 import { evaluateHideIfAndFeel } from '@/services/FeelService';
 import { FieldProps } from '@rjsf/utils';
 import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
+const emptyobject = {};
 
 const CustomArraySchemaField = (props: FieldProps): ReactElement => {
   const { formData, uiSchema, schema } = props;
   const formContext = (props.registry as any)?.formContext;
   const evaluationFields = {
-    ...(formContext?.formData || {}),
+    ...(formContext?.formData || emptyobject),
     ...formData,
   };
 

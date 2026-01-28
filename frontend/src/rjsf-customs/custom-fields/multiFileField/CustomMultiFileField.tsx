@@ -23,7 +23,8 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
   // console.log("** CustomMultiFileField ********************************************************************************************")
   // console.log(props)
 
-  const { formData: files, onChange } = props;
+  const { formData: files, onChange, fieldPathId } = props;
+  const fieldPath = fieldPathId?.path ?? [];
   const dispatch = useDispatch();
   const onDrop = (event: DragEvent<HTMLDivElement>): void => {
     updateFileList(event.dataTransfer.files);
@@ -96,14 +97,14 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
     )
       .then(results => {
         const nonNullResults: PcFile[] = results.filter(x => x !== null) as PcFile[];
-        onChange([...(files ?? []), ...nonNullResults], []);
+        onChange([...(files ?? []), ...nonNullResults], fieldPath);
         setFileUploadKey(getRandomString());
       })
       .catch(() => { });
   };
   const removeFile = (file: PcFile): void => {
     if (files) {
-      onChange(_.remove(files, current => current.filename !== file.filename), []);
+      onChange(_.remove(files, current => current.filename !== file.filename), fieldPath);
     }
   };
 

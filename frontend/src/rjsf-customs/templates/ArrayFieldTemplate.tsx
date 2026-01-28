@@ -25,6 +25,7 @@ import {
 import { fetchPost } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
 import { PcValueLabelItem } from '@/models/models';
+import _ from 'lodash';
 
 export default function CustomArrayFieldTemplate<
   T = any,
@@ -42,6 +43,7 @@ export default function CustomArrayFieldTemplate<
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
   const [dynamicSelectLabels, setDynamicSelectLabels] = useState<Record<string, Record<string, string>>>({});
   const itemUiSchema = (props.uiSchema as any)?.items;
+  const itemUiSchemaSignature = JSON.stringify(itemUiSchema ?? null);
   const dynamicSelectConfigs = useMemo<Record<string, any>>(() => {
     if (!itemUiSchema || typeof itemUiSchema !== 'object') {
       return {};
@@ -60,7 +62,7 @@ export default function CustomArrayFieldTemplate<
       }
       return acc;
     }, {} as Record<string, any>);
-  }, [itemUiSchema]);
+  }, [itemUiSchemaSignature]);
 
   useEffect(() => {
     // DURING THE FIRST RENDER -> ADD THE MINIMUM ITEMS, WHICH SHALL BE VISIBLE
@@ -120,12 +122,30 @@ export default function CustomArrayFieldTemplate<
     return Array.from(values);
   };
 
+  const formContextSignature = JSON.stringify((props.registry as any)?.formContext?.formData ?? null);
+  const dynamicSelectFetchSignature = useMemo(() => {
+    const dataArray = Array.isArray(props.formData) ? props.formData : [];
+    const fields = Object.entries(dynamicSelectConfigs)
+      .map(([fieldKey, fieldUiSchema]) => {
+        const propertyPath = (fieldUiSchema as Record<string, any>)['ui:path'];
+        const values = extractUniqueValues(dataArray, fieldKey).sort();
+        return { fieldKey, propertyPath, values };
+      })
+      .sort((a, b) => a.fieldKey.localeCompare(b.fieldKey));
+
+    return JSON.stringify({
+      taskId: effectiveTaskId ?? null,
+      formContextSignature,
+      fields,
+    });
+  }, [dynamicSelectConfigs, effectiveTaskId, formContextSignature, props.formData]);
+
   useEffect(() => {
     let isActive = true;
 
     const fetchDynamicLabels = async () => {
       if (!Object.keys(dynamicSelectConfigs).length) {
-        setDynamicSelectLabels({});
+        setDynamicSelectLabels(prev => (_.isEqual(prev, {}) ? prev : {}));
         return;
       }
 
@@ -163,7 +183,7 @@ export default function CustomArrayFieldTemplate<
       );
 
       if (isActive) {
-        setDynamicSelectLabels(nextLabels);
+        setDynamicSelectLabels(prev => (_.isEqual(prev, nextLabels) ? prev : nextLabels));
       }
     };
 
@@ -173,10 +193,9 @@ export default function CustomArrayFieldTemplate<
       isActive = false;
     };
   }, [
-    props.formData,
+    dynamicSelectFetchSignature,
     dynamicSelectConfigs,
     effectiveTaskId,
-    (props.registry as any)?.formContext?.formData,
   ]);
 
   //console.log(props.items.length)

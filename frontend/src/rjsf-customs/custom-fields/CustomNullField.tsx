@@ -13,11 +13,12 @@ function CustomNullField<
   S extends StrictRJSFSchema = RJSFSchema,
   F extends FormContextType = any
 >(props: FieldProps<T, S, F>): null {
-  const { formData, onChange } = props;
+  const { formData, onChange, fieldPathId } = props;
+  const fieldPath = fieldPathId?.path ?? [];
 
   if (formData !== null) {
     setTimeout(() => {
-      onChange(null as unknown as T, []);
+      onChange(null as unknown as T, fieldPath);
     });
   }
 

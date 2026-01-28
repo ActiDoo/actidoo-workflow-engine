@@ -45,7 +45,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const task = useSelectCurrentTask(taskId);
   const [scrollToTop] = useScrollTop();
   const [progress, setProgress] = useState(0);
-  const [formData, setFormData] = useState<object | undefined>(task?.data);
+  const [formData, setFormData] = useState<object | undefined>(undefined);
   const [errorSchema, setErrorSchema] = useState<ErrorSchema | undefined>(undefined);
   const [resetToInitialStateDialogOpen, setResetToInitialStateDialogOpen] = useState(false);
   const [formRenderIndex, setFormRenderIndex] = useState(0);
@@ -53,6 +53,10 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const [delegateComment, setDelegateComment] = useState('');
   const [pendingDelegateFormData, setPendingDelegateFormData] = useState<object | null>(null);
   const dbRef = useRef<IDBDatabase | null>(null); // Ref to hold the DB instance
+
+  // Track whether the draft has been loaded from IndexedDB (prevents race condition)
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const isDraftLoadedRef = useRef(false);
 
   // Refs to hold the latest formData and task
   const formDataRef = useRef<object | undefined>(formData);
@@ -66,6 +70,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   useEffect(() => {
     taskRef.current = task;
   }, [task]);
+
+  // Update isDraftLoadedRef whenever isDraftLoaded changes
+  useEffect(() => {
+    isDraftLoadedRef.current = isDraftLoaded;
+  }, [isDraftLoaded]);
+
+  // Reset state when taskId changes (prevents stale data from previous task)
+  useEffect(() => {
+    setIsDraftLoaded(false);
+    isDraftLoadedRef.current = false;
+    setFormData(undefined);
+    setErrorSchema(undefined);
+  }, [taskId]);
 
   const submitRequest = useSelector((state: State) => state.data[WeDataKey.SUBMIT_TASK_DATA]);
   const loadingState = useSelector((state: State) => state.ui.loading);
@@ -87,32 +104,57 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     changeRequiredDefinitionForFieldsWithHideIfDefinition(jsonschema, uiSchema);
   }
 
-  // Initialize IndexedDB and load draft data
+  // Initialize IndexedDB and load draft data (runs only when taskId changes)
   useEffect(() => {
+    let isCancelled = false;
+
     const initializeDB = async () => {
       try {
         const db = await openDB();
+        if (isCancelled) return;
         dbRef.current = db;
 
-        await deleteOldFormData(db)
+        await deleteOldFormData(db);
 
         if (taskId) {
           const savedFormData = await getFormData(db, taskId);
-          if (savedFormData) {
-            setFormData(savedFormData);
-          }
+          if (isCancelled) return;
+
+          setTimeout(() => {
+            if (savedFormData) {
+              // Draft data found in IndexedDB - use it
+              setFormData(savedFormData);
+            } else if (taskRef.current?.data) {
+              // No draft data, use server data as initial value
+              setFormData(taskRef.current.data);
+            }
+          }, 100);
+          // Note: if neither draft nor server data is available yet,
+          // the separate useEffect for task?.data will handle it
         }
+        // Mark draft as loaded - now saving is allowed
+        setIsDraftLoaded(true);
+        isDraftLoadedRef.current = true;
       } catch (error) {
         console.error('Failed to open IndexedDB:', error);
+        if (isCancelled) return;
+        // On error, fall back to server data and allow saving
+        if (taskRef.current?.data) {
+          setFormData(taskRef.current.data);
+        }
+        setIsDraftLoaded(true);
+        isDraftLoadedRef.current = true;
       }
     };
 
     void initializeDB();
 
-    // Cleanup function to close the DB when component unmounts
+    // Cleanup function to close the DB when component unmounts or taskId changes
     return () => {
+      isCancelled = true;
       if (dbRef.current) {
         dbRef.current.close();
+        dbRef.current = null;
       }
     };
   }, [taskId]);
@@ -122,15 +164,13 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     if (!task || task.id !== taskId) loadTasks();
   }, [taskId]);
 
-  // Update formData when task changes **only if no draft is present**
+  // Update formData when task changes **only if draft is already loaded and formData is still undefined**
+  // This handles the case where task.data arrives after IndexedDB check completed with no draft
   useEffect(() => {
-    const updateFormData = async () => {
-      if (task?.data && !formDataRef.current) {
-        setFormData(() => task.data);
-      }
-    };
-    void updateFormData();
-  }, [task]);
+    if (isDraftLoaded && task?.data && !formDataRef.current) {
+      setFormData(task.data);
+    }
+  }, [task?.data, isDraftLoaded]);
 
   // Handle responses for submit
   useEffect(() => {
@@ -343,11 +383,13 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       const updatedData = { ...prevData, ...d.formData };
       return updatedData;
     });
-    // Save draft to IndexedDB (debounced)
-    debouncedSaveDraft();
+    // Only save to IndexedDB after draft has been loaded (prevents overwriting draft with server data)
+    if (isDraftLoadedRef.current) {
+      debouncedSaveDraft();
+    }
   };
 
-  if (loadingState[WeDataKey.MY_USER_TASKS]) {
+  if (loadingState[WeDataKey.MY_USER_TASKS] || !isDraftLoaded) {
     return (
       <div className="flex flex-col w-full h-full items-center justify-center pb-32 gap-2">
         <BusyIndicator active={true} delay={500} />

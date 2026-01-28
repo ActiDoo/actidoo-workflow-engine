@@ -14,18 +14,36 @@ const CustomSchemaField = (props: FieldProps): ReactElement => {
   };
   const formContext = (props.registry as any)?.formContext;
 
+  const effectiveUiSchema = 
+  schema.type === 'null'
+    ? {
+        ...(uiSchema as any),
+        'ui:options': {
+          ...((uiSchema as any)?.['ui:options'] || {}),
+          'title': ' ', //suppress id as label
+        },
+      }
+    : uiSchema;
+
   // TODO the setTimeout's meaning is to asychronously start a job, which will do the props.onChange()
   // call later, so the rendering of this component will process until you hit the return-statement
   // BUT WHAT EXACTLY IS THE PURPOSE OF THESE ASYNC props.onChange() CALLS, UNDER WHICH CIRCUMSTANCES ETC?
+  const fieldPath = fieldPathId?.path ?? [];
   if (formData === undefined) {
     if (schema.default !== undefined) {
       setTimeout(() => {
-        props.onChange(schema.default, []);
+        props.onChange(schema.default, fieldPath);
       });
     } else if (schema.type === 'boolean') {
-      setTimeout(() => {
-        props.onChange(false, []);
-      });
+      // If a boolean is conditionally hidden/shown, RJSF may repeatedly drop it from formData.
+      // Forcing a default here can then create an update/render loop.
+      const widget = (effectiveUiSchema as any)?.['ui:widget'];
+      const hideif = (effectiveUiSchema as any)?.['ui:hideif'];
+      if (widget !== 'hidden' && hideif === undefined) {
+        setTimeout(() => {
+          props.onChange(false, fieldPath);
+        });
+      }
     }
   }
 
@@ -48,13 +66,13 @@ const CustomSchemaField = (props: FieldProps): ReactElement => {
     // console.log("CustomSchemaField formData", formData)
     // console.log("CustomSchemaField uiSchema", uiSchema)
     // console.log("CustomSchemaField schema", schema)
-    const { newUiSchema, newSchema } = evaluateHideIfAndFeel(orgFormData, uiSchema, schema);
+    const { newUiSchema, newSchema } = evaluateHideIfAndFeel(orgFormData, effectiveUiSchema, schema);
 
     const newProps = { ...props, uiSchema: newUiSchema, schema: newSchema};
     return <OrgSchemaField {...newProps} />;
   }
 
-  return <OrgSchemaField {...props} />;
+  return <OrgSchemaField {...{ ...props, uiSchema: effectiveUiSchema, schema: schema }} />;
 };
 
 export default CustomSchemaField;

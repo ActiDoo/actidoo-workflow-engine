@@ -1085,38 +1085,38 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rjsf/core@npm:6.1.2":
-  version: 6.1.2
-  resolution: "@rjsf/core@npm:6.1.2"
+"@rjsf/core@npm:6.2.5":
+  version: 6.2.5
+  resolution: "@rjsf/core@npm:6.2.5"
   dependencies:
     lodash: "npm:^4.17.21"
     lodash-es: "npm:^4.17.21"
     markdown-to-jsx: "npm:^8.0.0"
     prop-types: "npm:^15.8.1"
   peerDependencies:
-    "@rjsf/utils": ^6.x
+    "@rjsf/utils": ^6.2.x
     react: ">=18"
-  checksum: 10/2084cfb49d94bd2708f8c14747d3820ae156574a404c018de6199583eddc12688b83d67fc382c9ec71651503d3a801bfd2624f6c96cd3318b394cd105158bc17
+  checksum: 10/68abe2d45fb3f514390069261c8afefbb1f40fed7828a82bdbe123694c74c797a7c95f113be35df762389e8cf8feef04019b31b4f3678d14223dabd392f34403
   languageName: node
   linkType: hard
 
-"@rjsf/react-bootstrap@npm:6.1.2":
-  version: 6.1.2
-  resolution: "@rjsf/react-bootstrap@npm:6.1.2"
+"@rjsf/react-bootstrap@npm:6.2.5":
+  version: 6.2.5
+  resolution: "@rjsf/react-bootstrap@npm:6.2.5"
   dependencies:
     "@react-icons/all-files": "npm:^4.1.0"
   peerDependencies:
-    "@rjsf/core": ^6.x
-    "@rjsf/utils": ^6.x
+    "@rjsf/core": ^6.2.x
+    "@rjsf/utils": ^6.2.x
     react: ">=18"
     react-bootstrap: ^2.x
-  checksum: 10/9573d05324bb9934e2e7630c862085aede1b225aed58b709554817ee685b6bf73303cdcd257fbdaba3ca84dcd8c3eceac199a3f6ce221363075bfd5f2c8a6c88
+  checksum: 10/759a5407211990a179fd0a87e63a7fac7b1cbf87e3f0125f07c42e088aba920896c8ef09aa1b29df0710a30581d87a4e939cac99cb30208ba1de90d00666ad64
   languageName: node
   linkType: hard
 
-"@rjsf/utils@npm:6.1.2":
-  version: 6.1.2
-  resolution: "@rjsf/utils@npm:6.1.2"
+"@rjsf/utils@npm:6.2.5":
+  version: 6.2.5
+  resolution: "@rjsf/utils@npm:6.2.5"
   dependencies:
     "@x0k/json-schema-merge": "npm:^1.0.2"
     fast-uri: "npm:^3.1.0"
@@ -1126,21 +1126,21 @@ __metadata:
     react-is: "npm:^18.3.1"
   peerDependencies:
     react: ">=18"
-  checksum: 10/0193b3c8deb14b15da34a0ce600fcf47dcae4643e1428050764445f1da972c64772daa272f6256d4c9ce1856805a742e8b841a81601c5e832eb8e403f45c952d
+  checksum: 10/5a167d860407c30faa3bc4a987a1242dd70edea067b4062196d50a8421e5177f0603e4e0a6b067abc0650452c6633aa26329a7a61eda565dc8469fa03cf31d46
   languageName: node
   linkType: hard
 
-"@rjsf/validator-ajv8@npm:6.1.2":
-  version: 6.1.2
-  resolution: "@rjsf/validator-ajv8@npm:6.1.2"
+"@rjsf/validator-ajv8@npm:6.2.5":
+  version: 6.2.5
+  resolution: "@rjsf/validator-ajv8@npm:6.2.5"
   dependencies:
     ajv: "npm:^8.17.1"
     ajv-formats: "npm:^2.1.1"
     lodash: "npm:^4.17.21"
     lodash-es: "npm:^4.17.21"
   peerDependencies:
-    "@rjsf/utils": ^6.x
-  checksum: 10/b2a0a28640854dc22251341d0cc94eae48b0c98c0e9a0d9d4ed3f05fbca200782d6aca3a0276e1a4d5f3dacc2d1c06d6700c5e381cddcae8554f69bc60f6dbec
+    "@rjsf/utils": ^6.2.x
+  checksum: 10/d470e379df6e383a13cb2d27957fbb58884ef75367b7369addc29427818abb9e87418ef28355cbf84f53b70a8190edf69a1a7a24b6934cc843dfb69442c4b4ec
   languageName: node
   linkType: hard
 
@@ -2219,10 +2219,10 @@ __metadata:
   resolution: "actidoo-global@workspace:."
   dependencies:
     "@popperjs/core": "npm:2.11.8"
-    "@rjsf/core": "npm:6.1.2"
-    "@rjsf/react-bootstrap": "npm:6.1.2"
-    "@rjsf/utils": "npm:6.1.2"
-    "@rjsf/validator-ajv8": "npm:6.1.2"
+    "@rjsf/core": "npm:6.2.5"
+    "@rjsf/react-bootstrap": "npm:6.2.5"
+    "@rjsf/utils": "npm:6.2.5"
+    "@rjsf/validator-ajv8": "npm:6.2.5"
     "@types/d3": "npm:^7.4.3"
     "@types/eslint": "npm:^8"
     "@types/lodash": "npm:^4.14.191"

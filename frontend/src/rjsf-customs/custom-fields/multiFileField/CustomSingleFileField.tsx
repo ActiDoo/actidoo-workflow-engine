@@ -21,7 +21,8 @@ export interface PcFile {
 }
 const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement | null => {
   // console.log("** CustomSingleFileField ********************************************************************************************")
-  const { formData: files, onChange } = props;
+  const { formData: files, onChange, fieldPathId } = props;
+  const fieldPath = fieldPathId?.path ?? [];
   const dispatch = useDispatch();
   const onDrop = (event: DragEvent<HTMLDivElement>): void => {
     updateFileList(event.dataTransfer.files);
@@ -88,7 +89,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
 
     processFile(newFile)
     .then(result => {
-      onChange(result, []);
+      onChange(result, fieldPath);
       setFileUploadKey(getRandomString());
     })
     .catch(() => {
@@ -97,7 +98,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
   };
 
   const removeFile = (): void => {
-    onChange(undefined, []);
+    onChange(undefined, fieldPath);
   };
 
   /**
