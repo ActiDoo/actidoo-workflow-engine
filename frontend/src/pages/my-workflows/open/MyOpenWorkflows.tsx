@@ -167,7 +167,7 @@ const MyOpenWorkflows: React.FC = () => {
       </div>
       <div className="my-workflows-table">
         <PcAnalyticalTable
-          columns={myOpenWorkflowsColumns(tableData, user?.id, t, openSubmittedForm)}
+          columns={myOpenWorkflowsColumns(tableData, user?.id, t)}
           initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
           data={data?.data?.ITEMS ?? []}
           loading={loadingState}

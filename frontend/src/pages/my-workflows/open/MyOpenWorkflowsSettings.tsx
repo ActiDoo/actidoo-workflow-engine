@@ -4,7 +4,6 @@
 import { AnalyticalTableColumnDefinition, Button } from '@ui5/webcomponents-react';
 import { PcDateColumn, PcInputColumn, PcTableData } from '@/ui5-components';
 import { Link } from 'react-router-dom';
-import '@ui5/webcomponents-icons/dist/show';
 import { type useTranslation } from '@/i18n';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
@@ -12,8 +11,7 @@ type Translate = ReturnType<typeof useTranslation>['t'];
 export const myOpenWorkflowsColumns = (
   tableData: PcTableData,
   userId: string | undefined,
-  t: Translate,
-  onShowSubmittedForm?: (workflowId: string, taskId?: string) => void
+  t: Translate
 ): AnalyticalTableColumnDefinition[] => [
   PcInputColumn('title', t('myWorkflowsTable.workflow'), tableData),
   PcInputColumn('subtitle', t('myWorkflowsTable.subtitle'), tableData),
@@ -52,37 +50,17 @@ export const myOpenWorkflowsColumns = (
       const data = instance.row.original;
       const canEditTask =
         data.active_tasks?.length === 1 && data.active_tasks[0].assigned_user?.id === userId;
-      const completedTasks =
-        data.completed_tasks?.filter(
-          (task: any) =>
-            task.completed_by_user?.id === userId || task.completed_by_delegate_user?.id === userId
-        ) ?? [];
-      const completedTask = completedTasks.length === 1 ? completedTasks[0] : null;
-      const canShowSubmittedForm =
-        completedTasks.length > 0 && typeof onShowSubmittedForm === 'function';
 
-      if (!canEditTask && !canShowSubmittedForm) {
+      if (!canEditTask) {
         return '';
       }
 
       return (
-        <div className="flex items-center justify-center gap-2">
-          {canShowSubmittedForm ? (
-            <Button
-              icon="show"
-              onClick={() => {
-                onShowSubmittedForm?.(data.id, completedTask?.id);
-              }}
-            />
-          ) : null}
-          {canEditTask ? (
-            <Link
-              to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
-              className="w-full text-center">
-              <Button icon="edit" />
-            </Link>
-          ) : null}
-        </div>
+        <Link
+          to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
+          className="w-full text-center">
+          <Button icon="edit" />
+        </Link>
       );
     },
   },
