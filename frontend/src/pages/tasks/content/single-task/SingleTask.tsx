@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { WeDataKey } from '@/store/generic-data/setup';
-import { Text, BusyIndicator, Button, ButtonDesign, TextArea } from '@ui5/webcomponents-react';
-import { getRequest, postRequest } from '@/store/generic-data/actions';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { State } from '@/store';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ErrorSchema,
-  RJSFSchema,
-  UiSchema,
-} from '@rjsf/utils';
 import _ from 'lodash';
+import { BusyIndicator, Button, ButtonDesign, Text, TextArea } from '@ui5/webcomponents-react';
+import { ErrorSchema, RJSFSchema, UiSchema } from '@rjsf/utils';
+
+import { WeDataKey } from '@/store/generic-data/setup';
+import { getRequest, postRequest } from '@/store/generic-data/actions';
+import { State } from '@/store';
 import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
 import { useScrollTop } from '@/utils/hooks/useScrollTop';
@@ -28,10 +25,7 @@ import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { useTranslation } from '@/i18n';
 import { StringDict } from '@/ui5-components';
 
-// Import IndexedDB store service functions
 import { openDB, getFormData, saveFormData, deleteFormData, deleteOldFormData } from '@/services/DBService';
-
-// Import debounce from lodash to prevent excessive writes
 
 interface SingleTaskProps {
   state: WorkflowState;
@@ -42,47 +36,25 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const { workflowId, taskId } = useParams<{ workflowId: string; taskId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
   const task = useSelectCurrentTask(taskId);
   const [scrollToTop] = useScrollTop();
+
   const [progress, setProgress] = useState(0);
   const [formData, setFormData] = useState<object | undefined>(undefined);
   const [errorSchema, setErrorSchema] = useState<ErrorSchema | undefined>(undefined);
+
   const [resetToInitialStateDialogOpen, setResetToInitialStateDialogOpen] = useState(false);
-  const [formRenderIndex, setFormRenderIndex] = useState(0);
+  const [formRenderIndex] = useState(0);
+
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
   const [delegateComment, setDelegateComment] = useState('');
   const [pendingDelegateFormData, setPendingDelegateFormData] = useState<object | null>(null);
-  const dbRef = useRef<IDBDatabase | null>(null); // Ref to hold the DB instance
 
-  // Track whether the draft has been loaded from IndexedDB (prevents race condition)
+  const dbRef = useRef<IDBDatabase | null>(null);
+  const submittedTaskIdRef = useRef<string | null>(null);
+
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
-  const isDraftLoadedRef = useRef(false);
-
-  // Refs to hold the latest formData and task
-  const formDataRef = useRef<object | undefined>(formData);
-  const taskRef = useRef<typeof task>(task);
-
-  // Update the refs whenever formData or task changes
-  useEffect(() => {
-    formDataRef.current = formData;
-  }, [formData]);
-
-  useEffect(() => {
-    taskRef.current = task;
-  }, [task]);
-
-  // Update isDraftLoadedRef whenever isDraftLoaded changes
-  useEffect(() => {
-    isDraftLoadedRef.current = isDraftLoaded;
-  }, [isDraftLoaded]);
-
-  // Reset state when taskId changes (prevents stale data from previous task)
-  useEffect(() => {
-    setIsDraftLoaded(false);
-    isDraftLoadedRef.current = false;
-    setFormData(undefined);
-    setErrorSchema(undefined);
-  }, [taskId]);
 
   const submitRequest = useSelector((state: State) => state.data[WeDataKey.SUBMIT_TASK_DATA]);
   const loadingState = useSelector((state: State) => state.ui.loading);
@@ -91,9 +63,8 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const isUploadLoadingDialogOpen = isSubmitLoading;
 
   const jsonschema: RJSFSchema | undefined = _.cloneDeep(task?.jsonschema);
-  const uiSchema = (task?.uischema
-    ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>)
-    : undefined);
+  const uiSchema = task?.uischema ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>) : undefined;
+
   const isBlockedByDelegateAssignment =
     !!(task?.assigned_to_me && task?.assigned_delegate_user && !task?.assigned_to_me_as_delegate);
   const canSubmitTask =
@@ -104,6 +75,56 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     changeRequiredDefinitionForFieldsWithHideIfDefinition(jsonschema, uiSchema);
   }
 
+  const uploadProgress = (p: number): void => {
+    setProgress(() => p);
+  };
+
+  const loadTasks = useCallback((): void => {
+    if (!workflowId) return;
+
+    dispatch(
+      getRequest(WeDataKey.MY_USER_TASKS, {
+        queryParams: { workflow_instance_id: workflowId },
+        params: { state: props.state },
+      })
+    );
+  }, [dispatch, workflowId, props.state]);
+
+  // Reset state when taskId changes (prevents stale data from previous task)
+  useEffect(() => {
+    setIsDraftLoaded(false);
+    setFormData(undefined);
+    setErrorSchema(undefined);
+  }, [taskId]);
+
+  // Debounced draft saver: always saves the data for the taskId provided at call-time (prevents ref races)
+  const debouncedSaveDraft = useMemo(
+    () =>
+      _.debounce(async (id: string, data: object) => {
+        const db = dbRef.current;
+        if (!db) return;
+
+        try {
+          await saveFormData(db, id, data);
+        } catch (error) {
+          console.error('Failed to save draft to IndexedDB:', error);
+        }
+      }, 250),
+    []
+  );
+
+  // Cancel pending debounced saves on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSaveDraft.cancel();
+    };
+  }, [debouncedSaveDraft]);
+
+  // Cancel pending saves when taskId changes (prevents a prior task save from firing after reset/delete)
+  useEffect(() => {
+    debouncedSaveDraft.cancel();
+  }, [taskId, debouncedSaveDraft]);
+
   // Initialize IndexedDB and load draft data (runs only when taskId changes)
   useEffect(() => {
     let isCancelled = false;
@@ -112,6 +133,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       try {
         const db = await openDB();
         if (isCancelled) return;
+
         dbRef.current = db;
 
         await deleteOldFormData(db);
@@ -120,57 +142,50 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
           const savedFormData = await getFormData(db, taskId);
           if (isCancelled) return;
 
-          setTimeout(() => {
-            if (savedFormData) {
-              // Draft data found in IndexedDB - use it
-              setFormData(savedFormData);
-            } else if (taskRef.current?.data) {
-              // No draft data, use server data as initial value
-              setFormData(taskRef.current.data);
-            }
-          }, 100);
-          // Note: if neither draft nor server data is available yet,
-          // the separate useEffect for task?.data will handle it
+          // Only set draft here. Server fallback is handled in a separate effect after draft load is completed.
+          if (savedFormData !== undefined && savedFormData !== null) {
+            setFormData(savedFormData);
+          }
         }
-        // Mark draft as loaded - now saving is allowed
+
         setIsDraftLoaded(true);
-        isDraftLoadedRef.current = true;
       } catch (error) {
         console.error('Failed to open IndexedDB:', error);
         if (isCancelled) return;
-        // On error, fall back to server data and allow saving
-        if (taskRef.current?.data) {
-          setFormData(taskRef.current.data);
-        }
+
+        // Even on error, allow rendering and server fallback.
         setIsDraftLoaded(true);
-        isDraftLoadedRef.current = true;
       }
     };
 
     void initializeDB();
 
-    // Cleanup function to close the DB when component unmounts or taskId changes
     return () => {
       isCancelled = true;
+      debouncedSaveDraft.cancel();
+
       if (dbRef.current) {
         dbRef.current.close();
         dbRef.current = null;
       }
     };
-  }, [taskId]);
+  }, [taskId, debouncedSaveDraft]);
 
   // Load tasks if necessary
   useEffect(() => {
+    if (!taskId) return;
     if (!task || task.id !== taskId) loadTasks();
-  }, [taskId]);
+  }, [taskId, task?.id, task, loadTasks]);
 
-  // Update formData when task changes **only if draft is already loaded and formData is still undefined**
-  // This handles the case where task.data arrives after IndexedDB check completed with no draft
+  // Server fallback after draft-check is completed, only for the current taskId, and only if formData is still undefined.
   useEffect(() => {
-    if (isDraftLoaded && task?.data && !formDataRef.current) {
-      setFormData(task.data);
-    }
-  }, [task?.data, isDraftLoaded]);
+    if (!isDraftLoaded) return;
+    if (!taskId) return;
+    if (!task || task.id !== taskId) return;
+    if (formData !== undefined) return;
+
+    setFormData(task.data ?? {});
+  }, [isDraftLoaded, task, taskId, formData]);
 
   // Handle responses for submit
   useEffect(() => {
@@ -181,18 +196,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       t('taskContent.submitSuccess'),
       t('taskContent.submitError'),
       () => {
-        dispatch(
-          postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY })
-        );
+        dispatch(postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY }));
         navigate('/tasks/open');
-        
-        // Optionally, delete the draft from IndexedDB upon successful submit
-        if (dbRef.current && task?.id) {
-          deleteFormData(dbRef.current, task.id).catch(error => {
+
+        // Delete the draft for the task that was actually submitted (prevents deleting the wrong one on fast navigation)
+        const submittedId = submittedTaskIdRef.current;
+        submittedTaskIdRef.current = null;
+
+        if (dbRef.current && submittedId) {
+          debouncedSaveDraft.cancel();
+          deleteFormData(dbRef.current, submittedId).catch(error => {
             console.error('Failed to delete draft data:', error);
           });
         }
-        
       },
       () => {
         if (submitRequest?.data && 'error_schema' in submitRequest.data) {
@@ -205,74 +221,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitRequest?.postResponse]);
 
-  const loadTasks = (): void => {
-    if (workflowId)
-      dispatch(
-        getRequest(WeDataKey.MY_USER_TASKS, {
-          queryParams: { workflow_instance_id: workflowId },
-          params: { state: props.state },
-        })
-      );
-  };
-
-  const uploadProgress = (p: number): void => {
-    setProgress(() => p);
-  };
-
-  const resetToInitialState = (): void => {
-    if (formDataRef.current && taskRef.current?.id) {
-      setResetToInitialStateDialogOpen(false);
-      
-      // Optionally, delete the draft from IndexedDB
-      if (dbRef.current && taskRef.current.id) {
-        deleteFormData(dbRef.current, taskRef.current.id).catch(error => {
-          console.error('Failed to delete draft data:', error);
-        });
-      }
-      
-      if (task?.data) {
-        setFormData(() => task.data);
-      }
-      setErrorSchema(undefined);
-    }
-  };
-
-
-  // Define saveDraft without dependencies, using the refs
-  const saveDraft = useCallback((): void => {
-    const currentFormData = formDataRef.current;
-    const currentTask = taskRef.current;
-
-    if (currentFormData && currentTask?.id) {
-      // Save to IndexedDB
-      if (dbRef.current && currentTask.id) {
-        saveFormData(dbRef.current, currentTask.id, currentFormData).catch(error => {
-          console.error('Failed to save draft to IndexedDB:', error);
-        });
-      }
-    }
-  }, [dispatch]);
-
-  // Debounced version of saveDraft to prevent excessive writes
-  const debouncedSaveDraft = useRef(_.debounce(saveDraft, 100)).current;
-
   const submitData = (data: any, delegateCommentValue?: string): void => {
-    if (data && task?.id) {
-      const queryParams: StringDict = { task_id: task.id };
-      if (delegateCommentValue && delegateCommentValue.trim().length > 0) {
-        queryParams.delegate_comment = delegateCommentValue.trim();
-      }
-      dispatch(
-        postRequest(
-          WeDataKey.SUBMIT_TASK_DATA,
-          data,
-          undefined,
-          queryParams,
-          undefined,
-          uploadProgress
-        )
-      );
+    if (!data || !taskId) return;
+
+    submittedTaskIdRef.current = taskId;
+
+    const queryParams: StringDict = { task_id: taskId };
+    if (delegateCommentValue && delegateCommentValue.trim().length > 0) {
+      queryParams.delegate_comment = delegateCommentValue.trim();
     }
+
+    dispatch(
+      postRequest(WeDataKey.SUBMIT_TASK_DATA, data, undefined, queryParams, undefined, uploadProgress)
+    );
   };
 
   const closeDelegateDialog = (): void => {
@@ -290,6 +251,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
 
   const renderDelegateConfirmationDialog = (): React.ReactElement => {
     if (!task) return <></>;
+
     return (
       <WeAlertDialog
         title="Confirm delegated submission"
@@ -343,6 +305,24 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     );
   };
 
+  const resetToInitialState = (): void => {
+    if (!taskId || !task) return;
+
+    setResetToInitialStateDialogOpen(false);
+
+    // Prevent pending debounced writes from re-creating the draft after deletion
+    debouncedSaveDraft.cancel();
+
+    if (dbRef.current) {
+      deleteFormData(dbRef.current, taskId).catch(error => {
+        console.error('Failed to delete draft data:', error);
+      });
+    }
+
+    setFormData(task.data ?? {});
+    setErrorSchema(undefined);
+  };
+
   const renderResetToInitialStateDialog = (): React.ReactElement => {
     return (
       <WeAlertDialog
@@ -378,18 +358,25 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   };
 
   // Handle form changes and save draft
-  const handleFormChange = (d: any) => {
-    setFormData(prevData => {
-      const updatedData = { ...prevData, ...d.formData };
-      return updatedData;
-    });
-    // Only save to IndexedDB after draft has been loaded (prevents overwriting draft with server data)
-    if (isDraftLoadedRef.current) {
-      debouncedSaveDraft();
-    }
-  };
+  const handleFormChange = useCallback(
+    (d: any) => {
+      // RJSF typically provides the full formData object; do not shallow-merge.
+      const next = _.cloneDeep(d.formData ?? {});
+      setFormData(next);
 
-  if (loadingState[WeDataKey.MY_USER_TASKS] || !isDraftLoaded) {
+      // Save only after draft check completed (prevents overwriting an existing draft during initialization)
+      if (isDraftLoaded && taskId) {
+        debouncedSaveDraft(taskId, next);
+      }
+    },
+    [isDraftLoaded, taskId, debouncedSaveDraft]
+  );
+
+  if (
+    loadingState[WeDataKey.MY_USER_TASKS] ||
+    !isDraftLoaded ||
+    (task && formData === undefined)
+  ) {
     return (
       <div className="flex flex-col w-full h-full items-center justify-center pb-32 gap-2">
         <BusyIndicator active={true} delay={500} />
@@ -397,15 +384,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     );
   }
 
-  // console.log("** SingleTask *************************************************")
-  // console.log(uiSchema)
-  // console.log(jsonschema)
-
   if (task && jsonschema !== undefined && formData !== undefined) {
-    // All relevant form information is stored inside these 3 objects.
-    // This logging should clarify how FEEL functions are stored and where you have to adjust your code.
-    // console.log("jsonschema", jsonschema)
-    // console.log("formData", formData)
     return (
       <>
         <div className="pl-2">
@@ -415,18 +394,11 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               loadTasks();
             }}
             backToList={() => {
-              dispatch(
-                postRequest(
-                  WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS,
-                  {},
-                  { state: WorkflowState.READY }
-                )
-              );
+              dispatch(postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY }));
               navigate('/tasks/open');
             }}
           />
           <div className="bg-white pt-4 px-12 pc-form pb-20">
-            {/* This is the main part of the whole page. Will construct all input fields and other elements, based on the json scheme. */}
             <TaskForm
               key={`form_${formRenderIndex}`}
               formData={formData}
@@ -465,21 +437,22 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
                 <div></div>
               )}
             </TaskForm>
+
             <WeUploadDialog
               isOpen={isUploadLoadingDialogOpen}
               progress={progress}
-              progressLabel={
-                isSubmitLoading ? t('taskContent.uploadForm') : t('taskContent.uploadDraft')
-              }
+              progressLabel={isSubmitLoading ? t('taskContent.uploadForm') : t('taskContent.uploadDraft')}
               processLabel={isSubmitLoading ? t('taskContent.processForm') : t('taskContent.processDraft')}
             />
           </div>
         </div>
+
         {renderDelegateConfirmationDialog()}
         {renderResetToInitialStateDialog()}
       </>
     );
   }
+
   return (
     <WeEmptySection
       icon="search"
