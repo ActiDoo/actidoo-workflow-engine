@@ -121,6 +121,16 @@ export const de = {
       loadingError:
         'Beim Laden der Tabellendaten ist ein Fehler aufgetreten. Bitte lade die Seite neu.',
     },
+    unsavedChanges: {
+      title: 'Ungespeicherte Änderungen',
+      message: 'Möchtest du die Seite wirklich verlassen? Deine Änderungen gehen verloren.',
+      stay: 'Bleiben',
+      leave: 'Verlassen',
+    },
+    delegations: {
+      addedNotice: 'Vertretung hinzugefügt. Vergiss nicht, die Änderungen zu speichern!',
+      addHint: '(nur bekannte Nutzer können hinzugefügt werden)',
+    },
   },
   tasks: {
     header: 'Aufgaben',

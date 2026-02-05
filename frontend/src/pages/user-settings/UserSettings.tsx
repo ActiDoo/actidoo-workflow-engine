@@ -2,6 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useBlocker } from 'react-router-dom';
 
 import { PcPage } from '@/ui5-components';
 import { WeDataKey } from '@/store/generic-data/setup';
@@ -24,6 +25,7 @@ import WeUserAutocomplete from '@/utils/components/WeUserAutocomplete';
 import { UserDelegation } from '@/models/models';
 import { handleResponse } from '@/services/HelperService';
 import { useSelectUiLoading } from '@/store/ui/selectors';
+import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import { useTranslation } from '@/i18n';
 
 const DATE_TIME_PATTERN = 'yyyy-MM-dd HH:mm';
@@ -85,6 +87,8 @@ const UserSettings: React.FC = () => {
   const [initialDelegations, setInitialDelegations] = useState<UserDelegation[]>([]);
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
+  const [showDelegateAddedNotice, setShowDelegateAddedNotice] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const saving = useSelectUiLoading(key, 'POST');
 
   const isDuplicatePendingDelegate = useMemo(() => {
@@ -152,6 +156,7 @@ const UserSettings: React.FC = () => {
       })),
     };
     dispatch(postRequest(key, payload));
+    setShowDelegateAddedNotice(false);
   };
 
   const handleDelegationDateChange = (delegateId: string, isoValue?: string | null) => {
@@ -166,6 +171,7 @@ const UserSettings: React.FC = () => {
 
   const handleRemoveDelegation = (delegateId: string) => {
     setDelegations(prev => prev.filter(entry => entry.delegate_user_id !== delegateId));
+    setShowDelegateAddedNotice(false);
   };
 
   const handleAddDelegation = () => {
@@ -185,6 +191,48 @@ const UserSettings: React.FC = () => {
     ]);
     setPendingDelegate({});
     setPendingValidUntil('');
+    setShowDelegateAddedNotice(true);
+  };
+
+  const blocker = useBlocker(isDirty);
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setDialogOpen(true);
+    }
+  }, [blocker.state]);
+
+  const renderUnsavedChangesDialog = (): React.ReactElement | null => {
+    if (!dialogOpen) return null;
+    return (
+      <WeAlertDialog
+        isDialogOpen={dialogOpen}
+        setDialogOpen={setDialogOpen}
+        title={t('common.unsavedChanges.title')}
+        buttons={
+          <>
+            <Button
+              design={ButtonDesign.Transparent}
+              onClick={() => {
+                blocker.reset?.();
+                setDialogOpen(false);
+              }}>
+              {t('common.unsavedChanges.stay')}
+            </Button>
+            <Button
+              design={ButtonDesign.Negative}
+              onClick={() => {
+                setDialogOpen(false);
+                if (blocker.state === 'blocked') {
+                  blocker.proceed();
+                }
+              }}>
+              {t('common.unsavedChanges.leave')}
+            </Button>
+          </>
+        }>
+        <Text>{t('common.unsavedChanges.message')}</Text>
+      </WeAlertDialog>
+    );
   };
 
   return (
@@ -240,12 +288,6 @@ const UserSettings: React.FC = () => {
                       </Text>
                     ) : null}
                   </div>
-                  <Text className="text-xs text-neutral-500">
-                    {formatReadableDate(
-                      entry.valid_until,
-                      t('userSettings.delegations.noDeadline')
-                    )}
-                  </Text>
                 </div>
                 <div className="flex flex-wrap gap-3 items-end">
                   <div className="flex flex-col gap-1">
@@ -264,6 +306,7 @@ const UserSettings: React.FC = () => {
                   </div>
                   <Button
                     design={ButtonDesign.Transparent}
+                    disabled={!entry.valid_until}
                     onClick={() => handleDelegationDateChange(entry.delegate_user_id, null)}>
                     {t('userSettings.delegations.clearDeadline')}
                   </Button>
@@ -277,10 +320,18 @@ const UserSettings: React.FC = () => {
               </div>
             ))
           )}
+
+          {showDelegateAddedNotice && (
+            <Text className="text-xs text-amber-700">
+              {t('common.delegations.addedNotice')}
+            </Text>
+          )}
         </div>
 
         <div className="border-t border-neutral-200 pt-4 space-y-3">
-          <Label className="font-semibold block">{t('userSettings.delegations.add')}</Label>
+          <Label className="font-semibold block">
+            {t('userSettings.delegations.add')} {t('common.delegations.addHint')}
+          </Label>
           <WeUserAutocomplete
             excludeUserIds={currentUserId ? [currentUserId] : undefined}
             onSelectUser={(userId, label) => {
@@ -299,6 +350,12 @@ const UserSettings: React.FC = () => {
                 }
               />
             </div>
+            <Button
+              design={ButtonDesign.Transparent}
+              disabled={!pendingValidUntil}
+              onClick={() => setPendingValidUntil('')}>
+              {t('userSettings.delegations.clearDeadline')}
+            </Button>
             <Button
               design={ButtonDesign.Emphasized}
               disabled={!pendingDelegate.id || isDuplicatePendingDelegate}
@@ -329,6 +386,8 @@ const UserSettings: React.FC = () => {
         onClick={handleSave}>
         {t('userSettings.save')}
       </Button>
+
+      {renderUnsavedChangesDialog()}
     </PcPage>
   );
 };

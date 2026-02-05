@@ -12,7 +12,7 @@ import {
 } from '@ui5/webcomponents-react';
 import moment from 'moment';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useParams, useBlocker } from 'react-router-dom';
 import { PcPage } from '@/ui5-components';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest } from '@/store/generic-data/actions';
@@ -27,6 +27,7 @@ import {
 import WeUserAutocomplete from '@/utils/components/WeUserAutocomplete';
 import { WeDetailsTable } from '@/utils/components/WeDetailsTable';
 import { handleResponse } from '@/services/HelperService';
+import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import { useTranslation } from '@/i18n';
 
 const DATE_TIME_PATTERN = 'yyyy-MM-dd HH:mm';
@@ -79,6 +80,16 @@ const mapDelegationsFromResponse = (
     .filter(Boolean) as UserDelegation[];
 };
 
+const serializeDelegations = (items: UserDelegation[]): string =>
+  JSON.stringify(
+    items
+      .map(entry => ({
+        delegate_user_id: entry.delegate_user_id,
+        valid_until: entry.valid_until ?? null,
+      }))
+      .sort((a, b) => a.delegate_user_id.localeCompare(b.delegate_user_id))
+  );
+
 const AdminUserDetails: React.FC = () => {
   const { t } = useTranslation();
   const { userId } = useParams();
@@ -93,10 +104,17 @@ const AdminUserDetails: React.FC = () => {
 
   const [userDetail, setUserDetail] = useState<GetUserDetailResponse | undefined>(undefined);
   const [delegations, setDelegations] = useState<UserDelegation[]>([]);
+  const [initialDelegations, setInitialDelegations] = useState<UserDelegation[]>([]);
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
+  const [showDelegateAddedNotice, setShowDelegateAddedNotice] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const targetUserId = userDetail?.user?.id ?? userId;
+
+  const isDirty = useMemo(() => {
+    return serializeDelegations(delegations) !== serializeDelegations(initialDelegations);
+  }, [delegations, initialDelegations]);
 
   useEffect(() => {
     if (userId) {
@@ -107,7 +125,10 @@ const AdminUserDetails: React.FC = () => {
   const syncDetailState = (detail?: GetUserDetailResponse | null) => {
     if (!detail) return;
     setUserDetail(detail);
-    setDelegations(mapDelegationsFromResponse(detail.delegations));
+    const mapped = mapDelegationsFromResponse(detail.delegations);
+    setDelegations(mapped);
+    setInitialDelegations(mapped);
+    setShowDelegateAddedNotice(false);
   };
 
   useEffect(() => {
@@ -153,6 +174,7 @@ const AdminUserDetails: React.FC = () => {
 
   const handleRemoveDelegation = (delegateId: string) => {
     setDelegations(prev => prev.filter(entry => entry.delegate_user_id !== delegateId));
+    setShowDelegateAddedNotice(false);
   };
 
   const handleAddDelegation = () => {
@@ -172,6 +194,7 @@ const AdminUserDetails: React.FC = () => {
     ]);
     setPendingDelegate({});
     setPendingValidUntil('');
+    setShowDelegateAddedNotice(true);
   };
 
   const handleSaveDelegations = () => {
@@ -184,6 +207,47 @@ const AdminUserDetails: React.FC = () => {
       })),
     };
     dispatch(postRequest(WeDataKey.ADMIN_SET_USER_DELEGATIONS, payload));
+  };
+
+  const blocker = useBlocker(isDirty);
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setDialogOpen(true);
+    }
+  }, [blocker.state]);
+
+  const renderUnsavedChangesDialog = (): React.ReactElement | null => {
+    if (!dialogOpen) return null;
+    return (
+      <WeAlertDialog
+        isDialogOpen={dialogOpen}
+        setDialogOpen={setDialogOpen}
+        title={t('common.unsavedChanges.title')}
+        buttons={
+          <>
+            <Button
+              design={ButtonDesign.Transparent}
+              onClick={() => {
+                blocker.reset?.();
+                setDialogOpen(false);
+              }}>
+              {t('common.unsavedChanges.stay')}
+            </Button>
+            <Button
+              design={ButtonDesign.Negative}
+              onClick={() => {
+                setDialogOpen(false);
+                if (blocker.state === 'blocked') {
+                  blocker.proceed();
+                }
+              }}>
+              {t('common.unsavedChanges.leave')}
+            </Button>
+          </>
+        }>
+        <Text>{t('common.unsavedChanges.message')}</Text>
+      </WeAlertDialog>
+    );
   };
 
   const renderUserInfo = (user?: AdminUser) => {
@@ -230,7 +294,7 @@ const AdminUserDetails: React.FC = () => {
           </div>
           <Button
             design={ButtonDesign.Emphasized}
-            disabled={savingDelegations || delegations.length === 0}
+            disabled={!isDirty || !!savingDelegations}
             onClick={handleSaveDelegations}>
             {t('adminUserDetails.saveDelegations')}
           </Button>
@@ -255,9 +319,6 @@ const AdminUserDetails: React.FC = () => {
                       </Text>
                     ) : null}
                   </div>
-                  <Text className="text-xs text-neutral-500">
-                    {formatReadableDate(entry.valid_until)}
-                  </Text>
                 </div>
                 <div className="flex flex-wrap gap-3 items-end">
                   <div className="flex flex-col gap-1">
@@ -276,6 +337,7 @@ const AdminUserDetails: React.FC = () => {
                   </div>
                   <Button
                     design={ButtonDesign.Transparent}
+                    disabled={!entry.valid_until}
                     onClick={() => handleDelegationDateChange(entry.delegate_user_id, null)}>
                     {t('adminUserDetails.clearDeadline')}
                   </Button>
@@ -289,10 +351,18 @@ const AdminUserDetails: React.FC = () => {
               </div>
             ))
           )}
+
+          {showDelegateAddedNotice && (
+            <Text className="text-xs text-amber-700">
+              {t('common.delegations.addedNotice')}
+            </Text>
+          )}
         </div>
 
         <div className="border-t border-neutral-200 pt-4 space-y-3">
-          <Label className="font-semibold block">{t('adminUserDetails.addDelegate')}</Label>
+          <Label className="font-semibold block">
+            {t('adminUserDetails.addDelegate')} {t('common.delegations.addHint')}
+          </Label>
           <WeUserAutocomplete
             excludeUserIds={targetUserId ? [targetUserId] : undefined}
             onSelectUser={(selectedUserId, label) => {
@@ -311,6 +381,12 @@ const AdminUserDetails: React.FC = () => {
                 }
               />
             </div>
+            <Button
+              design={ButtonDesign.Transparent}
+              disabled={!pendingValidUntil}
+              onClick={() => setPendingValidUntil('')}>
+              {t('adminUserDetails.clearDeadline')}
+            </Button>
             <Button
               design={ButtonDesign.Emphasized}
               disabled={!pendingDelegate.id || isDuplicatePendingDelegate}
@@ -348,6 +424,7 @@ const AdminUserDetails: React.FC = () => {
           )}
         </div>
       )}
+      {renderUnsavedChangesDialog()}
     </PcPage>
   );
 };

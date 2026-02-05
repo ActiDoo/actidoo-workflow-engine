@@ -120,6 +120,16 @@ export const en = {
       loadingError:
         'An error has occurred while loading the table data. Reload the page to try again.',
     },
+    unsavedChanges: {
+      title: 'Unsaved changes',
+      message: 'Are you sure you want to leave? Your changes will be lost.',
+      stay: 'Stay',
+      leave: 'Leave',
+    },
+    delegations: {
+      addedNotice: "Delegate added. Don't forget to save your changes!",
+      addHint: '(only known users can be added)',
+    },
   },
   tasks: {
     header: 'Tasks',
