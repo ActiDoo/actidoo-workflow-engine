@@ -430,7 +430,7 @@ def bff_admin_get_all_users(db: Session, bff_table_request_params: BffTableQuery
 
     q = (
         select(WorkflowUser)
-        .distinct(WorkflowUser.id)
+        .distinct()
         .join(WorkflowUserRole, WorkflowUserRole.user_id == WorkflowUser.id, isouter=True)
         .join(Role, WorkflowUserRole.role_id == Role.id, isouter=True)
         .options(

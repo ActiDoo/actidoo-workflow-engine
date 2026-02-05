@@ -12,7 +12,7 @@ from typing import Annotated, Any, List, Optional
 import pydantic.v1
 from dateutil import parser
 from fastapi import Query
-from sqlalchemy import ScalarResult, Select, and_, func, or_
+from sqlalchemy import ScalarResult, Select, and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from actidoo_wfe.database import eilike, search_uuid_by_prefix
@@ -414,8 +414,8 @@ class BFFTable:
         """Retrieve the total count of records matching the current query without limit, offset, or order by clauses.
 
         This method constructs a count query based on the current query configuration, removing any existing
-        limits, offsets, or orderings to ensure an accurate total count of records. It utilizes the SQLAlchemy
-        `func.count` function to compute the number of records.
+        limits, offsets, or orderings to ensure an accurate total count of records. By wrapping the query as a
+        subquery, DISTINCT clauses are properly respected in the count.
 
         Returns:
             int: The total count of records as an integer.
@@ -428,6 +428,10 @@ class BFFTable:
         count_query = count_query.with_only_columns(
             func.count("*"), maintain_column_froms=True
         )
+
+        # Wrap as subquery to correctly handle DISTINCT in the original query
+        subquery = count_query.subquery()
+        count_query = select(func.count()).select_from(subquery)
 
         return self.db.execute(count_query).scalar()
 
