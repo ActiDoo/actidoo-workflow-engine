@@ -7,7 +7,8 @@ services:
 
   devcontainer:
     network_mode: "service:netns"
-    image: wfe-devcontainer
+    pull_policy: always
+    image: ghcr.io/actidoo/actidoo-workflow-engine-devcontainer:${WFE_TAG:-latest}
     command: sleep infinity
     volumes:
       - ..:/workspace:cached
@@ -18,8 +19,8 @@ services:
       PYTHONUNBUFFERED: "1"
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      DB_USER: appuser
-      DB_PASSWORD: appsecret
+      DB_USER: root
+      DB_PASSWORD: rootsecret
       DB_NAME: app
       STORAGE_MODE: LOCAL
       OIDC_CLIENT_ID: workflow-engine
@@ -29,6 +30,12 @@ services:
       BASE_URL: http://localhost:8080/
       FRONTEND_PATH: /wfe/
       API_PATH: /api/
+      EMAIL_TRANSPORT: SMTP
+      EMAIL_SMTP_HOST: localhost
+      EMAIL_SMTP_PORT: 1025
+      EMAIL_SMTP_USE_TLS: "false"
+      EMAIL_FROM_ADDRESS: noreply@example.com
+      EMAIL_SUBJECT_PREFIX: "[WF] "
     depends_on:
       netns:
         condition: service_started
@@ -37,6 +44,9 @@ services:
         condition: service_healthy
         required: true
       keycloak:
+        condition: service_started
+        required: true
+      mailpit:
         condition: service_started
         required: true
 
@@ -58,6 +68,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  mailpit:
+    network_mode: "service:netns"
+    depends_on:
+      netns:
+        condition: service_started
+    image: axllent/mailpit
 
   keycloak:
     network_mode: "service:netns"

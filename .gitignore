@@ -218,3 +218,7 @@ venv
 *.mo
 *.log
 upload_dir/
+.playwright-mcp
+.codex
+.claude
+

@@ -1,0 +1,45 @@
+# VCS
+.git
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.tox/
+.ruff_cache/
+.cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment and tooling
+.env
+.env.*
+!.env.devcontainer
+.python-version
+.vscode/
+.idea/
+.devcontainer/
+.github/
+.gitlab-ci.yml
+*.code-workspace
+
+# OS clutter
+.DS_Store
+Thumbs.db

@@ -1,0 +1,2 @@
+# Pin the upstream workflow engine tag for builds and devcontainer usage.
+WFE_TAG=latest

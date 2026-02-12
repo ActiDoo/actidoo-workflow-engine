@@ -21,5 +21,6 @@ include-package-data = true
 "myworkflows" = [
     "workflows/**/*.bpmn",
     "workflows/**/*.json",
-    "workflows/**/*.form"
+    "workflows/**/*.form",
+    "workflows/**/*.csv"
 ]
