@@ -64,7 +64,21 @@ By default, the API exposes all database columns except the mixin system columns
 | `datetime` | `str` (ISO 8601) | Locale-formatted date/time |
 | `array` | `list[dict]` | Expandable list / subtable |
 
-### Example
+### Examples
+
+Minimal — expose all database columns to any authenticated user:
+
+```python
+@register_data_model(
+    name="PurchaseRequest",
+    api=WorkflowDataApiConfig(),
+)
+class PurchaseRequest(MyModel, WorkflowManagedMixin):
+    _ext_table = "purchase_request"
+    ...
+```
+
+With role restrictions, row filtering, field selection, and virtual fields:
 
 ```python
 @register_data_model(
