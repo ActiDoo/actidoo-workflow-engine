@@ -1,0 +1,6 @@
+nav:
+  - index.md
+  - architecture.md
+  - development.md
+  - adr
+  - ...

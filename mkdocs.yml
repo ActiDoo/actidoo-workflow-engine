@@ -33,7 +33,7 @@ markdown_extensions:
   - toc:
       permalink: true
 
-nav:
-  - Overview: index.md
-  - Architecture: architecture.md
-  - Development: development.md
+plugins:
+  - search
+  - awesome-pages
+
