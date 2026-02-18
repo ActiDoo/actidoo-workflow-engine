@@ -77,6 +77,11 @@ async def lifespan(app: FastAPI):
     for target in discover_venusian_scan_targets(default_modules=[pyapp]):
         scanner.scan(target, ignore=[re.compile("test_").search])
 
+    # Validate connector configurations (non-blocking)
+    from actidoo_wfe.connectors import validate_configured_connectors
+    for warning in validate_configured_connectors():
+        log.warning("Connector config: %s", warning)
+
     task_future = None
     if not in_test():
         task_future = asyncio.create_task(run_scheduler(settings=settings))

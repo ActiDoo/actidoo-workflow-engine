@@ -432,7 +432,8 @@ def get_function_options(jsonschema, property_path, options_function, form_data,
     
     oth = OptionTaskHelper(
         form_data=form_data,
-        property_path=property_path
+        property_path=property_path,
+        allowed_data_models=set(functions_env.get("DATA_MODELS", [])),
     )
     data = func(oth=oth)
     return data
@@ -756,7 +757,8 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
             func = functions_env[validation_function]
             vth = ValidationTaskHelper(
                 form_data=task_data,
-                property_path=p
+                property_path=p,
+                allowed_data_models=set(functions_env.get("DATA_MODELS", [])),
             )
             try:
                 data = func(vth=vth)

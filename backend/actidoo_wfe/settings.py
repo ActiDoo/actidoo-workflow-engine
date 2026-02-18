@@ -160,7 +160,13 @@ Workflow Engine
     # ["__ALL__"] can be taken to configure all at once. The order in this list does not matter.
     workflows: list[str] = [""]
 
-    #ext: ExtConfig|None = None
+    # Connector instances — populated via env vars with nested delimiter '__'
+    # e.g. CONNECTORS__JIRA__EUROPE_PXC__URL=https://...
+    connectors: dict[str, dict[str, dict]] = {}
+
+    # Data Model API pagination defaults
+    data_model_api_page_size: int = 50
+    data_model_api_max_page_size: int = 500
 
     model_config = SettingsConfigDict(
         env_file=(env_file, ".env.local"), secrets_dir="/run/secrets", env_nested_delimiter='__'

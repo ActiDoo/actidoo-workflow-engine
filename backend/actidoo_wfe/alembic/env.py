@@ -18,6 +18,13 @@ load_all_models()
 target_metadata = metadata
 
 
+def _exclude_extension_tables(name, type_, parent_names):
+    """Exclude extension tables (ext_*) from main-project autogeneration."""
+    if type_ == "table":
+        return not name.startswith("ext_")
+    return True
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -34,6 +41,7 @@ def run_migrations_online() -> None:
             include_schemas=False,
             compare_type=True,
             compare_server_default=True,
+            include_name=_exclude_extension_tables,
         )
 
         with context.begin_transaction():

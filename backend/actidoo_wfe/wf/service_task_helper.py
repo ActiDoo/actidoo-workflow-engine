@@ -47,7 +47,8 @@ class ServiceTaskHelper:
         workflow: BpmnWorkflow,
         task_data: dict,
         task_to_user_mapping: TaskToUserMapping,
-        task_uuid: UUID
+        task_uuid: UUID,
+        allowed_data_models: set[str] | None = None,
     ):
         # Aktuell laufen die Service Task im Context des Requests.
         # Da hier schon eine Transaktion gestartet wurde, machen wir das hier erstmal nicht.
@@ -59,6 +60,7 @@ class ServiceTaskHelper:
         self.task_data = task_data
         self.task_to_user_mapping = task_to_user_mapping
         self.task_uuid = task_uuid
+        self._allowed_data_models: set[str] = allowed_data_models or set()
 
     def pretty_log(self, json_data: dict, boxed = True):
         """
@@ -426,6 +428,29 @@ class ServiceTaskHelper:
             log.exception(f"{type(error).__name__}: {error.args}")
             return default_value
         
+    def get_connector(self, type_name: str, instance_name: str):
+        """Obtain a configured connector as a context manager.
+
+        Usage::
+
+            with sth.get_connector("jira", "europe_pxc") as jira:
+                jira.create_issue(...)
+        """
+        from actidoo_wfe.connectors import get_connector
+        return get_connector(type_name=type_name, instance_name=instance_name)
+
+    def get_model(self, model_name: str) -> type:
+        """Return the SQLAlchemy model class for a declared data model.
+
+        Raises DataModelAccessDeniedError if the workflow did not declare
+        the model in its DATA_MODELS list.
+        """
+        from actidoo_wfe.data_models import DataModelAccessDeniedError, data_model_registry
+        if model_name not in self._allowed_data_models:
+            raise DataModelAccessDeniedError(model_name, self._allowed_data_models)
+        descriptor = data_model_registry.get(model_name)
+        return descriptor.model_class
+
     def _upload_attachment(self, datauri: str) -> UploadedAttachmentRepresentation:
         # TODO see service_application for the same implementation. Move to repository.py?
         

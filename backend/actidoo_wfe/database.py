@@ -244,17 +244,25 @@ def generate_uuid_bounds(uuid_prefix):
         )
 
 
-def run_migrations(settings: Settings):
-    """ only used by the cli app """
-    engine = create_engine(
-        get_uri(settings),
-        poolclass=NullPool,
-        connect_args=get_mysql_options(settings),
-    )
+def _run_with_advisory_lock(engine, lock_name: str, fn):
+    """Execute *fn* while holding a MySQL advisory lock (max 30s wait)."""
+    with engine.connect() as conn:
+        acquired = conn.execute(
+            text("SELECT GET_LOCK(:name, 30)"), {"name": lock_name}
+        ).scalar()
+        if acquired != 1:
+            raise RuntimeError(f"Could not acquire migration lock '{lock_name}' (result={acquired})")
+        try:
+            fn(engine)
+        finally:
+            conn.execute(text("SELECT RELEASE_LOCK(:name)"), {"name": lock_name})
 
+
+def _run_main_migrations(engine):
+    """Run the main-project Alembic migrations."""
     with engine.connect() as conn:
         initialized = conn.execute(
-            text(f"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{settings.db_name}' AND table_name = 'alembic_version'")
+            text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'alembic_version'")
         ).scalar()
 
     alembic_cfg = alembic.config.Config(attributes={"engine": engine})
@@ -274,6 +282,62 @@ def run_migrations(settings: Settings):
             upgrade(config=alembic_cfg, revision="head")
     else:
         raise Exception("Alembic Path not existing")
+
+
+def _run_extension_migrations(engine, ext_alembic_path, entry_point_name: str):
+    """Run Alembic migrations for a single extension project."""
+    from pathlib import Path
+
+    ext_alembic_path = Path(ext_alembic_path)
+    if not ext_alembic_path.exists():
+        log.warning("Extension alembic path '%s' for '%s' does not exist, skipping.", ext_alembic_path, entry_point_name)
+        return
+
+    alembic_cfg = alembic.config.Config(attributes={"engine": engine})
+    alembic_cfg.set_main_option("script_location", str(ext_alembic_path))
+
+    from alembic.command import upgrade
+
+    upgrade(config=alembic_cfg, revision="head")
+    log.info("Extension migrations '%s' applied successfully.", entry_point_name)
+
+
+EXTENSION_ALEMBIC_ENTRY_POINT_GROUP = "actidoo_wfe.alembic"
+
+
+def run_migrations(settings: Settings):
+    """Run main-project and extension-project migrations with advisory locks."""
+    from importlib import metadata as importlib_metadata
+    from pathlib import Path
+
+    engine = create_engine(
+        get_uri(settings),
+        poolclass=NullPool,
+        connect_args=get_mysql_options(settings),
+    )
+
+    # 1. Main-project migrations
+    _run_with_advisory_lock(engine, "alembic_main", _run_main_migrations)
+
+    # 2. Extension-project migrations (discovered via entry points)
+    try:
+        entries = importlib_metadata.entry_points().select(group=EXTENSION_ALEMBIC_ENTRY_POINT_GROUP)
+    except Exception as error:
+        log.warning("Failed to load extension alembic entry points: %s", error)
+        entries = []
+
+    for entry_point in entries:
+        try:
+            ext_alembic_module = entry_point.load()
+            ext_alembic_path = Path(ext_alembic_module.__file__).parent
+            lock_name = f"alembic_ext_{entry_point.name}"
+            _run_with_advisory_lock(
+                engine, lock_name,
+                lambda eng, p=ext_alembic_path, n=entry_point.name: _run_extension_migrations(eng, p, n),
+            )
+        except Exception as error:
+            log.error("Failed to run extension migrations for '%s': %s", entry_point.name, error)
+            raise
 
     engine.dispose()
 

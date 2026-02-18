@@ -592,7 +592,10 @@ class MyScriptEngine(FeelLikeScriptEngine):
                 workflow=workflow,
                 task_data=task_data,
                 task_to_user_mapping=task_to_user_mapping,
-                task_uuid=task.id
+                task_uuid=task.id,
+                allowed_data_models=set(
+                    self.environment.globals.get("DATA_MODELS", [])
+                ),
             )
             result = service_def(sth=sth)
 
