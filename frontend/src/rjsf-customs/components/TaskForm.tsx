@@ -20,6 +20,7 @@ import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/C
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
 import CustomFieldErrorTemplate from '@/rjsf-customs/templates/CustomFieldErrorTemplate';
+import CustomDescriptionFieldTemplate from '@/rjsf-customs/templates/CustomDescriptionFieldTemplate';
 import MultiSelectDynamic from '@/rjsf-customs/custom-widgets/MultiSelectDynamic';
 import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
@@ -50,6 +51,7 @@ const customTemplates = {
   ArrayFieldTemplate: CustomArrayFieldTemplate,
   ArrayFieldItemTemplate: CustomArrayFieldItemTemplate,
   FieldErrorTemplate: CustomFieldErrorTemplate,
+  DescriptionFieldTemplate: CustomDescriptionFieldTemplate,
 };
 
 type BaseFormProps = React.ComponentProps<typeof Form>;
