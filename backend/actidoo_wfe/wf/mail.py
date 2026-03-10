@@ -26,13 +26,17 @@ def _generate_workflow_instance_admin_url(workflow_instance_id):
     return Markup(settings.frontend_base_url.rstrip("/") + "/admin/all-workflows/" + str(workflow_instance_id ))
     
 def compile_email_template(template: str, params: dict, template_dir = MAIL_TEMPLATE_DIR) -> str:
-    mylookup = TemplateLookup(directories=[template_dir])
+    mylookup = TemplateLookup(directories=[template_dir], strict_undefined=True)
     mytemplate = mylookup.get_template(template)
-    return mytemplate.render_unicode(**dict(params,
-        generate_instance_url=_generate_instance_url,
-        generate_workflow_instance_admin_url=_generate_workflow_instance_admin_url,
-        email_signature=settings.email_signature
-    )) # type: ignore
+    try:
+        return mytemplate.render_unicode(**dict(params,
+            generate_instance_url=_generate_instance_url,
+            generate_workflow_instance_admin_url=_generate_workflow_instance_admin_url,
+            email_signature=settings.email_signature
+        )) # type: ignore
+    except NameError as e:
+        log.error(f"{str(e)}, {template}")
+        raise e
 
 def send_personal_status_mail(db: Session):
     users = get_all_users(db)
