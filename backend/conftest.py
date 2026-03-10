@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
-import logging
 import os
+
+# Enable engine-internal test workflows (TestFlow*) for the test suite.
+os.environ.setdefault("SHOW_TEST_WORKFLOWS", "true")
+
+import logging
 import re
 
 from actidoo_wfe.storage import _unsetup_storage

@@ -68,13 +68,19 @@ class WorkflowProviderRegistry:
     providers: List[WorkflowProvider] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        builtin = FileSystemWorkflowProvider(base_path=BPMN_DIRECTORY)
-        self.providers = self._sort_providers([builtin])
+        # Extensions (e.g. pxc-workflows) register their own provider via
+        # @register_workflow_provider.  The engine-internal test workflows
+        # (actidoo_wfe/wf/processes/) are only loaded when explicitly enabled
+        # via SHOW_TEST_WORKFLOWS=true.
+        from actidoo_wfe.settings import settings
+        if settings.show_test_workflows:
+            builtin = FileSystemWorkflowProvider(base_path=BPMN_DIRECTORY)
+            self.providers = self._sort_providers([builtin])
 
     def reload(self) -> None:
-        """Reset to builtin provider set."""
-        builtin = FileSystemWorkflowProvider(base_path=BPMN_DIRECTORY)
-        self.providers = self._sort_providers([builtin])
+        """Reset provider set (re-evaluates settings)."""
+        self.providers = []
+        self.__post_init__()
 
     def register(self, provider: WorkflowProvider, *, prepend: bool = False) -> None:
         if provider in self.providers:
