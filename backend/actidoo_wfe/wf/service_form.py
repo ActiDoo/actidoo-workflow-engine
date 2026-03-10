@@ -33,7 +33,7 @@ from actidoo_wfe.wf.exceptions import (
     OptionsFileCouldNotBeReadException,
     OptionsFileNotExistsException,
 )
-from actidoo_wfe.wf.form_transformation import _traverse_schema
+from actidoo_wfe.wf.form_transformation import _get_subschema
 from actidoo_wfe.wf.option_task_helper import OptionTaskHelper
 from actidoo_wfe.wf.types import (
     ReactJsonSchemaFormData,
@@ -53,7 +53,7 @@ def _find_property_upwards(
 
     queue = starting_path.copy()
     while len(queue) > 0 and not found:
-        jsonschema = _traverse_schema(global_jsonschema, starting_path)
+        jsonschema = _get_subschema(global_jsonschema, starting_path)
         if property in jsonschema.get("properties", {}):
             found = True
             found_path = queue
@@ -82,7 +82,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
         path = []
 
     # Wir holen uns das aktuell betrachtete Unterschema (nach dem aktuellen path), auf der Suche nach hideif properties.
-    jsonschema = _traverse_schema(global_jsonschema, path)
+    jsonschema = _get_subschema(global_jsonschema, path)
 
     # Die aktuelle Node (jsonschema) sollte direkt "properties" Kinder haben
     for key in jsonschema["properties"]:
@@ -123,21 +123,6 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
                 if "allOf" not in global_jsonschema:
                     global_jsonschema["allOf"] = []
-
-                global_jsonschema["allOf"].append(outer_ifthenschema)
-
-                # Das allOfSchema ist eine hierarchische Struktur, ganz innen ist ein {"if": {}, "then": {}, "else": {}}
-                # Das innerste "then" ist immer das Feld, das wir verstecken/anzeigen wollen.
-
-                inner_ifthenschema["then"]["properties"][key] = copy.deepcopy(then_property)
-                if is_required:
-                    inner_ifthenschema["then"]["required"] = [key]
-                inner_ifthenschema["else"] = {
-                    "properties": {key: else_property},
-                    "type": "object",
-                }
-
-                # Das richtige if müssen wir nach dem parsen finden
 
                 global_jsonschema["allOf"].append(outer_ifthenschema)
 
@@ -213,44 +198,44 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node, global_jsonschema, path)
         assert (isinstance(node.comparators[0], ast.Name) or isinstance(node.comparators[0], ast.Constant))
 
         if isinstance(node.left, ast.Name):
-            left, _ = _camunda_hide_if_expression_ast_to_jsonschema(
+            property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.left, global_jsonschema, path
             )
-            right, _ = _camunda_hide_if_expression_ast_to_jsonschema(
+            value, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.comparators[0], global_jsonschema, path
             )
         else:
-            left, _ = _camunda_hide_if_expression_ast_to_jsonschema(
+            property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.comparators[0], global_jsonschema, path
             )
-            right, _ = _camunda_hide_if_expression_ast_to_jsonschema(
+            value, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.left, global_jsonschema, path
             )
 
         op = node.ops[0]
 
-        # left auflösen und auf const wert setzen
-        found_path = _find_property_upwards(global_jsonschema, path, left)
-        left_node = _traverse_schema(
+        # property auflösen und auf const wert setzen
+        found_path = _find_property_upwards(global_jsonschema, path, property)
+        property_node = _get_subschema(
             global_jsonschema=global_jsonschema, path=found_path
-        )["properties"][left]
-        left_type = left_node["type"] if isinstance(left_node, dict) else None
-        # left_type can be a single string like "boolean" or "string" or a list of strings like: ["string", "null"]
-        right_type = type(right)
-        is_bool_type = left_type == "boolean" or right_type == bool
+        )["properties"][property]
+        property_type = property_node["type"] if isinstance(property_node, dict) else None
+        # property_type can be a single string like "boolean" or "string" or a list of strings like: ["string", "null"]
+        value_type = type(value)
+        is_bool_type = property_type == "boolean" or value_type == bool
 
         if_schema = {
             "type": "object",
             "properties": {
-                left: {
-                    "const": right,
-                    "default": False if right_type == "boolean" else "",
+                property: {
+                    "const": value,
+                    "default": False if value_type == "boolean" else "",
                 }
             },
         }
 
         if is_bool_type:  # checkbox has no value if not checked
-            if_schema["required"] = [left]
+            if_schema["required"] = [property]
 
         if isinstance(op, ast.NotEq):
             cp = copy.deepcopy(if_schema)
@@ -389,7 +374,7 @@ def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None
 
 
 def get_static_options(jsonschema, path):
-    node = _traverse_schema(global_jsonschema=jsonschema, path=path)
+    node = _get_subschema(global_jsonschema=jsonschema, path=path)
     oneOf = node.get("oneOf", [])
     values = {}
 
@@ -509,7 +494,7 @@ def get_options_detailed(jsonschema, property_path: list[str], options_folder, f
 
 
 def get_custom_properties(jsonschema, path: list[str]):
-    node = _traverse_schema(global_jsonschema=jsonschema, path=path)
+    node = _get_subschema(global_jsonschema=jsonschema, path=path)
     return node.get("custom_properties", {})
 
 
@@ -708,13 +693,13 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
 
         options_function = schema.get("custom_properties", {}).get("options_function", None)
 
-        # log.info("Calling _traverse_schema, my path = %s", property_path)  # e.g. ["articleList", 0, "componentList", 0, "priceList", 0] or ["request_positions", 1]
+        # log.info("Calling _get_subschema, my path = %s", property_path)  # e.g. ["articleList", 0, "componentList", 0, "priceList", 0] or ["request_positions", 1]
         # property_path is the current position inside the tracked task data.
         # It can contain indices if we have e.g. nested lists in our task data, but these indices must be
         # deleted from the path, when getting the subschema for validation:
         p = [x for x in property_path if not isinstance(x, int)]
 
-        required_list = _traverse_schema(global_jsonschema=form.jsonschema, path=p).get("required",[])
+        required_list = _get_subschema(global_jsonschema=form.jsonschema, path=p).get("required",[])
 
         is_required = p in required_list # TODO property_path is a list, can this work?
         # log.info("custom_properties_validator: required_list=%s,property_path=%s,is_required=%s",required_list, p, is_required)
@@ -930,7 +915,7 @@ def get_attachments(task_data) -> list[UploadedAttachmentRepresentation]:
 def convert_disabled_fields_to_null_fields(global_jsonschema, global_uischema, path=[]):
     """We convert disabled fields to null fields for validating posted formdata"""
     uischema = _traverse_uischema(global_uischema=global_uischema, path=path)
-    jsonschema = _traverse_schema(global_jsonschema=global_jsonschema, path=path)
+    jsonschema = _get_subschema(global_jsonschema=global_jsonschema, path=path)
 
     for k in uischema.keys():
         if isinstance(uischema[k], dict) and uischema[k].get("ui:disabled", False):
