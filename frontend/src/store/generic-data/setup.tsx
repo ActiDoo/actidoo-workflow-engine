@@ -143,7 +143,7 @@ export const WeApiUrl = (
     case WeDataKey.WORKFLOWS:
       return 'user/workflows';
     case WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS:
-      return `user/workflow_instances_with_tasks/${params?.state}`;
+      return `user/workflow_instances_with_tasks/${params?.state}?limit=200`;
     case WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES:
     case WeDataKey.MY_OPEN_WORKFLOW_INSTANCES:
       return 'user/my_initiated_workflow_instances';
