@@ -376,12 +376,14 @@ def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None
 def get_static_options(jsonschema, path):
     node = _get_subschema(global_jsonschema=jsonschema, path=path)
     oneOf = node.get("oneOf", [])
-    values = {}
 
     if oneOf:
-        values = {x["const"]: {"value": x["const"], "label": x["title"]} for x in oneOf}
+        return {x["const"]: {"value": x["const"], "label": x["title"]} for x in oneOf}
+    elif node.get("items"): # for multiselects we've got node.items.oneOf
+        oneOf = node["items"].get("oneOf", [])
+        return {x["const"]: {"value": x["const"], "label": x["title"]} for x in oneOf}
 
-    return values
+    return {}
 
 
 def get_file_options(options_folder, options_file) -> list[tuple[str, str]]:
