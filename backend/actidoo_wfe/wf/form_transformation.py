@@ -75,7 +75,7 @@ def _insert_array_component(
     The children are given in {all_itemgroup_components} and will be inserted using the _insert_component function
     """
 
-    jsonschema = _traverse_schema(global_jsonschema, jsonschemapath)
+    jsonschema = _get_subschema(global_jsonschema, jsonschemapath)
 
     jsonschema["properties"][itemgroup] = {
         "type": "array",
@@ -107,12 +107,26 @@ def _insert_array_component(
         )
 
 
-def _traverse_schema(global_jsonschema: dict, path: list[str]):
+def _get_subschema(global_jsonschema: dict, path: list[str]):
+    """
+    Traverses the provided JSON schema and retrieves the sub-schema at the specified path.
+
+    This function navigates the hierarchical structure of the JSON schema defined by `global_jsonschema`,
+    using the list of keys provided in `path`. It updates the current schema context by navigating through
+    'properties' and 'items' as necessary, returning the final sub-schema that corresponds to the specified path.
+
+    Args:
+        global_jsonschema (dict): The complete JSON schema object from which a sub-schema will be extracted.
+        path (list[str]): A list of keys representing the path to traverse within the JSON schema.
+
+    Returns:
+        dict: The sub-schema located at the specified path within the global JSON schema.
+    """
     jsonschema = global_jsonschema
-    # log.info("> _traverse_schema: path=%s", path)
-    # log.info("> _traverse_schema: global_jsonschema=%s", global_jsonschema)
+    # log.info("> _get_subschema: path=%s", path)
+    # log.info("> _get_subschema: global_jsonschema=%s", global_jsonschema)
     for p in path:
-        # log.info("_traverse_schema: p=%s", p)
+        # log.info("_get_subschema: p=%s", p)
 
         if "properties" in jsonschema:
             jsonschema = jsonschema["properties"]
@@ -125,14 +139,14 @@ def _traverse_schema(global_jsonschema: dict, path: list[str]):
             jsonschema = jsonschema["properties"]
         if "items" in jsonschema and "properties" in jsonschema["items"]:
             jsonschema = jsonschema["items"]
-    # log.info("< _traverse_schema %s", jsonschema)
+    # log.info("< _get_subschema %s", jsonschema)
     return jsonschema
 
 
 def _insert_single_component(
     component: dict, global_jsonschema: dict, jsonschemapath: list[str], uischema: dict
 ):
-    jsonschema = _traverse_schema(global_jsonschema, jsonschemapath)
+    jsonschema = _get_subschema(global_jsonschema, jsonschemapath)
     key = component.get("key", component.get("id"))
 
     if _is_attachment_multi(component):
