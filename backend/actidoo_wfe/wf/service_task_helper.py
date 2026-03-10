@@ -6,11 +6,14 @@ This module defined a "helper" class which is passed to all script tasks.
 Script tasks are defined next to the .bpmn files.
 """
 
+import base64
 import hashlib
 import io
 import json
 import logging
+import re
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Callable
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -487,6 +490,77 @@ class ServiceTaskHelper:
             hash=hash, filename=filename, id=attachment.id, mimetype=mimetype
         )
 
-    
+    def get_mail_attachments(self, key_or_keys):
+        """
+        Retrieves and prepares attachments from the task data for email sending.
+
+        This method accepts either a single key or a list of keys, where each key refers to an entry in the task data
+        that contains attachment information. Each entry may represent a single attachment or a list of attachments. For each
+        referenced attachment, the method fetches the corresponding attachment object using its hash, wraps its binary data in
+        a BytesIO stream, and adds it to the dictionary of attachments. The resulting dictionary maps filenames to their
+        respective BytesIO data objects, making it directly consumable by email-sending utilities that expect attachments
+        in this format.
+
+        Args:
+            key_or_keys (str | list[str]): The key or list of keys in task_data specifying the attachments to retrieve.
+
+        Returns:
+            dict[str, io.BytesIO]: A dictionary mapping each attachment's filename to a BytesIO object containing its data.
+
+        Raises:
+            KeyError: If a specified key does not exist in task_data.
+            AttachmentNotFoundException: If an attachment with the specified hash cannot be found.
+        """
+        mail_attachments = {}
+
+        # there can be several keys in the form (task_data), let's create a list if necessary:
+        keys = [key_or_keys] if isinstance(key_or_keys, str) else key_or_keys
+
+        for key in keys:
+            att = self.task_data.get(key)
+            if not att:
+                continue # if fields are not mandatory its value will be empty, then skip
+
+            # each key can hold a single attachment or several attachments, let's create a list if necessary:
+            att_list = att if isinstance(att, list) else [att]
+
+            for att in att_list:
+                attachment = self.get_attachment_by_hash(hash=att["hash"])
+                if mail_attachments.get(attachment.filename):
+                    # the same filename can occur twice if we have more the one form key, then let's prefix it
+                    mail_attachments[key + "_" + attachment.filename] = BytesIO(attachment.data)
+                else:
+                    # that's the normal case
+                    mail_attachments[attachment.filename] = BytesIO(attachment.data)
+
+        return mail_attachments
+
+    def _bytesIO_to_base64(self, input: BytesIO):
+        encoded_string = base64.b64encode(input.getvalue()).decode("utf-8")
+        return encoded_string
+
+    def add_attachment_to_task_data(self, data_bytesIO: BytesIO, name: str, extension: str, destination_key):
+        """
+        Adds an attachment to the task data by converting a file from BytesIO to a Data URI format,
+        sanitizing the filename, uploading the attachment, and then storing its representation under
+        the specified destination key in the task data.
+
+        Parameters:
+            data_bytesIO (BytesIO): The file data to be attached, provided as a BytesIO object.
+            name (str): The original filename for the attachment; no extension! Special characters are sanitized.
+            extension (str): The file extension (e.g., 'pdf', 'png') used to determine mimetype.
+            destination_key (str): The key in the task data under which the attachment info will be stored.
+
+        Returns:
+            None. Updates task data in-place.
+        """
+        data_as_base64 = self._bytesIO_to_base64(data_bytesIO)
+        sanitized_name = re.sub(r'[^a-zA-Z0-9äöüÄÖÜ\-\_\(\)]', '', name)
+        sanitized_name = sanitized_name + "." + extension
+        datauri_value = f"data:application/{extension};name={sanitized_name};base64,{data_as_base64}"
+        att = self._upload_attachment(datauri_value)
+        self.set_task_data_key(destination_key, att.model_dump())
+
+
 
 
