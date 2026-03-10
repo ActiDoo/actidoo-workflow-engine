@@ -309,7 +309,7 @@ class ServiceTaskHelper:
                 user = None
 
         assert user is not None
-        assert user.email == email
+        assert user.email.lower() == email.lower() #type: ignore
 
         upcoming_tasks = self._get_upcoming_tasks_by_name(bpmn_task_id)
 
