@@ -138,6 +138,7 @@ class Settings(BaseSettings):
     email_subject_prefix: str="[WF] "
     email_override_recipients_enable: bool = False
     email_override_recipients_list: list[str] = []
+    email_skip: bool = False
     email_receivers_erroneous_tasks: list[str] = []
     email_signature: str="""
 Best regards,

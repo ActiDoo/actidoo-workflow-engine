@@ -23,7 +23,10 @@ log = logging.getLogger(__name__)
 def is_debugger_active() -> bool:
     """Return if the debugger is currently active, see https://stackoverflow.com/questions/38634988/check-if-program-runs-in-debug-mode"""
     # sys.monitoring is the new feature of Python 3.12 and newer versions of VSCode or PyCharm will use it.
-    return hasattr(sys, "gettrace") and sys.gettrace() is not None or sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None 
+    return hasattr(sys, "gettrace") and sys.gettrace() is not None or sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None
+
+def shall_skip_sending_email() -> bool:
+    return in_test() or is_debugger_active() or settings.email_skip
 
 def _normalize_recipients(recipient_or_recipients_list: list[str] | str) -> list[str]:
     if isinstance(recipient_or_recipients_list, str):
@@ -167,13 +170,16 @@ def send_text_mail(
     if override_recipients_enable or len(override_recipients_list) > 0:
         recipients_list = override_recipients_list
 
-    # Skip sending email in test mode
-    if in_test() or is_debugger_active():
+    # Skip sending email in test/debug mode or when email_skip is set
+    if shall_skip_sending_email():
         rec_str = ", ".join(recipients_list)
-        
-        log.warning(
-            "Skipping mail during test:\n"
-            + get_boxed_text(subject + "\n\n" + content)
+
+        attachment_list = "\n\nATTACH: " + ", ".join(attachments.keys()) if attachments.keys() else ""
+
+        log.info(
+            f"Printing email to '{rec_str}':\n"
+            + get_boxed_text(subject + "\n\n" + content + attachment_list)
+            + "\n"
         )
         return
 
