@@ -55,20 +55,15 @@ if settings.sentry_dsn:
         traces_sample_rate=settings.sentry_traces_sample_rate,
     )
 
-# Run migrations
-run_migrations(settings=settings)
-
-# Create engine and setup DB Session
-db_engine = setup_db(settings=settings)
-
-# Configure Storage
-setup_storage(settings)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """This function allows to execute before and after the app lifetime. It can be used for initialization and proper shutdown."""
 
     # before app start
+    run_migrations(settings=settings)
+    engine = setup_db(settings=settings)
+    setup_storage(settings)
+
     import actidoo_wfe as pyapp
 
     clear_task_registry()
@@ -95,6 +90,7 @@ async def lifespan(app: FastAPI):
     from actidoo_wfe.helpers.concurrency import stop_executor
 
     await stop_executor()
+    engine.dispose()
        
 class ORJSONRequest(Request):
     async def json(self) -> Any:
