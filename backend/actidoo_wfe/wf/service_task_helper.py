@@ -35,7 +35,6 @@ from actidoo_wfe.wf.constants import (
 )
 from actidoo_wfe.wf.exceptions import AttachmentNotFoundException, TaskNotFoundException
 from actidoo_wfe.wf.models import WorkflowInstanceTask, WorkflowInstanceTaskAttachment
-from actidoo_wfe.wf.service_user import get_users_of_role
 from actidoo_wfe.wf.types import Attachment, TaskToUserMapping, UploadedAttachmentRepresentation, UserRepresentation
 from actidoo_wfe.wf.views import get_single_task
 
@@ -396,6 +395,7 @@ class ServiceTaskHelper:
         return self.task_to_user_mapping.get(task, None)
 
     def get_users_of_role(self, role_name):
+        from actidoo_wfe.wf.service_user import get_users_of_role
         return get_users_of_role(self.db, role_name)
     
     def get_label_from_form(self, form_id, form_key, default_value=""):
