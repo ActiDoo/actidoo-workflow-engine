@@ -9,19 +9,18 @@ from unittest.mock import MagicMock
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from actidoo_wfe.data_models import (
-    DataModelDescriptor,
-    VirtualField,
-    WorkflowDataApiConfig,
-    WorkflowManagedMixin,
-    _MIXIN_SYSTEM_COLUMNS,
-    data_model_registry,
-    extension_model_base,
-    register_data_model,
+from actidoo_wfe.wf.bff.bff_user_data_model import (
     _columns_from_model,
     _fields_metadata,
     _serialize_row,
     _user_has_read_access,
+)
+from actidoo_wfe.wf.config_data_model import VirtualField, WorkflowDataApiConfig
+from actidoo_wfe.wf.models import WorkflowManagedMixin, _MIXIN_SYSTEM_COLUMNS, extension_model_base
+from actidoo_wfe.wf.registry_data_model import (
+    DataModelDescriptor,
+    data_model_registry,
+    register_data_model,
 )
 
 

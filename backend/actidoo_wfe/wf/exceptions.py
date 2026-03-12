@@ -71,3 +71,19 @@ class UserMayNotAdministrateUsersException(Exception):
 
 class TaskIsNotErroneousException(Exception):
     pass
+
+
+class DataModelNotFoundError(KeyError):
+    """Raised when a data model name is not in the registry."""
+
+
+class DataModelAccessDeniedError(Exception):
+    """Raised when a workflow accesses a data model it did not declare."""
+
+    def __init__(self, model_name: str, allowed: set[str]):
+        self.model_name = model_name
+        self.allowed = allowed
+        super().__init__(
+            f"Access denied to data model '{model_name}'. "
+            f"Allowed models for this workflow: {sorted(allowed)}"
+        )

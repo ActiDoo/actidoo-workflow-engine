@@ -8,7 +8,7 @@ from typing import Any, List, Literal
 import sqlalchemy.dialects.mysql as myty
 import sqlalchemy.types as ty
 from sqlalchemy import CheckConstraint, Computed, ForeignKey, Index, UniqueConstraint, and_, null, or_, select, true
-from sqlalchemy.orm import Mapped, column_property, deferred, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, column_property, declared_attr, deferred, mapped_column, relationship, validates
 from sqlalchemy_file import File, FileField
 
 from actidoo_wfe.database import Base, JSONBlob, UTCDateTime, ZlibJSONBlob
@@ -508,4 +508,69 @@ class WorkflowTimeEvent(Base):
             name="ck_wte_status_values",
         ),
     )
-    
+
+
+# ---------------------------------------------------------------------------
+# Extension model base + WorkflowManagedMixin (for data models)
+# ---------------------------------------------------------------------------
+
+
+def extension_model_base(namespace: str) -> type:
+    """Create an abstract base class whose subclasses get auto-prefixed table names.
+
+    Usage in an extension project::
+
+        AcmeModel = extension_model_base("acme")
+
+        class OrderApproval(AcmeModel):
+            _ext_table = "order_approval"
+            # -> __tablename__ = "ext_acme_order_approval"
+    """
+
+    class _ExtBase(Base):
+        __abstract__ = True
+        _ext_namespace: str = namespace
+        _ext_table: str  # must be defined by subclass
+
+        @declared_attr.directive
+        def __tablename__(cls) -> str:
+            table = getattr(cls, "_ext_table", None)
+            if not table:
+                raise ValueError(
+                    f"{cls.__name__} must define '_ext_table' as a stable DB identifier"
+                )
+            return f"ext_{namespace}_{table}"
+
+    return _ExtBase
+
+
+_MIXIN_SYSTEM_COLUMNS = frozenset({
+    "parent_workflow_instance_id",
+    "child_workflow_instance_id",
+    "action",
+})
+
+
+class WorkflowManagedMixin:
+    """Mixin for data managed exclusively by workflows.
+
+    Each modification creates a new row linked to the previous one,
+    forming a version chain via parent/child workflow instance IDs.
+    """
+
+    workflow_instance_id: Mapped[str] = mapped_column(
+        ty.String(100), primary_key=True,
+    )
+    parent_workflow_instance_id: Mapped[str | None] = mapped_column(
+        ty.String(100), nullable=True,
+    )
+    child_workflow_instance_id: Mapped[str | None] = mapped_column(
+        ty.String(100), nullable=True,
+    )
+    action: Mapped[str | None] = mapped_column(
+        ty.String(100), nullable=True,
+    )
+    created_at: Mapped[datetime.datetime | None] = mapped_column(
+        ty.DateTime, nullable=True,
+    )
+

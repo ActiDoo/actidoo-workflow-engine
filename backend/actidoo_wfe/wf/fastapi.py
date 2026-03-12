@@ -8,7 +8,7 @@ from fastapi import APIRouter
 import actidoo_wfe.wf.api.routes as api_routes
 import actidoo_wfe.wf.bff.bff_admin as api_bff_admin
 import actidoo_wfe.wf.bff.bff_user as api_bff_user
-from actidoo_wfe.data_models import workflow_data_router
+from actidoo_wfe.wf.bff.bff_user_data_model import workflow_data_router
 
 router = APIRouter()
 

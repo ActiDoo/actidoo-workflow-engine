@@ -36,7 +36,8 @@ class ValidationTaskHelper:
         Raises DataModelAccessDeniedError if the workflow did not declare
         the model in its DATA_MODELS list.
         """
-        from actidoo_wfe.data_models import DataModelAccessDeniedError, data_model_registry
+        from actidoo_wfe.wf.exceptions import DataModelAccessDeniedError
+        from actidoo_wfe.wf.registry_data_model import data_model_registry
         if model_name not in self._allowed_data_models:
             raise DataModelAccessDeniedError(model_name, self._allowed_data_models)
         descriptor = data_model_registry.get(model_name)

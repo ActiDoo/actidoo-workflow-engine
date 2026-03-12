@@ -9,14 +9,12 @@ from unittest.mock import MagicMock, patch
 from sqlalchemy import String, inspect as sa_inspect
 from sqlalchemy.orm import Mapped, mapped_column
 
-from actidoo_wfe.data_models import (
-    DataModelAccessDeniedError,
+from actidoo_wfe.wf.config_data_model import WorkflowDataApiConfig
+from actidoo_wfe.wf.exceptions import DataModelAccessDeniedError, DataModelNotFoundError
+from actidoo_wfe.wf.models import WorkflowManagedMixin, extension_model_base
+from actidoo_wfe.wf.registry_data_model import (
     DataModelDescriptor,
-    DataModelNotFoundError,
-    WorkflowDataApiConfig,
-    WorkflowManagedMixin,
     data_model_registry,
-    extension_model_base,
     register_data_model,
 )
 from actidoo_wfe.database import Base
