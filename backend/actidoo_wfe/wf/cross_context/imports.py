@@ -3,16 +3,20 @@
 
 from actidoo_wfe.auth.cross_context.exports import (
     LoginStateSchema,
+    get_claims,
     get_login_state,
+    get_token_from_session,
     login_hook,
     require_authenticated,
     require_realm_role,
 )
 
 __all__ = [
-    "login_hook",
-    "get_login_state",
     "LoginStateSchema",
+    "get_claims",
+    "get_login_state",
+    "get_token_from_session",
+    "login_hook",
     "require_authenticated",
     "require_realm_role",
 ]
