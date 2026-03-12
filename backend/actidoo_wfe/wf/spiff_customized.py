@@ -581,7 +581,7 @@ class MyScriptEngine(FeelLikeScriptEngine):
         workflow: BpmnWorkflow = task.workflow
 
         if service_def is None:
-            log.error(f"Service for {service_type} is not defined")
+            log.warning(f"Service for {service_type} is not defined")
             raise Exception(f"Service for {service_type} is not defined")
         else:
             task_to_user_mapping: TaskToUserMapping = self.get_task_to_user_mapping(

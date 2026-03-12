@@ -296,7 +296,7 @@ def replace_task_data(
         task = service_application.admin_get_single_task(db=db, user_id=user.id, task_id=req_data.task_id)
         return GetSingleTaskResponse.model_validate(dict(task=task))
     except UserMayNotAdministrateThisWorkflowException as ex:
-        log.exception(f"User {user.username} is not allowed to call replace_task_data for task_id {req_data.task_id}")
+        log.warning(f"User {user.username} is not allowed to call replace_task_data for task_id {req_data.task_id}")
         raise HTTPException(status_code=403)
         
 
@@ -322,7 +322,7 @@ def execute_erroneous_task(
 
         return GetAllTasksResponse.model_validate(tasks)
     except UserMayNotAdministrateThisWorkflowException as ex:
-        log.exception(f"User {user.username} is not allowed to call execute_erroneous_task for task_id {req_data.task_id}")
+        log.warning(f"User {user.username} is not allowed to call execute_erroneous_task for task_id {req_data.task_id}")
         raise HTTPException(status_code=403)
 
 @router.post("/download_attachment", name="bff_admin_download_attachment")
@@ -381,7 +381,7 @@ def assign_user(
         task = views.admin_get_single_task(db=db, task_id=reqdata.task_id)
         return GetSingleTaskResponse.model_validate(dict(task=task))
     except UserMayNotAdministrateThisWorkflowException as ex:
-        log.exception(f"User {user.username} is not allowed to call assign_user for task_id {reqdata.task_id}")
+        log.warning(f"User {user.username} is not allowed to call assign_user for task_id {reqdata.task_id}")
         raise HTTPException(status_code=403)
     
 
@@ -397,7 +397,7 @@ def unassign_task(
         task = views.admin_get_single_task(db=db, task_id=reqdata.task_id)
         return GetSingleTaskResponse.model_validate(dict(task=task))
     except UserMayNotAdministrateThisWorkflowException as ex:
-        log.exception(f"User {user.username} is not allowed to call unassign_task for task_id {reqdata.task_id}")
+        log.warning(f"User {user.username} is not allowed to call unassign_task for task_id {reqdata.task_id}")
         raise HTTPException(status_code=403)
     
 
@@ -418,7 +418,7 @@ def cancel_workflow_instance(
         return CancelWorkflowInstanceResponse()
     
     except UserMayNotAdministrateThisWorkflowException as ex:
-        log.exception(f"User {user.username} is not allowed to call cancel_workflow_instance for task_id {reqdata.task_id}")
+        log.warning(f"User {user.username} is not allowed to call cancel_workflow_instance for task_id {reqdata.task_id}")
         raise HTTPException(status_code=403)
 
 

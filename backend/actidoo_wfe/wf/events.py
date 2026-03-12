@@ -112,7 +112,7 @@ def cleanup_session_events(session, transaction=None):
     if transaction is None or (not transaction.nested and transaction.parent is None):
         if session in session_events:
             if len(session_events[session])>0:
-                log.error("Cleaning non-empty session_events queue in cleanup_session_events")
+                log.warning("Cleaning non-empty session_events queue in cleanup_session_events")
             del session_events[session]
 
 event.listen(Session, 'after_commit', after_commit)

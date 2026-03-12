@@ -21,14 +21,14 @@ def empty_form():
 
 @cache
 def transform_camunda_form_from_file(form_file_path: Path):
-    log.info("> transform_camunda_form_from_file: path=%s", form_file_path)
+    log.debug("> transform_camunda_form_from_file: path=%s", form_file_path)
     if not form_file_path.exists():
             return empty_form()
     
     with open(form_file_path, "r") as fp:
         form_camunda_json = orjson.loads(fp.read())
         form = transform_camunda_form(form_camunda_json)
-    log.info("< transform_camunda_form_from_file")
+    log.debug("< transform_camunda_form_from_file")
     return form
 
 def transform_camunda_form(form_camunda_json) -> ReactJsonSchemaFormData:

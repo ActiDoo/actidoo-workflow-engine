@@ -154,7 +154,7 @@ class ServiceTaskHelper:
         """
         deprecated, use "set_task_data" instead
         """
-        log.warning("DECPRECATED use of update_task_data()")
+        log.warning("DEPRECATED use of update_task_data()")
         self.task_data.update(**update_dict)
 
     def set_task_data(self, update_dict):
@@ -249,7 +249,7 @@ class ServiceTaskHelper:
         """
         deprecated, use "set_workflow_data" instead
         """
-        log.warning("DECPRECATED use of set_data()")
+        log.warning("DEPRECATED use of set_data()")
         self.workflow.set_data(**key_value_dict)
 
     def set_workflow_data(self, key_value_dict: dict) -> None:

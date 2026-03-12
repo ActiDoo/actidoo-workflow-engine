@@ -66,7 +66,7 @@ def _find_property_upwards(
             found_path = []
 
     if found_path is None:
-        log.exception(f"EXCEPTION: Property {property} not found with starting_path {starting_path}")
+        log.warning(f"Property {property} not found with starting_path {starting_path}")
         raise Exception(f"Property {property} not found with starting_path {starting_path}")
 
     return found_path
@@ -368,7 +368,7 @@ def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None
                 if on_remove is not None:
                     on_remove(path_list + [k], value)
                 del subdata[k]
-                log.info(f"Removing Additional Field {k} from POST data")
+                log.debug(f"Removing Additional Field {k} from POST data")
 
     return data
 
@@ -673,7 +673,7 @@ def remove_data_uri_fields(schema):
 
 def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, property_path, options_folder, functions_env):
     def custom_properties_validator(validator, value, instance, schema):
-        log.info("custom_properties_validator: instance=%s, property_path=%s, value=%s)",instance, property_path, value)
+        log.debug("custom_properties_validator: instance=%s, property_path=%s, value=%s)",instance, property_path, value)
 
         options_file = schema.get("custom_properties", {}).get("options_file", None)
 
@@ -779,7 +779,7 @@ def validate_task_data(
     keep values of read-only/disabled form fields. The function returns the 
     cleaned task data together with an error payload."""
 
-    log.info("> validate_task_data")
+    log.debug("> validate_task_data")
 
     removed_unknown_fields: list[tuple[list, Any]] = []
 
@@ -831,7 +831,7 @@ def validate_task_data(
                 removed.append(list(ex.absolute_path))
                 run_again = True
             elif log_validation_errors:
-                log.exception(f"Validation error: {ex.message}; path={ex.json_path}; instance={ex.instance}")
+                log.debug(f"Validation error: {ex.message}; path={ex.json_path}; instance={ex.instance}")
             
     error_schema = validate_and_create_error_dict(validator=validator_instance,instance=tracked_task_data)
     # log.debug("removed = %s", removed)
@@ -843,9 +843,9 @@ def validate_task_data(
             set_item(untracked_task_data, path, value)
 
     if log_validation_errors:
-        log.info("< validate_task_data, errors = %s", error_schema)
+        log.debug("< validate_task_data, errors = %s", error_schema)
     else:
-        log.info("< validate_task_data")
+        log.debug("< validate_task_data")
 
     return ValidationResult(task_data = untracked_task_data, error_schema = error_schema)
 

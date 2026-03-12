@@ -228,8 +228,7 @@ def update(dest, upd):
                 dest[k] = v
         return dest
     except Exception as error:
-        log.exception(f'{type(error).__name__}: {error.args}.')
-        log.error(f'Error in update:\n{dest} \n\n {upd}')
+        log.exception(f'{type(error).__name__}: {error.args}. Error in update:\n{dest} \n\n {upd}')
         raise error
 
 def execute_user_task(

@@ -35,7 +35,7 @@ def compile_email_template(template: str, params: dict, template_dir = MAIL_TEMP
             email_signature=settings.email_signature
         )) # type: ignore
     except NameError as e:
-        log.error(f"{str(e)}, {template}")
+        log.exception(f"{str(e)}, {template}")
         raise e
 
 def send_personal_status_mail(db: Session):
