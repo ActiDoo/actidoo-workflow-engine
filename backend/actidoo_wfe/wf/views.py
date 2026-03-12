@@ -17,13 +17,6 @@ from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase
 from actidoo_wfe.helpers.schema import PaginatedDataSchema
 from actidoo_wfe.helpers.time import dt_ago_naive, dt_now_naive
 from actidoo_wfe.wf.exceptions import TaskNotFoundException
-from actidoo_wfe.wf.bff.bff_admin_schema import (
-    GetAllUsersResponseItem,
-    GetUserDetailResponse,
-    InlineUserAdminResponse,
-    InlineUserResponse,
-    UserDelegationResponse,
-)
 from actidoo_wfe.wf.models import (
     WorkflowInstance,
     WorkflowInstanceTask,
@@ -455,30 +448,26 @@ def bff_admin_get_all_users(db: Session, bff_table_request_params: BffTableQuery
     for row in paginated_data.items:
         db.expunge(row)
 
-    res_representation = PaginatedDataSchema(
+    return PaginatedDataSchema(
         ITEMS=[
-            GetAllUsersResponseItem.model_validate(
-                dict(
-                    id=x.id,
-                    username=x.username,
-                    email=x.email,
-                    first_name=x.first_name,
-                    last_name=x.last_name,
-                    full_name=x.full_name,
-                    is_service_user=x.is_service_user,
-                    created_at=x.created_at,
-                    roles=[r.role.name for r in x.roles],
-                )
+            dict(
+                id=x.id,
+                username=x.username,
+                email=x.email,
+                first_name=x.first_name,
+                last_name=x.last_name,
+                full_name=x.full_name,
+                is_service_user=x.is_service_user,
+                created_at=x.created_at,
+                roles=[r.role.name for r in x.roles],
             )
             for x in paginated_data.items
         ],
         COUNT=paginated_data.count,
     )
 
-    return res_representation
 
-
-def admin_get_user_detail(db: Session, user_id: uuid.UUID) -> GetUserDetailResponse:
+def admin_get_user_detail(db: Session, user_id: uuid.UUID):
     q = (
         select(WorkflowUser)
         .options(
@@ -494,16 +483,8 @@ def admin_get_user_detail(db: Session, user_id: uuid.UUID) -> GetUserDetailRespo
 
     db.expunge(user)
 
-    delegations = [
-        UserDelegationResponse(
-            delegate=InlineUserResponse.model_validate(d.delegate),
-            valid_until=d.valid_until,
-        )
-        for d in user.delegations_as_principal
-    ]
-
-    user_rep = InlineUserAdminResponse.model_validate(
-        dict(
+    return dict(
+        user=dict(
             id=user.id,
             username=user.username,
             email=user.email,
@@ -513,10 +494,20 @@ def admin_get_user_detail(db: Session, user_id: uuid.UUID) -> GetUserDetailRespo
             is_service_user=user.is_service_user,
             created_at=user.created_at,
             roles=[r.role.name for r in user.roles],
-        )
+        ),
+        delegations=[
+            dict(
+                delegate=dict(
+                    id=d.delegate.id,
+                    full_name=d.delegate.full_name,
+                    username=d.delegate.username,
+                    email=d.delegate.email,
+                ),
+                valid_until=d.valid_until,
+            )
+            for d in user.delegations_as_principal
+        ],
     )
-
-    return GetUserDetailResponse(user=user_rep, delegations=delegations)
 
 def admin_get_task_states_per_workflow(db: Session, wf_name: str, allowed_workflow_names: set[str] = set()) -> WorkflowStateResponse:
     instances_with_tasks = db.query(WorkflowInstance).options(

@@ -128,3 +128,6 @@ layers = [
     "actidoo_wfe.wf.service_workflow : actidoo_wfe.wf.spiff_customized : actidoo_wfe.wf.service_task_helper",
     "actidoo_wfe.wf.service_form",
 ]
+ignore_imports = [
+    "actidoo_wfe.wf.service_form -> actidoo_wfe.wf.service_workflow",
+]
