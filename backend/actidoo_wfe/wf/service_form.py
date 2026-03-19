@@ -45,6 +45,43 @@ log = logging.getLogger(__name__)
 
 # Form Service
 
+def _extract_attribute_reference(node: ast.Attribute) -> tuple[int, str]:
+    """
+    Returns (hops_up, property_name) for attribute chains like:
+      parent.foo           -> (1, "foo")
+      parent.parent.foo    -> (2, "foo")
+      this.parent.foo      -> (1, "foo")
+      this.foo             -> (0, "foo")
+    """
+    chain: list[str] = []
+    current: ast.AST = node
+    while isinstance(current, ast.Attribute):
+        chain.append(current.attr)
+        current = current.value
+    if isinstance(current, ast.Name):
+        chain.append(current.id)
+    else:
+        raise NotImplementedError("Unsupported attribute base")
+
+    chain = list(reversed(chain))
+    idx = 0
+    if chain and chain[0] == "this":
+        idx = 1
+
+    hops = 0
+    while idx < len(chain) and chain[idx] == "parent":
+        hops += 1
+        idx += 1
+
+    if idx >= len(chain):
+        raise NotImplementedError("Attribute reference is missing a property name")
+
+    property_name = chain[idx]
+    if idx + 1 < len(chain):
+        raise NotImplementedError("Nested properties beyond the first field are not supported")
+
+    return hops, property_name
+
 def _find_property_upwards(
     global_jsonschema: dict, starting_path: list[str], property: str
 ):
@@ -53,7 +90,7 @@ def _find_property_upwards(
 
     queue = starting_path.copy()
     while len(queue) > 0 and not found:
-        jsonschema = _get_subschema(global_jsonschema, starting_path)
+        jsonschema = _get_subschema(global_jsonschema, queue)
         if property in jsonschema.get("properties", {}):
             found = True
             found_path = queue
@@ -111,13 +148,10 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                 else_property = {
                     "type": "null"
                 }  # Im negativen Fall, setzen wir den Typen auf null, dadurch wird das Feld nicht angezeigt
-                is_required = "required" in jsonschema and key in jsonschema["required"]
 
                 # Aufräumen: hideif Property löschen; im globalen Schema das Property auf "True" setzen, weil die eigentliche Definition erst im allOf Teil folgt; required rausziehen
                 del then_property["hideif"]
                 jsonschema["properties"][key] = True
-                if is_required:
-                    jsonschema["required"].remove(key)
 
                 outer_ifthenschema, inner_ifthenschema = _build_allOf_schema_for_path(path)
 
@@ -130,12 +164,16 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                 # Das innerste "then" ist immer das Feld, das wir verstecken/anzeigen wollen.
 
                 inner_ifthenschema["then"]["properties"][key] = copy.deepcopy(then_property)
-                if is_required:
+                if key in jsonschema.get("required", []):
+                    jsonschema["required"].remove(key) # cleanup the old 'required' entry
                     inner_ifthenschema["then"]["required"] = [key]
                 inner_ifthenschema["else"] = {
                     "properties": {key: else_property},
                     "type": "object",
                 }
+                outer_ifthenschema["else"] = _build_nested_schema_for_path(
+                    path, inner_ifthenschema["else"]
+                )
 
                 # Das richtige if müssen wir nach dem parsen finden
                 # if = subschema mit werten, die gesetzt sein müssen (inkl. arrays...)
@@ -192,11 +230,12 @@ def _patch_expression(invalid_python, lhs=""):
     return patched
 
 
-def _camunda_hide_if_expression_ast_to_jsonschema(node, global_jsonschema, path):
+def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonschema, path):
     if isinstance(node, ast.Compare):  # =; !=
-        assert (isinstance(node.left, ast.Name) or isinstance(node.left, ast.Constant))
-        assert (isinstance(node.comparators[0], ast.Name) or isinstance(node.comparators[0], ast.Constant))
+        assert (isinstance(node.left, ast.Name) or isinstance(node.left, ast.Constant) or isinstance(node.left, ast.Attribute))
+        assert (isinstance(node.comparators[0], ast.Name) or isinstance(node.comparators[0], ast.Constant) or isinstance(node.comparators[0], ast.Attribute))
 
+        hops = 0
         if isinstance(node.left, ast.Name):
             property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.left, global_jsonschema, path
@@ -204,22 +243,27 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node, global_jsonschema, path)
             value, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.comparators[0], global_jsonschema, path
             )
-        else:
+        elif isinstance(node.left, ast.Constant):
             property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.comparators[0], global_jsonschema, path
             )
             value, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.left, global_jsonschema, path
             )
+        else: # ast.Attribute:
+            assert isinstance(node.left, ast.Attribute)
+            hops, property = _extract_attribute_reference(node.left)
+            value, _ = _camunda_hide_if_expression_ast_to_jsonschema(node.comparators[0], global_jsonschema, path) # type: ignore
 
         op = node.ops[0]
 
         # property auflösen und auf const wert setzen
-        found_path = _find_property_upwards(global_jsonschema, path, property)
-        property_node = _get_subschema(
+        starting_path = path[:-hops] if hops > 0 else path
+        found_path = _find_property_upwards(global_jsonschema, starting_path, property)
+        left_node = _get_subschema(
             global_jsonschema=global_jsonschema, path=found_path
         )["properties"][property]
-        property_type = property_node["type"] if isinstance(property_node, dict) else None
+        property_type = left_node["type"] if isinstance(left_node, dict) else None
         # property_type can be a single string like "boolean" or "string" or a list of strings like: ["string", "null"]
         value_type = type(value)
         is_bool_type = property_type == "boolean" or value_type == bool
@@ -234,7 +278,18 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node, global_jsonschema, path)
             },
         }
 
-        if is_bool_type:  # checkbox has no value if not checked
+        # Ensure hide-if comparisons only match when the referenced field exists, so hidden or
+        # unset fields are treated as undefined and don't accidentally satisfy the comparison.
+        requires_reference = is_bool_type
+        if left_node is True:
+            # The field definition lives in an allOf/then branch; treat it as potentially hidden.
+            requires_reference = True
+        elif isinstance(left_node, dict) and left_node.get("hideif") is not None:
+            # The field has its own hide-if, so only compare if it is present.
+            requires_reference = True
+
+        if requires_reference and "required" not in if_schema:
+            # Missing values must not satisfy hide-if comparisons for hidden/boolean fields.
             if_schema["required"] = [property]
 
         if isinstance(op, ast.NotEq):
@@ -287,7 +342,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node, global_jsonschema, path)
 def _build_allOf_schema_for_path(path: list[str]):
     inner = {"if": {}, "then": {"type": "object", "properties": {}}, "else": {}}
     pointer = inner
-    for p in path:
+    for p in reversed(path):
         new = {
             "if": {},
             "then": {
@@ -300,6 +355,16 @@ def _build_allOf_schema_for_path(path: list[str]):
         pointer = new
 
     return pointer, inner
+
+
+def _build_nested_schema_for_path(path: list[str], inner_schema: dict):
+    pointer = copy.deepcopy(inner_schema)
+    for p in reversed(path):
+        pointer = {
+            "type": "object",
+            "properties": {p: {"type": "array", "items": pointer}},
+        }
+    return pointer
 
 
 def get_jsonschema_for_validation(
