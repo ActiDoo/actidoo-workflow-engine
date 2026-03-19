@@ -425,11 +425,8 @@ class BFFTable:
         count_query = count_query.offset(None)
         count_query = count_query.order_by(None)
 
-        count_query = count_query.with_only_columns(
-            func.count("*"), maintain_column_froms=True
-        )
-
-        # Wrap as subquery to correctly handle DISTINCT in the original query
+        # Wrap as subquery to correctly handle DISTINCT in the original query,
+        # then count the rows of the subquery.
         subquery = count_query.subquery()
         count_query = select(func.count()).select_from(subquery)
 

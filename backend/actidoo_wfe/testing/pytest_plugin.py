@@ -3,10 +3,14 @@
 
 import contextlib
 import logging
+import pathlib
+import tempfile
 from unittest.mock import patch
 
 import pytest
+from libcloud.storage.drivers.local import LocalStorageDriver
 from sqlalchemy import create_engine, text
+from sqlalchemy_file.storage import StorageManager
 
 from actidoo_wfe.database import drop_all, get_uri, run_migrations, setup_db, wait
 from actidoo_wfe.settings import settings
@@ -69,6 +73,25 @@ def db_engine_ctx():
             teardown_test_db()
 
     return _db_engine_ctx
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _tmp_file_storage(tmp_path_factory):
+    """Provide a local tmp directory as default file storage for tests."""
+    try:
+        StorageManager.get_default()
+        return  # already configured
+    except RuntimeError:
+        pass
+
+    storage_path = tmp_path_factory.mktemp("storage")
+    driver = LocalStorageDriver(storage_path)
+    container = driver.create_container("attachment")
+    StorageManager.add_storage("default", container)
+
+    yield
+
+    StorageManager._clear()
 
 
 @pytest.fixture(scope="function", autouse=True)

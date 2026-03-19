@@ -242,7 +242,7 @@ def get_all_users(
         )
     except UserMayNotAdministrateUsersException:
         raise HTTPException(status_code=403)
-    return GetAllUsersResponse.model_validate(users)
+    return users
 
 
 @router.post("/user_detail", name="bff_admin_get_user_detail")
@@ -259,7 +259,7 @@ def get_user_detail(
         raise HTTPException(status_code=403)
     except ValueError:
         raise HTTPException(status_code=404)
-    return GetUserDetailResponse.model_validate(detail)
+    return detail
 
 
 @router.post("/set_user_delegations", name="bff_admin_set_user_delegations")
@@ -279,7 +279,7 @@ def set_user_delegations(
         raise HTTPException(status_code=403)
     except ValueError:
         raise HTTPException(status_code=404)
-    return GetUserDetailResponse.model_validate(detail)
+    return detail
 
 
 @router.post("/replace_task_data", name="bff_admin_replace_task_data")

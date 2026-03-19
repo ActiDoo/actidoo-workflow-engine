@@ -16,6 +16,7 @@ from actidoo_wfe.helpers.bff_table import BffTableQuerySchemaBase
 from actidoo_wfe.helpers.datauri import DataURI
 from actidoo_wfe.helpers.modules import env_from_module
 from actidoo_wfe.helpers.schema import PaginatedDataSchema
+from actidoo_wfe.wf.bff.bff_admin_schema import GetAllUsersResponse, GetUserDetailResponse
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import providers as workflow_providers
@@ -1122,13 +1123,17 @@ def bff_admin_get_all_workflow_instances(db: Session, user_id: uuid.UUID, bff_ta
 def bff_admin_get_all_users(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
     if not is_global_admin(db=db, user_id=user_id):
         raise UserMayNotAdministrateUsersException()
-    return views.bff_admin_get_all_users(db=db, bff_table_request_params=bff_table_request_params)
+    return GetAllUsersResponse.model_validate(
+        views.bff_admin_get_all_users(db=db, bff_table_request_params=bff_table_request_params)
+    )
 
 
 def admin_get_user_detail(db: Session, admin_user_id: uuid.UUID, target_user_id: uuid.UUID):
     if not is_global_admin(db=db, user_id=admin_user_id):
         raise UserMayNotAdministrateUsersException()
-    return views.admin_get_user_detail(db=db, user_id=target_user_id)
+    return GetUserDetailResponse.model_validate(
+        views.admin_get_user_detail(db=db, user_id=target_user_id)
+    )
 
 
 def admin_set_user_delegations(
@@ -1146,7 +1151,9 @@ def admin_set_user_delegations(
         delegations=[(delegate_id, valid_until) for delegate_id, valid_until in delegations],
     )
 
-    return views.admin_get_user_detail(db=db, user_id=principal_user_id)
+    return GetUserDetailResponse.model_validate(
+        views.admin_get_user_detail(db=db, user_id=principal_user_id)
+    )
 
 def admin_get_single_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
