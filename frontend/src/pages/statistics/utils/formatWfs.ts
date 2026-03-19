@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { DataPoint } from "./Graph";
+import { DataPoint } from '@/pages/statistics/utils/Graph';
 
 export function createCountforWFs(
   selectedWorkflow: string,
-  workflow_dates: Date[],
+  workflowDates: Date[],
   startDate: Date,
   endDate: Date
 ): { name: string; data: DataPoint[] } {
@@ -16,8 +16,8 @@ export function createCountforWFs(
   };
 
   // Count workflow occurrences per day
-  const countedWfs: { date: Date; calls: number }[] = [];
-  for (const wfDate of workflow_dates) {
+  const countedWfs: Array<{ date: Date; calls: number }> = [];
+  for (const wfDate of workflowDates) {
     const normalizedDate = toMidnight(wfDate);
     const existingEntry = countedWfs.find(
       entry => entry.date.getTime() === normalizedDate.getTime()
@@ -49,18 +49,21 @@ export function createCountforWFs(
   let cumulativeCount = 0;
   const dailySeries: DataPoint[] = [];
 
-  const current = new Date(baselineDefault);
-  while (current <= actualEnd) {
+  for (
+    let current = new Date(baselineDefault);
+    // eslint-disable-next-line no-unmodified-loop-condition -- current is mutated via setDate()
+    current <= actualEnd;
+    current.setDate(current.getDate() + 1)
+  ) {
     const dayMatch = countedWfs.find(entry => entry.date.getTime() === current.getTime());
-    cumulativeCount += dayMatch?.calls || 0;
+    cumulativeCount += dayMatch?.calls ?? 0;
     dailySeries.push({ date: new Date(current), calls: cumulativeCount });
-    current.setDate(current.getDate() + 1);
   }
 
   if (startDate) {
     return {
       name: selectedWorkflow,
-      data: dailySeries.filter(d => d.date >= actualStart && d.date <= actualEnd)
+      data: dailySeries.filter(d => d.date >= actualStart && d.date <= actualEnd),
     };
   } else {
     // Default: keep the original zero-baseline first point

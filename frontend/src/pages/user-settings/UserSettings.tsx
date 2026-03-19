@@ -45,13 +45,6 @@ const toIsoDateTimeValue = (value?: string | null): string | null => {
   return parsed.toISOString();
 };
 
-const formatReadableDate = (iso?: string | null, fallback?: string): string => {
-  if (!iso) return fallback ?? 'No deadline';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return fallback ?? 'No deadline';
-  return date.toLocaleString();
-};
-
 const cloneDelegations = (items: UserDelegation[] = []): UserDelegation[] =>
   items.map(entry => ({
     ...entry,
@@ -74,9 +67,7 @@ const UserSettings: React.FC = () => {
   const key = WeDataKey.USER_SETTINGS;
   const dispatch = useDispatch();
   const data = useSelector((state: State) => state.data[key]);
-  const currentUserId = useSelector(
-    (state: State) => state.data[WeDataKey.WFE_USER]?.data?.id
-  );
+  const currentUserId = useSelector((state: State) => state.data[WeDataKey.WFE_USER]?.data?.id);
   const options = data?.data?.supported_locales?.length
     ? data.data.supported_locales
     : availableLanguages.map(lang => ({ key: lang.key, label: lang.label }));
@@ -162,9 +153,7 @@ const UserSettings: React.FC = () => {
   const handleDelegationDateChange = (delegateId: string, isoValue?: string | null) => {
     setDelegations(prev =>
       prev.map(entry =>
-        entry.delegate_user_id === delegateId
-          ? { ...entry, valid_until: isoValue ?? null }
-          : entry
+        entry.delegate_user_id === delegateId ? { ...entry, valid_until: isoValue ?? null } : entry
       )
     );
   };
@@ -178,14 +167,15 @@ const UserSettings: React.FC = () => {
     if (!pendingDelegate.id || isDuplicatePendingDelegate) {
       return;
     }
+    const delegateId = pendingDelegate.id;
     setDelegations(prev => [
       ...prev,
       {
-        delegate_user_id: pendingDelegate.id!,
+        delegate_user_id: delegateId,
         valid_until: pendingValidUntil || null,
         delegate: {
-          id: pendingDelegate.id!,
-          full_name: pendingDelegate.label ?? pendingDelegate.id!,
+          id: delegateId,
+          full_name: pendingDelegate.label ?? delegateId,
         },
       },
     ]);
@@ -239,11 +229,13 @@ const UserSettings: React.FC = () => {
     <PcPage header={{ title: t('userSettings.title') }}>
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-4 mb-8">
         <Label className="font-semibold block mb-1">{t('userSettings.localeLabel')}</Label>
-        <FlexBox className="items-center mb-4 flex-wrap gap-2" alignItems={FlexBoxAlignItems.Center}>
+        <FlexBox
+          className="items-center mb-4 flex-wrap gap-2"
+          alignItems={FlexBoxAlignItems.Center}>
           <Select
             className="w-48"
             onChange={e => {
-              const nextLocale = e.detail.selectedOption.getAttribute('data-key') || '';
+              const nextLocale = e.detail.selectedOption.getAttribute('data-key') ?? '';
               setLocale(nextLocale);
               changeLanguage(nextLocale);
             }}>
@@ -255,9 +247,7 @@ const UserSettings: React.FC = () => {
           </Select>
         </FlexBox>
         <div>
-          <Text className="mr-2 text-sm text-neutral-700">
-            {t('userSettings.localeHint')}
-          </Text>
+          <Text className="mr-2 text-sm text-neutral-700">{t('userSettings.localeHint')}</Text>
         </div>
       </div>
 
@@ -269,9 +259,7 @@ const UserSettings: React.FC = () => {
 
         <div className="space-y-4">
           {delegations.length === 0 ? (
-            <Text className="text-sm text-neutral-500">
-              {t('userSettings.delegations.empty')}
-            </Text>
+            <Text className="text-sm text-neutral-500">{t('userSettings.delegations.empty')}</Text>
           ) : (
             delegations.map(entry => (
               <div
@@ -296,24 +284,28 @@ const UserSettings: React.FC = () => {
                       className="w-64"
                       formatPattern={DATE_TIME_PATTERN}
                       value={toPickerValue(entry.valid_until)}
-                      onChange={event =>
+                      onChange={event => {
                         handleDelegationDateChange(
                           entry.delegate_user_id,
                           toIsoDateTimeValue(event.detail.value)
-                        )
-                      }
+                        );
+                      }}
                     />
                   </div>
                   <Button
                     design={ButtonDesign.Transparent}
                     disabled={!entry.valid_until}
-                    onClick={() => handleDelegationDateChange(entry.delegate_user_id, null)}>
+                    onClick={() => {
+                      handleDelegationDateChange(entry.delegate_user_id, null);
+                    }}>
                     {t('userSettings.delegations.clearDeadline')}
                   </Button>
                   <Button
                     design={ButtonDesign.Negative}
                     icon="decline"
-                    onClick={() => handleRemoveDelegation(entry.delegate_user_id)}>
+                    onClick={() => {
+                      handleRemoveDelegation(entry.delegate_user_id);
+                    }}>
                     {t('userSettings.delegations.remove')}
                   </Button>
                 </div>
@@ -322,9 +314,7 @@ const UserSettings: React.FC = () => {
           )}
 
           {showDelegateAddedNotice && (
-            <Text className="text-xs text-amber-700">
-              {t('common.delegations.addedNotice')}
-            </Text>
+            <Text className="text-xs text-amber-700">{t('common.delegations.addedNotice')}</Text>
           )}
         </div>
 
@@ -345,15 +335,17 @@ const UserSettings: React.FC = () => {
                 className="w-64"
                 formatPattern={DATE_TIME_PATTERN}
                 value={toPickerValue(pendingValidUntil)}
-                onChange={event =>
-                  setPendingValidUntil(toIsoDateTimeValue(event.detail.value) ?? '')
-                }
+                onChange={event => {
+                  setPendingValidUntil(toIsoDateTimeValue(event.detail.value) ?? '');
+                }}
               />
             </div>
             <Button
               design={ButtonDesign.Transparent}
               disabled={!pendingValidUntil}
-              onClick={() => setPendingValidUntil('')}>
+              onClick={() => {
+                setPendingValidUntil('');
+              }}>
               {t('userSettings.delegations.clearDeadline')}
             </Button>
             <Button

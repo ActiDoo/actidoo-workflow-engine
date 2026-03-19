@@ -13,7 +13,7 @@ const waitForRuntimeConfig = async (): Promise<void> => {
     return;
   }
 
-  await new Promise<void>((resolve) => {
+  await new Promise<void>(resolve => {
     const cleanup = (timeoutId: number) => {
       window.removeEventListener(RUNTIME_CONFIG_EVENT, handleReady);
       window.clearTimeout(timeoutId);

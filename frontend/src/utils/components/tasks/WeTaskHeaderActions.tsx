@@ -105,6 +105,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
   };
 
   const renderAssignUserDialog = (): React.ReactElement => {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
     const isLoading = assignTaskLoadState || unassignTaskLoadState;
     return (
       <WeAlertDialog
@@ -115,6 +116,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
         buttons={
           <>
             <Button
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
               disabled={isLoading || !props.data?.assigned_user}
               design={ButtonDesign.Negative}
               tooltip={t('admin.unassignUserTooltip')}
@@ -124,6 +126,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
               {t('admin.unassignUser')}
             </Button>
             <Button
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
               disabled={isLoading || !selectedUserId}
               design={ButtonDesign.Emphasized}
               tooltip={t('admin.assignUserTooltip')}

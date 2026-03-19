@@ -6,7 +6,7 @@ import { Form } from '@rjsf/react-bootstrap';
 import { customizeValidator } from '@rjsf/validator-ajv8';
 import type { RegistryFieldsType, RegistryWidgetsType } from '@rjsf/utils';
 
-import './TaskForm.scss';
+import '@/rjsf-customs/components/TaskForm.scss';
 
 import CustomNullField from '@/rjsf-customs/custom-fields/CustomNullField';
 import { CustomObjectFieldTemplate } from '@/rjsf-customs/templates/ObjectFieldTemplate';

@@ -25,7 +25,13 @@ import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { useTranslation } from '@/i18n';
 import { StringDict } from '@/ui5-components';
 
-import { openDB, getFormData, saveFormData, deleteFormData, deleteOldFormData } from '@/services/DBService';
+import {
+  openDB,
+  getFormData,
+  saveFormData,
+  deleteFormData,
+  deleteOldFormData,
+} from '@/services/DBService';
 
 interface SingleTaskProps {
   state: WorkflowState;
@@ -63,11 +69,17 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const isUploadLoadingDialogOpen = isSubmitLoading;
 
   const jsonschema: RJSFSchema | undefined = _.cloneDeep(task?.jsonschema);
-  const uiSchema = task?.uischema ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>) : undefined;
+  const uiSchema = task?.uischema
+    ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>)
+    : undefined;
 
-  const isBlockedByDelegateAssignment =
-    !!(task?.assigned_to_me && task?.assigned_delegate_user && !task?.assigned_to_me_as_delegate);
+  const isBlockedByDelegateAssignment = !!(
+    task?.assigned_to_me &&
+    task?.assigned_delegate_user &&
+    !task?.assigned_to_me_as_delegate
+  );
   const canSubmitTask =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR: false should fall through
     !!(task?.assigned_to_me || task?.assigned_to_me_as_delegate) && !isBlockedByDelegateAssignment;
   const isDelegateSubmission = !!task?.assigned_to_me_as_delegate;
 
@@ -196,7 +208,9 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       t('taskContent.submitSuccess'),
       t('taskContent.submitError'),
       () => {
-        dispatch(postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY }));
+        dispatch(
+          postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY })
+        );
         navigate('/tasks/open');
 
         // Delete the draft for the task that was actually submitted (prevents deleting the wrong one on fast navigation)
@@ -218,8 +232,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
         }
       }
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitRequest?.postResponse]);
+  }, [submitRequest?.postResponse]); // eslint-disable-line
 
   const submitData = (data: any, delegateCommentValue?: string): void => {
     if (!data || !taskId) return;
@@ -232,7 +245,14 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     }
 
     dispatch(
-      postRequest(WeDataKey.SUBMIT_TASK_DATA, data, undefined, queryParams, undefined, uploadProgress)
+      postRequest(
+        WeDataKey.SUBMIT_TASK_DATA,
+        data,
+        undefined,
+        queryParams,
+        undefined,
+        uploadProgress
+      )
     );
   };
 
@@ -366,17 +386,13 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
 
       // Save only after draft check completed (prevents overwriting an existing draft during initialization)
       if (isDraftLoaded && taskId) {
-        debouncedSaveDraft(taskId, next);
+        void debouncedSaveDraft(taskId, next);
       }
     },
     [isDraftLoaded, taskId, debouncedSaveDraft]
   );
 
-  if (
-    loadingState[WeDataKey.MY_USER_TASKS] ||
-    !isDraftLoaded ||
-    (task && formData === undefined)
-  ) {
+  if (loadingState[WeDataKey.MY_USER_TASKS] || !isDraftLoaded || (task && formData === undefined)) {
     return (
       <div className="flex flex-col w-full h-full items-center justify-center pb-32 gap-2">
         <BusyIndicator active={true} delay={500} />
@@ -394,7 +410,13 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               loadTasks();
             }}
             backToList={() => {
-              dispatch(postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY }));
+              dispatch(
+                postRequest(
+                  WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS,
+                  {},
+                  { state: WorkflowState.READY }
+                )
+              );
               navigate('/tasks/open');
             }}
           />
@@ -441,8 +463,12 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
             <WeUploadDialog
               isOpen={isUploadLoadingDialogOpen}
               progress={progress}
-              progressLabel={isSubmitLoading ? t('taskContent.uploadForm') : t('taskContent.uploadDraft')}
-              processLabel={isSubmitLoading ? t('taskContent.processForm') : t('taskContent.processDraft')}
+              progressLabel={
+                isSubmitLoading ? t('taskContent.uploadForm') : t('taskContent.uploadDraft')
+              }
+              processLabel={
+                isSubmitLoading ? t('taskContent.processForm') : t('taskContent.processDraft')
+              }
             />
           </div>
         </div>

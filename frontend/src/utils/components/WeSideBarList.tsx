@@ -37,9 +37,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
 
   const data = useSelector((state: State) => state.data[props.dataKey]);
   const isLoading = useSelector((state: State) => state.ui.loading[`${props.dataKey}POST`]);
-  const currentUserId = useSelector(
-    (state: State) => state.data[WeDataKey.WFE_USER]?.data?.id
-  );
+  const currentUserId = useSelector((state: State) => state.data[WeDataKey.WFE_USER]?.data?.id);
 
   useEffect(() => {
     dispatch(postRequest(props.dataKey, {}, { state: props.state }));
@@ -101,13 +99,17 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                 : `${t('common.labels.task')}:`;
             return (
               <StandardListItem
-                className={` h-auto pc-pl-responsive ${isDelegationHighlight ? 'bg-orange-50' : ''}`}
+                className={` h-auto pc-pl-responsive ${
+                  isDelegationHighlight ? 'bg-orange-50' : ''
+                }`}
                 key={`task-item-${instance.id}`}
                 onClick={() => {
                   navigate(`${instance.id}`);
                 }}>
                 <div className="py-2">
-                  <Text className={`${isSelected ? '!font-bold' : ''} ml-1 `}>{instance.title}</Text>
+                  <Text className={`${isSelected ? '!font-bold' : ''} ml-1 `}>
+                    {instance.title}
+                  </Text>
                   {instance.subtitle && (
                     <Text className={`!text-xs !text-neutral-700  !block ml-1 `}>
                       {instance.subtitle}

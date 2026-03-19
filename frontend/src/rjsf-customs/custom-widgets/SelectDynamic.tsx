@@ -3,7 +3,7 @@
 
 import { WidgetProps } from '@rjsf/utils';
 import React, { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
-import { MultiValue, SingleValue } from 'react-select';
+import { SingleValue } from 'react-select';
 import { useMutation } from 'react-query';
 import { fetchPost } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
@@ -23,7 +23,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
-  //console.log(`SelectDynamic: ${JSON.stringify(options)} -> ${props.value}`)
+  // console.log(`SelectDynamic: ${JSON.stringify(options)} -> ${props.value}`)
 
   const optionsQuery = useMutation({
     mutationFn: async () => {
@@ -43,21 +43,22 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
         form_data: (props.registry as any)?.formContext?.formData,
       });
 
-      //console.log(`opts = ${JSON.stringify(res.data)}`)
-      //e.g. {"options":[{"value":"three","label":"Option Drei"},{"value":"one","label":"Option Eins"},{"value":"two","label":"Option Zwei"}]}
-      
+      // console.log(`opts = ${JSON.stringify(res.data)}`)
+      // e.g. {"options":[{"value":"three","label":"Option Drei"},{"value":"one","label":"Option Eins"},{"value":"two","label":"Option Zwei"}]}
+
       return res.data;
     },
     onSuccess: (data: { options: PcValueLabelItem[] }) => {
       setOptions(data.options);
     },
     onError: () => {
-      //TODO implement proper error message to the user
+      // TODO implement proper error message to the user
       console.log('an error occurred');
     },
   });
 
-  const debouncedMutate = useCallback( //debouncedMutate will stay the same during re-render, as long as the deps don't change
+  const debouncedMutate = useCallback(
+    // debouncedMutate will stay the same during re-render, as long as the deps don't change
     debounce(() => {
       optionsQuery.mutate();
     }, 300),
@@ -67,16 +68,16 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
   useEffect(() => {
     debouncedMutate();
     return () => {
-      debouncedMutate.cancel(); //cleanup function that runs every re-render and on unmount
+      debouncedMutate.cancel(); // cleanup function that runs every re-render and on unmount
     };
-  }, [search, props.value]); //TODO hier werden sich
-  //IN JEDEM FALL dynamisch die Werte geholt
+  }, [search, props.value]); // TODO hier werden sich
+  // IN JEDEM FALL dynamisch die Werte geholt
 
-  const handleChange = function (option: unknown): void {    
+  const handleChange = function (option: unknown): void {
     const singleOption = option as SingleValue<PcValueLabelItem>;
-    if (!singleOption || !singleOption.value) {
-      props.onChange(null)
-      return
+    if (!singleOption?.value) {
+      props.onChange(null);
+      return;
     }
     props.onChange(singleOption?.value);
   };
@@ -91,13 +92,12 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
       );
   };
 
-  const getSelectionOption = function() {
-    let opts = options?.find(o => o.value === props.value)
+  const getSelectionOption = function () {
+    const opts = options?.find(o => o.value === props.value);
     if (opts === undefined)
-      return null //prevent returning undefined, otherwise cleared data from a selection is not included in the JSON payload
-    else
-      return opts
-  }
+      return null; // prevent returning undefined, otherwise cleared data from a selection is not included in the JSON payload
+    else return opts;
+  };
 
   useEffect(() => {
     const now = Date.now();
@@ -106,7 +106,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
     if (!optionsLoaded) {
       debouncedMutate();
       setOptionsLoaded(true);
-    } else {      
+    } else {
       setSelectedOption(getSelectionOption());
     }
     // no return value with clean-up code like "debouncedMutate.cancel()"", because that's done in the other useEffect() definition
@@ -125,11 +125,11 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
     useEffect(() => {
       const now = Date.now();
       const timeSinceLastValueChange = now - (lastValueChangeRef.current || 0);
-      //When the data is first filled into the form and there are already values for these fields, then all fields are filled "simultaneously".
-      //Then all Change Events are processed "simultaneously".
-      //Then it is determined that the Dependency field (e.g. Car Type) has changed and the dependent field (e.g. "Car Sub Type") is reset,
-      //so the initial value is gone.
-      //I have solved this with a time check that checks whether the two fields have changed in quick succession and then does not perform a reset.
+      // When the data is first filled into the form and there are already values for these fields, then all fields are filled "simultaneously".
+      // Then all Change Events are processed "simultaneously".
+      // Then it is determined that the Dependency field (e.g. Car Type) has changed and the dependent field (e.g. "Car Sub Type") is reset,
+      // so the initial value is gone.
+      // I have solved this with a time check that checks whether the two fields have changed in quick succession and then does not perform a reset.
 
       if (timeSinceLastValueChange > 1000) {
         setSelectedOption(null);
@@ -144,12 +144,14 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
   return (
     <div>
       <WeComboBox
-        value={selectedOption || ''}
+        value={selectedOption ?? ''}
         required={props.required}
         isLoading={optionsQuery.isLoading}
         options={options}
         isDisabled={isDisabled}
-        isClearable={props.schema.default !== selectedOption?.value} /* it's clearable if there's a value which does not equal the default */
+        isClearable={
+          props.schema.default !== selectedOption?.value
+        } /* it's clearable if there's a value which does not equal the default */
         onInputChange={value => {
           setSearch(value);
         }}

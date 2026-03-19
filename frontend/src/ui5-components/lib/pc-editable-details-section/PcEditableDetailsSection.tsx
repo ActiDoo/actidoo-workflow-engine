@@ -337,6 +337,7 @@ export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): Re
   }
 
   function error(): ReactNode | null {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
     return (props.response && props.response !== 200) || props.showError ? (
       <MessageStrip design={MessageStripDesign.Negative} className="mb-4" hideCloseButton={true}>
         {errorMessage}

@@ -185,14 +185,12 @@ export interface UserDelegation {
 }
 
 export interface AdminUserDelegation {
-  delegate?:
-    | {
-        id: string;
-        full_name?: string | null;
-        email?: string | null;
-        username?: string | null;
-      }
-    | null;
+  delegate?: {
+    id: string;
+    full_name?: string | null;
+    email?: string | null;
+    username?: string | null;
+  } | null;
   valid_until?: string | null;
 }
 

@@ -149,7 +149,8 @@ export const deleteOldFormData = async (db: IDBDatabase): Promise<void> => {
     const request: IDBRequest<IDBCursorWithValue | null> = store.openCursor();
 
     request.onsuccess = (event: Event) => {
-      const cursor: IDBCursorWithValue | null = (event.target as IDBRequest<IDBCursorWithValue>).result;
+      const cursor: IDBCursorWithValue | null = (event.target as IDBRequest<IDBCursorWithValue>)
+        .result;
       if (cursor) {
         const storedData: StoredFormData = cursor.value;
         if (now - storedData.timestamp > sixtyDaysInMilliseconds) {

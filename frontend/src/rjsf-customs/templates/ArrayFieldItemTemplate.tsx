@@ -27,32 +27,28 @@ const CustomArrayFieldItemTemplate = (props: ArrayFieldItemTemplateProps): React
             icon="navigation-down-arrow"
             onClick={buttonsProps.onMoveDownItem}
             design={ButtonDesign.Transparent}
-            disabled={disabled}>
-          </Button>
+            disabled={disabled}></Button>
         )}
         {allowAddRemove && buttonsProps.hasMoveUp && (
           <Button
             icon="navigation-up-arrow"
             design={ButtonDesign.Transparent}
             onClick={buttonsProps.onMoveUpItem}
-            disabled={disabled}>
-          </Button>
+            disabled={disabled}></Button>
         )}
         {allowAddRemove && buttonsProps.hasCopy && (
           <Button
             icon="duplicate"
             design={ButtonDesign.Transparent}
             onClick={buttonsProps.onCopyItem}
-            disabled={disabled}>
-          </Button>
+            disabled={disabled}></Button>
         )}
         {allowAddRemove && buttonsProps.hasRemove && (
           <Button
             icon="delete"
             design={ButtonDesign.Negative}
             onClick={buttonsProps.onRemoveItem}
-            disabled={disabled}>
-          </Button>
+            disabled={disabled}></Button>
         )}
       </div>
       <div className="pt-4 pl-8">{children}</div>
@@ -61,4 +57,3 @@ const CustomArrayFieldItemTemplate = (props: ArrayFieldItemTemplateProps): React
 };
 
 export default CustomArrayFieldItemTemplate;
-

@@ -1,32 +1,32 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-export * from './lib/pc-editable-details-section/PcEditableDetailsSection';
-export * from './lib/pc-editable-details-section/models/PcEditableDetailsSectionModels';
-export * from './lib/pc-details-page/PcDetailsPage';
-export * from './lib/pc-dynamic-page/PcDynamicPage';
-export * from './lib/pc-page/PcPage';
-export * from './lib/pc-page-wrapper/PcPageWrapper';
-export * from './lib/pc-analytical-table/PcAnalyticalTable';
-export * from './lib/pc-analytical-table/PcAnalyticalTableHeader';
-export * from './lib/pc-analytical-table/filter/PcInputFilter';
-export * from './lib/pc-analytical-table/filter/PcDateFilter';
-export * from './lib/pc-analytical-table/PcAnalyticalTableColumns';
-export * from './lib/pc-error-view/PcErrorView';
-export * from './lib/pc-search/PcSearch';
+export * from '@/ui5-components/lib/pc-editable-details-section/PcEditableDetailsSection';
+export * from '@/ui5-components/lib/pc-editable-details-section/models/PcEditableDetailsSectionModels';
+export * from '@/ui5-components/lib/pc-details-page/PcDetailsPage';
+export * from '@/ui5-components/lib/pc-dynamic-page/PcDynamicPage';
+export * from '@/ui5-components/lib/pc-page/PcPage';
+export * from '@/ui5-components/lib/pc-page-wrapper/PcPageWrapper';
+export * from '@/ui5-components/lib/pc-analytical-table/PcAnalyticalTable';
+export * from '@/ui5-components/lib/pc-analytical-table/PcAnalyticalTableHeader';
+export * from '@/ui5-components/lib/pc-analytical-table/filter/PcInputFilter';
+export * from '@/ui5-components/lib/pc-analytical-table/filter/PcDateFilter';
+export * from '@/ui5-components/lib/pc-analytical-table/PcAnalyticalTableColumns';
+export * from '@/ui5-components/lib/pc-error-view/PcErrorView';
+export * from '@/ui5-components/lib/pc-search/PcSearch';
 
-export * from './utils/PcArrowLink';
-export * from './utils/PcDateString';
-export * from './utils/PcDownloadLink';
-export * from './utils/PcDeleteBtn';
-export * from './utils/PcDuplicateBtn';
+export * from '@/ui5-components/utils/PcArrowLink';
+export * from '@/ui5-components/utils/PcDateString';
+export * from '@/ui5-components/utils/PcDownloadLink';
+export * from '@/ui5-components/utils/PcDeleteBtn';
+export * from '@/ui5-components/utils/PcDuplicateBtn';
 
-export * from './models/models';
-export * from './models/generic-data-models';
+export * from '@/ui5-components/models/models';
+export * from '@/ui5-components/models/generic-data-models';
 
-export * from './services/PageService';
-export * from './services/HelperService';
-export * from './services/FetchService';
-export * from './services/GernericDataService';
+export * from '@/ui5-components/services/PageService';
+export * from '@/ui5-components/services/HelperService';
+export * from '@/ui5-components/services/FetchService';
+export * from '@/ui5-components/services/GernericDataService';
 
-export * from './hooks/useAdditionalTableFunctions';
+export * from '@/ui5-components/hooks/useAdditionalTableFunctions';

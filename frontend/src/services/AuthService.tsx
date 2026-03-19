@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import { getAuthApiUrl } from '@/services/ApiService';
-import { deleteAllFormData, openDB } from './DBService';
+import { deleteAllFormData, openDB } from '@/services/DBService';
 
 export function login(): void {
   const apiUrl: string = getAuthApiUrl('do_login', { redirect_url: window.location.href });
@@ -11,8 +11,12 @@ export function login(): void {
 
 export function logout(): void {
   openDB()
-    .then((db) => deleteAllFormData(db))
-    .catch((error) => console.error('Error deleting all form data:', error))
+    .then(async db => {
+      await deleteAllFormData(db);
+    })
+    .catch(error => {
+      console.error('Error deleting all form data:', error);
+    })
     .finally(() => {
       const apiUrl: string = getAuthApiUrl('do_logout', { redirect_url: window.location.href });
       window.location.href = apiUrl;

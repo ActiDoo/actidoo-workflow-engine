@@ -105,9 +105,9 @@ const MyOpenWorkflows: React.FC = () => {
     const activeTasks: ActiveTaskInstance[] | undefined = row.values.active_tasks;
     const completedTasks: ActiveTaskInstance[] = (row.original.completed_tasks ?? []).filter(
       (task: ActiveTaskInstance) =>
-        task.completed_by_user?.id === user?.id ||
-        task.completed_by_delegate_user?.id === user?.id
+        task.completed_by_user?.id === user?.id || task.completed_by_delegate_user?.id === user?.id
     );
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between boolean conditions
     if ((activeTasks && activeTasks.length > 1) || completedTasks.length > 0) {
       return (
         <div className="space-y-4">

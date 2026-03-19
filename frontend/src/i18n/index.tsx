@@ -22,12 +22,12 @@ type TranslationVars = Record<string, string | number>;
 
 type Language = keyof typeof translations;
 
-type TranslationContextValue = {
+interface TranslationContextValue {
   language: Language;
   availableLanguages: Array<{ key: Language; label: string }>;
   t: (key: string, defaultValue?: string | TranslationVars, vars?: TranslationVars) => string;
   changeLanguage: (next: string) => void;
-};
+}
 
 const TranslationContext = createContext<TranslationContextValue | undefined>(undefined);
 
@@ -81,7 +81,7 @@ export const I18nProvider: React.FC<PropsWithChildren> = ({ children }) => {
         !Array.isArray(defaultValue) &&
         vars === undefined
       ) {
-        finalVars = defaultValue as TranslationVars;
+        finalVars = defaultValue;
         finalDefault = undefined;
       }
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { PcSortItem, StringDict, TableQueryParams } from '../models/models';
-import { AdditionalTableData } from '../hooks/useAdditionalTableFunctions';
+import { PcSortItem, StringDict, TableQueryParams } from '@/ui5-components/models/models';
+import { AdditionalTableData } from '@/ui5-components/hooks/useAdditionalTableFunctions';
 
 export function calculatePageOffset(currentPage?: number, limit?: number): number {
   return currentPage && limit ? limit * currentPage : 0;

@@ -13,13 +13,16 @@ import { useTranslation } from '@/i18n';
 const AdminWorkflowDiagram: React.FC = () => {
   const { t } = useTranslation();
   const { name } = useParams();
-  const { dataWorkflowSpec, dataWorkflowSpecItem, loadStateWorkflowSpec, taskStates } = useWorkflowSpec(name);
+  const { dataWorkflowSpec, dataWorkflowSpecItem, loadStateWorkflowSpec, taskStates } =
+    useWorkflowSpec(name);
 
   return (
     <PcPage
       header={{
-        title: t('workflowDiagram.workflowTitle', { name: dataWorkflowSpec ? dataWorkflowSpec.name : '' }),
-        showBack: true
+        title: t('workflowDiagram.workflowTitle', {
+          name: dataWorkflowSpec ? dataWorkflowSpec.name : '',
+        }),
+        showBack: true,
       }}
       innerSpacing={false}>
       {loadStateWorkflowSpec ? (

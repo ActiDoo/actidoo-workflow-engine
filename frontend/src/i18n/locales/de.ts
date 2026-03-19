@@ -375,8 +375,7 @@ export const de = {
     saveError: 'Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.',
     delegations: {
       title: 'Vertretungen',
-      hint:
-        'Wähle Kolleg:innen, die Aufgaben in deiner Vertretung bearbeiten dürfen. Optional kannst du eine Frist hinterlegen.',
+      hint: 'Wähle Kolleg:innen, die Aufgaben in deiner Vertretung bearbeiten dürfen. Optional kannst du eine Frist hinterlegen.',
       empty: 'Noch keine Vertretungen konfiguriert.',
       noDeadline: 'Keine Frist',
       validUntil: 'Gültig bis (optional)',

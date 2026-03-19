@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { StringDict } from '../models/models';
+import { StringDict } from '@/ui5-components/models/models';
 import _ from 'lodash';
 import { useCallback } from 'react';
 

@@ -3,7 +3,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
-import { DateSelection } from './Datepicker';
+import { DateSelection } from '@/pages/statistics/utils/Datepicker';
 import { useTranslation } from '@/i18n';
 export interface DataPoint {
   date: Date;
@@ -37,18 +37,22 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
     );
   };
 
-  useEffect(() => setVisibleWorkflows(workflows.map(w => w.name)), [workflows]);
+  useEffect(() => {
+    setVisibleWorkflows(workflows.map(w => w.name));
+  }, [workflows]);
 
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setDimensions({ width, height });
       }
     });
     resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, []);
 
   const colorScale = d3
@@ -67,12 +71,12 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
     const filteredWorkflows = workflows.filter(w => visibleWorkflows.includes(w.name));
     const allData = filteredWorkflows.flatMap(w => w.data);
-    const [minDate, maxDate] = d3.extent(allData, d => d.date) as [Date, Date]; // if you want to change how date selection behaves
+    // d3.extent(allData, d => d.date) available if you want to change how date selection behaves
     const x = d3.scaleTime().domain([startDate, endDate]).range([0, innerWidth]);
     const y = d3
 
       .scaleLinear()
-      .domain([0, d3.max(allData, d => d.calls)!])
+      .domain([0, d3.max(allData, d => d.calls) ?? 0])
       .nice()
       .range([innerHeight, 0]);
 
@@ -117,15 +121,14 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
         .attr('stroke', '#fff')
         .attr('stroke-width', 1)
         .attr('opacity', 0)
-        .on('mouseover', function (event, d) {
+        .on('mouseover', function (_event, d) {
           const tooltip = d3.select('#tooltip');
-          const offset = 10;
 
           tooltip
             .html(
-              `${t('common.labels.workflow')}: ${workflow.name}<br/>${t('statistics.totalInstances')}: ${
-                d.calls
-              }<br/>${d.date.toLocaleDateString(language)}`
+              `${t('common.labels.workflow')}: ${workflow.name}<br/>${t(
+                'statistics.totalInstances'
+              )}: ${d.calls}<br/>${d.date.toLocaleDateString(language)}`
             )
             .style('opacity', 1)
             .style('visibility', 'visible');
@@ -143,7 +146,6 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
           const tooltipHeight = tooltipNode.getBoundingClientRect().height;
 
           const containerWidth = containerRect?.width ?? window.innerWidth;
-          const containerHeight = containerRect?.height ?? window.innerHeight;
 
           let leftPos = mouseX + offset;
           let topPos = mouseY - tooltipHeight - offset;
@@ -176,7 +178,9 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
         .attr('class', 'flex items-center mb-2 cursor-pointer')
         .style('text-decoration', isVisible ? 'none' : 'line-through')
 
-        .on('click', () => toggleWorkflowVisibility(workflow.name));
+        .on('click', () => {
+          toggleWorkflowVisibility(workflow.name);
+        });
       legendItem
         .append('div')
         .attr('class', 'w-3 h-3 mr-2 rounded')
@@ -184,41 +188,35 @@ const Graph: React.FC<Props> = ({ workflows, startSetter, endSetter, startDate, 
         .style('opacity', isVisible ? 1 : 0.3);
 
       legendItem.append('span').attr('class', 'text-sm').text(workflow.name);
-
     });
   }, [workflows, dimensions, visibleWorkflows, startDate, endDate, t, language]);
   return (
-  <div className='bg-white'>
-    <div
-      ref={containerRef}
-      className="w-full max-h-[600px] relative pt-[10px] pb-[30px] bg-white mb-[30px]">
-      <DateSelection startSetter={startSetter} endSetter={endSetter} />
-      <svg
-        ref={svgRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        
-      />{' '}
+    <div className="bg-white">
       <div
-        id="tooltip"
-        style={{
-          position: 'absolute',
-          opacity: 0,
-          backgroundColor: 'white',
-          padding: '6px 10px',
-          border: '1px solid #aaa',
-          borderRadius: '4px',
-          pointerEvents: 'none',
-          fontSize: '14px',
-          transition: 'top 0.1s ease-out, left 0.1s ease-out, opacity 0.2s ease-in-out',
-        }}
-      />{' '}
+        ref={containerRef}
+        className="w-full max-h-[600px] relative pt-[10px] pb-[30px] bg-white mb-[30px]">
+        <DateSelection startSetter={startSetter} endSetter={endSetter} />
+        <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />{' '}
+        <div
+          id="tooltip"
+          style={{
+            position: 'absolute',
+            opacity: 0,
+            backgroundColor: 'white',
+            padding: '6px 10px',
+            border: '1px solid #aaa',
+            borderRadius: '4px',
+            pointerEvents: 'none',
+            fontSize: '14px',
+            transition: 'top 0.1s ease-out, left 0.1s ease-out, opacity 0.2s ease-in-out',
+          }}
+        />{' '}
+      </div>
+      <div
+        id="legend-container"
+        className="flex flex-wrap background-#fff pl-[50px] gap-x-4 mb-4 max-h-[100px] overflow-y-auto"
+      />
     </div>
-    <div
-      id="legend-container"
-      className="flex flex-wrap background-#fff pl-[50px] gap-x-4 mb-4 max-h-[100px] overflow-y-auto"
-    />
-  </div>
   );
 };
 export default Graph;

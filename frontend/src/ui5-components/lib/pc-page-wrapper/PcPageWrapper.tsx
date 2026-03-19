@@ -2,9 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { PropsWithChildren, ReactElement } from 'react';
-import { NavLink } from 'react-router-dom';
-
-import { Link as RouterLink } from 'react-router-dom';
+import { NavLink, Link as RouterLink } from 'react-router-dom';
 
 import { Bar, Icon, Button, ButtonDesign, Text } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/log';
@@ -23,7 +21,7 @@ export interface PcPageWrapperProps extends PropsWithChildren {
   brandLogoUrl?: string;
   onNavigate?: () => void;
   onLogout?: () => void;
-  settingsRoute? : string;
+  settingsRoute?: string;
   helpRoute?: string;
 }
 
@@ -78,7 +76,7 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
             title={t('layout.settings')}
             className="cursor-pointer align-middle text-4xl"
             style={{
-              fontSize: '1.3rem',    // bump size up (24px)
+              fontSize: '1.3rem', // bump size up (24px)
               width: '1.3rem',
               height: '1.3rem',
               cursor: 'pointer',

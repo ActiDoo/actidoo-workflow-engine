@@ -22,9 +22,7 @@ const serviceUserFilter = (
   return (
     <Select
       className="w-full"
-      onChange={e =>
-        tableData.onFilter(columnId, e.detail.selectedOption?.dataset?.value ?? '')
-      }>
+      onChange={e => tableData.onFilter(columnId, e.detail.selectedOption?.dataset?.value ?? '')}>
       <Option data-value="" selected={currentVal === ''}>
         {t('common.labels.all')}
       </Option>
@@ -51,7 +49,8 @@ export const adminUsersColumns = (
   {
     ...PcInputColumn('is_service_user', t('adminUsers.list.serviceUser'), tableData),
     hAlign: TextAlign.Center,
-    Cell: (instance: any) => (instance.row.original.is_service_user ? t('common.labels.yes') : t('common.labels.no')),
+    Cell: (instance: any) =>
+      instance.row.original.is_service_user ? t('common.labels.yes') : t('common.labels.no'),
     Filter: (data: any) => serviceUserFilter(tableData, data.column.id, t),
   },
   PcDateColumn('created_at', t('common.labels.createdAt'), tableData),

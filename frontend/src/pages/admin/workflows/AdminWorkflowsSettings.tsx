@@ -19,11 +19,10 @@ export const adminWorkflowsColumns = (
   tableData: PcTableData,
   t: Translate
 ): AnalyticalTableColumnDefinition[] => [
-  
-  //PcInputColumn('name', 'Name', tableData),
+  // PcInputColumn('name', 'Name', tableData),
   {
     ...PcInputColumn('title', t('adminTables.workflow'), tableData),
-    width: 225
+    width: 225,
   },
   {
     ...PcInputColumn('subtitle', t('adminTables.subtitle'), tableData),
@@ -31,24 +30,28 @@ export const adminWorkflowsColumns = (
   },
   {
     minWidth: 150,
-    ...PcInputColumn('id', t('adminTables.id'), tableData)
+    ...PcInputColumn('id', t('adminTables.id'), tableData),
   },
   {
     ...PcDateColumn('created_at', t('adminTables.createdAt'), tableData),
     width: 150,
-  },  
+  },
   {
     ...PcInputColumn('created_by.full_name', t('adminTables.createdBy'), tableData),
     minWidth: 150,
     Cell: (instance: any) => {
       const flow = instance.row.original;
-      return (<>{flow.created_by?.full_name} ({flow.created_by?.email})</>);
+      return (
+        <>
+          {flow.created_by?.full_name} ({flow.created_by?.email})
+        </>
+      );
     },
   },
   {
     ...PcInputColumn('name', t('adminTables.internalName'), tableData),
-    maxWidth: 220
-  },  
+    maxWidth: 220,
+  },
   {
     ...PcInputColumn('is_completed', t('adminTables.isCompleted'), tableData),
     disableFilters: true,

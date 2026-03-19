@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-type RuntimeConfig = {
+interface RuntimeConfig {
   FRONTEND_BASE_URL?: string;
   API_BASE_URL?: string;
   ENVIRONMENT_LABEL?: string;
-};
+}
 
 declare global {
   interface Window {
@@ -14,35 +14,33 @@ declare global {
 }
 
 const runtimeConfig: RuntimeConfig =
-  typeof window !== "undefined" && window.__ACTIDOO_RUNTIME_CONFIG__
+  typeof window !== 'undefined' && window.__ACTIDOO_RUNTIME_CONFIG__
     ? window.__ACTIDOO_RUNTIME_CONFIG__
     : {};
 
-const ensureLeadingSlash = (value: string): string =>
-  value.startsWith("/") ? value : `/${value}`;
+const ensureLeadingSlash = (value: string): string => (value.startsWith('/') ? value : `/${value}`);
 
-const ensureTrailingSlash = (value: string): string =>
-  value.endsWith("/") ? value : `${value}/`;
+const ensureTrailingSlash = (value: string): string => (value.endsWith('/') ? value : `${value}/`);
 
 const sanitisePath = (value: string): string => {
   const trimmed = value.trim();
-  if (trimmed === "") {
-    return "/";
+  if (trimmed === '') {
+    return '/';
   }
   return ensureTrailingSlash(ensureLeadingSlash(trimmed));
 };
 
 const normaliseBaseUrl = (value: string): string => {
   const trimmed = value.trim();
-  if (trimmed === "") {
-    return "/";
+  if (trimmed === '') {
+    return '/';
   }
 
   try {
     const url = new URL(trimmed);
-    const pathname = url.pathname && url.pathname !== "" ? url.pathname : "/";
-    const prefix = pathname === "/" ? "/" : ensureTrailingSlash(pathname);
-    return `${url.origin}${prefix === "/" ? "/" : prefix}`;
+    const pathname = url.pathname && url.pathname !== '' ? url.pathname : '/';
+    const prefix = pathname === '/' ? '/' : ensureTrailingSlash(pathname);
+    return `${url.origin}${prefix === '/' ? '/' : prefix}`;
   } catch {
     return sanitisePath(trimmed);
   }
@@ -51,8 +49,8 @@ const normaliseBaseUrl = (value: string): string => {
 const extractUrlPrefix = (value: string): string => {
   try {
     const url = new URL(value);
-    const pathname = url.pathname && url.pathname !== "" ? url.pathname : "/";
-    return pathname === "/" ? "/" : ensureTrailingSlash(pathname);
+    const pathname = url.pathname && url.pathname !== '' ? url.pathname : '/';
+    return pathname === '/' ? '/' : ensureTrailingSlash(pathname);
   } catch {
     return sanitisePath(value);
   }
@@ -63,6 +61,7 @@ const getEffectiveConfigValue = (
   envValue: string | undefined,
   label: string
 ): string => {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string is not a valid config value, fallback intentional
   const value = runtimeValue?.trim() || envValue?.trim();
 
   if (!value) {
@@ -72,16 +71,18 @@ const getEffectiveConfigValue = (
   return value;
 };
 
+/* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- empty string is not a valid config value, fallback intentional */
 const getOptionalConfigValue = (
   runtimeValue: string | undefined,
   envValue: string | undefined
 ): string | undefined => runtimeValue?.trim() || envValue?.trim() || undefined;
+/* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
 // Required: base URL where the frontend is served (Dev = "/", Prod e.g. "https://example.com/wfe/").
 const rawFrontendBaseUrl = getEffectiveConfigValue(
   runtimeConfig.FRONTEND_BASE_URL,
   import.meta.env.VITE_FRONTEND_BASE_URL,
-  "FRONTEND_BASE_URL"
+  'FRONTEND_BASE_URL'
 );
 // Absolute base URL incl. trailing slash; used for external links/display.
 const frontendBaseUrl = normaliseBaseUrl(rawFrontendBaseUrl);
@@ -92,7 +93,7 @@ const urlPrefix = extractUrlPrefix(frontendBaseUrl);
 const rawApiBaseUrl = getEffectiveConfigValue(
   runtimeConfig.API_BASE_URL,
   import.meta.env.VITE_API_BASE_URL,
-  "API_BASE_URL"
+  'API_BASE_URL'
 );
 // Normalized API base with trailing slash; apiUrl/apiUrlAdmin/authApiUrl build on top.
 const apiBaseUrl = normaliseBaseUrl(rawApiBaseUrl);

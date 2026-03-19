@@ -59,9 +59,9 @@ export const DialogStartWorkflow: React.FC = () => {
   }, [startData?.postResponse]);
 
   const environmentInfo =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string is not a valid label, fallback intentional
     environment.environmentLabel ||
-    (environment.apiUrl.includes('localhost')
-      ? 'LOCALHOST - TESTING' : '');
+    (environment.apiUrl.includes('localhost') ? 'LOCALHOST - TESTING' : '');
 
   return (
     <>

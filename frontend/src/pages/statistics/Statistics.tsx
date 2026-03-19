@@ -9,11 +9,10 @@ import { getRequest } from '@/store/generic-data/actions';
 import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
 import { AnalyticalTable } from '@ui5/webcomponents-react';
-import { WorkflowInstancesData } from './getWorkflowInstances';
-import { createCountforWFs } from './utils/formatWfs';
-import { filterWorkflows, mergeByTitle } from './utils/workflowUtils';
-import Graph, { Workflow } from './utils/Graph';
-import { DateSelection } from './utils/Datepicker';
+import { WorkflowInstancesData } from '@/pages/statistics/getWorkflowInstances';
+import { createCountforWFs } from '@/pages/statistics/utils/formatWfs';
+import { filterWorkflows, mergeByTitle } from '@/pages/statistics/utils/workflowUtils';
+import Graph, { Workflow } from '@/pages/statistics/utils/Graph';
 import { useTranslation } from '@/i18n';
 
 const Statistics: React.FC = () => {
@@ -22,14 +21,15 @@ const Statistics: React.FC = () => {
   const dispatch = useDispatch();
 
   const [endDate, setEndDate] = useState<Date>(new Date());
-  const [startDate, setStartDate] = useState<Date>(new Date(new Date().setFullYear(new Date().getFullYear() - 1)));
+  const [startDate, setStartDate] = useState<Date>(
+    new Date(new Date().setFullYear(new Date().getFullYear() - 1))
+  );
   const filteredWFs = mergeByTitle(filterWorkflows(WorkflowInstancesData()));
-  const graph_data: [Workflow] | any = [];
-
+  const graphData: [Workflow] | any = [];
 
   filteredWFs.forEach(workflow => {
     const result = createCountforWFs(workflow.title, workflow.dates, startDate, endDate);
-    graph_data.push(result);
+    graphData.push(result);
   });
 
   const data = useSelector((state: State) => state.data[key]);
@@ -41,20 +41,26 @@ const Statistics: React.FC = () => {
   return (
     <PcPage
       header={{
-        title: t('statistics.title')
+        title: t('statistics.title'),
       }}>
-      <Graph workflows={graph_data} startSetter={setStartDate} endSetter={setEndDate} startDate={startDate} endDate={endDate} />
+      <Graph
+        workflows={graphData}
+        startSetter={setStartDate}
+        endSetter={setEndDate}
+        startDate={startDate}
+        endDate={endDate}
+      />
 
       <AnalyticalTable
-        className='mb-4'
+        className="mb-4"
         columns={[
           {
             Header: t('common.labels.title'),
-            accessor: 'title'
+            accessor: 'title',
           },
           {
             Header: t('statistics.activeInstances'),
-            accessor: 'active_instances'
+            accessor: 'active_instances',
           },
           {
             Header: t('statistics.completedInstances'),
@@ -62,31 +68,31 @@ const Statistics: React.FC = () => {
           },
           {
             Header: t('statistics.estimatedInstancesPerYear'),
-            accessor: 'estimated_instances_per_year'
+            accessor: 'estimated_instances_per_year',
           },
           {
             Header: t('statistics.estimatedSavingsPerYear'),
-            accessor: 'estimated_savings_per_year'
-          }
+            accessor: 'estimated_savings_per_year',
+          },
         ]}
         minRows={1}
         data={[
           {
             title: t('statistics.sumForAll'),
-            active_instances: (data?.data?.workflows || []).reduce(
+            active_instances: (data?.data?.workflows ?? []).reduce(
               (sum, item) => sum + item.active_instances,
               0
             ),
-            completed_instances: (data?.data?.workflows || []).reduce(
+            completed_instances: (data?.data?.workflows ?? []).reduce(
               (sum, item) => sum + item.completed_instances,
               0
             ),
-            //"estimated_saved_mins_per_instance": (data?.data?.workflows || []).reduce((sum, item) => sum + item.active_instances, 0),
-            estimated_instances_per_year: (data?.data?.workflows || []).reduce(
+            // "estimated_saved_mins_per_instance": (data?.data?.workflows ?? []).reduce((sum, item) => sum + item.active_instances, 0),
+            estimated_instances_per_year: (data?.data?.workflows ?? []).reduce(
               (sum, item) => sum + item.estimated_instances_per_year,
               0
             ),
-            estimated_savings_per_year: (data?.data?.workflows || []).reduce(
+            estimated_savings_per_year: (data?.data?.workflows ?? []).reduce(
               (sum, item) => sum + item.estimated_savings_per_year,
               0
             ),
@@ -98,11 +104,11 @@ const Statistics: React.FC = () => {
         columns={[
           {
             Header: t('common.labels.title'),
-            accessor: 'title'
+            accessor: 'title',
           },
           {
             Header: t('statistics.activeInstances'),
-            accessor: 'active_instances'
+            accessor: 'active_instances',
           },
           {
             Header: t('statistics.completedInstances'),
@@ -110,15 +116,15 @@ const Statistics: React.FC = () => {
           },
           {
             Header: t('statistics.estimatedSavingsPerInstance'),
-            accessor: 'estimated_saved_mins_per_instance'
+            accessor: 'estimated_saved_mins_per_instance',
           },
           {
             Header: t('statistics.estimatedInstancesPerYear'),
-            accessor: 'estimated_instances_per_year'
+            accessor: 'estimated_instances_per_year',
           },
           {
             Header: t('statistics.estimatedSavingsPerYear'),
-            accessor: 'estimated_savings_per_year'
+            accessor: 'estimated_savings_per_year',
           },
           {
             Header: '',
@@ -126,10 +132,12 @@ const Statistics: React.FC = () => {
             disableFilters: true,
             disableSortBy: true,
             width: 70,
-            Cell: (instance: any) => <PcArrowLink link={`/statistics/overview/${instance.row.original.name}`} />
-          }
+            Cell: (instance: any) => (
+              <PcArrowLink link={`/statistics/overview/${instance.row.original.name}`} />
+            ),
+          },
         ]}
-        data={data?.data?.workflows || []}
+        data={data?.data?.workflows ?? []}
         visibleRowCountMode="Auto"
       />
     </PcPage>

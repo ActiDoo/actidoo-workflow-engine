@@ -7,7 +7,6 @@ import { useDispatch } from 'react-redux';
 import { loadAndShowFile } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
-import { useParams } from 'react-router-dom';
 import { PcFile } from '@/rjsf-customs/custom-fields/multiFileField/CustomMultiFileField';
 
 interface MultiFileRowProps {

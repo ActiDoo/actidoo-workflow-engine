@@ -3,21 +3,21 @@
 
 import { AdminGraphInstance } from '@/models/models';
 
-type WF = {
+interface WF {
   title: string;
   dates: Date[];
-};
+}
 
 /**
  * this function takes the wf_instance objects, and takes out the name, and the created_at attributes
  * @returns an array of dictionaries containing the name, and a list of dates
  */
-export function filterWorkflows(wf_instances: AdminGraphInstance[] = []) {
+export function filterWorkflows(wfInstances: AdminGraphInstance[] = []) {
   const wfMap: Record<string, { title: string; dates: Date[] }> = {};
-  wf_instances.forEach(wf => {
-    const name = wf.name!;
-    const title = wf.title!;
-    const date: Date = new Date(wf.created_at!);
+  wfInstances.forEach(wf => {
+    const name = wf.name ?? '';
+    const title = wf.title ?? '';
+    const date: Date = new Date(wf.created_at ?? 0);
     if (!wfMap[name]) {
       wfMap[name] = {
         title,

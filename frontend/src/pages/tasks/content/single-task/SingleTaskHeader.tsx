@@ -26,7 +26,6 @@ import { useSelectUiLoading } from '@/store/ui/selectors';
 import { useSelectCurrentWorkflow } from '@/store/generic-data/selectors';
 import { handleResponse } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
-import { WeToastContent } from '@/utils/components/WeToast';
 import { useTranslation } from '@/i18n';
 
 interface TaskItemHeaderProps {
@@ -57,17 +56,19 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const deleteWorkflow = useSelector((state: State) => state.data[WeDataKey.DELETE_WORKFLOW]);
   const deleteWorkflowLoadState = useSelectUiLoading(WeDataKey.DELETE_WORKFLOW, 'POST');
 
-  const copyInstance = useSelector(
-    (state: State) => state.data[WeDataKey.COPY_INSTANCE]
-  );
+  const copyInstance = useSelector((state: State) => state.data[WeDataKey.COPY_INSTANCE]);
   const copyInstanceLoadState = useSelectUiLoading(WeDataKey.COPY_INSTANCE, 'POST');
 
   const isActingAsDelegate = task.assigned_to_me_as_delegate;
-  const isDelegatedToMyDelegate =
-    !!(task.assigned_to_me && task.assigned_delegate_user && !task.assigned_to_me_as_delegate);
+  const isDelegatedToMyDelegate = !!(
+    task.assigned_to_me &&
+    task.assigned_delegate_user &&
+    !task.assigned_to_me_as_delegate
+  );
   const canShowAssignButton =
     (!task.assigned_user || task.can_be_assigned_as_delegate) && !task.assigned_to_me;
   const canUnassignTask =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
     task.can_be_unassigned || task.assigned_to_me_as_delegate || isDelegatedToMyDelegate;
 
   useEffect(() => {
@@ -132,7 +133,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
         if (taskName) params.set('task_name', taskName);
         params.set('data', JSON.stringify(workflowData));
         navigate({
-          pathname:"/tasks/open/start_workflow_preview",
+          pathname: '/tasks/open/start_workflow_preview',
           search: createSearchParams(params).toString(),
         });
       } else {
@@ -167,7 +168,9 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
       dispatch(addToast(<>{t('singleTaskHeader.missingWorkflowId')}</>));
       return;
     }
-    dispatch(postRequest(WeDataKey.COPY_INSTANCE, {}, { workflow_instance_id: workflowInstance.id }));
+    dispatch(
+      postRequest(WeDataKey.COPY_INSTANCE, {}, { workflow_instance_id: workflowInstance.id })
+    );
   };
 
   return (
@@ -178,7 +181,10 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
           <Title level={TitleLevel.H3}>{task.title}</Title>
         </div>
         {!task.assigned_user && (
-          <MessageStrip hideCloseButton={true} design={MessageStripDesign.Warning} className="w-auto">
+          <MessageStrip
+            hideCloseButton={true}
+            design={MessageStripDesign.Warning}
+            className="w-auto">
             {t('singleTaskHeader.notAssigned')}
           </MessageStrip>
         )}
@@ -211,7 +217,9 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
               <span className="text-xs text-neutral-700">{t('singleTaskHeader.assignedTo')}</span>
               <br />
               {task.assigned_delegate_user
-                ? `${task.assigned_delegate_user.full_name} (${t('singleTaskHeader.assignedTo')} ${task.assigned_user.full_name})`
+                ? `${task.assigned_delegate_user.full_name} (${t('singleTaskHeader.assignedTo')} ${
+                    task.assigned_user.full_name
+                  })`
                 : task.assigned_user.full_name}
             </Text>
             {canUnassignTask ? (
@@ -223,7 +231,9 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                   onClick={() => {
                     handleUnassignTaskFromMe(task.id);
                   }}>
-                  {isDelegatedToMyDelegate ? 'Unassign delegate' : t('singleTaskHeader.unassignFromMe')}
+                  {isDelegatedToMyDelegate
+                    ? 'Unassign delegate'
+                    : t('singleTaskHeader.unassignFromMe')}
                 </Button>
               </BusyIndicator>
             ) : null}
@@ -335,15 +345,14 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
         )}
       </div>
       <div>
+        {/* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans */}
         {(isDelegatedToMyDelegate ||
           (isActingAsDelegate && !task.state_completed) ||
           task.delegate_submit_comment) && (
+          /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
           <div className="flex flex-col gap-2 mt-2">
             {isDelegatedToMyDelegate ? (
-              <MessageStrip
-                hideCloseButton
-                design={MessageStripDesign.Warning}
-                className="w-auto">
+              <MessageStrip hideCloseButton design={MessageStripDesign.Warning} className="w-auto">
                 This task is currently assigned to your delegate
                 {task.assigned_delegate_user?.full_name ? (
                   <>
@@ -361,7 +370,10 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 design={MessageStripDesign.Information}
                 className="w-auto">
                 You are working on behalf of{' '}
-                <span className="font-semibold">{task.assigned_user?.full_name ?? 'this user'}</span>.
+                <span className="font-semibold">
+                  {task.assigned_user?.full_name ?? 'this user'}
+                </span>
+                .
               </MessageStrip>
             ) : null}
 
@@ -370,7 +382,9 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 hideCloseButton
                 design={MessageStripDesign.Information}
                 className="w-auto">
-                <span className="font-semibold mr-1">This task was completed by the delegate user:</span>
+                <span className="font-semibold mr-1">
+                  This task was completed by the delegate user:
+                </span>
                 {task.completed_by_delegate_user.full_name}
               </MessageStrip>
             ) : null}
@@ -380,7 +394,9 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 hideCloseButton
                 design={MessageStripDesign.Information}
                 className="w-auto">
-                <span className="font-semibold mr-1">Comment by {task.completed_by_delegate_user.full_name}:</span>
+                <span className="font-semibold mr-1">
+                  Comment by {task.completed_by_delegate_user.full_name}:
+                </span>
                 {task.delegate_submit_comment}
               </MessageStrip>
             ) : null}

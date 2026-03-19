@@ -7,21 +7,21 @@ import { PcPage } from '@/ui5-components';
 import { useTranslation } from '@/i18n';
 import { environment } from '@/environment';
 
-type ThirdPartyDependency = {
+interface ThirdPartyDependency {
   name: string;
   version: string;
   license: string;
   licenseFile: string | null;
   repository?: string | null;
-};
+}
 
-type ThirdPartyNotices = {
+interface ThirdPartyNotices {
   generatedAt: string;
   dependencies: ThirdPartyDependency[];
   bpmnJsIncluded?: boolean;
   bpmnJsWatermarkNotice: string;
   rawNoticesPath: string;
-};
+}
 
 const About: React.FC = () => {
   const { t } = useTranslation();
@@ -138,7 +138,7 @@ const About: React.FC = () => {
               </table>
             </div>
 
-            {(notices.bpmnJsIncluded ?? notices.dependencies.some(dep => dep.name === 'bpmn-js')) ? (
+            {notices.bpmnJsIncluded ?? notices.dependencies.some(dep => dep.name === 'bpmn-js') ? (
               <div className="mt-6">
                 <div className="text-sm font-semibold">{t('about.bpmnJsWatermarkTitle')}</div>
                 <div className="text-sm text-pc-gray-700 mt-1">{notices.bpmnJsWatermarkNotice}</div>

@@ -7,7 +7,7 @@ import {
   FetchParams,
   FetchUploadProgressFunc,
   StringDict,
-} from '../models/models';
+} from '@/ui5-components/models/models';
 import axios from 'axios';
 
 export async function fetchGet(url: string, params?: StringDict): Promise<FetchDataResponse> {
@@ -61,6 +61,7 @@ export async function finalFetch(params: FetchParams): Promise<FetchDataResponse
         'Content-Type': 'application/json',
         accept: 'application/json',
       },
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string should fallback to 'json'
       responseType: params.responseType || 'json',
       withCredentials: true,
       onUploadProgress: progressEvent => {

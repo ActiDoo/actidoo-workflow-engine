@@ -61,12 +61,12 @@ export const PcNavigationItem: React.FC<PcNavigationItemProps> = (props: PcNavig
         ref={buttonRef}
         className={linkClass(isActive)}
         onClick={() => {
-          if (buttonRef.current) menuRef.current?.showAt(buttonRef.current);
+          if (buttonRef.current) void menuRef.current?.showAt(buttonRef.current);
         }}
         onKeyDown={event => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            if (buttonRef.current) menuRef.current?.showAt(buttonRef.current);
+            if (buttonRef.current) void menuRef.current?.showAt(buttonRef.current);
           }
         }}
         role="button"

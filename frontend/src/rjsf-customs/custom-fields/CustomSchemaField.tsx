@@ -14,16 +14,16 @@ const CustomSchemaField = (props: FieldProps): ReactElement => {
   };
   const formContext = (props.registry as any)?.formContext;
 
-  const effectiveUiSchema = 
-  schema.type === 'null'
-    ? {
-        ...(uiSchema as any),
-        'ui:options': {
-          ...((uiSchema as any)?.['ui:options'] || {}),
-          'title': ' ', //suppress id as label
-        },
-      }
-    : uiSchema;
+  const effectiveUiSchema =
+    schema.type === 'null'
+      ? {
+          ...(uiSchema as any),
+          'ui:options': {
+            ...((uiSchema as any)?.['ui:options'] || {}),
+            title: ' ', // suppress id as label
+          },
+        }
+      : uiSchema;
 
   // TODO the setTimeout's meaning is to asychronously start a job, which will do the props.onChange()
   // call later, so the rendering of this component will process until you hit the return-statement
@@ -37,8 +37,8 @@ const CustomSchemaField = (props: FieldProps): ReactElement => {
     } else if (schema.type === 'boolean') {
       // If a boolean is conditionally hidden/shown, RJSF may repeatedly drop it from formData.
       // Forcing a default here can then create an update/render loop.
-      const widget = (effectiveUiSchema as any)?.['ui:widget'];
-      const hideif = (effectiveUiSchema as any)?.['ui:hideif'];
+      const widget = effectiveUiSchema?.['ui:widget'];
+      const hideif = effectiveUiSchema?.['ui:hideif'];
       if (widget !== 'hidden' && hideif === undefined) {
         setTimeout(() => {
           props.onChange(false, fieldPath);
@@ -61,18 +61,22 @@ const CustomSchemaField = (props: FieldProps): ReactElement => {
     const orgFormData = {
       ...(formContext?.formData || {}),
     };
-    // console.log("**CustomSchemaField**")    
+    // console.log("**CustomSchemaField**")
     // console.log("CustomSchemaField formContext", formContext) // {"numberA": {....}, "numberB": {...}, "Field_1aff9sg": {"ui:description": "Hello: {{ numberA * numberB }}"" }}
     // console.log("CustomSchemaField formData", formData)
     // console.log("CustomSchemaField uiSchema", uiSchema)
     // console.log("CustomSchemaField schema", schema)
-    const { newUiSchema, newSchema } = evaluateHideIfAndFeel(orgFormData, effectiveUiSchema, schema);
+    const { newUiSchema, newSchema } = evaluateHideIfAndFeel(
+      orgFormData,
+      effectiveUiSchema,
+      schema
+    );
 
-    const newProps = { ...props, uiSchema: newUiSchema, schema: newSchema};
+    const newProps = { ...props, uiSchema: newUiSchema, schema: newSchema };
     return <OrgSchemaField {...newProps} />;
   }
 
-  return <OrgSchemaField {...{ ...props, uiSchema: effectiveUiSchema, schema: schema }} />;
+  return <OrgSchemaField {...{ ...props, uiSchema: effectiveUiSchema, schema }} />;
 };
 
 export default CustomSchemaField;

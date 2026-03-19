@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { ReactElement, useEffect, useMemo, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom';
 import {
   Bar,
   Button,
@@ -32,16 +32,17 @@ export default function CustomArrayFieldTemplate<
   S extends StrictRJSFSchema = RJSFSchema,
   F extends FormContextType = any
 >(props: ArrayFieldTemplateProps<T, S, F>): ReactElement | null {
-
   // console.log("**** Array Field Template ********************************************************************************************")
   // console.log(props)
 
   const uiOptions = getUiOptions<T, S, F>(props.uiSchema);
 
-  const location = useLocation()
+  const location = useLocation();
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
-  const [dynamicSelectLabels, setDynamicSelectLabels] = useState<Record<string, Record<string, string>>>({});
+  const [dynamicSelectLabels, setDynamicSelectLabels] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const itemUiSchema = (props.uiSchema as any)?.items;
   const itemUiSchemaSignature = JSON.stringify(itemUiSchema ?? null);
   const dynamicSelectConfigs = useMemo<Record<string, any>>(() => {
@@ -49,7 +50,7 @@ export default function CustomArrayFieldTemplate<
       return {};
     }
 
-    return Object.entries(itemUiSchema).reduce((acc, [key, config]) => {
+    return Object.entries(itemUiSchema).reduce<Record<string, any>>((acc, [key, config]) => {
       if (
         config &&
         typeof config === 'object' &&
@@ -61,44 +62,46 @@ export default function CustomArrayFieldTemplate<
         acc[key] = config;
       }
       return acc;
-    }, {} as Record<string, any>);
+    }, {});
   }, [itemUiSchemaSignature]);
 
   useEffect(() => {
     // DURING THE FIRST RENDER -> ADD THE MINIMUM ITEMS, WHICH SHALL BE VISIBLE
-    
-    //check our uischema expectation and only do it on the open tasks page (not later on, when the workflow is completed)
-    const defaultRepetitionsRaw = uiOptions?.["defaultRepetitions"];
-    const defaultRepetitions = typeof defaultRepetitionsRaw === 'number' ? defaultRepetitionsRaw : 0;
+
+    // check our uischema expectation and only do it on the open tasks page (not later on, when the workflow is completed)
+    const defaultRepetitionsRaw = uiOptions?.defaultRepetitions;
+    const defaultRepetitions =
+      typeof defaultRepetitionsRaw === 'number' ? defaultRepetitionsRaw : 0;
 
     if (defaultRepetitions > 0 && location?.pathname?.includes('/tasks/open/')) {
-        // uiOptions["defaultRepetitions"] -> the initial number of displayed items in a dynamic list as the user configured it
-        // props.schema.minItems -> the minimum number of items the user has to submit
-        // props.items -> the actual display items how RJSF calculated it (unfortunately based on props.schema.minItems)
+      // uiOptions["defaultRepetitions"] -> the initial number of displayed items in a dynamic list as the user configured it
+      // props.schema.minItems -> the minimum number of items the user has to submit
+      // props.items -> the actual display items how RJSF calculated it (unfortunately based on props.schema.minItems)
 
-        // So, it can be that the user does NOT HAVE to submit any item (props.schema.minItems = 0), then RJSF has calculated
-        // that no item shall be displayed initially (props.items == empty array), but actually the list
-        // is configured to show at least 1 item at the beginning ( uiOptions["defaultRepetitions"]= 1), but which can be
-        // deleted by the user, because he does NOT HAVE to submit it.
-        // In this case we now insert the missing number of items:
+      // So, it can be that the user does NOT HAVE to submit any item (props.schema.minItems = 0), then RJSF has calculated
+      // that no item shall be displayed initially (props.items == empty array), but actually the list
+      // is configured to show at least 1 item at the beginning ( uiOptions["defaultRepetitions"]= 1), but which can be
+      // deleted by the user, because he does NOT HAVE to submit it.
+      // In this case we now insert the missing number of items:
 
-        const currentItems = props.items?.length ?? 0;
-        for (let i = 0; i < (defaultRepetitions - currentItems); i++) { // add as many items as needed.
-          // Fake the adding by simulating an ADD click, because ArrayField.tsx from RJSF will take care of it
-          // (no need to reimplement the code)
-          // I insert a Dummy MouseEvent although an undefined is also handled by the code,
-          // but to avoid potential crashes in future RJSF updates when an undefined is no longer accepted.
-          // (see onAddClick method in RJSF's ArrayField.tsx)
+      const currentItems = props.items?.length ?? 0;
+      for (let i = 0; i < defaultRepetitions - currentItems; i++) {
+        // add as many items as needed.
+        // Fake the adding by simulating an ADD click, because ArrayField.tsx from RJSF will take care of it
+        // (no need to reimplement the code)
+        // I insert a Dummy MouseEvent although an undefined is also handled by the code,
+        // but to avoid potential crashes in future RJSF updates when an undefined is no longer accepted.
+        // (see onAddClick method in RJSF's ArrayField.tsx)
 
-          setTimeout(() => {
-            // With the setTimeout trick we do it asynchronously: otherwise when adding more than 1 item, the next onAddClick() will not be handled properly and no item is added.
-            // We also have to have a delay between each inAddClick, therefore each gets 100ms to complete, before the next onAddClick gets executed.
-            // (10 ms was not enough, some items were missing but with 100ms we were good, even for adding 10 items in case of the big Workflow)
-            props.onAddClick(new MouseEvent("Dummy"))
-          }, 100 + i*100)
+        setTimeout(() => {
+          // With the setTimeout trick we do it asynchronously: otherwise when adding more than 1 item, the next onAddClick() will not be handled properly and no item is added.
+          // We also have to have a delay between each inAddClick, therefore each gets 100ms to complete, before the next onAddClick gets executed.
+          // (10 ms was not enough, some items were missing but with 100ms we were good, even for adding 10 items in case of the big Workflow)
+          props.onAddClick(new MouseEvent('Dummy'));
+        }, 100 + i * 100);
 
-          //console.log("############# ADD")
-        }
+        // console.log("############# ADD")
+      }
     }
   }, []);
 
@@ -122,7 +125,9 @@ export default function CustomArrayFieldTemplate<
     return Array.from(values);
   };
 
-  const formContextSignature = JSON.stringify((props.registry as any)?.formContext?.formData ?? null);
+  const formContextSignature = JSON.stringify(
+    (props.registry as any)?.formContext?.formData ?? null
+  );
   const dynamicSelectFetchSignature = useMemo(() => {
     const dataArray = Array.isArray(props.formData) ? props.formData : [];
     const fields = Object.entries(dynamicSelectConfigs)
@@ -187,18 +192,14 @@ export default function CustomArrayFieldTemplate<
       }
     };
 
-    fetchDynamicLabels();
+    void fetchDynamicLabels();
 
     return () => {
       isActive = false;
     };
-  }, [
-    dynamicSelectFetchSignature,
-    dynamicSelectConfigs,
-    effectiveTaskId,
-  ]);
+  }, [dynamicSelectFetchSignature, dynamicSelectConfigs, effectiveTaskId]);
 
-  //console.log(props.items.length)
+  // console.log(props.items.length)
   const showDialog = Modals.useShowDialog();
   const items = props.schema.items as unknown as {
     properties: Record<string, { title: string }>;
@@ -241,15 +242,13 @@ export default function CustomArrayFieldTemplate<
 
     const isPdfArray = (val: any) => {
       return (
-        Array.isArray(val) &&
-        val.length > 0 &&
-        val.some(item => item.filename && item.filename.includes('.pdf'))
+        Array.isArray(val) && val.length > 0 && val.some(item => item.filename?.includes('.pdf'))
       );
     };
 
     const tableRows = dataArray?.map((data, rowIndex) => (
       <TableRow key={`row-${rowIndex}`}>
-        {Object.keys(items.properties).map((key) => {
+        {Object.keys(items.properties).map(key => {
           let val = data[key];
 
           const property = items.properties[key];
@@ -282,16 +281,17 @@ export default function CustomArrayFieldTemplate<
           if (typeof val === 'boolean') {
             return (
               <TableCell key={`cell-${rowIndex}-${key}`}>
-                <Label>{val ? "Yes" : "No"}</Label> {/* Display "Yes" or "No" based on boolean value */}
+                <Label>{val ? 'Yes' : 'No'}</Label>{' '}
+                {/* Display "Yes" or "No" based on boolean value */}
               </TableCell>
             );
           }
 
           // Handle nested arrays recursively
-          if (property?.type === "array" && Array.isArray(val)) {
+          if (property?.type === 'array' && Array.isArray(val)) {
             return (
               <TableCell key={`cell-${rowIndex}-${key}`}>
-                {renderTable(property.items, val)} 
+                {renderTable(property.items, val)}
               </TableCell>
             );
           }
@@ -314,13 +314,17 @@ export default function CustomArrayFieldTemplate<
 
   return (
     <div>
-      <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">{uiOptions["label"]}</label>
+      <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">
+        {uiOptions.label}
+      </label>
       {/* <div className={props.className + " relative border-[2px] border-white border-solid rounded bg-neutral-50 "}> */}
-      {/* The above out-commented stuff gives a nice background instead of a border*/}
-      <div className={props.className + " relative border-[2px] border-neutral-200 border-solid rounded "}>
-        {
-        props.items
-        }
+      {/* The above out-commented stuff gives a nice background instead of a border */}
+      <div
+        className={
+          (props.className ?? '') +
+          ' relative border-[2px] border-neutral-200 border-solid rounded '
+        }>
+        {props.items}
         <div className="flex gap-4 m-4 ">
           {props.items.length > 0 ? (
             <Button
@@ -342,7 +346,9 @@ export default function CustomArrayFieldTemplate<
                   ),
                 });
               }}>
-              {uiOptions.arrayOverviewButtonText ? (uiOptions.arrayOverviewButtonText as string) : 'Overview'}
+              {uiOptions.arrayOverviewButtonText
+                ? (uiOptions.arrayOverviewButtonText as string)
+                : 'Overview'}
             </Button>
           ) : null}
           {props.canAdd && allowAddRemove && (

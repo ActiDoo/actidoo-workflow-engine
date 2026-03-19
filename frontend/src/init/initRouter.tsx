@@ -25,8 +25,8 @@ import AdminInfo from '@/pages/admin/info/AdminInfo';
 import UserSettings from '@/pages/user-settings/UserSettings';
 import { useTranslation } from '@/i18n';
 
-//Actually lazy loading is not necessary, but it will help to keep the initial JS file(s) smaller and speed up the initial loading
-//To omit lazy loading you'd have to use normal imports like `import { Tasks } from ...`
+// Actually lazy loading is not necessary, but it will help to keep the initial JS file(s) smaller and speed up the initial loading
+// To omit lazy loading you'd have to use normal imports like `import { Tasks } from ...`
 
 const Tasks = React.lazy(async () => await import('@/pages/tasks/Tasks'));
 const OpenTasks = React.lazy(async () => await import('@/pages/tasks/open/OpenTasks'));
@@ -70,7 +70,6 @@ const StartWorkflowPreview = React.lazy(
 const About = React.lazy(async () => await import('@/pages/about/About'));
 const Wrapper: React.FC = () => {
   const { t } = useTranslation();
-  const appTitle = t('layout.appTitle');
   const loginState = useSelector((state: State) => state.auth.loginState.data);
   const user = useSelector((state: State) => state.data['wfe-user']?.data);
   const brandLogoUrl = `${import.meta.env.BASE_URL}branding/logo.svg`;
@@ -88,6 +87,7 @@ const Wrapper: React.FC = () => {
     },
   ];
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR: false should fall through to second condition
   if (loginState?.can_access_wf_admin || (user?.workflows_the_user_is_admin_for?.length ?? 0) > 0) {
     const subNav = [
       { title: t('navigation.adminWorkflows'), to: '/admin/all-workflows' },
@@ -107,7 +107,6 @@ const Wrapper: React.FC = () => {
     });
   }
 
-
   const busy: JSX.Element = (
     <div className="flex inset-0 absolute items-center justify-center">
       <BusyIndicator active delay={100} />
@@ -117,9 +116,11 @@ const Wrapper: React.FC = () => {
   return (
     <PcPageWrapper
       navigation={navigation}
-      //appTitle={appTitle}
+      // appTitle={appTitle}
       brandLogoUrl={brandLogoUrl}
-      onLogout={() => logout()}
+      onLogout={() => {
+        logout();
+      }}
       endHeaderActions={<DialogStartWorkflow />}
       user={loginState?.username}
       settingsRoute={'/user-settings'}
@@ -205,25 +206,13 @@ const router = createBrowserRouter(
             errorElement={<PcErrorView />}
           />
         </Route>
+        <Route path="/statistics" element={<Statistics />} errorElement={<PcErrorView />} />
         <Route
-          path="/statistics"
-          element={
-            <Statistics />
-          }
-          errorElement={<PcErrorView />}
-        />
-        <Route
-          path='/statistics/overview/:name'
+          path="/statistics/overview/:name"
           element={<AdminWorkflowDiagram />}
           errorElement={<PcErrorView />}
         />
-        <Route
-          path="/user-settings"
-          element={
-            <UserSettings />
-          }
-          errorElement={<PcErrorView />}
-        />
+        <Route path="/user-settings" element={<UserSettings />} errorElement={<PcErrorView />} />
         <Route
           path="/admin/all-tasks"
           element={
@@ -278,13 +267,7 @@ const router = createBrowserRouter(
           }
           errorElement={<PcErrorView />}
         />
-        <Route
-          path="/admin/sysinfo"
-          element={
-            <AdminInfo />
-          }
-          errorElement={<PcErrorView />}
-        />
+        <Route path="/admin/sysinfo" element={<AdminInfo />} errorElement={<PcErrorView />} />
         <Route
           path="/workflow-diagram/:name"
           element={<WorkflowDiagram />}
@@ -296,7 +279,6 @@ const router = createBrowserRouter(
           errorElement={<PcErrorView />}
         />
         <Route path="/about" element={<About />} errorElement={<PcErrorView />} />
-
       </Route>
     </Route>
   ),

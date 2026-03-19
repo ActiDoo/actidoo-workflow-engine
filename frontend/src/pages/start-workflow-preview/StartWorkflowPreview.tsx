@@ -66,17 +66,12 @@ const StartWorkflowPreview: React.FC = () => {
     );
   }, [dispatch, workflowName, parseError, parsedData]);
 
-  const previewState = useSelector(
-    (state: State) => state.data[WeDataKey.START_WORKFLOW_PREVIEW]
-  );
+  const previewState = useSelector((state: State) => state.data[WeDataKey.START_WORKFLOW_PREVIEW]);
   const previewLoading = useSelectUiLoading(WeDataKey.START_WORKFLOW_PREVIEW, 'POST');
   const startLoading = useSelectUiLoading(WeDataKey.START_WORKFLOW, 'POST');
 
   useEffect(() => {
-    if (
-      previewState?.postResponse &&
-      previewState.postResponse !== 200
-    ) {
+    if (previewState?.postResponse && previewState.postResponse !== 200) {
       dispatch(addToast(<WeToastContent type="error" text={t('workflowPreview.loadError')} />));
     }
   }, [previewState?.postResponse, dispatch]);
@@ -84,15 +79,13 @@ const StartWorkflowPreview: React.FC = () => {
   const previewTask = previewState?.data?.task;
 
   const previewWorkflowTitle = previewState?.data?.title ?? '';
-  
+
   const { jsonschema, uiSchema } = useMemo(() => {
     if (!previewTask?.jsonschema || !previewTask?.uischema) {
       return { jsonschema: undefined, uiSchema: undefined };
     }
     const schemaClone = _.cloneDeep(previewTask.jsonschema) as RJSFSchema;
-    const uiSchemaClone = _.cloneDeep(
-      previewTask.uischema
-    ) as UiSchema<any, RJSFSchema, any>;
+    const uiSchemaClone = _.cloneDeep(previewTask.uischema) as UiSchema<any, RJSFSchema, any>;
     changeRequiredDefinitionForFieldsWithHideIfDefinition(schemaClone, uiSchemaClone);
     return { jsonschema: schemaClone, uiSchema: uiSchemaClone };
   }, [previewTask]);
@@ -109,8 +102,7 @@ const StartWorkflowPreview: React.FC = () => {
     );
   };
 
-  const cannotStartWorkflow =
-    !workflowName || parseError || parsedData === null || !previewTask;
+  const cannotStartWorkflow = !workflowName || parseError || parsedData === null || !previewTask;
 
   return (
     <div className="pl-2">
@@ -123,7 +115,7 @@ const StartWorkflowPreview: React.FC = () => {
           </MessageStrip>
         </div>
       </div>
-    
+
       {parseError ? (
         <div className="mt-2">
           <MessageStrip design={MessageStripDesign.Negative} hideCloseButton={true}>
@@ -153,7 +145,10 @@ const StartWorkflowPreview: React.FC = () => {
           />
 
           <div className="mt-16 flex flex-row justify-end">
-            <MessageStrip className="max-w-4xl" design={MessageStripDesign.Information} hideCloseButton={true}>
+            <MessageStrip
+              className="max-w-4xl"
+              design={MessageStripDesign.Information}
+              hideCloseButton={true}>
               {t('workflowPreview.startInfo')}
             </MessageStrip>
           </div>
@@ -163,6 +158,7 @@ const StartWorkflowPreview: React.FC = () => {
             <BusyIndicator active={startLoading} delay={0}>
               <Button
                 design={ButtonDesign.Emphasized}
+                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
                 disabled={startLoading || cannotStartWorkflow}
                 onClick={handleStartWorkflow}>
                 {t('workflowPreview.startWithData')}
@@ -177,8 +173,6 @@ const StartWorkflowPreview: React.FC = () => {
           </MessageStrip>
         </div>
       )}
-
-
     </div>
   );
 };

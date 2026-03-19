@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Option, Select, Text, ValueState } from '@ui5/webcomponents-react';
-import { PcDetailsSectionItem } from '../models/PcEditableDetailsSectionModels';
+import { PcDetailsSectionItem } from '@/ui5-components/lib/pc-editable-details-section/models/PcEditableDetailsSectionModels';
 
 interface PcSelectProps {
   item: PcDetailsSectionItem;

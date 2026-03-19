@@ -45,7 +45,12 @@ export const WeCompletedTaskSubRow: React.FC<{
                   <Text>{completedBy}</Text>
                 </td>
                 <td className="p-2 py-1 text-right">
-                  <Button icon="show" onClick={() => props.onShowForm(task.id)} />
+                  <Button
+                    icon="show"
+                    onClick={() => {
+                      props.onShowForm(task.id);
+                    }}
+                  />
                 </td>
               </tr>
             );

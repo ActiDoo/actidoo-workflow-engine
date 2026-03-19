@@ -48,6 +48,7 @@ export function getValueState<T>(
   validationError?: HTTPValidationError
 ): ValueState {
   if (
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
     validationError?.detail?.some(e => e.loc[1] === item.key) ||
     (item.required && !hasData(item, dataMap))
   ) {

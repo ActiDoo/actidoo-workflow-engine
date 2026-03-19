@@ -108,6 +108,7 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
         </Button>
         <BusyIndicator active={saveLoadingState} delay={0} className="text-white">
           <Button
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
             disabled={saveLoadingState || showError}
             design={ButtonDesign.Emphasized}
             onClick={() => {

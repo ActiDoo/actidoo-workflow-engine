@@ -11,18 +11,18 @@ export const WeComboBox: React.FC<StateManagerProps> = props => {
       {...props}
       isClearable={props.isClearable ?? true}
       styles={{
-        control: (baseStyles, state) => ({
+        control: (baseStyles, _state) => ({
           ...baseStyles,
           fontSize: 'var(--sapFontSize)',
           boxShadow: 'none !important',
           minHeight: '34px',
           marginBottom: '0.25rem',
         }),
-        indicatorSeparator: (baseStyles, state) => ({
+        indicatorSeparator: (baseStyles, _state) => ({
           ...baseStyles,
           width: '0',
         }),
-        clearIndicator: (baseStyles, state) => ({
+        clearIndicator: (baseStyles, _state) => ({
           ...baseStyles,
           color: '#888888',
           padding: '6px 4px 6px 8px',
@@ -32,20 +32,20 @@ export const WeComboBox: React.FC<StateManagerProps> = props => {
           color: state.isDisabled ? '#cccccc' : '#000000',
           padding: '6px 8px 6px 4px',
         }),
-        valueContainer: (baseStyles, state) => ({
+        valueContainer: (baseStyles, _state) => ({
           ...baseStyles,
           padding: '2px 8px 1px',
         }),
-        option: (baseStyles, state) => ({
+        option: (baseStyles, _state) => ({
           ...baseStyles,
           fontSize: 'var(--sapFontSize)',
         }),
         /* zIndex = 20: thiy way items of a select box will overlap the label of a dynamic list */
         /* see ArrayFieldTemplate.tsx and see the usage of the z-10 class */
-        menu: (baseStyles, state) => ({
+        menu: (baseStyles, _state) => ({
           ...baseStyles,
-          zIndex: 20
-        })
+          zIndex: 20,
+        }),
       }}
       classNames={{
         control: state =>
@@ -60,7 +60,7 @@ export const WeComboBox: React.FC<StateManagerProps> = props => {
             ? '!bg-brand-primary'
             : state.isFocused
             ? '!bg-neutral-50 !cursor-pointer'
-            : 'hover:bg-neutral-50 cursor-pointer',        
+            : 'hover:bg-neutral-50 cursor-pointer',
       }}
     />
   );

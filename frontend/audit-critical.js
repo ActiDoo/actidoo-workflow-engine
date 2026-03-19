@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-
 /**
  * audit-critical.js
  * * Führt `yarn npm audit` aus, filtert nach kritischen Lücken (High/Critical),
- * reichert die Daten via OSV.dev API an (CVEs, Fixes) und berechnet 
+ * reichert die Daten via OSV.dev API an (CVEs, Fixes) und berechnet
  * Upgrade-Pfade für transitive Abhängigkeiten.
  */
 
@@ -19,25 +18,26 @@ const rootDir = __dirname;
 const MIN_SEVERITY = 'high';
 
 const severityLevels = {
-  info: 0, low: 1, moderate: 2, high: 3, critical: 4,
+  info: 0,
+  low: 1,
+  moderate: 2,
+  high: 3,
+  critical: 4,
 };
 
 // Root package + dependency info
-let rootPkgName = null;
 let rootDeps = {};
 
 try {
   const pkgRaw = fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8');
   const pkg = JSON.parse(pkgRaw);
-  rootPkgName = pkg.name || null;
   rootDeps = {
     ...(pkg.dependencies || {}),
     ...(pkg.devDependencies || {}),
     ...(pkg.optionalDependencies || {}),
-    ...(pkg.peerDependencies || {})
+    ...(pkg.peerDependencies || {}),
   };
 } catch (e) {
-  rootPkgName = null;
   rootDeps = {};
 }
 
@@ -61,7 +61,7 @@ function parseSemVer(version) {
     minor: parseInt(match[2], 10),
     patch: parseInt(match[3], 10),
     prerelease: match[4] || '',
-    original: cleaned
+    original: cleaned,
   };
 }
 
@@ -82,7 +82,7 @@ function runCommand(cmd, args) {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
     maxBuffer: 50 * 1024 * 1024,
-    cwd: rootDir
+    cwd: rootDir,
   });
 }
 
@@ -91,7 +91,7 @@ function runCommand(cmd, args) {
  * Nutzt natives https Modul, um keine dependencies zu brauchen.
  */
 function fetchOsvDetails(rawId) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     // 1. Falls undefined/null -> Abbruch
     if (!rawId) {
       resolve(null);
@@ -108,24 +108,26 @@ function fetchOsvDetails(rawId) {
     }
 
     const url = `https://api.osv.dev/v1/vulns/${ghsaId}`;
-    
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        resolve(null);
-        return;
-      }
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
+
+    https
+      .get(url, res => {
+        if (res.statusCode !== 200) {
           resolve(null);
+          return;
         }
+        let data = '';
+        res.on('data', chunk => (data += chunk));
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve(null);
+          }
+        });
+      })
+      .on('error', () => {
+        resolve(null);
       });
-    }).on('error', () => {
-      resolve(null);
-    });
   });
 }
 
@@ -154,19 +156,25 @@ function npmListPackage(pkgName) {
 
       if (node.dependencies) {
         for (const [childName, childNode] of Object.entries(node.dependencies)) {
-          dfs({ name: childName, version: childNode.version, dependencies: childNode.dependencies }, nextPath);
+          dfs(
+            { name: childName, version: childNode.version, dependencies: childNode.dependencies },
+            nextPath
+          );
         }
       }
     }
 
-    dfs({ name: json.name || '(root)', version: json.version, dependencies: json.dependencies }, []);
+    dfs(
+      { name: json.name || '(root)', version: json.version, dependencies: json.dependencies },
+      []
+    );
 
     if (paths.length === 0) {
       if (json.dependencies && json.dependencies[pkgName] && json.dependencies[pkgName].version) {
         const v = json.dependencies[pkgName].version;
         const fallbackPath = [
           { name: json.name || '(root)', version: json.version },
-          { name: pkgName, version: v }
+          { name: pkgName, version: v },
         ];
         const info = { version: v, path: fallbackPath };
         npmListCache.set(pkgName, info);
@@ -217,7 +225,12 @@ function getPackageVersions(packageName) {
 
 function checkParentDependency(parentName, parentVersion, childName) {
   try {
-    const res = runCommand('npm', ['view', `${parentName}@${parentVersion}`, 'dependencies', '--json']);
+    const res = runCommand('npm', [
+      'view',
+      `${parentName}@${parentVersion}`,
+      'dependencies',
+      '--json',
+    ]);
     if (res.status === 0 && res.stdout) {
       const deps = JSON.parse(res.stdout);
       return deps[childName] || null;
@@ -277,9 +290,7 @@ function findParentFix(parentPkg, childPkg, currentParentVer, neededChildVer) {
 
 function formatPath(pathNodes) {
   if (!pathNodes || pathNodes.length === 0) return '';
-  return pathNodes
-    .map(n => (n.version ? `${n.name}@${n.version}` : n.name))
-    .join(' > ');
+  return pathNodes.map(n => (n.version ? `${n.name}@${n.version}` : n.name)).join(' > ');
 }
 
 function findDeclaredAncestor(pathNodes) {
@@ -290,7 +301,7 @@ function findDeclaredAncestor(pathNodes) {
       return {
         index: i,
         name,
-        range: rootDeps[name]
+        range: rootDeps[name],
       };
     }
   }
@@ -318,7 +329,7 @@ function buildUpgradeChain(pathNodes, startIndex, neededChildVer) {
         failingParent: parentName,
         failingChild: childName,
         neededChildVer: currentNeeded,
-        segments
+        segments,
       };
     }
 
@@ -327,7 +338,7 @@ function buildUpgradeChain(pathNodes, startIndex, neededChildVer) {
       from: currentParentVer,
       to: fix.parentVer,
       viaChild: childName,
-      viaChildTo: fix.childVer
+      viaChildTo: fix.childVer,
     });
 
     currentNeeded = fix.parentVer;
@@ -336,7 +347,7 @@ function buildUpgradeChain(pathNodes, startIndex, neededChildVer) {
   return {
     ok: true,
     segments,
-    rootRequiredVer: currentNeeded
+    rootRequiredVer: currentNeeded,
   };
 }
 
@@ -353,7 +364,8 @@ function extractPkgName(locator) {
 
 function runAudit() {
   const env = { ...process.env };
-  env.YARN_NPM_REGISTRY_SERVER = env.YARN_NPM_REGISTRY_SERVER || env.NPM_CONFIG_REGISTRY || 'https://registry.npmjs.org';
+  env.YARN_NPM_REGISTRY_SERVER =
+    env.YARN_NPM_REGISTRY_SERVER || env.NPM_CONFIG_REGISTRY || 'https://registry.npmjs.org';
 
   console.log('Running yarn npm audit...');
   const result = spawnSync('yarn', ['npm', 'audit', '--recursive', '--json'], {
@@ -361,7 +373,7 @@ function runAudit() {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     env,
-    maxBuffer: 50 * 1024 * 1024
+    maxBuffer: 50 * 1024 * 1024,
   });
 
   if (result.status !== 0 && !result.stdout) {
@@ -374,7 +386,10 @@ function runAudit() {
 function parseAuditOutput(stdout) {
   if (!stdout) return [];
   const advisories = [];
-  const lines = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = stdout
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
 
   lines.forEach(line => {
     try {
@@ -382,7 +397,6 @@ function parseAuditOutput(stdout) {
 
       // FORMAT A: Yarn Berry Tree Format
       if (entry.value && entry.children && entry.children.Severity) {
-        
         let parentName = null;
         if (entry.children.Dependents) {
           const deps = entry.children.Dependents;
@@ -395,15 +409,19 @@ function parseAuditOutput(stdout) {
 
         let cves = [];
         if (entry.children.CVE) {
-          cves = Array.isArray(entry.children.CVE) ? entry.children.CVE : [String(entry.children.CVE)];
+          cves = Array.isArray(entry.children.CVE)
+            ? entry.children.CVE
+            : [String(entry.children.CVE)];
         }
         // Fallback ID für späteres Matching, aber nicht direkt in CVEs pushen
         // um Duplikate zu vermeiden, wenn die API die ID auch zurückgibt.
-        
+
         // Patched Version Suche
         let patchedVer = entry.children['Patched Versions'] || '';
         if (!patchedVer && entry.children.Recommendation) {
-          const recMatch = String(entry.children.Recommendation).match(/version\s+(\d+\.\d+\.\d+)/i);
+          const recMatch = String(entry.children.Recommendation).match(
+            /version\s+(\d+\.\d+\.\d+)/i
+          );
           if (recMatch) patchedVer = recMatch[1];
         }
 
@@ -413,12 +431,12 @@ function parseAuditOutput(stdout) {
           title: entry.children.Issue,
           url: entry.children.URL,
           id: entry.children.ID, // GHSA-xxxx ID oder numerisch
-          cves: cves,
+          cves,
           vulnerable_versions: entry.children['Vulnerable Versions'],
           patched_versions: patchedVer,
           recommendation: entry.children.Recommendation || '',
           parent_module: parentName,
-          findings: [{ version: 'Unknown', paths: [] }]
+          findings: [{ version: 'Unknown', paths: [] }],
         });
       }
       // FORMAT B: Standard npm audit JSON
@@ -427,12 +445,11 @@ function parseAuditOutput(stdout) {
         adv.cves = adv.cves || [];
         adv.id = adv.github_advisory_id || adv.id;
         advisories.push(adv);
-      }
-      else if (entry.advisories) {
+      } else if (entry.advisories) {
         Object.values(entry.advisories).forEach(a => {
-            a.cves = a.cves || [];
-            a.id = a.github_advisory_id || a.id;
-            advisories.push(a);
+          a.cves = a.cves || [];
+          a.id = a.github_advisory_id || a.id;
+          advisories.push(a);
         });
       }
     } catch (e) {}
@@ -454,7 +471,9 @@ async function main() {
   });
 
   if (criticals.length === 0) {
-    console.log(`✅ No critical vulnerabilities found. (Parsed ${advisories.length} total advisories)`);
+    console.log(
+      `✅ No critical vulnerabilities found. (Parsed ${advisories.length} total advisories)`
+    );
     return;
   }
 
@@ -465,57 +484,57 @@ async function main() {
     const advisory = criticals[index];
 
     // --- API ENRICHMENT ---
-    
+
     // 1. Versuche GHSA ID zu finden
     let ghsaId = null;
     if (advisory.id && String(advisory.id).startsWith('GHSA')) {
-        ghsaId = advisory.id;
+      ghsaId = advisory.id;
     }
-    
+
     // 2. Fallback: Suche in der URL, wenn ID numerisch oder leer
     if (!ghsaId && advisory.url) {
-        const match = advisory.url.match(/(GHSA-[a-zA-Z0-9-]+)/);
-        if (match) {
-            ghsaId = match[1];
-        }
+      const match = advisory.url.match(/(GHSA-[a-zA-Z0-9-]+)/);
+      if (match) {
+        ghsaId = match[1];
+      }
     }
 
     if (ghsaId) {
-        // console.log(`   ... fetching details for ${ghsaId}`);
-        const osvData = await fetchOsvDetails(ghsaId);
-        if (osvData) {
-            // A. CVEs mergen
-            if (osvData.aliases) {
-                osvData.aliases.forEach(alias => {
-                    if (alias.startsWith('CVE') && !advisory.cves.includes(alias)) {
-                        advisory.cves.push(alias);
-                    }
-                });
+      // console.log(`   ... fetching details for ${ghsaId}`);
+      const osvData = await fetchOsvDetails(ghsaId);
+      if (osvData) {
+        // A. CVEs mergen
+        if (osvData.aliases) {
+          osvData.aliases.forEach(alias => {
+            if (alias.startsWith('CVE') && !advisory.cves.includes(alias)) {
+              advisory.cves.push(alias);
             }
-            
-            // B. Fix Version finden (OSV: affected[].ranges[].events[])
-            if (osvData.affected) {
-                for (const aff of osvData.affected) {
-                    // Matching Package Name
-                    const isSamePackage = !aff.package || (aff.package.name === advisory.module_name);
-                    
-                    if (isSamePackage && aff.ranges) {
-                        for (const range of aff.ranges) {
-                            if (range.events) {
-                                for (const evt of range.events) {
-                                    if (evt.fixed) {
-                                        // Erste gefundene Fix-Version übernehmen, falls noch keine da ist
-                                        if (!advisory.patched_versions) {
-                                            advisory.patched_versions = evt.fixed;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+          });
         }
+
+        // B. Fix Version finden (OSV: affected[].ranges[].events[])
+        if (osvData.affected) {
+          for (const aff of osvData.affected) {
+            // Matching Package Name
+            const isSamePackage = !aff.package || aff.package.name === advisory.module_name;
+
+            if (isSamePackage && aff.ranges) {
+              for (const range of aff.ranges) {
+                if (range.events) {
+                  for (const evt of range.events) {
+                    if (evt.fixed) {
+                      // Erste gefundene Fix-Version übernehmen, falls noch keine da ist
+                      if (!advisory.patched_versions) {
+                        advisory.patched_versions = evt.fixed;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
     // ---------------------
 
@@ -523,7 +542,12 @@ async function main() {
     const pathNodes = npmInfo && npmInfo.path && npmInfo.path.length ? npmInfo.path : null;
 
     let installedVulnerableVersion = 'Unknown';
-    if (advisory.findings && advisory.findings[0] && advisory.findings[0].version && advisory.findings[0].version !== 'Unknown') {
+    if (
+      advisory.findings &&
+      advisory.findings[0] &&
+      advisory.findings[0].version &&
+      advisory.findings[0].version !== 'Unknown'
+    ) {
       installedVulnerableVersion = advisory.findings[0].version;
     } else if (npmInfo && npmInfo.version) {
       installedVulnerableVersion = npmInfo.version;
@@ -539,8 +563,8 @@ async function main() {
       if (match) neededPatchVer = match[1];
     }
     if (!neededPatchVer && advisory.recommendation) {
-       const match = String(advisory.recommendation).match(/version\s+(\d+\.\d+\.\d+)/i);
-       if (match) neededPatchVer = match[1];
+      const match = String(advisory.recommendation).match(/version\s+(\d+\.\d+\.\d+)/i);
+      if (match) neededPatchVer = match[1];
     }
     if (!neededPatchVer && advisory.vulnerable_versions) {
       const match = String(advisory.vulnerable_versions).match(/<\s*(\d+\.\d+\.\d+)/);
@@ -549,32 +573,43 @@ async function main() {
 
     console.log(`--- Issue #${index + 1} ---`);
     console.log(`📦 Vulnerable Lib:      ${advisory.module_name}`);
-    
+
     // ID Anzeige:
     const displayId = ghsaId || advisory.id || 'N/A';
-    const cveString = (advisory.cves && advisory.cves.length > 0) ? advisory.cves.join(', ') : displayId;
+    const cveString =
+      advisory.cves && advisory.cves.length > 0 ? advisory.cves.join(', ') : displayId;
     console.log(`🛡️  CVE / ID:           ${cveString}`);
-    
+
     if (advisory.url) {
       console.log(`🌐 Mehr Infos:          ${advisory.url}`);
     }
 
-    console.log(`❌ Installed (Lib):     ${installedVulnerableVersion !== 'Unknown' ? installedVulnerableVersion : '(See yarn.lock)'}`);
+    console.log(
+      `❌ Installed (Lib):     ${
+        installedVulnerableVersion !== 'Unknown' ? installedVulnerableVersion : '(See yarn.lock)'
+      }`
+    );
 
     if (pathNodes) {
       console.log(`🧬 Dependency-Pfad:     ${formatPath(pathNodes)}`);
     }
 
     if (isDirectRootDep) {
-      const currentDirect = npmInfo && npmInfo.version ? cleanVersion(npmInfo.version) : getLocalVersion(advisory.module_name);
+      const currentDirect =
+        npmInfo && npmInfo.version
+          ? cleanVersion(npmInfo.version)
+          : getLocalVersion(advisory.module_name);
       console.log(`ℹ️  Direkt-Dependency:   ${advisory.module_name}`);
       console.log(`ℹ️  Aktuell installiert: ${currentDirect}`);
     } else if (declaredAncestor) {
       const ancestorNode = pathNodes[declaredAncestor.index];
-      const currentAncestorVer = ancestorNode && ancestorNode.version
-        ? cleanVersion(ancestorNode.version)
-        : getLocalVersion(declaredAncestor.name);
-      console.log(`🔗 Eingetragene Dep.:    ${declaredAncestor.name} (Deklariert als: ${declaredAncestor.range})`);
+      const currentAncestorVer =
+        ancestorNode && ancestorNode.version
+          ? cleanVersion(ancestorNode.version)
+          : getLocalVersion(declaredAncestor.name);
+      console.log(
+        `🔗 Eingetragene Dep.:    ${declaredAncestor.name} (Deklariert als: ${declaredAncestor.range})`
+      );
       console.log(`ℹ️  Aktuell installiert: ${currentAncestorVer}`);
     } else if (advisory.parent_module) {
       const currentParentVer = getLocalVersion(advisory.parent_module);
@@ -585,15 +620,22 @@ async function main() {
     console.log(`\n🛠️  Action Plan:`);
 
     if (!neededPatchVer) {
-      console.log(`   Konnte Zielversion für Fix nicht automatisch bestimmen (auch nicht via API).`);
-      console.log(`   👉 Empfehlung: Prüfe Advisory manuell und führe z.B. 'yarn up ${advisory.module_name}' aus.`);
+      console.log(
+        `   Konnte Zielversion für Fix nicht automatisch bestimmen (auch nicht via API).`
+      );
+      console.log(
+        `   👉 Empfehlung: Prüfe Advisory manuell und führe z.B. 'yarn up ${advisory.module_name}' aus.`
+      );
       console.log('');
-      continue; 
+      continue;
     }
 
     // Fall 1: Direct Dependency
     if (isDirectRootDep) {
-      const currentDirect = npmInfo && npmInfo.version ? cleanVersion(npmInfo.version) : getLocalVersion(advisory.module_name);
+      const currentDirect =
+        npmInfo && npmInfo.version
+          ? cleanVersion(npmInfo.version)
+          : getLocalVersion(advisory.module_name);
       const allVers = getPackageVersions(advisory.module_name);
       const candidates = allVers.filter(v => {
         if (compareSemVer(v, currentDirect) < 0) return false;
@@ -608,7 +650,9 @@ async function main() {
         console.log(`   Auf (minimal sicher): ${target}`);
         console.log(`\n   👉 Command: yarn up ${advisory.module_name}@${target}`);
       } else {
-        console.log(`   Keine passende Version für ${advisory.module_name} gefunden, die >= ${neededPatchVer} ist.`);
+        console.log(
+          `   Keine passende Version für ${advisory.module_name} gefunden, die >= ${neededPatchVer} ist.`
+        );
       }
       console.log('');
       continue;
@@ -618,9 +662,10 @@ async function main() {
     if (pathNodes && declaredAncestor) {
       const chainResult = buildUpgradeChain(pathNodes, declaredAncestor.index, neededPatchVer);
       const ancestorNode = pathNodes[declaredAncestor.index];
-      const currentAncestorVer = ancestorNode && ancestorNode.version
-        ? cleanVersion(ancestorNode.version)
-        : getLocalVersion(declaredAncestor.name);
+      const currentAncestorVer =
+        ancestorNode && ancestorNode.version
+          ? cleanVersion(ancestorNode.version)
+          : getLocalVersion(declaredAncestor.name);
 
       if (chainResult.ok) {
         const rootSegment = chainResult.segments[0] || null;
@@ -633,16 +678,24 @@ async function main() {
           console.log(`   Auf (minimal sicher): ${targetAncestorVer}`);
           console.log(`\n   👉 Command: yarn up ${declaredAncestor.name}@${targetAncestorVer}`);
         } else {
-          console.log(`   Die aktuell deklarierte Version ${declaredAncestor.name}@${currentAncestorVer} kann bereits eine sichere Unter-Dependency auflösen.`);
+          console.log(
+            `   Die aktuell deklarierte Version ${declaredAncestor.name}@${currentAncestorVer} kann bereits eine sichere Unter-Dependency auflösen.`
+          );
           console.log(`\n   👉 Command (Lockfile aktualisieren): yarn up ${declaredAncestor.name}`);
           console.log(`      Falls nötig zusätzlich: yarn up -R ${advisory.module_name}`);
         }
         console.log('');
         continue;
       } else {
-        console.log(`   ❌ Konnte keinen durchgängigen Fix bis zur eingetragenen Dependency berechnen.`);
-        console.log(`   Letzter Schritt ohne Lösung: ${chainResult.failingParent} -> ${chainResult.failingChild} (braucht mind. ${chainResult.neededChildVer})`);
-        console.log(`   👉 Empfehlung: Arbeite mit 'resolutions' in package.json oder fixe ${chainResult.failingParent} manuell.`);
+        console.log(
+          `   ❌ Konnte keinen durchgängigen Fix bis zur eingetragenen Dependency berechnen.`
+        );
+        console.log(
+          `   Letzter Schritt ohne Lösung: ${chainResult.failingParent} -> ${chainResult.failingChild} (braucht mind. ${chainResult.neededChildVer})`
+        );
+        console.log(
+          `   👉 Empfehlung: Arbeite mit 'resolutions' in package.json oder fixe ${chainResult.failingParent} manuell.`
+        );
         console.log('');
         continue;
       }
@@ -653,22 +706,29 @@ async function main() {
     const currentParentVersion = getLocalVersion(directDepName);
 
     if (directDepName === advisory.module_name) {
-        const allVers = getPackageVersions(directDepName);
-        const candidates = allVers.filter(v => {
-            if (compareSemVer(v, currentParentVersion) < 0) return false;
-            return compareSemVer(v, neededPatchVer) >= 0;
-        });
-        candidates.sort(compareSemVer);
+      const allVers = getPackageVersions(directDepName);
+      const candidates = allVers.filter(v => {
+        if (compareSemVer(v, currentParentVersion) < 0) return false;
+        return compareSemVer(v, neededPatchVer) >= 0;
+      });
+      candidates.sort(compareSemVer);
 
-        if (candidates.length > 0) {
-            const target = candidates[0];
-            console.log(`   Direct Update (Fallback):`);
-            console.log(`   👉 Command: yarn up ${directDepName}@${target}`);
-        } else {
-            console.log(`   Keine Version für ${directDepName} gefunden, die >= ${neededPatchVer} ist.`);
-        }
+      if (candidates.length > 0) {
+        const target = candidates[0];
+        console.log(`   Direct Update (Fallback):`);
+        console.log(`   👉 Command: yarn up ${directDepName}@${target}`);
+      } else {
+        console.log(
+          `   Keine Version für ${directDepName} gefunden, die >= ${neededPatchVer} ist.`
+        );
+      }
     } else {
-      const fix = findParentFix(directDepName, advisory.module_name, currentParentVersion, neededPatchVer);
+      const fix = findParentFix(
+        directDepName,
+        advisory.module_name,
+        currentParentVersion,
+        neededPatchVer
+      );
       if (fix && fix.isFixed) {
         if (fix.parentVer !== currentParentVersion) {
           console.log(`   ✅ Fix via Parent (Fallback):`);
@@ -677,7 +737,9 @@ async function main() {
           console.log(`   Auf: ${fix.parentVer}`);
           console.log(`\n   👉 Command: yarn up ${directDepName}@${fix.parentVer}`);
         } else {
-          console.log(`   Parent-Version ${currentParentVersion} kann bereits eine sichere Unter-Dependency nutzen.`);
+          console.log(
+            `   Parent-Version ${currentParentVersion} kann bereits eine sichere Unter-Dependency nutzen.`
+          );
           console.log(`\n   👉 Command (Refresh): yarn up ${directDepName}`);
           console.log(`      (Sub-Dep forcieren: yarn up -R ${advisory.module_name})`);
         }

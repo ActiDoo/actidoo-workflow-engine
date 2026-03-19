@@ -59,14 +59,11 @@ function computeHiddenMap(
   // Iterate until fixpoint is reached
   const maxIterations = Math.max(1, uiKeys.length + 2);
   for (let iter = 0; iter < maxIterations; iter++) {
-    const ctx: Record<string, any> = { ...formData };
-
-    // Remove all hidden fields from context (they should be treated as undefined)
-    for (const k of uiKeys) {
-      if (hiddenMap[k]) {
-        delete ctx[k];
-      }
-    }
+    // Build context excluding hidden fields (they should be treated as undefined)
+    const hiddenKeys = new Set(uiKeys.filter(k => hiddenMap[k]));
+    const ctx: Record<string, any> = Object.fromEntries(
+      Object.entries(formData).filter(([k]) => !hiddenKeys.has(k))
+    );
 
     // Visible-but-missing booleans default to false
     for (const k of booleanKeys) {
@@ -128,9 +125,7 @@ export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
       parentProp = curProp;
       curProp = curProp.properties?.[pathElement];
       uiPropSchema =
-        uiPropSchema && Object.hasOwn(uiPropSchema, pathElement)
-          ? uiPropSchema[pathElement]
-          : null;
+        uiPropSchema && Object.hasOwn(uiPropSchema, pathElement) ? uiPropSchema[pathElement] : null;
     }
 
     if ((curProp?.type ?? '') === 'array' && curProp?.items?.properties) {
@@ -173,7 +168,11 @@ export function evaluateHideIfAndFeel(
   const newUiSchema = _.cloneDeep(uiSchema);
   const newSchema = _.cloneDeep(schema);
   const schemaProperties = (schema as any)?.properties as Record<string, any> | undefined;
-  const hiddenMap = computeHiddenMap(uiSchema, schemaProperties, (orgFormData ?? {}) as Record<string, any>);
+  const hiddenMap = computeHiddenMap(
+    uiSchema,
+    schemaProperties,
+    (orgFormData ?? {}) as Record<string, any>
+  );
 
   let hide = false;
 
@@ -188,15 +187,15 @@ export function evaluateHideIfAndFeel(
       const findings = [...description.matchAll(regexp)]; // description can be undefined, then create an empty array
 
       for (const finding of findings) {
-        const whole_incl_brackets = finding[0]; // e.g. "{{ numberA * numberB }}"
+        const wholeInclBrackets = finding[0]; // e.g. "{{ numberA * numberB }}"
         const expression = finding[1]; // e.g. " numberA * numberB "
         try {
-          let new_value = evaluate(expression, { ...orgFormData });
-          if (new_value == null) {
+          let newValue = evaluate(expression, { ...orgFormData });
+          if (newValue == null) {
             // if expression can not (yet) be evaluated, we do not want to render the expression,
             // but rather render an empty string
-            new_value = '';
-          } else if (typeof new_value === 'number') {
+            newValue = '';
+          } else if (typeof newValue === 'number') {
             // In Javascript we have precision problems: 11*(3*15.77) becomes 520.4100000000001
             // or 3*10.7 becomes 32.099999999999994 - lets format it properly.
             // TODO At the moment we only have Euro sums, but we might configure it in the future
@@ -204,12 +203,14 @@ export function evaluateHideIfAndFeel(
             // num.toLocaleString("de-DE", {style:"currency", currency:"EUR"})
             // num.toLocaleString("en-US", {style:"currency", currency:"EUR"})
             // num.toLocaleString("en-US", {style:"currency", currency:"USD"})
-            new_value = new_value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            newValue = newValue.toLocaleString('de-DE', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            });
           }
-          newUiSchema[fieldName]['ui:description'] = newUiSchema[fieldName]['ui:description'].replace(
-            whole_incl_brackets,
-            String(new_value)
-          );
+          newUiSchema[fieldName]['ui:description'] = newUiSchema[fieldName][
+            'ui:description'
+          ].replace(wholeInclBrackets, String(newValue));
         } catch (e) {
           console.log(e);
         }

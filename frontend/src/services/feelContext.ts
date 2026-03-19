@@ -14,12 +14,15 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 // - buildMaskedParentContext -> like buildParentContext, but it walks each list level,
 //   applies hide-if masking per item, and then rebuilds the parent chain from those masked items
 
-export type HideIfEvaluator = (expression: string, context: InterpreterContext | undefined) => boolean;
+export type HideIfEvaluator = (
+  expression: string,
+  context: InterpreterContext | undefined
+) => boolean;
 
-type ListSegment = {
+interface ListSegment {
   listName: string;
   index: number;
-};
+}
 
 const ROOT_PREFIX = 'root_';
 const trailingIndexPattern = /_(\d+)$/;
@@ -254,7 +257,10 @@ export function resolveHiddenFields(
     }
 
     // Stop once the hidden set stabilizes to avoid unnecessary passes.
-    if (nextHidden.size === currentHidden.size && [...nextHidden].every(x => currentHidden.has(x))) {
+    if (
+      nextHidden.size === currentHidden.size &&
+      [...nextHidden].every(x => currentHidden.has(x))
+    ) {
       return { hiddenFields: nextHidden, maskedContext };
     }
 
@@ -262,5 +268,8 @@ export function resolveHiddenFields(
   }
 
   // Guardrail: return the best-effort mask after max passes.
-  return { hiddenFields: currentHidden, maskedContext: applyHiddenMask(orgFormData, currentHidden) };
+  return {
+    hiddenFields: currentHidden,
+    maskedContext: applyHiddenMask(orgFormData, currentHidden),
+  };
 }

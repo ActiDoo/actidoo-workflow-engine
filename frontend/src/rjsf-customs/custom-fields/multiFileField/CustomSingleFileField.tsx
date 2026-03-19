@@ -6,7 +6,6 @@ import { addNameToDataURL, getRandomString } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
 import { FieldProps } from '@rjsf/utils';
 import { Button, ButtonDesign, FileUploader, Text } from '@ui5/webcomponents-react';
-import _ from 'lodash';
 import React, { DragEvent, ReactElement, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
@@ -33,38 +32,29 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
 
   const isDisabled = !!props.readonly || !!props.disabled;
 
-  const isRequired = props.required ? true : false
-  const label = (props.schema?.title ? props.schema?.title : "Single File Upload") + (isRequired ? "*" : "")
-  const hint = props.uiSchema?.["ui:description"] ? props.uiSchema?.['ui:description'] : "Drag and drop one file here or"
+  const isRequired = !!props.required;
+  const label =
+    (props.schema?.title ? props.schema?.title : 'Single File Upload') + (isRequired ? '*' : '');
+  const hint = props.uiSchema?.['ui:description']
+    ? props.uiSchema?.['ui:description']
+    : 'Drag and drop one file here or';
 
   const updateFileList = (fileList: FileList): void => {
     const maxFileSize = 15 * 1024 * 1024; // 15MB in bytes
 
     if (fileList.length > 1) {
-      dispatch(
-        addToast(
-          <WeToastContent text={`Only one file allowed.`} />
-        )
-      );
-      return
+      dispatch(addToast(<WeToastContent text={`Only one file allowed.`} />));
+      return;
     }
 
-    const newFile = fileList[0]
+    const newFile = fileList[0];
 
     if (newFile.size > maxFileSize) {
-      dispatch(
-        addToast(
-          <WeToastContent text={`File exceeds the max size of 15MB.`} />
-        )
-      );
-      return
+      dispatch(addToast(<WeToastContent text={`File exceeds the max size of 15MB.`} />));
+      return;
     } else if (files && files.filename === newFile.name) {
-      dispatch(
-        addToast(
-          <WeToastContent text={`File is already in list.`} />
-        )
-      );
-      return
+      dispatch(addToast(<WeToastContent text={`File is already in list.`} />));
+      return;
     }
 
     const processFile = async (file: File) => {
@@ -80,21 +70,21 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
               datauri,
             });
           } else {
-            resolve(undefined)
+            resolve(undefined);
           }
         };
         fileReader.readAsDataURL(file);
       });
-    }
+    };
 
     processFile(newFile)
-    .then(result => {
-      onChange(result, fieldPath);
-      setFileUploadKey(getRandomString());
-    })
-    .catch(() => {
-      removeFile()
-    });
+      .then(result => {
+        onChange(result, fieldPath);
+        setFileUploadKey(getRandomString());
+      })
+      .catch(() => {
+        removeFile();
+      });
   };
 
   const removeFile = (): void => {
@@ -132,28 +122,33 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
     (the properties are missing)
     So as a workaround we delete this invalid object by calling removeFile(), which will result in an undefined formData again.
    */
-  if (
-    files &&
-    !(files.datauri || files.filename || files.hash || files.id || files.mimetype)
-  ) {
-    console.log(`files undefined: ${props.id}`)
-    //remove it async, after rendering, to avoid warnings
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means property not set, treat as falsy
+  if (files && !(files.datauri || files.filename || files.hash || files.id || files.mimetype)) {
+    console.log(`files undefined: ${props.id}`);
+    // remove it async, after rendering, to avoid warnings
     setTimeout(() => {
-      removeFile()
+      removeFile();
     });
   }
 
   return (
     <div className="relative">
-      <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">{label}</label>
-      <div className={props.className + " relative border-2 border-neutral-200 border-solid rounded mb-2 p-3"}>
+      <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">
+        {label}
+      </label>
+      <div
+        className={
+          (props.className ?? '') +
+          ' relative border-2 border-neutral-200 border-solid rounded mb-2 p-3'
+        }>
         {!isDisabled && !files && (
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={` flex flex-col items-center justify-center text-center ${isDragging ? 'border-brand-primary' : 'border-neutral-200'
-              }`}>
+            className={` flex flex-col items-center justify-center text-center ${
+              isDragging ? 'border-brand-primary' : 'border-neutral-200'
+            }`}>
             <Text>{hint}</Text>
             <FileUploader
               key={fileUploadKey}

@@ -54,19 +54,14 @@ const formatReadableDate = (iso?: string | null): string => {
   return date.toLocaleString();
 };
 
-const mapDelegationsFromResponse = (
-  delegations?: AdminUserDelegation[]
-): UserDelegation[] => {
+const mapDelegationsFromResponse = (delegations?: AdminUserDelegation[]): UserDelegation[] => {
   if (!delegations) return [];
   return delegations
     .map(entry => {
       const id = entry.delegate?.id;
       if (!id) return null;
       const fullName =
-        entry.delegate?.full_name ??
-        entry.delegate?.username ??
-        entry.delegate?.email ??
-        id;
+        entry.delegate?.full_name ?? entry.delegate?.username ?? entry.delegate?.email ?? id;
       return {
         delegate_user_id: id,
         valid_until: entry.valid_until ?? null,
@@ -165,9 +160,7 @@ const AdminUserDetails: React.FC = () => {
   const handleDelegationDateChange = (delegateId: string, isoValue?: string | null) => {
     setDelegations(prev =>
       prev.map(entry =>
-        entry.delegate_user_id === delegateId
-          ? { ...entry, valid_until: isoValue ?? null }
-          : entry
+        entry.delegate_user_id === delegateId ? { ...entry, valid_until: isoValue ?? null } : entry
       )
     );
   };
@@ -181,14 +174,15 @@ const AdminUserDetails: React.FC = () => {
     if (!pendingDelegate.id || isDuplicatePendingDelegate) {
       return;
     }
+    const delegateId = pendingDelegate.id;
     setDelegations(prev => [
       ...prev,
       {
-        delegate_user_id: pendingDelegate.id!,
+        delegate_user_id: delegateId,
         valid_until: pendingValidUntil || null,
         delegate: {
-          id: pendingDelegate.id!,
-          full_name: pendingDelegate.label ?? pendingDelegate.id!,
+          id: delegateId,
+          full_name: pendingDelegate.label ?? delegateId,
         },
       },
     ]);
@@ -273,7 +267,10 @@ const AdminUserDetails: React.FC = () => {
               label: t('adminUserDetails.serviceUser'),
               content: user.is_service_user ? t('common.labels.yes') : t('common.labels.no'),
             },
-            { label: t('adminUserDetails.createdAt'), content: formatReadableDate(user.created_at) },
+            {
+              label: t('adminUserDetails.createdAt'),
+              content: formatReadableDate(user.created_at),
+            },
             {
               label: t('adminUserDetails.roles'),
               content: user.roles?.length ? user.roles.join(', ') : '-',
@@ -290,7 +287,9 @@ const AdminUserDetails: React.FC = () => {
         <div className="flex flex-wrap justify-between items-center gap-3">
           <div>
             <Label className="font-semibold block">{t('adminUserDetails.delegationsTitle')}</Label>
-            <Text className="text-sm text-neutral-700">{t('adminUserDetails.delegationsHint')}</Text>
+            <Text className="text-sm text-neutral-700">
+              {t('adminUserDetails.delegationsHint')}
+            </Text>
           </div>
           <Button
             design={ButtonDesign.Emphasized}
@@ -327,24 +326,28 @@ const AdminUserDetails: React.FC = () => {
                       className="w-64"
                       formatPattern={DATE_TIME_PATTERN}
                       value={toPickerValue(entry.valid_until)}
-                      onChange={event =>
+                      onChange={event => {
                         handleDelegationDateChange(
                           entry.delegate_user_id,
                           toIsoDateTimeValue(event.detail.value)
-                        )
-                      }
+                        );
+                      }}
                     />
                   </div>
                   <Button
                     design={ButtonDesign.Transparent}
                     disabled={!entry.valid_until}
-                    onClick={() => handleDelegationDateChange(entry.delegate_user_id, null)}>
+                    onClick={() => {
+                      handleDelegationDateChange(entry.delegate_user_id, null);
+                    }}>
                     {t('adminUserDetails.clearDeadline')}
                   </Button>
                   <Button
                     design={ButtonDesign.Negative}
                     icon="decline"
-                    onClick={() => handleRemoveDelegation(entry.delegate_user_id)}>
+                    onClick={() => {
+                      handleRemoveDelegation(entry.delegate_user_id);
+                    }}>
                     {t('adminUserDetails.remove')}
                   </Button>
                 </div>
@@ -353,9 +356,7 @@ const AdminUserDetails: React.FC = () => {
           )}
 
           {showDelegateAddedNotice && (
-            <Text className="text-xs text-amber-700">
-              {t('common.delegations.addedNotice')}
-            </Text>
+            <Text className="text-xs text-amber-700">{t('common.delegations.addedNotice')}</Text>
           )}
         </div>
 
@@ -376,15 +377,17 @@ const AdminUserDetails: React.FC = () => {
                 className="w-64"
                 formatPattern={DATE_TIME_PATTERN}
                 value={toPickerValue(pendingValidUntil)}
-                onChange={event =>
-                  setPendingValidUntil(toIsoDateTimeValue(event.detail.value) ?? '')
-                }
+                onChange={event => {
+                  setPendingValidUntil(toIsoDateTimeValue(event.detail.value) ?? '');
+                }}
               />
             </div>
             <Button
               design={ButtonDesign.Transparent}
               disabled={!pendingValidUntil}
-              onClick={() => setPendingValidUntil('')}>
+              onClick={() => {
+                setPendingValidUntil('');
+              }}>
               {t('adminUserDetails.clearDeadline')}
             </Button>
             <Button
@@ -399,23 +402,26 @@ const AdminUserDetails: React.FC = () => {
     );
   };
 
+  /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- empty string is not a valid display name, fallback intentional */
   const pageTitle =
     userDetail?.user?.full_name ||
     userDetail?.user?.username ||
     userDetail?.user?.email ||
     t('adminUserDetails.pageTitleFallback');
+  /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
   const isLoading = loadingDetail && !userDetail;
 
   return (
-    <PcPage header={{ title: t('adminUserDetails.pageTitle', { name: pageTitle }), showBack: true }}>
+    <PcPage
+      header={{ title: t('adminUserDetails.pageTitle', { name: pageTitle }), showBack: true }}>
       {isLoading ? (
         <div className="flex justify-center py-12">
           <BusyIndicator active size="Large" />
         </div>
       ) : (
         <div className="space-y-6">
-          {renderUserInfo(userDetail?.user as AdminUser | undefined)}
+          {renderUserInfo(userDetail?.user)}
           {renderDelegations()}
           {savingDelegations && (
             <div className="flex justify-center">

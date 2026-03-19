@@ -7,9 +7,9 @@ import fs from 'fs';
 import react from '@vitejs/plugin-react';
 import { createRequire } from 'module';
 
-const toPosixPath = (value) => value.split(path.sep).join('/');
+const toPosixPath = value => value.split(path.sep).join('/');
 
-const tryGetPackageJsonPathFromModuleId = (rawId) => {
+const tryGetPackageJsonPathFromModuleId = rawId => {
   if (!rawId || rawId.startsWith('\0')) return null;
 
   const id = rawId.split('?')[0].split('#')[0];
@@ -37,9 +37,9 @@ const noticesJsonName = 'third-party-notices.json';
 const noticesMdName = 'THIRD_PARTY_NOTICES.md';
 const licensesDirName = 'licenses';
 
-const ensureDir = (dirPath) => fs.mkdirSync(dirPath, { recursive: true });
+const ensureDir = dirPath => fs.mkdirSync(dirPath, { recursive: true });
 
-const sanitizePackageName = (packageName) => packageName.replace(/^@/, '').replaceAll('/', '__');
+const sanitizePackageName = packageName => packageName.replace(/^@/, '').replaceAll('/', '__');
 
 const sanitizePackageId = (name, version) => {
   const safeName = sanitizePackageName(name);
@@ -47,7 +47,7 @@ const sanitizePackageId = (name, version) => {
   return `${safeName}__${safeVersion}`;
 };
 
-const normalizeRepositoryUrl = (value) => {
+const normalizeRepositoryUrl = value => {
   if (!value) return null;
   let url = String(value).trim();
   if (!url) return null;
@@ -56,13 +56,13 @@ const normalizeRepositoryUrl = (value) => {
   return url;
 };
 
-const getRepositoryUrl = (modulePkg) => {
+const getRepositoryUrl = modulePkg => {
   const repositoryRaw =
     typeof modulePkg?.repository === 'string'
       ? modulePkg.repository
       : typeof modulePkg?.repository?.url === 'string'
-        ? modulePkg.repository.url
-        : null;
+      ? modulePkg.repository.url
+      : null;
   return normalizeRepositoryUrl(repositoryRaw);
 };
 
@@ -83,7 +83,7 @@ const toPackageInfo = (modulePkg, moduleDir, fallbackName) => {
   };
 };
 
-const findLicenseFile = (moduleDir) => {
+const findLicenseFile = moduleDir => {
   const candidates = [
     'LICENSE',
     'LICENSE.md',
@@ -113,7 +113,9 @@ const writeNoticesMarkdown = (outDirAbs, rows, { includeBpmnJsWatermarkNotice })
 
   lines.push('# Third-Party Notices (Frontend)');
   lines.push('');
-  lines.push('This build output bundles third-party software. License texts are included in `licenses/`.');
+  lines.push(
+    'This build output bundles third-party software. License texts are included in `licenses/`.'
+  );
   lines.push('');
   lines.push('## Packages');
   lines.push('');
@@ -123,7 +125,9 @@ const writeNoticesMarkdown = (outDirAbs, rows, { includeBpmnJsWatermarkNotice })
   for (const row of rows) {
     const link = row.licenseFile ? `licenses/${row.licenseFile}` : '(missing)';
     const upstream = row.repository ? row.repository : '(unknown)';
-    lines.push(`| \`${row.name}\` | \`${row.version}\` | \`${row.license}\` | \`${link}\` | \`${upstream}\` |`);
+    lines.push(
+      `| \`${row.name}\` | \`${row.version}\` | \`${row.license}\` | \`${link}\` | \`${upstream}\` |`
+    );
   }
 
   if (includeBpmnJsWatermarkNotice) {
@@ -131,7 +135,7 @@ const writeNoticesMarkdown = (outDirAbs, rows, { includeBpmnJsWatermarkNotice })
     lines.push('## bpmn-js watermark condition');
     lines.push('');
     lines.push(
-      'The `bpmn-js` license includes an additional condition: the bpmn.io project watermark/link shown as part of rendered diagrams MUST NOT be removed or changed and MUST remain visible.',
+      'The `bpmn-js` license includes an additional condition: the bpmn.io project watermark/link shown as part of rendered diagrams MUST NOT be removed or changed and MUST remain visible.'
     );
     lines.push('');
   }
@@ -139,7 +143,7 @@ const writeNoticesMarkdown = (outDirAbs, rows, { includeBpmnJsWatermarkNotice })
   fs.writeFileSync(outPath, lines.join('\n'), 'utf8');
 };
 
-const collectBundledPackageJsonPathsFromRollup = (moduleIds) => {
+const collectBundledPackageJsonPathsFromRollup = moduleIds => {
   const pkgJsonPaths = new Set();
   for (const id of moduleIds) {
     const pkgJsonPath = tryGetPackageJsonPathFromModuleId(id);
@@ -148,14 +152,14 @@ const collectBundledPackageJsonPathsFromRollup = (moduleIds) => {
   return Array.from(pkgJsonPaths).sort();
 };
 
-const collectTransitiveProdDependencies = (frontendPackageJsonPath) => {
+const collectTransitiveProdDependencies = frontendPackageJsonPath => {
   const pkg = JSON.parse(fs.readFileSync(frontendPackageJsonPath, 'utf8'));
   const roots = Object.keys(pkg.dependencies || {}).sort();
   const rootRequire = createRequire(frontendPackageJsonPath);
 
   const visitedPackageJsonPaths = new Set();
   const packagesByKey = new Map();
-  const queue = roots.map((name) => ({ name, req: rootRequire }));
+  const queue = roots.map(name => ({ name, req: rootRequire }));
 
   while (queue.length) {
     const { name, req } = queue.shift();
@@ -199,7 +203,7 @@ const collectTransitiveProdDependencies = (frontendPackageJsonPath) => {
   });
 };
 
-const collectPackagesFromPackageJsonPaths = (packageJsonPaths) => {
+const collectPackagesFromPackageJsonPaths = packageJsonPaths => {
   const packagesByKey = new Map();
 
   for (const pkgJsonPath of packageJsonPaths) {
@@ -254,15 +258,23 @@ const writeThirdPartyNotices = (outDirAbs, packages, { clean, alsoCopyToPrefixDi
       fs.copyFileSync(licensePath, path.join(licensesDirAbs, licenseFileName));
       copied += 1;
     } else {
-      console.warn(`WARN: no LICENSE file found for ${name} in ${moduleDir} (declared license: ${license})`);
+      console.warn(
+        `WARN: no LICENSE file found for ${name} in ${moduleDir} (declared license: ${license})`
+      );
     }
 
-    rows.push({ name, version, license: String(license), licenseFile: licenseFileName, repository });
+    rows.push({
+      name,
+      version,
+      license: String(license),
+      licenseFile: licenseFileName,
+      repository,
+    });
   }
 
-  const bpmnJsIncluded = rows.some((r) => r.name === 'bpmn-js');
+  const bpmnJsIncluded = rows.some(r => r.name === 'bpmn-js');
   if (bpmnJsIncluded) {
-    const bpmnJs = rows.find((r) => r.name === 'bpmn-js');
+    const bpmnJs = rows.find(r => r.name === 'bpmn-js');
     if (!bpmnJs || !bpmnJs.licenseFile) {
       throw new Error(`Expected bpmn-js LICENSE to be copied into ${licensesDirAbs}.`);
     }
@@ -280,24 +292,37 @@ const writeThirdPartyNotices = (outDirAbs, packages, { clean, alsoCopyToPrefixDi
         rawNoticesPath: noticesMdName,
       },
       null,
-      2,
+      2
     ),
-    'utf8',
+    'utf8'
   );
 
   if (alsoCopyToPrefixDirAbs) {
     ensureDir(alsoCopyToPrefixDirAbs);
     if (clean) {
-      fs.rmSync(path.join(alsoCopyToPrefixDirAbs, licensesDirName), { recursive: true, force: true });
+      fs.rmSync(path.join(alsoCopyToPrefixDirAbs, licensesDirName), {
+        recursive: true,
+        force: true,
+      });
       fs.rmSync(path.join(alsoCopyToPrefixDirAbs, noticesMdName), { force: true });
       fs.rmSync(path.join(alsoCopyToPrefixDirAbs, noticesJsonName), { force: true });
     }
 
-    fs.copyFileSync(path.join(outDirAbs, noticesMdName), path.join(alsoCopyToPrefixDirAbs, noticesMdName));
-    fs.copyFileSync(path.join(outDirAbs, noticesJsonName), path.join(alsoCopyToPrefixDirAbs, noticesJsonName));
-    fs.cpSync(path.join(outDirAbs, licensesDirName), path.join(alsoCopyToPrefixDirAbs, licensesDirName), {
-      recursive: true,
-    });
+    fs.copyFileSync(
+      path.join(outDirAbs, noticesMdName),
+      path.join(alsoCopyToPrefixDirAbs, noticesMdName)
+    );
+    fs.copyFileSync(
+      path.join(outDirAbs, noticesJsonName),
+      path.join(alsoCopyToPrefixDirAbs, noticesJsonName)
+    );
+    fs.cpSync(
+      path.join(outDirAbs, licensesDirName),
+      path.join(alsoCopyToPrefixDirAbs, licensesDirName),
+      {
+        recursive: true,
+      }
+    );
   }
 
   console.log(`Wrote ${copied} license texts for ${rows.length} dependencies to ${licensesDirAbs}`);
@@ -319,7 +344,7 @@ const writeThirdPartyNotices = (outDirAbs, packages, { clean, alsoCopyToPrefixDi
  *   deriveBaseFromExternalUrl("")                          -> "/"
  *   deriveBaseFromExternalUrl(null)                        -> "/"
  */
-const deriveBaseFromExternalUrl = (value) => {
+const deriveBaseFromExternalUrl = value => {
   if (!value) {
     return '/';
   }
@@ -365,7 +390,9 @@ const thirdPartyNoticesPlugin = ({ command, env }) => {
   const rootDir = __dirname;
   const packageJsonPath = path.join(rootDir, 'package.json');
 
-  const prefix = env?.VITE_FRONTEND_BASE_URL ? deriveBaseFromExternalUrl(env.VITE_FRONTEND_BASE_URL) : '/';
+  const prefix = env?.VITE_FRONTEND_BASE_URL
+    ? deriveBaseFromExternalUrl(env.VITE_FRONTEND_BASE_URL)
+    : '/';
   const devPrefix = prefix === '/' ? null : prefix;
 
   return {
@@ -386,7 +413,10 @@ const thirdPartyNoticesPlugin = ({ command, env }) => {
           ? path.join(publicDirAbs, devPrefix.replace(/^\/+/, '').replace(/\/+$/, ''))
           : null;
 
-      writeThirdPartyNotices(publicDirAbs, packages, { clean: true, alsoCopyToPrefixDirAbs: prefixDirAbs });
+      writeThirdPartyNotices(publicDirAbs, packages, {
+        clean: true,
+        alsoCopyToPrefixDirAbs: prefixDirAbs,
+      });
     },
     generateBundle(outputOptions) {
       if (command !== 'build') return;

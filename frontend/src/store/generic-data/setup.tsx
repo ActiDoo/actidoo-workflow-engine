@@ -36,7 +36,7 @@ import {
   User,
   UserSettings,
   WorkflowInstance,
-  GetTaskStatesPerWorkflowResponse
+  GetTaskStatesPerWorkflowResponse,
 } from '@/models/models';
 
 // KEY DEFINITION
@@ -131,7 +131,7 @@ export interface WeDataState {
 export const WeApiUrl = (
   key: string,
   params?: StringDict,
-  fetchMethod?: FetchMethods
+  _fetchMethod?: FetchMethods
 ): string | undefined => {
   switch (key) {
     case WeDataKey.MY_USER_TASKS:
@@ -175,7 +175,7 @@ export const WeApiUrl = (
     case WeDataKey.ADMIN_ALL_USERS:
       return 'admin/all_users';
     case WeDataKey.ADMIN_GRAPH_OBJECTS:
-      return 'admin/statistics_information'
+      return 'admin/statistics_information';
     case WeDataKey.ADMIN_REPLACE_TASK_DATA:
       return 'admin/replace_task_data';
     case WeDataKey.ADMIN_EXECUTE_ERRONEOUS_TASK:

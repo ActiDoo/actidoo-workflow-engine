@@ -28,18 +28,3 @@ export interface PcDetailsItemOption {
   value: any;
   label: string;
 }
-
-interface PcDetailsSectionProps<T> {
-  sections: PcDetailsSectionItem[][][];
-  data?: T;
-  loading?: boolean;
-  isEditable?: boolean;
-  onDelete?: () => void;
-  onSave?: (obj: T | undefined) => void;
-  saveLabel?: string;
-  response?: number;
-  deleteResponse?: number;
-  saveResponse?: number;
-  showError?: boolean;
-  errorMessage?: string;
-}

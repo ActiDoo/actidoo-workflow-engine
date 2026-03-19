@@ -5,7 +5,7 @@ import React, { PropsWithChildren } from 'react';
 import '@ui5/webcomponents-icons/dist/log';
 import '@ui5/webcomponents-icons/dist/nav-back';
 import '@ui5/webcomponents-icons/dist/search';
-import { PcPageHeader } from './pc-page-header/PcPageHeader';
+import { PcPageHeader } from '@/ui5-components/lib/pc-page/pc-page-header/PcPageHeader';
 
 export interface PcPageProps extends PropsWithChildren {
   header?: PcPageHeaderData;

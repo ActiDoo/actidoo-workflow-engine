@@ -2,7 +2,11 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 // Actions definition for Generic Data
-import { FetchUploadProgressFunc, HTTPValidationError, StringDict } from './models';
+import {
+  FetchUploadProgressFunc,
+  HTTPValidationError,
+  StringDict,
+} from '@/ui5-components/models/models';
 
 export interface GenericDataEntry<T> {
   data?: T;

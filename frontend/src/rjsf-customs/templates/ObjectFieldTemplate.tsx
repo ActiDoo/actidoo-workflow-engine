@@ -17,7 +17,8 @@ export function CustomObjectFieldTemplate<
   S extends StrictRJSFSchema = RJSFSchema,
   F extends FormContextType = any
 >(props: ObjectFieldTemplateProps<T, S, F>): ReactElement {
-  const { registry, properties, title, description, uiSchema, required, schema, fieldPathId } = props;
+  const { registry, properties, title, description, uiSchema, required, schema, fieldPathId } =
+    props;
   // console.log("** Object Field Template ********************************************************************************************")
   // console.log(props)
   const options = getUiOptions<T, S, F>(uiSchema);

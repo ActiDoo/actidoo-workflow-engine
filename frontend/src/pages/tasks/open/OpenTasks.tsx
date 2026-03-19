@@ -14,7 +14,7 @@ import { useTranslation } from '@/i18n';
 const OpenTasks: React.FC = () => {
   const { t } = useTranslation();
   const { workflowId } = useParams();
-  
+
   const isStartWorkflowPreview = window.location.pathname.includes('start_workflow_preview');
 
   return (
@@ -25,6 +25,7 @@ const OpenTasks: React.FC = () => {
         emptyMessage={t('tasks.empty.open')}
       />
       <div className="absolute top-0 bottom-0 overflow-y-auto left-[280px] right-0 bottom-0 ">
+        {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR: empty string workflowId should also fall through */}
         {workflowId || isStartWorkflowPreview ? (
           <Suspense>
             <Outlet />

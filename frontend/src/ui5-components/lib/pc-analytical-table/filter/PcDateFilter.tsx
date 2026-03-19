@@ -32,7 +32,9 @@ export const PcDateFilter: React.FC<PcDateFilterProps> = props => {
       <DatePicker
         ref={ref}
         value={value}
-        onChange={e => props.onFilter(filterId, e.target.dateValue ? toIsoDateOnly(e.target.dateValue) : '')}
+        onChange={e =>
+          props.onFilter(filterId, e.target.dateValue ? toIsoDateOnly(e.target.dateValue) : '')
+        }
       />
       <Icon
         name="decline"

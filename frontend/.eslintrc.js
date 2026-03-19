@@ -7,6 +7,7 @@ module.exports = {
     es2021: true,
   },
   extends: ['plugin:react/recommended', 'standard-with-typescript', 'prettier'],
+  ignorePatterns: ['dist/', 'node_modules/', '*.config.js', '*.config.ts'],
   overrides: [],
   parserOptions: {
     ecmaVersion: 'latest',
@@ -43,6 +44,7 @@ module.exports = {
     ],
     'react/react-in-jsx-scope': 'off',
     'react/jsx-uses-react': 'off',
-    'max-len': ['warning', { code: 250 }],
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    'max-len': ['warn', { code: 250 }],
   },
 };

@@ -2,8 +2,8 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import { useEffect, useRef, useState } from 'react';
-import { calculatePageOffset } from '../services/PageService';
-import { PcSortItem, StringDict } from '../models/models';
+import { calculatePageOffset } from '@/ui5-components/services/PageService';
+import { PcSortItem, StringDict } from '@/ui5-components/models/models';
 import _ from 'lodash';
 
 export interface AdditionalTableData {
@@ -38,9 +38,10 @@ export function useAdditionalTableFunctions(
     // will use loadData as trigger to load new data.
     // Therefore we have to prevent setting loadData during the first render here,
     // otherwise the Component's onEffect will be called twice
-    
-    if (isFirstRender.current) { // Do not call during first render
-      isFirstRender.current = false; 
+
+    if (isFirstRender.current) {
+      // Do not call during first render
+      isFirstRender.current = false;
       return;
     }
     setLoadData(v => v + 1);
@@ -74,7 +75,7 @@ export function useAdditionalTableFunctions(
     if (!_.isEqual(sort, item)) {
       setOffset(0);
       setForceState(0);
-      setSort(s => (item.sortDirection === 'clear' ? undefined : item));
+      setSort(_s => (item.sortDirection === 'clear' ? undefined : item));
     }
   };
 

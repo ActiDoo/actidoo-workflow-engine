@@ -15,7 +15,7 @@ import { getRequest, postRequest } from '@/store/generic-data/actions';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { useTranslation } from '@/i18n';
 
-export const AuthWrapper: React.FC = props => {
+export const AuthWrapper: React.FC = _props => {
   const { t, changeLanguage } = useTranslation();
   const loginState = useSelector((state: State) => state.auth.loginState);
   const userSettings = useSelector((state: State) => state.data[WeDataKey.USER_SETTINGS]);
@@ -29,7 +29,9 @@ export const AuthWrapper: React.FC = props => {
     loginState?.data?.is_logged_in && !loginState.data?.can_access_wf;
   const loadingLoginStateFailed = loginState.response !== 200 && retries >= 2;
   const loadingUserSettings =
-    loggedInAndAuthorized && !userSettingsBootstrapped.current && userSettings?.response === undefined;
+    loggedInAndAuthorized &&
+    !userSettingsBootstrapped.current &&
+    userSettings?.response === undefined;
 
   useEffect(() => {
     interceptFetch();

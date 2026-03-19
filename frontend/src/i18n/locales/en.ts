@@ -373,8 +373,7 @@ export const en = {
     saveError: 'Could not save settings. Please try again.',
     delegations: {
       title: 'Delegations',
-      hint:
-        'Select colleagues who may work on tasks as your delegate. You can optionally limit the delegation to a deadline.',
+      hint: 'Select colleagues who may work on tasks as your delegate. You can optionally limit the delegation to a deadline.',
       empty: 'No delegates configured yet.',
       noDeadline: 'No deadline',
       validUntil: 'Valid until (optional)',

@@ -7,9 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { getRequest } from '@/store/generic-data/actions';
-import {
-  PcPage,
-} from '@/ui5-components';
+import { PcPage } from '@/ui5-components';
 import { environment } from '@/environment';
 import { AnalyticalTable } from '@ui5/webcomponents-react';
 import { useTranslation } from '@/i18n';
@@ -19,42 +17,40 @@ const AdminInfo: React.FC = () => {
   const dispatch = useDispatch();
 
   const data = useSelector((state: State) => state.data[WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]);
-   
+
   useEffect(() => {
-    dispatch(
-      getRequest(WeDataKey.ADMIN_GET_SYSTEM_INFORMATION, {})
-    );
+    dispatch(getRequest(WeDataKey.ADMIN_GET_SYSTEM_INFORMATION, {}));
   }, []);
 
   return (
     <PcPage
-        header={{
-        title: t('navigation.systemInformation')
-        }}
-    >
-
-    <AnalyticalTable
-        className='mb-4'
+      header={{
+        title: t('navigation.systemInformation'),
+      }}>
+      <AnalyticalTable
+        className="mb-4"
         columns={[
-            {
+          {
             Header: t('common.labels.title'),
-            accessor: 'title'
-            },
-            {
+            accessor: 'title',
+          },
+          {
             Header: t('common.labels.value'),
-            accessor: 'value'
-            },
+            accessor: 'value',
+          },
         ]}
         minRows={1}
-        data={[{
-            "title": t('common.labels.frontendBuildCommit'),
-            "value": environment.buildNumber || "dev"
-        },{
-            "title": t('common.labels.backendBuildCommit'),
-            "value": data ? (data?.data?.build_number || "") : ""
-        }]}
-    />
-      
+        data={[
+          {
+            title: t('common.labels.frontendBuildCommit'),
+            value: environment.buildNumber || 'dev',
+          },
+          {
+            title: t('common.labels.backendBuildCommit'),
+            value: data ? data?.data?.build_number ?? '' : '',
+          },
+        ]}
+      />
     </PcPage>
   );
 };

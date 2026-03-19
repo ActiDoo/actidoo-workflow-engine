@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { DateRangePicker, type DateRangePickerDomRef } from '@ui5/webcomponents-react';
-import type { Ui5CustomEvent } from '@ui5/webcomponents-react';
+import {
+  DateRangePicker,
+  type DateRangePickerDomRef,
+  Ui5CustomEvent,
+} from '@ui5/webcomponents-react';
 import type { Dispatch, SetStateAction } from 'react';
 
 interface Props {
@@ -10,6 +13,7 @@ interface Props {
   endSetter: Dispatch<SetStateAction<Date>>;
 }
 
+// eslint-disable-next-line react/prop-types
 export const DateSelection: React.FC<Props> = ({ startSetter, endSetter }) => {
   const today = new Date();
   const lastYear = new Date(today);

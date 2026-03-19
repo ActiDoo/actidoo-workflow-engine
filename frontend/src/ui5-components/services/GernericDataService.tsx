@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { FetchMethods } from '../models/models';
-import { GenericDataEntry } from '../models/generic-data-models';
+import { FetchMethods } from '@/ui5-components/models/models';
+import { GenericDataEntry } from '@/ui5-components/models/generic-data-models';
 
 export const handleStateResponse = (
   state: GenericDataEntry<any> | null

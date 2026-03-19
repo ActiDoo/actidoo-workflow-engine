@@ -5,10 +5,8 @@ import React from 'react';
 import { PcPage } from '@/ui5-components';
 import { WeBpmnViewer } from '@/utils/components/WeBpmnViewer';
 import { useParams } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { State } from '@/store';
+import { useDispatch } from 'react-redux';
 import { WeDataKey } from '@/store/generic-data/setup';
-import { useSelectUiLoading } from '@/store/ui/selectors';
 import { BusyIndicator, Button, ButtonDesign } from '@ui5/webcomponents-react';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { postRequest } from '@/store/generic-data/actions';
@@ -18,13 +16,15 @@ import { useTranslation } from '@/i18n';
 const WorkflowDiagram: React.FC = () => {
   const { t } = useTranslation();
   const { name } = useParams();
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
   const { dataWorkflowSpec, dataWorkflowSpecItem, loadStateWorkflowSpec } = useWorkflowSpec(name);
 
   return (
     <PcPage
       header={{
-        title: t('workflowDiagram.workflowTitle', { name: dataWorkflowSpec ? dataWorkflowSpec.name : '' }),
+        title: t('workflowDiagram.workflowTitle', {
+          name: dataWorkflowSpec ? dataWorkflowSpec.name : '',
+        }),
         actionSection: (
           <Button
             design={ButtonDesign.Emphasized}
@@ -39,10 +39,7 @@ const WorkflowDiagram: React.FC = () => {
       {loadStateWorkflowSpec ? (
         <BusyIndicator />
       ) : dataWorkflowSpecItem ? (
-        <WeBpmnViewer
-          diagramXML={dataWorkflowSpecItem.file_content}
-          isAdmin={false}
-        />
+        <WeBpmnViewer diagramXML={dataWorkflowSpecItem.file_content} isAdmin={false} />
       ) : dataWorkflowSpec ? (
         <WeEmptySection
           icon={'org-chart'}

@@ -40,7 +40,7 @@ export const PcAnalyticalTable: React.FC<PhAnalyticalTableProps> = props => {
     limit = 20,
     forcePage,
     sort,
-    filter,
+    filter: _filter,
     ...tableData
   } = props;
 

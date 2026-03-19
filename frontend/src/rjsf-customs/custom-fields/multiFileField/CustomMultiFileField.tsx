@@ -13,11 +13,11 @@ import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/compon
 import { useDragging } from '@/utils/hooks/useDragging';
 
 export interface PcFile {
-  datauri?: string | null; //available during adding, not available when showing backend data
-  filename?: string | null; //MUST: always available
-  hash?: string | null; //not available during adding, available when showing backend data
-  id?: string | null; //not available during adding, available when showing backend data
-  mimetype?: string | null; //optional: if depictable, it's available during adding and showing backend data
+  datauri?: string | null; // available during adding, not available when showing backend data
+  filename?: string | null; // MUST: always available
+  hash?: string | null; // not available during adding, available when showing backend data
+  id?: string | null; // not available during adding, available when showing backend data
+  mimetype?: string | null; // optional: if depictable, it's available during adding and showing backend data
 }
 const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement | null => {
   // console.log("** CustomMultiFileField ********************************************************************************************")
@@ -33,11 +33,15 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
   const [isDragging, handleDragOver, handleDragLeave, handleDrop] = useDragging(onDrop);
   const [fileUploadKey, setFileUploadKey] = useState<string>('');
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
   const isDisabled = Boolean(props.readonly || props.disabled);
-  const isRequired = props.schema?.minItems ? true : false
+  const isRequired = !!props.schema?.minItems;
 
-  const label = (props.schema?.title ? props.schema?.title : "File Upload") + (isRequired ? "*" : "")
-  const hint = props.uiSchema?.["ui:description"] ? props.uiSchema?.['ui:description'] : "Drag and drop files here or"
+  const label =
+    (props.schema?.title ? props.schema?.title : 'File Upload') + (isRequired ? '*' : '');
+  const hint = props.uiSchema?.['ui:description']
+    ? props.uiSchema?.['ui:description']
+    : 'Drag and drop files here or';
 
   const updateFileList = (fileList: FileList): void => {
     const duplicatedFiles: File[] = [];
@@ -96,21 +100,24 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
       })
     )
       .then(results => {
-        const nonNullResults: PcFile[] = results.filter(x => x !== null) as PcFile[];
+        const nonNullResults: PcFile[] = results.filter(x => x !== null);
         onChange([...(files ?? []), ...nonNullResults], fieldPath);
         setFileUploadKey(getRandomString());
       })
-      .catch(() => { });
+      .catch(() => {});
   };
   const removeFile = (file: PcFile): void => {
     if (files) {
-      onChange(_.remove(files, current => current.filename !== file.filename), fieldPath);
+      onChange(
+        _.remove(files, current => current.filename !== file.filename),
+        fieldPath
+      );
     }
   };
 
   /**
    * In case of a non-required field, we get an empty object {} as formData if there is no file attached. Ok.
-   * 
+   *
    * In case of a required field, we get an object with an empty list {[]} for formData if there is no file attached:
    * This will look like an attached file without filename etc., which is wrong.
    * Unfortunately this behaviour is implemented in RJSF itself, so as a workaround
@@ -118,28 +125,35 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
    */
   if (
     files &&
-    files.length == 1 &&
+    files.length === 1 &&
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means property not set, treat as falsy
     !(files[0].datauri || files[0].filename || files[0].hash || files[0].id || files[0].mimetype)
   ) {
-    console.log(`files undefined: ${props.id}`)
-    //remove it async, after rendering, to avoid warnings
+    console.log(`files undefined: ${props.id}`);
+    // remove it async, after rendering, to avoid warnings
     setTimeout(() => {
-      removeFile(files[0])
+      removeFile(files[0]);
     });
   }
 
-
   return (
     <div className="relative">
-      <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">{label}</label>
-      <div className={props.className + " relative border-2 border-neutral-200 border-solid rounded mb-2 p-3"}>
+      <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">
+        {label}
+      </label>
+      <div
+        className={
+          (props.className ?? '') +
+          ' relative border-2 border-neutral-200 border-solid rounded mb-2 p-3'
+        }>
         {!isDisabled && (
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={` flex flex-col items-center justify-center text-center ${isDragging ? 'border-brand-primary' : 'border-neutral-200'
-              }`}>
+            className={` flex flex-col items-center justify-center text-center ${
+              isDragging ? 'border-brand-primary' : 'border-neutral-200'
+            }`}>
             <Text>{hint}</Text>
             <FileUploader
               key={fileUploadKey}

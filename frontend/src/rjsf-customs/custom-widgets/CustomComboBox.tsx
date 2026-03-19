@@ -118,11 +118,11 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
     useEffect(() => {
       const now = Date.now();
       const timeSinceLastValueChange = now - (lastValueChangeRef.current || 0);
-      //When the data is first filled into the form and there are already values for these fields, then all fields are filled "simultaneously".
-      //Then all Change Events are processed "simultaneously".
-      //Then it is determined that the Dependency field (e.g. Car Type) has changed and the dependent field (e.g. "Car Sub Type") is reset,
-      //so the initial value is gone.
-      //I have solved this with a time check that checks whether the two fields have changed in quick succession and then does not perform a reset.
+      // When the data is first filled into the form and there are already values for these fields, then all fields are filled "simultaneously".
+      // Then all Change Events are processed "simultaneously".
+      // Then it is determined that the Dependency field (e.g. Car Type) has changed and the dependent field (e.g. "Car Sub Type") is reset,
+      // so the initial value is gone.
+      // I have solved this with a time check that checks whether the two fields have changed in quick succession and then does not perform a reset.
 
       if (timeSinceLastValueChange > 1000) {
         setSelectedOption(null);
@@ -137,7 +137,7 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
   return (
     <div>
       <WeComboBox
-        value={selectedOption || ''}
+        value={selectedOption ?? ''}
         required={props.required}
         isLoading={optionsQuery.isLoading}
         options={options}
@@ -146,8 +146,9 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
         closeMenuOnSelect={!isMultiple}
         isClearable={
           /* it's clearable if there's a value which does not equal the default */
-          ( !Array.isArray(selectedOption) && props.schema.default !== selectedOption?.value) ||
-          ( Array.isArray(selectedOption) && props.schema.default !== selectedOption[0]?.value )}
+          (!Array.isArray(selectedOption) && props.schema.default !== selectedOption?.value) ||
+          (Array.isArray(selectedOption) && props.schema.default !== selectedOption[0]?.value)
+        }
         onInputChange={value => {
           setSearch(value);
         }}
