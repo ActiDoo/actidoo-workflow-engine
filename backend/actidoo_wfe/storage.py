@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+import os
 import pathlib
 
 from libcloud.storage.drivers.azure_blobs import AzureBlobsStorageDriver
@@ -27,6 +28,17 @@ def setup_storage(
         storage_path.mkdir(exist_ok=True)
         driver = LocalStorageDriver(storage_path)
     elif settings.storage_mode == 'AZURE_BLOB':
+        if settings.storage_azure_override_proxy_envs:
+            # apache libcloud will only take https_proxy and http_proxy (in that order, only lowercase variant) into account.
+            # it ignores the environment variable 'no_proxy', see https://github.com/apache/libcloud/pull/2079 for future changes on this topic
+            # you can add a proxy parameter 'proxy_url' to AzureBlobsStorageDriver, but it's omitted if it's an empty string -> there is no distinction between empty string and None :-(
+            # this means you can't turn off proxy handling if the environment variables 'https_proxy' and 'http_proxy' are set!
+            # therefore we temporarily turn these off:
+            tmp_http_proxy = os.environ.get('http_proxy', '')
+            tmp_https_proxy = os.environ.get('https_proxy', '')
+            os.environ['http_proxy'] = ''
+            os.environ['https_proxy'] = ''
+
         driver = AzureBlobsStorageDriver(
             key=settings.storage_azure_account_name,
             secret=settings.storage_azure_account_key,
@@ -37,6 +49,9 @@ def setup_storage(
                 "endpoint_suffix": settings.storage_azure_override_endpoint
             } if settings.storage_azure_override_endpoint else {})
         )
+        if settings.storage_azure_override_proxy_envs:
+            os.environ['http_proxy'] = tmp_http_proxy
+            os.environ['https_proxy'] = tmp_https_proxy
     elif settings.storage_mode == 'AZURE_BLOB_TENANT':
         driver = AzureBlobsStorageDriver(
             key=settings.storage_azure_account_name,

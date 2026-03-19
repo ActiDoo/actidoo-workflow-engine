@@ -108,7 +108,8 @@ class Settings(BaseSettings):
     storage_local_upload_path: str = str((pathlib.Path(__file__).parent.parent / "upload_dir").absolute())
     storage_azure_account_name: str|None = None
     storage_azure_account_key: str|None = None # base64 encoded in case of local development for azureit; not base64 encoded for deployed Azure Tenant version (Client Secret of Service Principal)
-    
+    storage_azure_override_proxy_envs: bool = False # libcloud in version 3.19 still does not respect no_proxy, it will use http_proxy (lowercase only!) if not overwritten, see https://github.com/apache/libcloud/pull/2079
+
     # Azure-Blob Settings for development
     storage_azure_override_host: str|None = None
     storage_azure_override_port: str|None = None
