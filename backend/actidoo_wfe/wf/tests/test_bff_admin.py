@@ -177,12 +177,12 @@ def test_admin_user_listing_and_delegations(db_engine_ctx):
             user_id=admin.id,
             bff_table_request_params=table_params,
         )
-        assert any(u.id == principal.id for u in users.ITEMS)
+        assert any(u["id"] == principal.id for u in users.ITEMS)
 
         detail = service_application.admin_get_user_detail(
             db=db, admin_user_id=admin.id, target_user_id=principal.id
         )
-        assert detail.user.id == principal.id
+        assert detail["user"]["id"] == principal.id
 
         updated_detail = service_application.admin_set_user_delegations(
             db=db,
@@ -191,7 +191,7 @@ def test_admin_user_listing_and_delegations(db_engine_ctx):
             delegations=[(delegate.id, dt_now_naive() + timedelta(days=1))],
         )
 
-        assert any(d.delegate.id == delegate.id for d in updated_detail.delegations)
+        assert any(d["delegate"]["id"] == delegate.id for d in updated_detail["delegations"])
 
         filtered_params = bff_admin.AdminWorkflowUsersBffTableQuerySchema.parse_obj(
             {"f_roles": "wf-admin"}
@@ -201,5 +201,5 @@ def test_admin_user_listing_and_delegations(db_engine_ctx):
             user_id=admin.id,
             bff_table_request_params=filtered_params,
         )
-        assert any(u.id == admin.id for u in filtered_users.ITEMS)
-        assert all("wf-admin" in u.roles for u in filtered_users.ITEMS)
+        assert any(u["id"] == admin.id for u in filtered_users.ITEMS)
+        assert all("wf-admin" in u["roles"] for u in filtered_users.ITEMS)
