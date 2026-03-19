@@ -1,0 +1,173 @@
+{
+  "components": [
+    {
+      "label": "Number globalA",
+      "type": "number",
+      "layout": {
+        "row": "Row_1ljibiq",
+        "columns": 7
+      },
+      "id": "Field_1rgd9ea",
+      "key": "globalA",
+      "defaultValue": 2
+    },
+    {
+      "label": "Number globalB",
+      "type": "number",
+      "layout": {
+        "row": "Row_1ljibiq",
+        "columns": 7
+      },
+      "id": "Field_1j10sp0",
+      "key": "globalB",
+      "defaultValue": 4,
+      "conditional": {
+        "hide": "=globalA=1"
+      },
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "text": "Product of globalA*globalB is easy: {{ globalA * globalB }}",
+      "label": "Text view",
+      "type": "text",
+      "layout": {
+        "row": "Row_1p1s2g4",
+        "columns": null
+      },
+      "id": "Field_1aff9sg"
+    },
+    {
+      "label": "Dynamic list (my_list)",
+      "components": [
+        {
+          "label": "number_a Label",
+          "type": "number",
+          "layout": {
+            "row": "Row_0r35sy1",
+            "columns": 5
+          },
+          "id": "Field_1o0073j",
+          "key": "number_a",
+          "defaultValue": 8,
+          "conditional": {
+            "hide": "=globalA=3"
+          }
+        },
+        {
+          "label": "number_b Label",
+          "type": "number",
+          "layout": {
+            "row": "Row_0r35sy1",
+            "columns": 5
+          },
+          "id": "Field_0rkhjm7",
+          "key": "number_b",
+          "conditional": {
+            "hide": "=this.number_a=9"
+          },
+          "validate": {
+            "required": true
+          }
+        },
+        {
+          "text": "globalA={{ globalA }}\n\na*b = {{this.number_a * this.number_b}}\n\nSum for inner my_list_B: {{sum(for elem in this.my_list_B return elem.number_c * elem.number_d)}}",
+          "label": "Text view",
+          "type": "text",
+          "layout": {
+            "row": "Row_0r35sy1",
+            "columns": null
+          },
+          "id": "Field_13cwx6x"
+        },
+        {
+          "label": "Dynamic list (my_list_B)",
+          "components": [
+            {
+              "label": "number_c label",
+              "type": "number",
+              "layout": {
+                "row": "Row_18vxy5a",
+                "columns": null
+              },
+              "id": "Field_0afxybx",
+              "key": "number_c",
+              "defaultValue": 32,
+              "conditional": {
+                "hide": "=parent.number_a=7"
+              }
+            },
+            {
+              "label": "number_d label",
+              "type": "number",
+              "layout": {
+                "row": "Row_18vxy5a",
+                "columns": null
+              },
+              "id": "Field_0mox5bl",
+              "key": "number_d",
+              "conditional": {
+                "hide": "=this.number_c=33"
+              },
+              "validate": {
+                "required": true
+              }
+            },
+            {
+              "text": "globalA={{ globalA }}\n\nparent.number_a = {{ parent.number_a}}\n\nthis.number_c = {{ this.number_c }}\n\nc*d = {{ this.number_c * this.number_d }}\n",
+              "label": "Text view",
+              "type": "text",
+              "layout": {
+                "row": "Row_18vxy5a",
+                "columns": null
+              },
+              "id": "Field_0jqepgf"
+            }
+          ],
+          "showOutline": true,
+          "isRepeating": true,
+          "allowAddRemove": true,
+          "defaultRepetitions": 1,
+          "type": "dynamiclist",
+          "layout": {
+            "row": "Row_10ud0ye",
+            "columns": null
+          },
+          "id": "Field_1v6t7p9",
+          "path": "my_list_B"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": null,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_1177ouc",
+        "columns": null
+      },
+      "id": "Field_0tkequb",
+      "path": "my_list"
+    },
+    {
+      "text": "https://camunda.com/blog/2024/01/camunda-forms-features-you-dont-know/\n\nhttps://docs.camunda.io/docs/components/modeler/forms/form-element-library/forms-element-library-text/",
+      "label": "Text view",
+      "type": "text",
+      "layout": {
+        "row": "Row_0bd5l2h",
+        "columns": null
+      },
+      "id": "Field_0ik1grh"
+    }
+  ],
+  "type": "default",
+  "id": "Form_list",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.32.0"
+  },
+  "schemaVersion": 18
+}

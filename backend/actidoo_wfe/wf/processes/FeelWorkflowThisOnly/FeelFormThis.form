@@ -1,0 +1,88 @@
+{
+  "components": [
+    {
+      "label": "Number globalA",
+      "type": "number",
+      "layout": {
+        "row": "Row_1ljibiq",
+        "columns": 7
+      },
+      "id": "Field_1rgd9ea",
+      "key": "globalA",
+      "defaultValue": 2
+    },
+    {
+      "label": "Number globalB",
+      "type": "number",
+      "layout": {
+        "row": "Row_1ljibiq",
+        "columns": 7
+      },
+      "id": "Field_1j10sp0",
+      "key": "globalB",
+      "defaultValue": 4,
+      "conditional": {
+        "hide": "=globalA=1"
+      },
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Dynamic list (mylist)",
+      "components": [
+        {
+          "label": "number_a Label",
+          "type": "number",
+          "layout": {
+            "row": "Row_0r35sy1",
+            "columns": 5
+          },
+          "id": "Field_1o0073j",
+          "key": "number_a",
+          "defaultValue": 8,
+          "conditional": {
+            "hide": "=globalA=3"
+          }
+        },
+        {
+          "label": "number_b Label",
+          "type": "number",
+          "layout": {
+            "row": "Row_0r35sy1",
+            "columns": 5
+          },
+          "id": "Field_0rkhjm7",
+          "key": "number_b",
+          "conditional": {
+            "hide": "=number_a=9"
+          },
+          "validate": {
+            "required": true
+          },
+          "defaultValue": 16
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": null,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_1177ouc",
+        "columns": null
+      },
+      "id": "Field_0tkequb",
+      "path": "mylist"
+    }
+  ],
+  "type": "default",
+  "id": "Form_list",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.32.0"
+  },
+  "schemaVersion": 18
+}
