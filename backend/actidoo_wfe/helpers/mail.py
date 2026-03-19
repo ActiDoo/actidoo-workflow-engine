@@ -28,6 +28,24 @@ def is_debugger_active() -> bool:
 def shall_skip_sending_email() -> bool:
     return in_test() or is_debugger_active() or settings.email_skip
 
+def log_email(
+    subject: str,
+    content: str,
+    recipient_or_recipients_list: list[str] | str,
+    attachments: Dict[str, io.BytesIO],
+):
+    rec_str = (
+        recipient_or_recipients_list
+        if isinstance(recipient_or_recipients_list, str)
+        else ", ".join(recipient_or_recipients_list)
+    )
+    attachment_list = "\n\nATTACH: " + ", ".join(attachments.keys()) if attachments.keys() else ""
+    log.info(
+        f"Printing email to '{rec_str}':\n"
+        + get_boxed_text(subject + "\n\n" + content + attachment_list)
+        + "\n"
+    )
+
 def _normalize_recipients(recipient_or_recipients_list: list[str] | str) -> list[str]:
     if isinstance(recipient_or_recipients_list, str):
         return [recipient_or_recipients_list]
@@ -54,38 +72,44 @@ def _send_via_graph(subject: str, content: str, recipients_list: list[str], atta
             {"Subscription-Key": settings.email_subscription_key},
         )
 
-        for recipient in recipients_list:
-            # Create payload for sending email
-            payload = {
-                "message": {
-                    "subject": subject,
-                    "body": {"contentType": "Text", "content": content},
-                    "toRecipients": [{"emailAddress": {"address": recipient}}],
-                    "ccRecipients": [],
-                },
-                "saveToSentItems": False,
-            }
-
-            # Add attachments to payload
-            attachments_payload = []
-            for name, attachment in attachments.items():
-                attachment.seek(0)
-                content_bytes = base64.b64encode(attachment.read()).decode("utf-8")
-                attachment.seek(0)
-
-                attachment_payload = {
-                    "@odata.type": "#microsoft.graph.fileAttachment",
-                    "name": name,
-                    "contentBytes": content_bytes,
+        successful_recipients = []
+        try:
+            for recipient in recipients_list:
+                # Create payload for sending email
+                payload = {
+                    "message": {
+                        "subject": subject,
+                        "body": {"contentType": "Text", "content": content},
+                        "toRecipients": [{"emailAddress": {"address": recipient}}],
+                        "ccRecipients": [],
+                    },
+                    "saveToSentItems": False,
                 }
 
-                attachments_payload.append(attachment_payload)
+                # Add attachments to payload
+                attachments_payload = []
+                for name, attachment in attachments.items():
+                    attachment.seek(0)
+                    content_bytes = base64.b64encode(attachment.read()).decode("utf-8")
+                    attachment.seek(0)
 
-            payload["message"]["attachments"] = attachments_payload
+                    attachment_payload = {
+                        "@odata.type": "#microsoft.graph.fileAttachment",
+                        "name": name,
+                        "contentBytes": content_bytes,
+                    }
 
-            # Send email
-            response = client.post(url=send_endpoint_with_key, json=payload)
-            response.raise_for_status() # raises an exception for status_code >=400
+                    attachments_payload.append(attachment_payload)
+
+                payload["message"]["attachments"] = attachments_payload
+
+                # Send email
+                response = client.post(url=send_endpoint_with_key, json=payload)
+                response.raise_for_status() # raises an exception for status_code >=400
+                successful_recipients.append(recipient)
+        except Exception as error:
+            log.error(f"error while sending email to '{recipient}'. Successful before was '{successful_recipients}'. All recipients are '{recipients_list}'. Attachments = {list(attachments.keys())}")
+            raise error
 
 def _send_via_smtp(subject: str, content: str, recipients_list: list[str], attachments: Dict[str, io.BytesIO]) -> None:
     host = settings.email_smtp_host
@@ -118,20 +142,24 @@ def _send_via_smtp(subject: str, content: str, recipients_list: list[str], attac
         message.add_attachment(data, maintype=maintype, subtype=subtype, filename=name)
 
     context = ssl.create_default_context()
-    if settings.email_smtp_use_ssl:
-        with smtplib.SMTP_SSL(host, port, context=context) as server:
-            if username or password:
-                server.login(username, password)
-            server.send_message(message)
-    else:
-        with smtplib.SMTP(host, port) as server:
-            server.ehlo()
-            if settings.email_smtp_use_tls:
-                server.starttls(context=context)
+    try:
+        if settings.email_smtp_use_ssl:
+            with smtplib.SMTP_SSL(host, port, context=context) as server:
+                if username or password:
+                    server.login(username, password)
+                server.send_message(message)
+        else:
+            with smtplib.SMTP(host, port) as server:
                 server.ehlo()
-            if username or password:
-                server.login(username, password)
-            server.send_message(message)
+                if settings.email_smtp_use_tls:
+                    server.starttls(context=context)
+                    server.ehlo()
+                if username or password:
+                    server.login(username, password)
+                server.send_message(message)
+    except Exception as error:
+        log.error(f"error while sending email via SMTP. Recipients: '{recipients_list}'. Attachments = {list(attachments.keys())}")
+        raise error
 
 def send_text_mail(
     subject: str,
@@ -172,15 +200,7 @@ def send_text_mail(
 
     # Skip sending email in test/debug mode or when email_skip is set
     if shall_skip_sending_email():
-        rec_str = ", ".join(recipients_list)
-
-        attachment_list = "\n\nATTACH: " + ", ".join(attachments.keys()) if attachments.keys() else ""
-
-        log.info(
-            f"Printing email to '{rec_str}':\n"
-            + get_boxed_text(subject + "\n\n" + content + attachment_list)
-            + "\n"
-        )
+        log_email(subject, content, recipients_list, attachments)
         return
 
     transport = (settings.email_transport or "GRAPH").upper()

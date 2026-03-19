@@ -82,6 +82,8 @@ def clear_cache():
 @pytest.fixture
 def mock_send_text_mail():
     """Capture outbound text mails for assertions."""
+    from actidoo_wfe.helpers.mail import log_email
+
     emails = []
 
     def mock_send(subject, content, recipient_or_recipients_list, attachments):
@@ -92,6 +94,7 @@ def mock_send_text_mail():
             "attachments": attachments,
         }
         emails.append(email)
+        log_email(subject, content, recipient_or_recipients_list, attachments)
 
     with patch("actidoo_wfe.helpers.mail.send_text_mail", new=mock_send):
         yield emails
