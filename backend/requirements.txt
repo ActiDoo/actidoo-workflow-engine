@@ -175,7 +175,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.1
     # via apache-libcloud
 rfc3339-validator==0.1.4
     # via jsonschema
