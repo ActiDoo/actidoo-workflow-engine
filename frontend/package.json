@@ -31,7 +31,7 @@
     "@popperjs/core": "2.11.8",
     "@rjsf/core": "6.2.5",
     "@rjsf/react-bootstrap": "6.2.5",
-    "@rjsf/utils": "6.2.5",
+    "@rjsf/utils": "6.4.2",
     "@rjsf/validator-ajv8": "6.2.5",
     "@ui5/webcomponents": "^1.9.3",
     "@ui5/webcomponents-base": "^1.9.3",
