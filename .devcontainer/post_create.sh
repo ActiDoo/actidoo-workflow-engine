@@ -74,6 +74,9 @@ source backend/.venv/bin/activate
 
 export PYTHONPATH=/workspace/backend:${PYTHONPATH:-}
 
+# Supply-chain defense: only allow packages uploaded ≥7 days ago
+export PIP_UPLOADED_PRIOR_TO="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+
 pip config list
 pip install "${PIP_PROXY_ARGS[@]}" --upgrade pip setuptools
 pip install "${PIP_PROXY_ARGS[@]}" -e "./backend[dev]"
@@ -84,4 +87,9 @@ if [ -d frontend ]; then
     pushd frontend >/dev/null
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 yarn install
     popd >/dev/null
+fi
+
+# Persist pip cooldown for every new interactive shell
+if ! grep -Fq 'PIP_UPLOADED_PRIOR_TO' ~/.bashrc 2>/dev/null; then
+    echo 'export PIP_UPLOADED_PRIOR_TO="$(date -u -d '\''7 days ago'\'' +%Y-%m-%dT%H:%M:%SZ)"' >> ~/.bashrc
 fi

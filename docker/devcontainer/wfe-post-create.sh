@@ -64,6 +64,9 @@ rm -rf "${WORKSPACE_DIR}/.venv"
 ln -sfn "${VENV_PATH}" "${WORKSPACE_DIR}/.venv"
 source "${VENV_PATH}/bin/activate"
 
+# Supply-chain defense: only allow packages uploaded ≥7 days ago
+export PIP_UPLOADED_PRIOR_TO="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+
 "${PIP_BIN}" install ${PIP_PROXY_ARGS[@]+"${PIP_PROXY_ARGS[@]}"} --upgrade pip setuptools wheel
 
 if [[ ! -f "${BACKEND_DIR}/pyproject.toml" ]]; then
@@ -75,6 +78,11 @@ fi
 
 if ! grep -Fq "${VENV_PATH}/bin/activate" "${HOME}/.bashrc"; then
     echo "source ${VENV_PATH}/bin/activate" >> "${HOME}/.bashrc"
+fi
+
+# Persist pip cooldown for every new interactive shell
+if ! grep -Fq 'PIP_UPLOADED_PRIOR_TO' "${HOME}/.bashrc"; then
+    echo 'export PIP_UPLOADED_PRIOR_TO="$(date -u -d '\''7 days ago'\'' +%Y-%m-%dT%H:%M:%SZ)"' >> "${HOME}/.bashrc"
 fi
 
 echo "Virtualenv ready at ${VENV_PATH}"

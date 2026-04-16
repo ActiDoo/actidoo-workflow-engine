@@ -46,10 +46,12 @@ WORKDIR /opt/workspace/backend
 COPY backend/pyproject.toml backend/requirements.txt ./
 
 # Build dependency wheels in a layer that only changes when the lockfile changes
+# Supply-chain defense: only allow packages uploaded ≥7 days ago
 RUN --mount=type=cache,sharing=locked,id=pip-cache-${TARGETPLATFORM},target=/root/.cache/pip \
     python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip wheel --wheel-dir /tmp/wheels -r requirements.txt
+    && PIP_UPLOADED_PRIOR_TO="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)" \
+       /opt/venv/bin/pip wheel --wheel-dir /tmp/wheels -r requirements.txt
 
 # Build the application wheel separately so code changes don't invalidate deps
 COPY backend/actidoo_wfe ./actidoo_wfe
