@@ -56,7 +56,7 @@ dependencies = [
     "wrapt>=1.16.0",
     "pycountry==24.6.1",
     "sqlalchemy-file==0.6.0",
-    "babel==2.17.0"
+    "babel==2.18.0"
 ]
 
 [project.optional-dependencies]
