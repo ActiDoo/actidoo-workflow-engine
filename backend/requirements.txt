@@ -30,7 +30,7 @@ attrs==25.4.0
     # via
     #   jsonschema
     #   referencing
-authlib==1.6.6
+authlib==1.6.11
     # via actidoo-wfe (pyproject.toml)
 babel==2.17.0
     # via actidoo-wfe (pyproject.toml)
