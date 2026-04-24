@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
+import { useEffect } from 'react';
 import { FieldProps, FormContextType, RJSFSchema, StrictRJSFSchema } from '@rjsf/utils';
 
 /** The `NullField` component is used to render a field in the schema is null. It also ensures that the `formData` is
@@ -16,11 +17,12 @@ function CustomNullField<
   const { formData, onChange, fieldPathId } = props;
   const fieldPath = fieldPathId?.path ?? [];
 
-  if (formData !== null) {
-    setTimeout(() => {
+  useEffect(() => {
+    if (formData === undefined) {
       onChange(null as unknown as T, fieldPath);
-    });
-  }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]);
 
   return null;
 }
