@@ -13,6 +13,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy_file.storage import StorageManager
 
 from actidoo_wfe.database import drop_all, get_uri, run_migrations, setup_db, wait
+from actidoo_wfe.helpers.concurrency import wait_for_background_tasks
 from actidoo_wfe.settings import settings
 
 log = logging.getLogger(__name__)
@@ -69,6 +70,11 @@ def db_engine_ctx():
             log.exception(f"{type(error).__name__}: {error.args}.")
             raise
         finally:
+            # Drain async event handlers (run_background_task / commit_db_and_run_background_task)
+            # before dropping the DB - otherwise their queries race the teardown and surface as
+            # "Unknown database 'app_test'" errors in the log.
+            if not wait_for_background_tasks(timeout=10.0):
+                log.warning("Background tasks did not finish within timeout before db teardown")
             SessionLocal.remove()
             teardown_test_db()
 

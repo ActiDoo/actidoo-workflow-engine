@@ -5,13 +5,13 @@
 Event System Module
 
 This module provides a simple event system for handling events.
-Events should be published from the service layer, and handlers can be attached to 
+Events should be published from the service layer, and handlers can be attached to
 specific event types using the @handler decorator.
 
 Classes:
     Event: Base class for all events.
     Concrete Event Classes:
-      e.g. UserAssignedToReadyTaskEvent: Event class for when a user is assigned to a ready task or an already assigned task becomes ready.
+      e.g. TaskReadyForUserNotificationEvent: Event class for when a ready task should trigger a notification to its assigned user.
 
 Functions:
     publish_event(event): Publishes an event to all registered handlers.
@@ -23,15 +23,15 @@ Usage:
     Use the publish_event function to publish events, triggering all registered handlers for that event type.
 
 Example:
-    class UserAssignedToTaskEvent(Event):
+    class TaskReadyForUserNotificationEvent(Event):
         user_id: uuid.UUID
         task_id: uuid.UUID
-    
-    @handler(UserAssignedToTaskEvent)
-    def handle_user_assigned_to_task(event: UserAssignedToTaskEvent):
-        print(f"Handling event: User {event.user_id} assigned to task {event.task_id}")
 
-    event = UserAssignedToTaskEvent(user_id=uuid.uuid4(), task_id=uuid.uuid4())
+    @handler(TaskReadyForUserNotificationEvent)
+    def handle_task_ready_for_user_notification(event: TaskReadyForUserNotificationEvent):
+        print(f"Handling event: notify user {event.user_id} about ready task {event.task_id}")
+
+    event = TaskReadyForUserNotificationEvent(user_id=uuid.uuid4(), task_id=uuid.uuid4())
     publish_event(event)
 """
 
@@ -53,8 +53,11 @@ class Event(pydantic.BaseModel):
     pass
 
 
-class UserAssignedToReadyTaskEvent(Event):
+class TaskReadyForUserNotificationEvent(Event):
     user_id: uuid.UUID
+    task_id: uuid.UUID
+
+class TaskReadyForRoleNotificationEvent(Event):
     task_id: uuid.UUID
 
 class TaskBecameErroneousEvent(Event):

@@ -35,6 +35,24 @@ class MyThreadPoolExecutor(ThreadPoolExecutor):
 background_task_executor = MyThreadPoolExecutor(max_workers=50)
 """A global executor instance for running background tasks. Note that this needs to be considered when defining the sqlalchemy pool."""
 
+_pending_background_futures: set = set()
+"""Tracks submitted-but-not-completed futures so tests can wait for them before tearing down resources."""
+
+
+def wait_for_background_tasks(timeout: float = 5.0) -> bool:
+    """Block until all background tasks submitted via run_background_task / commit_db_and_run_background_task
+    have completed. Returns True if all finished within the timeout, False otherwise.
+
+    Intended for test fixtures that need to drain async work before tearing down shared state (DBs, mocks).
+    """
+    from concurrent.futures import wait
+
+    pending = list(_pending_background_futures)
+    if not pending:
+        return True
+    done, not_done = wait(pending, timeout=timeout)
+    return not not_done
+
 
 async def stop_executor():
     """Stops the background task executor. At first it does not accept any new items. After a timeout, all queued(not started) items will be canceled as well. Started items cannot be cancelled."""
@@ -59,6 +77,12 @@ async def stop_executor():
 
     background_task_executor.shutdown(wait=True, cancel_futures=True)
 
+def _submit_tracked(background_task):
+    future = background_task_executor.submit(background_task)
+    _pending_background_futures.add(future)
+    future.add_done_callback(_pending_background_futures.discard)
+
+
 def commit_db_and_run_background_task(db: Session, task, *args, **kwargs):
     """Commits and queues the task."""
     db.commit()
@@ -72,7 +96,7 @@ def commit_db_and_run_background_task(db: Session, task, *args, **kwargs):
         finally:
             SessionLocal.remove()
 
-    background_task_executor.submit(background_task)
+    _submit_tracked(background_task)
 
 def run_background_task(task, *args, **kwargs):
     def background_task():
@@ -81,4 +105,4 @@ def run_background_task(task, *args, **kwargs):
         except Exception:
             log.exception("Unexpected error during background_task")
     # kein Event-Loop nötig
-    background_task_executor.submit(background_task)
+    _submit_tracked(background_task)

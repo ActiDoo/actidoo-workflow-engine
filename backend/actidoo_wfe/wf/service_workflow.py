@@ -837,23 +837,42 @@ def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
 class LaneMappingSchema(BaseModel):
     initiator: bool | list[str] | None = Field(default=None)
     roles: List[str] = Field(default_factory=list)
+    notify_role_members: bool = Field(default=False)
+    notify_role_members_max: int | None = Field(default=None)
+
+
+def _parse_notify_role_members_max(raw: str | None) -> int | None:
+    if raw is None or raw == "":
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        raise Exception(f"'notify_role_members_max' must be an integer, got: {raw!r}")
 
 
 def get_lane_mapping(workflow: BpmnWorkflow) -> dict[str, dict]:
     wflanes = workflow.spec.wflanes
     mapping = {}
     for lane in wflanes.values():
+        custom_props = lane.get("custom_properties", {})
+
         # get "roles" extension property. If "roles" is missing we use "" as default value,
         # if user configured "roles", but left the entry empty we get None. We will treat this as error
-        lane_config = lane.get("custom_properties",{}).get("roles","")
+        lane_config = custom_props.get("roles", "")
         if lane_config is None:
             raise Exception((f"'roles' configured, but left empty in lane {lane['id']}"))
 
         role_list = [r.strip() for r in lane_config.split(",")] # create list of strings and strip all spaces
         role_list = [r for r in role_list if r != ""] # remove empty-string entries, so it's either an empty list [] or list of non-empty strings
+
+        notify_raw = custom_props.get("notify_role_members", None)
+        notify_role_members = str(notify_raw).strip().lower() == "true" if notify_raw is not None else False
+
         mapping[lane["name"]] = LaneMappingSchema(
             roles=role_list,
-            initiator=boolean_or_string_list(lane.get("custom_properties",{}).get("initiator",None))
+            initiator=boolean_or_string_list(custom_props.get("initiator", None)),
+            notify_role_members=notify_role_members,
+            notify_role_members_max=_parse_notify_role_members_max(custom_props.get("notify_role_members_max")),
         ).model_dump()
     return mapping
 

@@ -221,28 +221,45 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
             workflow=workflow, task_id=task.id
         )
 
-        ### Conditionally fire UserAssignedToReadyTaskEvent
+        ### Conditionally fire TaskReadyForUserNotificationEvent / TaskReadyForRoleNotificationEvent
         # Define conditions for readability
         is_manual_task = db_task.manual
         is_ready_state = db_task.state_ready
         has_assigned_user = db_task.assigned_user_id is not None
         is_newly_assigned_or_newly_ready = task_was_assigned_to != db_task.assigned_user_id or not task_was_ready
+        is_newly_ready = not task_was_ready and db_task.state_ready
         is_not_triggered_by_current_user = triggered_by is None or triggered_by != db_task.assigned_user_id
         is_excluded_by_property = _get_custom_props(task).get("send_assignment_email", None) == "no"
 
-        # Check if all conditions are met
         if (
-            is_manual_task and 
-            is_ready_state and 
-            has_assigned_user and 
-            is_newly_assigned_or_newly_ready and 
+            is_manual_task and
+            is_ready_state and
+            has_assigned_user and
+            is_newly_assigned_or_newly_ready and
             is_not_triggered_by_current_user and
             not is_excluded_by_property
         ):
-            events.publish_event(events.UserAssignedToReadyTaskEvent(
+            events.publish_event(events.TaskReadyForUserNotificationEvent(
                 user_id=db_task.assigned_user_id, # type: ignore
                 task_id=db_task.id
             ))
+        else:
+            # Role-broadcast only fires when the task is newly ready, has no direct assignee,
+            # and the lane is configured for it. Suppressed when the user-mail above fires.
+            lane_cfg = lane_mapping.get(task_spec.lane, {}) if task_spec.lane else {}
+            notify_role_members = lane_cfg.get("notify_role_members", False)
+
+            if (
+                is_manual_task and
+                is_ready_state and
+                is_newly_ready and
+                not has_assigned_user and
+                notify_role_members and
+                not is_excluded_by_property
+            ):
+                events.publish_event(events.TaskReadyForRoleNotificationEvent(
+                    task_id=db_task.id
+                ))
 
         ### Conditionally fire TaskBecameErroneousEvent
         if not task_was_erroneous and db_task.state_error:

@@ -16,7 +16,11 @@ from actidoo_wfe.wf.cross_context.imports import (
     get_token_from_session,
     login_hook,
 )
-from actidoo_wfe.wf.mail import send_task_became_erroneous_mail, send_user_assigned_to_task_mail
+from actidoo_wfe.wf.mail import (
+    send_task_became_erroneous_mail,
+    send_task_ready_to_role_members_mail,
+    send_user_assigned_to_task_mail,
+)
 from actidoo_wfe.wf.user_attributes import resolve_user_attributes_on_login
 
 log = logging.getLogger(__name__)
@@ -37,10 +41,15 @@ def wf_on_login(request: Request, db: Session, login_state: LoginStateSchema):
             db=db, user_id=user.id, role_names=login_state.roles
         )
 
-@events.event_handler(events.UserAssignedToReadyTaskEvent)
-def handle_user_assigned_to_task(event: events.UserAssignedToReadyTaskEvent):
+@events.event_handler(events.TaskReadyForUserNotificationEvent)
+def handle_task_ready_for_user_notification(event: events.TaskReadyForUserNotificationEvent):
     with get_db_contextmanager() as db:
         send_user_assigned_to_task_mail(task_id=event.task_id, user_id=event.user_id, db=db)
+
+@events.event_handler(events.TaskReadyForRoleNotificationEvent)
+def handle_task_ready_for_role_notification(event: events.TaskReadyForRoleNotificationEvent):
+    with get_db_contextmanager() as db:
+        send_task_ready_to_role_members_mail(task_id=event.task_id, db=db)
 
 @events.event_handler(events.TaskBecameErroneousEvent)
 def handle_erroneous_task(event: events.TaskBecameErroneousEvent):

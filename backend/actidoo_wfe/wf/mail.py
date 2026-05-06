@@ -19,6 +19,8 @@ from actidoo_wfe.wf.views import get_single_task, get_workflows_with_usertasks
 
 log = logging.getLogger(__name__)
 
+DEFAULT_NOTIFY_ROLE_MEMBERS_MAX = 10
+
 def _generate_instance_url(workflow_instance_id):
     return Markup(settings.frontend_base_url.rstrip("/") + "/tasks/open/" + str(workflow_instance_id ))
 
@@ -102,6 +104,55 @@ def send_user_assigned_to_task_mail(db: Session, user_id: uuid.UUID, task_id: uu
             num_sent += 1
 
     return num_sent
+
+def send_task_ready_to_role_members_mail(db: Session, task_id: uuid.UUID):
+    task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
+    if not task.state_ready:
+        return 0
+
+    instance = task.workflow_instance
+    lane_cfg = (instance.lane_mapping or {}).get(task.lane, {}) if task.lane else {}
+    cap = lane_cfg.get("notify_role_members_max") or DEFAULT_NOTIFY_ROLE_MEMBERS_MAX
+
+    role_names = [r.name for r in task.lane_roles]
+
+    recipients: dict = {}
+    for role_name in role_names:
+        for u in get_users_of_role(db=db, role_name=role_name):
+            if u.email:
+                recipients[u.id] = u
+
+    if not recipients:
+        return 0
+
+    if len(recipients) > cap:
+        log.warning(
+            "Skipping role-broadcast for task %s: %d recipients > cap %d (lane=%s)",
+            task_id, len(recipients), cap, task.lane,
+        )
+        return 0
+
+    num_sent = 0
+    for user in recipients.values():
+        text = compile_email_template(template="task_ready_for_role_members.mako", params={
+            "user": user,
+            "task": task,
+            "role_names": role_names,
+        })
+
+        subject = f"A task is waiting in your role for \"{task.workflow_instance.title or task.workflow_instance.name}\""
+
+        mail.send_text_mail(
+            subject=subject,
+            content=text,
+            recipient_or_recipients_list=user.email,
+            attachments=dict()
+        )
+        num_sent += 1
+
+    log.info(f"Sent task_ready_for_role_members for task {task_id} to {num_sent} recipients")
+    return num_sent
+
 
 def send_task_became_erroneous_mail(db: Session, task_id: uuid.UUID):
     task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
