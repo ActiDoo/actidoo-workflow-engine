@@ -175,7 +175,7 @@ Workflow Engine
     data_model_api_max_page_size: int = 500
 
     model_config = SettingsConfigDict(
-        env_file=(env_file, ".env.local"), secrets_dir="/run/secrets", env_nested_delimiter='__'
+        env_file=(".env.defaults", env_file, ".env.local"), secrets_dir="/run/secrets", env_nested_delimiter='__'
     )
     
     @field_validator("api_path", mode="before")
