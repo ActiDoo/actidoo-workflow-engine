@@ -19,7 +19,7 @@ from actidoo_wfe.wf.views import get_single_task, get_workflows_with_usertasks
 
 log = logging.getLogger(__name__)
 
-DEFAULT_NOTIFY_ROLE_MEMBERS_MAX = 10
+DEFAULT_NOTIFY_ROLE_MEMBERS_MAX = 20
 
 def _generate_instance_url(workflow_instance_id):
     return Markup(settings.frontend_base_url.rstrip("/") + "/tasks/open/" + str(workflow_instance_id ))
