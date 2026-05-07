@@ -19,6 +19,7 @@ import CustomMultiFileField from '@/rjsf-customs/custom-fields/multiFileField/Cu
 import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomSingleFileField';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
+import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
 import CustomFieldErrorTemplate from '@/rjsf-customs/templates/CustomFieldErrorTemplate';
 import CustomDescriptionFieldTemplate from '@/rjsf-customs/templates/CustomDescriptionFieldTemplate';
 import MultiSelectDynamic from '@/rjsf-customs/custom-widgets/MultiSelectDynamic';
@@ -40,6 +41,7 @@ const customWidgets: RegistryWidgetsType = {
   combobox: CustomComboBox,
   SelectWidget: CustomSelect,
   CheckboxWidget: CustomCheckbox,
+  CurrencyNumberWidget,
   MultiSelectDynamic,
   MultiSelectStatic,
   SelectDynamic,

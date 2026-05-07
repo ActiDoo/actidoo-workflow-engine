@@ -295,12 +295,18 @@ def _insert_single_component(
                 uischema[key].update({"ui:dependsOn": [x.strip() for x in custom_properties.get("depends_on").split(",")]})
 
     elif component["type"] == "number":
+        currency = custom_properties.get("currency")
+        if currency:
+            uischema[key].update({"ui:currency": currency, "ui:widget": "CurrencyNumberWidget"})
+
         jsonschema["properties"][key].update(
             {
                 "type": "number",
             }
         )
         if component.get("appearance", None) and component["appearance"].get("suffixAdorner", None):
+            if component["appearance"]["suffixAdorner"] == "€":
+                uischema[key].update({"ui:widget": "CurrencyNumberWidget"})
             uischema[key].update({"ui:suffixAdorner":component["appearance"]["suffixAdorner"]})
             title = jsonschema["properties"][key]["title"]
             # title += " /" + component["appearance"]["suffixAdorner"]
