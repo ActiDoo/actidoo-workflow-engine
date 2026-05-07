@@ -20,5 +20,3 @@ INTERNAL_DATA_KEY_DELEGATE_COMMENT = "delegate_submit_comment"
 # set_data in workflow instances
 DATA_KEY_CREATED_BY = "_created_by_id"
 DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE = "_subtitle"
-
-DEFAULT_LOCALE= "en"

@@ -12,11 +12,11 @@ FILL_FORM_DATA = {
 }
 
 NOT_APPROVE_FORM_DATA = {
-    "approve": "no"
+    "approve": "no",
 }
 
 APPROVE_FORM_DATA = {
-    "approve": "yes"
+    "approve": "yes",
 }
 
 
@@ -31,13 +31,13 @@ def test_incoming_message_workflow_happy_path(db_engine_ctx):
             },
             service_users_with_roles={
                 "initiator": ["wf-api"],
-            }
+            },
         )
 
         workflow.service_user("initiator").send_message(
             message_name="testflow_start_with_incoming_message_start",
             data=dict(FILL_FORM_DATA),
-            correlation_key=""
+            correlation_key="",
         )
         workflow.auto_set_workflow_instance_id()
 
@@ -51,7 +51,7 @@ def test_incoming_message_workflow_happy_path(db_engine_ctx):
         workflow.service_user("initiator").send_message(
             message_name="testflow_start_with_incoming_message_resubmit",
             data=dict(FILL_FORM_DATA),
-            correlation_key=subscriptions[0].correlation_key
+            correlation_key=subscriptions[0].correlation_key,
         )
 
         workflow.user("reviewer@example.com").get_usertasks(workflow.workflow_instance_id, 1)

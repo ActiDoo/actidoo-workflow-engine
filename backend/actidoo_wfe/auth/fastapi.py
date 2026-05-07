@@ -17,6 +17,7 @@ from actidoo_wfe.settings import settings
 router = APIRouter(tags=["auth"])
 log = logging.getLogger(__name__)
 
+
 @router.get("/do_login", name="auth_do_login", include_in_schema=False)
 def do_login(request: Request, redirect_url: str) -> Response:
     fastapi_redirect_uri = str(request.url_for("auth_login_callback"))
@@ -24,10 +25,12 @@ def do_login(request: Request, redirect_url: str) -> Response:
     client.client_kwargs["scope"] = settings.oidc_scopes
     return client.authorize_redirect(request, fastapi_redirect_uri)
 
+
 @router.get("/get_login_state", name="auth_get_login_state")
 def get_login_state_endpoint(request: Request) -> LoginStateResponseSchema:
     loginstate = get_login_state(request=request)
     return LoginStateResponseSchema.model_validate(loginstate.model_dump())
+
 
 @router.get("/login_callback", name="auth_login_callback", include_in_schema=False)
 def login_callback(request: Request, db=Depends(get_db)):
@@ -41,7 +44,7 @@ def login_callback(request: Request, db=Depends(get_db)):
         provider_error = request.query_params.get("error")
         if provider_error:
             raise OAuthError(error=provider_error)
-        
+
         access_token = client.authorize_access_token(request=request, redirect_uri=str(request.url_for("auth_login_callback")))
         set_token_in_session(request, access_token)
 
@@ -51,23 +54,23 @@ def login_callback(request: Request, db=Depends(get_db)):
         call_login_hooks(request, db)
     except (OAuthError,) as e:
         log.exception("Login callback failed: %s", e)
-        if (
-            request.session["login_fails"] >= 10
-        ):  # prevent endless redirect if frontend auto-initiates login
+        if request.session["login_fails"] >= 10:  # prevent endless redirect if frontend auto-initiates login
             request.session["login_fails"] = 0
             return RedirectResponse(url=request.url_for("auth_fallback"))
-        
+
         return RedirectResponse(
             url=request.session.get(
-                "login_redirect_url", request.url_for("auth_fallback")
-            )
+                "login_redirect_url",
+                request.url_for("auth_fallback"),
+            ),
         )
-    
+
     try:
         return RedirectResponse(
             url=request.session.get(
-                "login_redirect_url", request.url_for("auth_fallback")
-            )
+                "login_redirect_url",
+                request.url_for("auth_fallback"),
+            ),
         )
     except KeyError:
         return RedirectResponse(url=request.url_for("auth_fallback"))
@@ -89,7 +92,8 @@ def do_logout(request: Request, redirect_url: str, db=Depends(get_db)) -> Respon
 @router.get("/logout_callback", name="auth_logout_callback", include_in_schema=False)
 def logout_callback(request: Request, db=Depends(get_db)):
     redirect_url = request.cookies.get(
-        "logout_redirect_url", str(request.url_for("auth_fallback"))
+        "logout_redirect_url",
+        str(request.url_for("auth_fallback")),
     )
     response = RedirectResponse(url=redirect_url)
     response.delete_cookie(key="logout_redirect_url", secure=True, httponly=True)
@@ -102,7 +106,8 @@ def auth_fallback(request: Request) -> Response:
     login_state = get_login_state(request=request)
 
     debug_requested = settings.auth_debug_token_introspection or request.query_params.get(
-        "debug", ""
+        "debug",
+        "",
     ).lower() in {"1", "true", "yes", "on"}
 
     if debug_requested:
@@ -110,10 +115,7 @@ def auth_fallback(request: Request) -> Response:
         if settings.auth_debug_token_introspection and login_state.is_logged_in:
             token_debug = f"<br><br><pre>{get_claims(request)}</pre>"
 
-        content = (
-            "<html><body>Please visit target application. "
-            f"<br> LoggedIn: {login_state.is_logged_in}{token_debug}</body></html>"
-        )
+        content = f"<html><body>Please visit target application. <br> LoggedIn: {login_state.is_logged_in}{token_debug}</body></html>"
         return HTMLResponse(content=content, status_code=200)
 
     # Prefer the configured frontend entrypoint; fall back to explicit override only if frontend_base_url is empty.

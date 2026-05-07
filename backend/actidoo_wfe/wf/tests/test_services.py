@@ -7,11 +7,10 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select
 
-import actidoo_wfe.wf.bff.bff_user_schema as bff_user_schema
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf import repository, service_application, service_form, service_i18n, service_user
+from actidoo_wfe.wf import service_application, service_form, service_i18n, service_user
 from actidoo_wfe.wf.bff.bff_user import WorkflowInstancesBffTableQuerySchema
 from actidoo_wfe.wf.exceptions import (
     TaskAlreadyAssignedToDifferentUserException,
@@ -19,20 +18,11 @@ from actidoo_wfe.wf.exceptions import (
     TaskIsNotInReadyUsertasksException,
 )
 from actidoo_wfe.wf.models import WorkflowInstanceTask
-from actidoo_wfe.wf.tests.helpers.client import Client
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
 log: logging.Logger = logging.getLogger(__name__)
 
 setup_db(settings=settings)
-
-
-# TODO out-commented for now, because get_workflow now expects a user-authorization
-# def test_get_workflows(db_engine_ctx):
-#     with db_engine_ctx():
-#         client = Client()
-#         status, json_resp = client.get("get_workflows", bff_user_schema.GetWorkflowsResponse)
-#         assert len(json_resp.workflows) > 0
 
 
 def test_user_roles(db_engine_ctx):
@@ -168,14 +158,14 @@ def test_remove_datauri(db_engine_ctx):
                         "not": {
                             "type": "object",
                             "properties": {"travel_region": {"const": "sonstiges", "default": ""}},
-                        }
-                    }
+                        },
+                    },
                 },
                 "else": {
                     "properties": {"travel_approver": {"type": "null"}},
                     "type": "object",
                 },
-            }
+            },
         ],
     }
 
@@ -213,14 +203,14 @@ def test_remove_datauri(db_engine_ctx):
                         "not": {
                             "type": "object",
                             "properties": {"travel_region": {"const": "sonstiges", "default": ""}},
-                        }
-                    }
+                        },
+                    },
                 },
                 "else": {
                     "properties": {"travel_approver": {"type": "null"}},
                     "type": "object",
                 },
-            }
+            },
         ],
     }
 
@@ -340,34 +330,27 @@ def test_delegate_can_assign_and_submit_task(db_engine_ctx, mock_send_text_mail)
             user_id=delegate.id,
             state="ready",
         )
-        assert any(
-            any(
-                t.id == delegate_tasks[0].id
-                and t.can_be_assigned_as_delegate is True
-                for t in wf.active_tasks
-            )
-            for wf in ready_workflows.ITEMS
-        )
+        assert any(any(t.id == delegate_tasks[0].id and t.can_be_assigned_as_delegate is True for t in wf.active_tasks) for wf in ready_workflows.ITEMS)
 
         task_id = delegate_tasks[0].id
         service_application.assign_task_to_me(db=db, user_id=delegate.id, task_id=task_id)
 
         db_task = db.execute(
-            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
         ).scalar_one()
         assert db_task.assigned_user_id == principal.id
         assert db_task.assigned_delegate_user_id == delegate.id
 
         service_application.unassign_task_from_me(db=db, user_id=delegate.id, task_id=task_id)
         db_task = db.execute(
-            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
         ).scalar_one()
         assert db_task.assigned_user_id == principal.id
         assert db_task.assigned_delegate_user_id is None
 
         service_application.assign_task_to_me(db=db, user_id=delegate.id, task_id=task_id)
         db_task = db.execute(
-            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
         ).scalar_one()
         assert db_task.assigned_delegate_user_id == delegate.id
 
@@ -380,7 +363,7 @@ def test_delegate_can_assign_and_submit_task(db_engine_ctx, mock_send_text_mail)
         )
 
         db_task = db.execute(
-            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
         ).scalar_one()
         assert db_task.completed_by_user_id == principal.id
         assert db_task.completed_by_delegate_user_id == delegate.id
@@ -421,14 +404,8 @@ def test_delegate_can_assign_and_submit_task(db_engine_ctx, mock_send_text_mail)
             state="completed",
         )
 
-        assert any(
-            any(t.id == task_id for t in wf.completed_tasks)
-            for wf in delegate_workflows.ITEMS
-        )
-        assert any(
-            any(t.id == task_id for t in wf.completed_tasks)
-            for wf in principal_workflows.ITEMS
-        )
+        assert any(any(t.id == task_id for t in wf.completed_tasks) for wf in delegate_workflows.ITEMS)
+        assert any(any(t.id == task_id for t in wf.completed_tasks) for wf in principal_workflows.ITEMS)
 
 
 def test_delegate_cannot_assign_without_permission(db_engine_ctx):
@@ -494,7 +471,7 @@ def test_delegate_unassign_active_assignment(db_engine_ctx):
 
         service_application.unassign_task_from_me(db=db, user_id=helper.id, task_id=task_id)
         db_task = db.execute(
-            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
         ).scalar_one()
         assert db_task.assigned_user_id == principal.id
         assert db_task.assigned_delegate_user_id is None
@@ -576,16 +553,18 @@ def test_cannot_unassign_completed_task(db_engine_ctx):
         with pytest.raises(TaskCannotBeUnassignedException):
             service_application.unassign_task_from_me(db=db, user_id=principal.id, task_id=task_id)
         db_task = db.execute(
-            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+            select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
         ).scalar_one()
         assert db_task.assigned_user_id == principal.id
         assert db_task.assigned_delegate_user_id is None
+
 
 def test_supported_locales_fit_db_column():
     service_i18n.get_supported_locales.cache_clear()
     locales = service_i18n.get_supported_locales()
     assert locales  # ensure at least one locale is available
     assert all(len(loc["key"]) <= service_i18n.MAX_LOCALE_KEY_LENGTH for loc in locales)
+
 
 @pytest.mark.parametrize(
     "header,expected",
@@ -600,7 +579,7 @@ def test_supported_locales_fit_db_column():
         ("", None),
         ("not-a-header", None),
         # without country will not match any
-        ("en;q=0.5,en;q=0.9", None), 
+        ("en;q=0.5,en;q=0.9", None),
         # case preserved
         ("EN-US,en;q=0.9", "en-US"),
         ("DE-DE,de;q=0.9", "de-DE"),
@@ -638,7 +617,4 @@ def test_match_translation(user_locale, available, default, expected, monkeypatc
     monkeypatch.setattr(settings, "default_locale", default)
 
     result = service_i18n.match_translation(user_locale=user_locale, available=available)
-    assert result == expected, (
-        f"match_translation({user_locale!r}, {available}, default={default!r}) -> {result!r}, "
-        f"expected {expected!r}"
-    )
+    assert result == expected, f"match_translation({user_locale!r}, {available}, default={default!r}) -> {result!r}, expected {expected!r}"

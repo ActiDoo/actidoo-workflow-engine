@@ -20,7 +20,7 @@ def service_assign_user(sth: ServiceTaskHelper):
     sth.assign_user_without_role(
         bpmn_task_id=bpmn_task_id,
         email=reviewer_email,
-        create_user=True
+        create_user=True,
     )
 
 

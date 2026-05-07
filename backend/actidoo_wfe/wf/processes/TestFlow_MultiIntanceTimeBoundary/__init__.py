@@ -11,29 +11,35 @@ log = logging.getLogger(__name__)
 
 def service_create_multi_instance(sth: ServiceTaskHelper):
     users = sth.get_users_of_role("wf-multi-instance-reviewer")
-    sth.set_task_data({
-        "key_users": [u.email for u in users]
-    })
+    sth.set_task_data(
+        {
+            "key_users": [u.email for u in users],
+        }
+    )
+
 
 def service_assign_multi_instance_task(sth: ServiceTaskHelper):
-    sth.set_task_data({
-        "count": 0,
-        "vote": 0
-    })
+    sth.set_task_data(
+        {
+            "count": 0,
+            "vote": 0,
+        }
+    )
     sth.assign_user_without_role(
         bpmn_task_id="GroupReview",
-        email=sth.task_data.get("key_user")
+        email=sth.task_data.get("key_user"),
     )
+
 
 def service_send_info_mail(sth: ServiceTaskHelper):
     key_user_email = sth.task_data.get("key_user")
     if not key_user_email:
         log.warning("service_send_info_mail: no key_user email found; skipping mail")
         return
-    
+
     sth.assign_user_without_role(
         bpmn_task_id="GroupReview",
-        email=sth.task_data.get("key_user")
+        email=sth.task_data.get("key_user"),
     )
 
     attempt = int(sth.task_data.get("count", 0)) + 1
@@ -51,13 +57,15 @@ def service_send_info_mail(sth: ServiceTaskHelper):
     details_lines.append("")
     details_lines.append(f"Open task: {workflow_link}")
 
-    content = "\n".join([
-        "Hello,",
-        "",
-        "please review the sample multi-instance request.",
-        "",
-        *details_lines,
-    ])
+    content = "\n".join(
+        [
+            "Hello,",
+            "",
+            "please review the sample multi-instance request.",
+            "",
+            *details_lines,
+        ]
+    )
 
     subject = f"Group review required{reminder_suffix}"
 
@@ -68,9 +76,12 @@ def service_send_info_mail(sth: ServiceTaskHelper):
         attachments={},
     )
 
+
 def service_evaluate_votes(sth: ServiceTaskHelper):
     raw_votes = sth.task_data.get("votes")
 
-    sth.set_task_data({
-        "success": sum([int(v) for v in raw_votes]) > 3,
-    })
+    sth.set_task_data(
+        {
+            "success": sum([int(v) for v in raw_votes]) > 3,
+        }
+    )

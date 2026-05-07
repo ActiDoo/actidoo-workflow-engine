@@ -64,6 +64,7 @@ def test_taskInRoleLane_skipsMail_whenRoleExceedsCap(db_engine_ctx, mock_send_te
         # Give the background handler time to run, then assert no mail was sent.
         # We can't easily wait_for_results for "0 results", so sleep a short fixed window.
         import time
+
         time.sleep(1.0)
 
         assert len(mock_send_text_mail) == 0

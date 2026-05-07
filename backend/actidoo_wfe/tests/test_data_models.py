@@ -52,6 +52,7 @@ class TestExtensionModelBase:
         TestModel = extension_model_base("phoenix")
 
         with pytest.raises(ValueError, match="must define '_ext_table'"):
+
             class Bad(TestModel):
                 __abstract__ = False
                 id: Mapped[str] = mapped_column(String(50), primary_key=True)
@@ -194,6 +195,7 @@ class TestRegisterDataModelDecorator:
         api_cfg = WorkflowDataApiConfig(read_roles=["viewer"])
 
         with pytest.raises(TypeError, match="WorkflowManagedMixin"):
+
             @register_data_model(name="BadApiModel", api=api_cfg)
             class BadApiModel(TestModel):
                 _ext_table = "bam"
@@ -244,6 +246,7 @@ class TestDependencyEnforcement:
             id: Mapped[str] = mapped_column(String(50), primary_key=True)
 
         from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
+
         sth = object.__new__(ServiceTaskHelper)
         sth._allowed_data_models = {"AllowedModel"}
         sth.db = MagicMock()
@@ -253,6 +256,7 @@ class TestDependencyEnforcement:
 
     def test_get_model_denied(self):
         from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
+
         sth = object.__new__(ServiceTaskHelper)
         sth._allowed_data_models = set()
         sth.db = MagicMock()
@@ -262,6 +266,7 @@ class TestDependencyEnforcement:
 
     def test_enforcement_oth(self):
         from actidoo_wfe.wf.option_task_helper import OptionTaskHelper
+
         oth = object.__new__(OptionTaskHelper)
         oth._allowed_data_models = set()
         oth.db = MagicMock()
@@ -271,6 +276,7 @@ class TestDependencyEnforcement:
 
     def test_enforcement_vth(self):
         from actidoo_wfe.wf.validation_task_helper import ValidationTaskHelper
+
         vth = object.__new__(ValidationTaskHelper)
         vth._allowed_data_models = set()
         vth.db = MagicMock()

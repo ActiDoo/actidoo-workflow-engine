@@ -40,6 +40,7 @@ from actidoo_wfe.wf.views import get_single_task
 
 log = logging.getLogger(__name__)
 
+
 class ServiceTaskHelper:
     # NOTE: We must not use application services here, which load and save the workflow. The workflow is already in a modification state during task execution.
     # Only use service_workflow when modifying the workflow/task state!!!!
@@ -64,7 +65,7 @@ class ServiceTaskHelper:
         self.task_uuid = task_uuid
         self._allowed_data_models: set[str] = allowed_data_models or set()
 
-    def pretty_log(self, json_data: dict, boxed = True):
+    def pretty_log(self, json_data: dict, boxed=True):
         """
         Logs the provided JSON data in a formatted/boxed manner.
 
@@ -77,52 +78,51 @@ class ServiceTaskHelper:
             log.debug("\n" + get_boxed_text(json_formatted_str))
         else:
             log.debug(json_formatted_str)
-        
+
     def get_task(self, bpmn_task_id) -> Task | None:
         for task in self.workflow.get_tasks():
             task_spec: BpmnTaskSpec = task.task_spec
             if task_spec.bpmn_id == bpmn_task_id:
                 return task
         return None
-    
+
     def _get_db_task(self, bpmn_task_id) -> WorkflowInstanceTask:
         spiff_task = self.get_task(bpmn_task_id=bpmn_task_id)
         if not spiff_task:
             raise TaskNotFoundException(f"{bpmn_task_id} not found")
-        
+
         task_uuid = spiff_task.id
 
         db_task = get_single_task(self.db, task_uuid)
 
         return db_task
-    
+
     def get_task_completion_day(self, bpmn_task_id) -> str:
         try:
             datetime_obj = self._get_db_task(bpmn_task_id).completed_at
             # timing problem: "completed_at" may not be written into the database, yet.
             # Use now() in such a case.:
-            if not datetime_obj:                
+            if not datetime_obj:
                 datetime_obj = datetime.now()
-            
-            datetime_obj = datetime_obj.replace(tzinfo=timezone.utc) # timedate.replace will make the object timezone-aware
-                
-                
-            datetime_obj = datetime_obj.astimezone(ZoneInfo('Europe/Berlin'))
-            
+
+            datetime_obj = datetime_obj.replace(tzinfo=timezone.utc)  # timedate.replace will make the object timezone-aware
+
+            datetime_obj = datetime_obj.astimezone(ZoneInfo("Europe/Berlin"))
+
             # Format the date
-            formatted_date = datetime_obj.strftime('%d.%m.%Y')
+            formatted_date = datetime_obj.strftime("%d.%m.%Y")
             return formatted_date
         except Exception as error:
             log.exception(f"{type(error).__name__}: {error.args}")
             return "??.??.????"
-        
+
     def get_task_completion_datetime(self, bpmn_task_id) -> str:
         try:
-            datetime_obj = self._get_db_task(bpmn_task_id).completed_at.replace(tzinfo=timezone.utc) # timedate.replace will make the object timezone-aware
-            datetime_obj = datetime_obj.astimezone(ZoneInfo('Europe/Berlin'))
-            
+            datetime_obj = self._get_db_task(bpmn_task_id).completed_at.replace(tzinfo=timezone.utc)  # timedate.replace will make the object timezone-aware
+            datetime_obj = datetime_obj.astimezone(ZoneInfo("Europe/Berlin"))
+
             # Format the date
-            formatted_date = datetime_obj.strftime('%d.%m.%Y %H:%M:%S')
+            formatted_date = datetime_obj.strftime("%d.%m.%Y %H:%M:%S")
             return formatted_date
         except Exception as error:
             log.exception(f"{type(error).__name__}: {error.args}")
@@ -149,7 +149,7 @@ class ServiceTaskHelper:
         if isinstance(user_id, str):
             user_id = UUID(user_id)
         return repository.load_user(db=self.db, user_id=user_id)
-    
+
     def update_task_data(self, update_dict):
         """
         deprecated, use "set_task_data" instead
@@ -190,7 +190,7 @@ class ServiceTaskHelper:
 
         Returns:
             UserRepresentation: The user assigned to the specified task.
-        
+
         Raises:
             AssertionError: If the user representation is not of the expected type.
             IndexError: If no completed tasks with the given name exist.
@@ -219,14 +219,16 @@ class ServiceTaskHelper:
             user_rep = self.get_user_by_id(user_id=created_by_id)
 
         return user_rep
-    
+
     def get_attachment_by_hash(self, hash):
 
         attachments = repository.find_task_attachments_by_worfklow_instance_id(
-            db=self.db, workflow_instance_id=self.workflow_instance_id
+            db=self.db,
+            workflow_instance_id=self.workflow_instance_id,
         )
         att: WorkflowInstanceTaskAttachment | None = next(
-            (a for a in attachments if a.attachment.hash == hash), None
+            (a for a in attachments if a.attachment.hash == hash),
+            None,
         )
         if att is None:
             raise AttachmentNotFoundException()
@@ -241,7 +243,7 @@ class ServiceTaskHelper:
         )
 
     def set_workflow_instance_subtitle(self, subtitle):
-        if subtitle and len(subtitle)>50:
+        if subtitle and len(subtitle) > 50:
             subtitle = subtitle[:47] + "..."
         self.workflow.set_data(**{DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE: subtitle})
 
@@ -308,7 +310,7 @@ class ServiceTaskHelper:
                 user = None
 
         assert user is not None
-        assert user.email.lower() == email.lower() #type: ignore
+        assert user.email.lower() == email.lower()  # type: ignore
 
         upcoming_tasks = self._get_upcoming_tasks_by_name(bpmn_task_id)
 
@@ -374,15 +376,15 @@ class ServiceTaskHelper:
         Raises:
             TaskNotFoundException: If no future task is found in the workflow.
         """
-        for task in self.workflow.get_tasks(): # returns an ordered list, so the first FUTURE task will be the next one.
+        for task in self.workflow.get_tasks():  # returns an ordered list, so the first FUTURE task will be the next one.
             if task.has_state(TaskState.FUTURE):
                 return task
         raise TaskNotFoundException("No future task found")
 
     def get_last_completed_task_name(self) -> str:
-        '''
+        """
         Returns the last completed task name (e.g. "Form040_CostApproval")
-        '''
+        """
         return self.get_last_completed_task().task_spec.name
 
     def get_single_completed_task_by_name_and_condition_sorted_by_last_state_change(self, name, condition_func: Callable):
@@ -396,8 +398,9 @@ class ServiceTaskHelper:
 
     def get_users_of_role(self, role_name):
         from actidoo_wfe.wf.service_user import get_users_of_role
+
         return get_users_of_role(self.db, role_name)
-    
+
     def get_label_from_form(self, form_id, form_key, default_value=""):
         """
         Retrieves the label associated with a value from a specified form based on the provided form ID and key.
@@ -430,16 +433,17 @@ class ServiceTaskHelper:
             # that is not contained in the form data.
             log.exception(f"{type(error).__name__}: {error.args}")
             return default_value
-        
+
     def get_connector(self, type_name: str, instance_name: str):
         """Obtain a configured connector as a context manager.
 
         Usage::
 
-            with sth.get_connector("jira", "europe_pxc") as jira:
+            with sth.get_connector("jira", "abc") as jira:
                 jira.create_issue(...)
         """
         from actidoo_wfe.connectors import get_connector
+
         return get_connector(type_name=type_name, instance_name=instance_name)
 
     def get_model(self, model_name: str) -> type:
@@ -450,6 +454,7 @@ class ServiceTaskHelper:
         """
         from actidoo_wfe.wf.exceptions import DataModelAccessDeniedError
         from actidoo_wfe.wf.registry_data_model import data_model_registry
+
         if model_name not in self._allowed_data_models:
             raise DataModelAccessDeniedError(model_name, self._allowed_data_models)
         descriptor = data_model_registry.get(model_name)
@@ -457,7 +462,7 @@ class ServiceTaskHelper:
 
     def _upload_attachment(self, datauri: str) -> UploadedAttachmentRepresentation:
         # TODO see service_application for the same implementation. Move to repository.py?
-        
+
         db = self.db
 
         workflow = self.workflow
@@ -475,7 +480,11 @@ class ServiceTaskHelper:
         hash = hasher.hexdigest()
 
         attachment = repository.store_attachment(
-            db=db, filename=filename, mimetype=mimetype, data=data, hash=hash
+            db=db,
+            filename=filename,
+            mimetype=mimetype,
+            data=data,
+            hash=hash,
         )
         repository.store_attachment_for_workflow_instance(
             db=db,
@@ -484,11 +493,17 @@ class ServiceTaskHelper:
             filename=filename,
         )
         repository.store_attachment_for_task(
-            db=db, task_id=self.task_uuid, attachment_id=attachment.id, filename=filename
+            db=db,
+            task_id=self.task_uuid,
+            attachment_id=attachment.id,
+            filename=filename,
         )
 
         return UploadedAttachmentRepresentation(
-            hash=hash, filename=filename, id=attachment.id, mimetype=mimetype
+            hash=hash,
+            filename=filename,
+            id=attachment.id,
+            mimetype=mimetype,
         )
 
     def get_mail_attachments(self, key_or_keys):
@@ -520,7 +535,7 @@ class ServiceTaskHelper:
         for key in keys:
             att = self.task_data.get(key)
             if not att:
-                continue # if fields are not mandatory its value will be empty, then skip
+                continue  # if fields are not mandatory its value will be empty, then skip
 
             # each key can hold a single attachment or several attachments, let's create a list if necessary:
             att_list = att if isinstance(att, list) else [att]
@@ -556,12 +571,8 @@ class ServiceTaskHelper:
             None. Updates task data in-place.
         """
         data_as_base64 = self._bytesIO_to_base64(data_bytesIO)
-        sanitized_name = re.sub(r'[^a-zA-Z0-9äöüÄÖÜ\-\_\(\)]', '', name)
+        sanitized_name = re.sub(r"[^a-zA-Z0-9äöüÄÖÜ\-\_\(\)]", "", name)
         sanitized_name = sanitized_name + "." + extension
         datauri_value = f"data:application/{extension};name={sanitized_name};base64,{data_as_base64}"
         att = self._upload_attachment(datauri_value)
         self.set_task_data_key(destination_key, att.model_dump())
-
-
-
-

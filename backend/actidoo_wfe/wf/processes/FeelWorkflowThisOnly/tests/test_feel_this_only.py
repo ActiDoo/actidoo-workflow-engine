@@ -7,9 +7,8 @@ WF_NAME = "FeelWorkflowThisOnly"
 
 log = logging.getLogger(__name__)
 
-FORM_DATA = {
+FORM_DATA = {}
 
-}
 
 def _start_workflow():
     db_session = SessionLocal()
@@ -17,14 +16,13 @@ def _start_workflow():
     workflow = WorkflowDummy(
         db_session=db_session,
         users_with_roles={  # keycloak-realm dummy
-            "initiator": ["wf-user"]
+            "initiator": ["wf-user"],
         },
         workflow_name=WF_NAME,
         start_user="initiator",
     )
 
     return workflow
-
 
 
 def test_feel_this(db_engine_ctx, mock_send_text_mail):

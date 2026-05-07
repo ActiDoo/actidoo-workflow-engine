@@ -20,7 +20,7 @@ class HTTPAccessLogMiddleware:
             request = Request(scope)
 
         if request.url.path.endswith("/docs") or request.url.path.endswith(
-            "/openapi.json"
+            "/openapi.json",
         ):
             await self.app(scope, receive, send)
             return
@@ -33,7 +33,7 @@ class HTTPAccessLogMiddleware:
             if message["type"] == "http.response.start":
                 if request.client is not None:
                     log.info(
-                        f"{request.client.host}:{request.client.port} - {request.method} {request.url} {message['status']}"
+                        f"{request.client.host}:{request.client.port} - {request.method} {request.url} {message['status']}",
                     )
 
             await send(message)

@@ -243,6 +243,7 @@ class TestHelperIntegration:
         monkeypatch.setattr("actidoo_wfe.settings.settings", fake_settings)
 
         from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
+
         sth = object.__new__(ServiceTaskHelper)  # skip __init__
         with sth.get_connector("dummy", "inst1") as obj:
             assert obj["url"] == "https://sth.test"
@@ -256,6 +257,7 @@ class TestHelperIntegration:
         monkeypatch.setattr("actidoo_wfe.settings.settings", fake_settings)
 
         from actidoo_wfe.wf.option_task_helper import OptionTaskHelper
+
         oth = object.__new__(OptionTaskHelper)
         with oth.get_connector("dummy", "inst1") as obj:
             assert obj["url"] == "https://oth.test"
@@ -269,6 +271,7 @@ class TestHelperIntegration:
         monkeypatch.setattr("actidoo_wfe.settings.settings", fake_settings)
 
         from actidoo_wfe.wf.validation_task_helper import ValidationTaskHelper
+
         vth = object.__new__(ValidationTaskHelper)
         with vth.get_connector("dummy", "inst1") as obj:
             assert obj["url"] == "https://vth.test"

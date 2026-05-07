@@ -23,11 +23,6 @@ from pydantic import BaseModel, ValidationError
 log = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Exceptions
-# ---------------------------------------------------------------------------
-
-
 class ConnectorTypeNotFoundError(KeyError):
     """Raised when a connector type has not been registered."""
 
@@ -36,22 +31,12 @@ class ConnectorInstanceNotFoundError(KeyError):
     """Raised when a named connector instance is not present in settings."""
 
 
-# ---------------------------------------------------------------------------
-# ConnectorType — immutable descriptor for a registered connector
-# ---------------------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class ConnectorType:
     name: str
     config_schema: Type[BaseModel]
     factory: Callable[[BaseModel], ContextManager]
     source_name: str = ""
-
-
-# ---------------------------------------------------------------------------
-# ConnectorRegistry
-# ---------------------------------------------------------------------------
 
 
 class ConnectorRegistry:
@@ -66,8 +51,7 @@ class ConnectorRegistry:
             if existing.factory is ct.factory:
                 return  # dedup — same factory, no conflict
             raise ValueError(
-                f"Connector type '{ct.name}' already registered with a different factory "
-                f"(existing source: {existing.source_name!r}, new source: {ct.source_name!r})"
+                f"Connector type '{ct.name}' already registered with a different factory (existing source: {existing.source_name!r}, new source: {ct.source_name!r})",
             )
         self._types[ct.name] = ct
         log.debug("Registered connector type %r (source=%s)", ct.name, ct.source_name or "?")
@@ -77,8 +61,7 @@ class ConnectorRegistry:
             return self._types[name]
         except KeyError:
             raise ConnectorTypeNotFoundError(
-                f"Connector type '{name}' is not registered. "
-                f"Available types: {sorted(self._types)}"
+                f"Connector type '{name}' is not registered. Available types: {sorted(self._types)}",
             ) from None
 
     def list_types(self) -> List[str]:
@@ -89,11 +72,6 @@ class ConnectorRegistry:
 
 
 connector_registry = ConnectorRegistry()
-
-
-# ---------------------------------------------------------------------------
-# get_connector — resolution helper
-# ---------------------------------------------------------------------------
 
 
 def get_connector(type_name: str, instance_name: str) -> ContextManager:
@@ -111,24 +89,17 @@ def get_connector(type_name: str, instance_name: str) -> ContextManager:
     type_instances = settings.connectors.get(type_name)
     if not type_instances:
         raise ConnectorInstanceNotFoundError(
-            f"No connector instances configured for type '{type_name}'. "
-            f"Expected settings.connectors['{type_name}'] to contain instance configs."
+            f"No connector instances configured for type '{type_name}'. Expected settings.connectors['{type_name}'] to contain instance configs.",
         )
 
     raw_config = type_instances.get(instance_name)
     if raw_config is None:
         raise ConnectorInstanceNotFoundError(
-            f"Connector instance '{instance_name}' not found for type '{type_name}'. "
-            f"Available instances: {sorted(type_instances)}"
+            f"Connector instance '{instance_name}' not found for type '{type_name}'. Available instances: {sorted(type_instances)}",
         )
 
     validated = ct.config_schema(**raw_config)
     return ct.factory(validated)
-
-
-# ---------------------------------------------------------------------------
-# Startup validation (optional, non-blocking)
-# ---------------------------------------------------------------------------
 
 
 def validate_configured_connectors() -> List[str]:
@@ -159,11 +130,6 @@ def validate_configured_connectors() -> List[str]:
                 warnings.append(f"Connector {type_name}/{instance_name}: unexpected error: {exc}")
 
     return warnings
-
-
-# ---------------------------------------------------------------------------
-# @register_connector_type — venusian decorator (dual registration)
-# ---------------------------------------------------------------------------
 
 
 def register_connector_type(

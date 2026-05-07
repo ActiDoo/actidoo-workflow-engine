@@ -57,16 +57,20 @@ class TaskReadyForUserNotificationEvent(Event):
     user_id: uuid.UUID
     task_id: uuid.UUID
 
+
 class TaskReadyForRoleNotificationEvent(Event):
     task_id: uuid.UUID
+
 
 class TaskBecameErroneousEvent(Event):
     task_id: uuid.UUID
 
+
 handlers = {}
 session_events = {}
 
-def publish_event(event: Event, session: Session|None = None):
+
+def publish_event(event: Event, session: Session | None = None):
     """Collects an event to be published after transaction commit."""
     if session is None:
         session = SessionLocal()
@@ -78,18 +82,21 @@ def publish_event(event: Event, session: Session|None = None):
             session_events[session] = []
         session_events[session].append(event)
 
-        
+
 def event_handler(event_type):
     def decorator(func):
         if event_type not in handlers:
             handlers[event_type] = []
         handlers[event_type].append(func)
-        
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
+
 
 def handle_pending_events(session):
     """Handles all collected events for a given session."""
@@ -97,7 +104,7 @@ def handle_pending_events(session):
         while session_events[session]:
             event = session_events[session].pop(0)
             _handle_event(event)
-            
+
 
 def _handle_event(event):
     event_type = type(event)
@@ -110,14 +117,16 @@ def after_commit(session):
     handle_pending_events(session)
     cleanup_session_events(session, None)
 
+
 def cleanup_session_events(session, transaction=None):
     """Cleans up session events to prevent memory leaks."""
     if transaction is None or (not transaction.nested and transaction.parent is None):
         if session in session_events:
-            if len(session_events[session])>0:
+            if len(session_events[session]) > 0:
                 log.warning("Cleaning non-empty session_events queue in cleanup_session_events")
             del session_events[session]
 
-event.listen(Session, 'after_commit', after_commit)
-event.listen(Session, 'after_transaction_end', cleanup_session_events)
-event.listen(Session, 'after_rollback', cleanup_session_events)
+
+event.listen(Session, "after_commit", after_commit)
+event.listen(Session, "after_transaction_end", cleanup_session_events)
+event.listen(Session, "after_rollback", cleanup_session_events)

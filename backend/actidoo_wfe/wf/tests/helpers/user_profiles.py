@@ -28,7 +28,7 @@ def get_test_user_profiles() -> list[TestUserProfile]:
                 last_name=last_names[(index - 1) % len(last_names)],
                 sex="F" if index % 2 == 0 else "M",
                 idp_user_id=str(index),
-            )
+            ),
         )
 
     return profiles

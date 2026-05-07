@@ -2,10 +2,10 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 """
-    This module contains most of our work around workflow instances:
-    Loading, Execution, User Assignment, Delegations to Form-Service,....
+This module contains most of our work around workflow instances:
+Loading, Execution, User Assignment, Delegations to Form-Service,....
 
-    This module works on domain objects. There must not be any database involved here.
+This module works on domain objects. There must not be any database involved here.
 """
 
 import collections
@@ -73,10 +73,10 @@ from actidoo_wfe.wf.types import (
 
 log = logging.getLogger(__name__)
 
+
 def load_process_from_file(name: str):
     """Loads a process from files parses it and returns a BpmnWorkflow object"""
     try:
-
         parser = get_parser()
         folder = workflow_providers.get_workflow_directory(name)
         bpmn_files = [str(x.absolute()) for x in folder.glob("*.bpmn") if x.is_file()]
@@ -85,16 +85,19 @@ def load_process_from_file(name: str):
         if dmn_files:
             parser.add_dmn_files(dmn_files)
 
-        top_level = parser.get_spec(name) # This is where the real parsing is called in MyProcessParser._parse() of spiff_customized.py
+        top_level = parser.get_spec(name)  # This is where the real parsing is called in MyProcessParser._parse() of spiff_customized.py
         subprocesses = parser.get_subprocess_specs(name)
         workflow = BpmnWorkflow(
-            top_level, subprocesses, script_engine=get_script_engine(workflow_name=name)
+            top_level,
+            subprocesses,
+            script_engine=get_script_engine(workflow_name=name),
         )
 
         return workflow
     except ValidationException as error:
         log.error(f"load_process_from_file({name}): {type(error).__name__}: {error.args}, id={error.id}, name={error.name}, file = {error.file_name}")
         raise error
+
 
 def start_process(name: str, created_by: UserRepresentation):
     """Loads a process from files, sets the creator and returns a BpmnWorkflow object"""
@@ -104,14 +107,15 @@ def start_process(name: str, created_by: UserRepresentation):
     workflow.set_data(**{DATA_KEY_CREATED_BY: str(created_by.id)})
     return workflow
 
+
 def user_may_start_workflow(name: str, user: UserRepresentation):
-    workflow_initiator_roles= get_initiator_property_cached(name=name)
+    workflow_initiator_roles = get_initiator_property_cached(name=name)
 
     if workflow_initiator_roles is None:
         return True
     else:
-        return workflow_initiator_roles is True or  \
-            (isinstance(workflow_initiator_roles, list) and len(set(workflow_initiator_roles) & user.roles)>0 )
+        return workflow_initiator_roles is True or (isinstance(workflow_initiator_roles, list) and len(set(workflow_initiator_roles) & user.roles) > 0)
+
 
 def restore(serialized_data: dict):
     """Restores a workflow from serialized data"""
@@ -126,12 +130,14 @@ def dump(workflow: BpmnWorkflow):
     """Serializes a workflow"""
     serializer = get_serializer()
     dct = serializer.to_dict(workflow)
-    dct[serializer.VERSION_KEY] = serializer.VERSION # type: ignore
+    dct[serializer.VERSION_KEY] = serializer.VERSION  # type: ignore
     return dct
-    #return json.dumps(dct, indent=2, separators=(", ", ": "))
+    # return json.dumps(dct, indent=2, separators=(", ", ": "))
+
 
 def get_unfinished_tasks(workflow: BpmnWorkflow):
-    return workflow.get_tasks(task_filter=TaskFilter(state = TaskState.NOT_FINISHED_MASK))
+    return workflow.get_tasks(task_filter=TaskFilter(state=TaskState.NOT_FINISHED_MASK))
+
 
 def get_faulty_tasks(workflow: BpmnWorkflow):
     # See comment in get_completed_usertasks(): for BPMN workflows, querying FINISHED-like states
@@ -139,48 +145,52 @@ def get_faulty_tasks(workflow: BpmnWorkflow):
     # and filter explicitly.
     return [t for t in workflow.get_tasks() if t.has_state(TaskState.ERROR)]
 
+
 def run_workflow(workflow: BpmnWorkflow):
     """Runs all possible tasks and finally auto-assigns if possible"""
 
     # TODO: This logic could be moved to application service, as we might want to persist after each step?!?
 
     if not workflow.is_completed():
-        engine_tasks = [
-            t for t in workflow.get_tasks(task_filter=TaskFilter(state = TaskState.READY, manual=False))
-        ]
+        engine_tasks = [t for t in workflow.get_tasks(task_filter=TaskFilter(state=TaskState.READY, manual=False))]
         result = True
         while len(engine_tasks) > 0:
             for task in engine_tasks:
                 set_stacktrace(
-                    workflow=workflow, task_id=task.id, stacktrace=None
+                    workflow=workflow,
+                    task_id=task.id,
+                    stacktrace=None,
                 )  # reset stacktrace
                 try:
                     success = task.run()
                     if not success:
                         result = False
                         task.error()
-                        log.exception("task failed") # TODO no error code is returned
-                except Exception as error: # WorkflowTaskException("Error evaluating expression '=optional_approver1 != null'")
-                    log.exception(f'{type(error).__name__}: {error.args}') # TODO the exception/args is often very descriptive, but the information is not re-raised, only a bool gets return and the Exception info is lost....
+                        log.exception("task failed")  # TODO no error code is returned
+                except Exception as error:  # WorkflowTaskException("Error evaluating expression '=optional_approver1 != null'")
+                    log.exception(
+                        f"{type(error).__name__}: {error.args}"
+                    )  # TODO the exception/args is often very descriptive, but the information is not re-raised, only a bool gets return and the Exception info is lost....
                     result = False
                     task.error()
                     s_traceback = traceback.format_exc()
                     set_stacktrace(
-                        workflow=workflow, task_id=task.id, stacktrace=s_traceback
+                        workflow=workflow,
+                        task_id=task.id,
+                        stacktrace=s_traceback,
                     )
-                    log.exception("task failed") # TODO no error code is returned
+                    log.exception("task failed")  # TODO no error code is returned
 
             workflow.refresh_waiting_tasks()
-            engine_tasks = [
-                t for t in workflow.get_tasks(task_filter=TaskFilter(state = TaskState.READY, manual=False))
-            ]
+            engine_tasks = [t for t in workflow.get_tasks(task_filter=TaskFilter(state=TaskState.READY, manual=False))]
 
     auto_assign_all_tasks_in_initiator_lane(workflow=workflow)
     cleanup_hidden_fields_for_ready_tasks(workflow=workflow)
     return result
 
+
 def update(dest, upd):
-    ''' A deep update function, which merges the contents of two dictionaries.'''
+    """A deep update function, which merges the contents of two dictionaries."""
     # we assume that d and u are dicts (or more general 'Mappings')
     try:
         for k, v in upd.items():
@@ -194,13 +204,13 @@ def update(dest, upd):
                     continue
                 # if it's a list, it can be a list of dicts [{...}, {...}] or a list of strings ["..", ".."]
                 # we only support lists of same types and therfore only check the first entry for its type
-                if isinstance(v[0], collections.abc.Mapping): # [{...}, {...}]
-                    if k not in dest or not isinstance(dest[k], list): #in dest we may not have a list or some other type (see new_list or some_other_list_type_dict)
+                if isinstance(v[0], collections.abc.Mapping):  # [{...}, {...}]
+                    if k not in dest or not isinstance(dest[k], list):  # in dest we may not have a list or some other type (see new_list or some_other_list_type_dict)
                         dest[k] = [{}] * len(v)  # create an empty list with as many elements as v
                     elif len(dest[k]) < len(v):
-                        dest[k].extend([{}] * (len(v)-len(dest[k]) )) # if dest[k] is smaller extend it with a list of empty dicts to get the same size as v
+                        dest[k].extend([{}] * (len(v) - len(dest[k])))  # if dest[k] is smaller extend it with a list of empty dicts to get the same size as v
                     elif len(dest[k]) > len(v):
-                        del dest[k][-(len(dest[k]) - len(v)):] # if dest[k] is bigger then delete the last items
+                        del dest[k][-(len(dest[k]) - len(v)) :]  # if dest[k] is bigger then delete the last items
                         # TODO actually we do not know that the user intended to remove the last item!
                         # This works only if all the items contain ALL the properties, otherwise we might mix different items together
                         # But to solve this a list is not sufficient, we would need a data structure, which stores the information if an item got deleted
@@ -219,7 +229,7 @@ def update(dest, upd):
                         dest[k][idx] = update(tmp, new_value)
                         # update((dest[k])[idx], new_value)
 
-                else: # ["", ""] or any other list
+                else:  # ["", ""] or any other list
                     # the list of strings in dest mus be overwritten with the exact list of v.
                     dest[k] = []
                     for new_value in v:
@@ -228,8 +238,9 @@ def update(dest, upd):
                 dest[k] = v
         return dest
     except Exception as error:
-        log.exception(f'{type(error).__name__}: {error.args}. Error in update:\n{dest} \n\n {upd}')
+        log.exception(f"{type(error).__name__}: {error.args}. Error in update:\n{dest} \n\n {upd}")
         raise error
+
 
 def execute_user_task(
     workflow: BpmnWorkflow,
@@ -243,25 +254,23 @@ def execute_user_task(
     task: Task = workflow.get_task_from_id(task_id)
 
     # Ensure the acting user is either the assignee or the delegate.
-    assert is_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id) or \
-        is_delegate_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id)
+    assert is_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id) or is_delegate_assigned_to_task(workflow=workflow, task_id=task.id, user_id=user.id)
 
     assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
     assigned_delegate_user_id = get_assigned_delegate_user(
-        workflow=workflow, task_id=task.id
+        workflow=workflow,
+        task_id=task.id,
     )
     # Prevent the principal from working while a different delegate is assigned.
-    assert not (
-        assigned_delegate_user_id is not None
-        and assigned_user_id == user.id
-        and assigned_delegate_user_id != user.id
-    )
+    assert not (assigned_delegate_user_id is not None and assigned_user_id == user.id and assigned_delegate_user_id != user.id)
 
     # Deep-Update task.data with cleaned_task_data
     update(task.data, cleaned_task_data)
-    
+
     set_stacktrace(
-        workflow=workflow, task_id=task_id, stacktrace=None
+        workflow=workflow,
+        task_id=task_id,
+        stacktrace=None,
     )  # reset stacktrace
 
     result = task.run()
@@ -272,11 +281,9 @@ def execute_user_task(
     task._set_internal_data(
         **{
             INTERNAL_DATA_KEY_COMPLETED_BY_USER: str(effective_principal_id),
-            INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER: str(delegate_user_id)
-            if delegate_user_id
-            else None,
+            INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER: str(delegate_user_id) if delegate_user_id else None,
             INTERNAL_DATA_KEY_DELEGATE_COMMENT: delegate_comment if delegate_user_id else None,
-        }
+        },
     )
 
     # TODO: This logic could be moved to application service, as we might want to persist after each step?!?
@@ -295,7 +302,7 @@ def get_completed_usertasks(workflow: BpmnWorkflow) -> list[Task]:
 
 def get_ready_and_waiting_usertasks(workflow: BpmnWorkflow) -> list[Task]:
     """Returns the usertasks which are ready or waiting (and manual)"""
-    tasks = workflow.get_tasks(task_filter=TaskFilter(state = TaskState.READY | TaskState.WAITING))
+    tasks = workflow.get_tasks(task_filter=TaskFilter(state=TaskState.READY | TaskState.WAITING))
     return [t for t in tasks if t.task_spec.manual]
 
 
@@ -306,7 +313,7 @@ def get_usertasks_for_user(
     delegation_targets: set[uuid.UUID] | None = None,
 ):
     tasks = []
-    if "ready" in state :
+    if "ready" in state:
         tasks = get_ready_and_waiting_usertasks(workflow=workflow)
 
     if "completed" in state:
@@ -316,48 +323,37 @@ def get_usertasks_for_user(
     for task in tasks:
         assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
         assigned_delegate_user_id = get_assigned_delegate_user(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
         completed_by_user_id = get_completed_by_user(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
         completed_by_delegate_user_id = get_completed_by_delegate_user(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
         delegate_comment = get_delegate_submit_comment(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
         assigned = user.id == assigned_user_id
         assigned_as_delegate = user.id == assigned_delegate_user_id
         task_roles = get_task_roles(workflow=workflow, task_id=task.id)
         lane_is_initiator = is_initiator_lane(
-            workflow=workflow, lane_name=task.task_spec.lane
+            workflow=workflow,
+            lane_name=task.task_spec.lane,
         )
         created_by_id = get_created_by_id(workflow=workflow)
 
-        delegate_target_access = (
-            delegation_targets is not None
-            and assigned_user_id is not None
-            and assigned_user_id in delegation_targets
-        )
-        delegate_assignment_possible = (
-            delegate_target_access
-            and task.has_state(TaskState.READY)
-            and assigned_delegate_user_id is None
-        )
+        delegate_target_access = delegation_targets is not None and assigned_user_id is not None and assigned_user_id in delegation_targets
+        delegate_assignment_possible = delegate_target_access and task.has_state(TaskState.READY) and assigned_delegate_user_id is None
 
-        completed_for_user = task.has_state(TaskState.COMPLETED) and (
-            completed_by_user_id == user.id
-            or completed_by_delegate_user_id == user.id
-        )
+        completed_for_user = task.has_state(TaskState.COMPLETED) and (completed_by_user_id == user.id or completed_by_delegate_user_id == user.id)
 
         task_is_available_for_this_user = (
-            assigned
-            or len(task_roles & user.roles) > 0
-            or (lane_is_initiator and user.id == created_by_id)
-            or assigned_as_delegate
-            or delegate_target_access
-            or completed_for_user
+            assigned or len(task_roles & user.roles) > 0 or (lane_is_initiator and user.id == created_by_id) or assigned_as_delegate or delegate_target_access or completed_for_user
         )
 
         assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
@@ -380,13 +376,18 @@ def get_usertasks_for_user(
                         assigned_to_me_as_delegate=assigned_as_delegate,
                         can_be_assigned_as_delegate=delegate_assignment_possible,
                         can_be_unassigned=can_be_unassigned(
-                            workflow=workflow, task_id=task.id
+                            workflow=workflow,
+                            task_id=task.id,
                         ),
                         can_cancel_workflow=can_user_cancel_workflow(
-                            workflow=workflow, task_id=task.id, user_id=user.id
+                            workflow=workflow,
+                            task_id=task.id,
+                            user_id=user.id,
                         ),
                         can_delete_workflow=can_user_delete_workflow(
-                            workflow=workflow, task_id=task.id, user_id=user.id
+                            workflow=workflow,
+                            task_id=task.id,
+                            user_id=user.id,
                         ),
                         state_completed=task.has_state(TaskState.COMPLETED),
                         completed_by_user_id=completed_by_user_id,
@@ -394,7 +395,7 @@ def get_usertasks_for_user(
                         delegate_submit_comment=delegate_comment,
                         **formspec._asdict(),
                         data=get_task_data(task),
-                    )
+                    ),
                 )
     available_tasks.reverse()
     return available_tasks
@@ -402,12 +403,15 @@ def get_usertasks_for_user(
 
 def get_waiting_events(workflow: BpmnWorkflow) -> List[MessageEventDefinitionRepresentation]:
     waiting_events: list[PendingBpmnEvent] = workflow.waiting_events()
-    return [MessageEventDefinitionRepresentation(
-        name=e.name,
-        value=e.value,
-        event_type=e.event_type
-    ) for e in waiting_events
+    return [
+        MessageEventDefinitionRepresentation(
+            name=e.name,
+            value=e.value,
+            event_type=e.event_type,
+        )
+        for e in waiting_events
     ]
+
 
 def send_event(workflow: BpmnWorkflow, name: str, payload: dict):
     # We need to construct the MessageEventDefinition class from the "camunda" package.
@@ -420,12 +424,12 @@ def send_event(workflow: BpmnWorkflow, name: str, payload: dict):
     bpmn_event = BpmnEvent(
         event_definition=bpmn_message,
         payload={
-            'payload': payload
-        }
+            "payload": payload,
+        },
     )
 
     # This overrides SpiffWorkflow.bpmn.workflow::send_event to check the message payload
-    tasks = workflow.get_tasks(catches_event=bpmn_event, task_filter=TaskFilter(state = TaskState.WAITING))
+    tasks = workflow.get_tasks(catches_event=bpmn_event, task_filter=TaskFilter(state=TaskState.WAITING))
     if len(tasks) == 0:
         raise WorkflowException(f"This process is not waiting for {bpmn_event.event_definition.name}")
     for task in tasks:
@@ -454,6 +458,7 @@ def _get_workflow_functions_env(workflow_name: str) -> dict[str, Any]:
         log.debug("Workflow module '%s' could not be imported for workflow '%s'", module_path, workflow_name)
         return {}
 
+
 def get_allowed_workflow_names_to_start(user: UserRepresentation) -> Generator[str, Any, None]:
     """Returns a list of all possible workflow names, the user may start"""
     for folder in workflow_providers.iter_workflow_directories():
@@ -469,7 +474,8 @@ def get_all_activated_workflow_names() -> Generator[str, Any, None]:
         name = folder.name
         if name in settings.workflows or in_test() or "__ALL__" in settings.workflows:
             yield name
-                
+
+
 @cache
 def get_workflow_title_cached(name: str):
     assert name is not None and name != ""
@@ -480,7 +486,8 @@ def get_workflow_title_cached(name: str):
     except Exception:
         log.exception(f"Cannot get workflow title (description) for workflow {name}")
         return name
-    
+
+
 @cache
 def get_workflow_saved_minutes_per_instance_cached(name: str) -> int:
     assert name is not None and name != ""
@@ -491,7 +498,8 @@ def get_workflow_saved_minutes_per_instance_cached(name: str) -> int:
     except Exception:
         log.exception(f"Cannot get workflow custom property statistics_saved_minutes (statistics_saved_minutes) for workflow {name}")
         return 10
-    
+
+
 @cache
 def get_workflow_owner(name: str):
     """Fetches the value of the custom property 'wf-owner'.
@@ -514,6 +522,7 @@ def get_workflow_owner(name: str):
         log.error(f"Cannot get workflow custom property wf-owner for workflow {name}")
         return None
 
+
 def get_wf_owner_role_to_workflow_mapping():
     """
     Generates a mapping of workflow owner roles to their corresponding workflow names.
@@ -532,15 +541,17 @@ def get_wf_owner_role_to_workflow_mapping():
             role_to_workflow_map.setdefault(wf_owner_role, []).append(wfname)
     return role_to_workflow_map
 
+
 @cache
 def can_load_workflow(name):
     try:
         load_process_from_file(name=name)
     except Exception as error:
-        log.error(f'load_process_from_file({name}): {type(error).__name__}: {error.args}. Raised in load_process_from_file({name})')
+        log.error(f"load_process_from_file({name}): {type(error).__name__}: {error.args}. Raised in load_process_from_file({name})")
         return False
     else:
         return True
+
 
 @cache
 def get_initiator_property_cached(name: str) -> list[str] | bool | None:
@@ -550,7 +561,7 @@ def get_initiator_property_cached(name: str) -> list[str] | bool | None:
     try:
         workflow = load_process_from_file(name=name)
         lane_mapping = get_lane_mapping(workflow=workflow)
-        return next((v.get("initiator") for k,v in lane_mapping.items() if v.get("initiator", None) is not None), None)
+        return next((v.get("initiator") for k, v in lane_mapping.items() if v.get("initiator", None) is not None), None)
     except Exception as error:
         log.error(f"get_initiator_property_cached({name}): {type(error).__name__}: {error.args}")
         return False
@@ -568,22 +579,26 @@ def get_subtitle(workflow: BpmnWorkflow) -> str | None:
 
 
 def get_assigned_user(
-    workflow: BpmnWorkflow, task_id: uuid.UUID
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
 ) -> uuid.UUID | None:
     task: Task = workflow.get_task_from_id(task_id)
     assigned_user_id: str | None = task._get_internal_data(
-        name=INTERNAL_DATA_KEY_ASSIGNED_USER, default=None
+        name=INTERNAL_DATA_KEY_ASSIGNED_USER,
+        default=None,
     )
     assigned_user_uuid = uuid.UUID(assigned_user_id) if assigned_user_id is not None else None
     return assigned_user_uuid
 
 
 def get_assigned_delegate_user(
-    workflow: BpmnWorkflow, task_id: uuid.UUID
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
 ) -> uuid.UUID | None:
     task: Task = workflow.get_task_from_id(task_id)
     delegate_user_id: str | None = task._get_internal_data(
-        name=INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER, default=None
+        name=INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER,
+        default=None,
     )
     delegate_uuid = uuid.UUID(delegate_user_id) if delegate_user_id is not None else None
     return delegate_uuid
@@ -592,9 +607,11 @@ def get_assigned_delegate_user(
 def is_assigned_to_task(workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID):
     """Returns whether a user is assigned to the task"""
     assigned_user_id = get_assigned_user(
-        workflow=workflow, task_id=task_id
+        workflow=workflow,
+        task_id=task_id,
     )
     return assigned_user_id == user_id
+
 
 def is_task_completed(workflow: BpmnWorkflow, task_id: uuid.UUID) -> bool:
     """Returns whether the task is completed (domain helper for external callers)."""
@@ -603,28 +620,34 @@ def is_task_completed(workflow: BpmnWorkflow, task_id: uuid.UUID) -> bool:
 
 
 def is_delegate_assigned_to_task(
-    workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
+    user_id: uuid.UUID,
 ):
     delegate_user_id = get_assigned_delegate_user(workflow=workflow, task_id=task_id)
     return delegate_user_id == user_id
 
 
 def get_completed_by_user(
-    workflow: BpmnWorkflow, task_id: uuid.UUID
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
 ) -> uuid.UUID | None:
     task: Task = workflow.get_task_from_id(task_id)
     completed_by_id: str | None = task._get_internal_data(
-        name=INTERNAL_DATA_KEY_COMPLETED_BY_USER, default=None
+        name=INTERNAL_DATA_KEY_COMPLETED_BY_USER,
+        default=None,
     )
     return uuid.UUID(completed_by_id) if completed_by_id is not None else None
 
 
 def get_completed_by_delegate_user(
-    workflow: BpmnWorkflow, task_id: uuid.UUID
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
 ) -> uuid.UUID | None:
     task: Task = workflow.get_task_from_id(task_id)
     delegate_id: str | None = task._get_internal_data(
-        name=INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER, default=None
+        name=INTERNAL_DATA_KEY_COMPLETED_BY_DELEGATE_USER,
+        default=None,
     )
     return uuid.UUID(delegate_id) if delegate_id is not None else None
 
@@ -645,7 +668,7 @@ def assign_task(
     # In the delegation case, the logged in user is the delegate_user and the principal-user is the user
     acting_user = delegate_user or user  # The acting user is the currently logged in one
     delegation_targets = {user.id} if delegate_user else None
-    
+
     usertasks = get_usertasks_for_user(
         workflow=workflow,
         user=acting_user,
@@ -654,12 +677,13 @@ def assign_task(
     )
 
     task: UserTaskWithoutNestedAssignedUserRepresentation | None = next(
-        (t for t in usertasks if t.id == task_id), None
+        (t for t in usertasks if t.id == task_id),
+        None,
     )
 
     if task is None:
         raise TaskNotFoundException(
-            message="A ready user task with the given id has not been found"
+            message="A ready user task with the given id has not been found",
         )
 
     assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
@@ -670,15 +694,15 @@ def assign_task(
     workflow.get_task_from_id(task_id=task.id)._set_internal_data(
         **{
             INTERNAL_DATA_KEY_ASSIGNED_USER: str(user.id),
-            INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: (
-                str(delegate_user.id) if delegate_user else None
-            ),
-        }
+            INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: (str(delegate_user.id) if delegate_user else None),
+        },
     )
 
 
 def assign_task_without_checks(
-    workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
+    user_id: uuid.UUID,
 ):
     """We want to assign a (future) task from a script and do not want to perform additional checks"""
 
@@ -686,16 +710,16 @@ def assign_task_without_checks(
 
     if task is None:
         raise TaskNotFoundException(
-            message="A task with the given id has not been found"
+            message="A task with the given id has not been found",
         )
 
     workflow.get_task_from_id(task_id=task.id)._set_internal_data(
         **{
             INTERNAL_DATA_KEY_ASSIGNED_USER: str(user_id),
             INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: None,
-        }
+        },
     )
-    
+
 
 def unassign_delegate_from_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
     task: Task = workflow.get_task_from_id(task_id)
@@ -704,7 +728,7 @@ def unassign_delegate_from_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
 
 def set_allow_unassign(workflow: BpmnWorkflow, task_id: uuid.UUID):
     workflow.get_task_from_id(task_id=task_id)._set_internal_data(
-        **{INTERNAL_DATA_KEY_ALLOW_UNASSIGN: True}
+        **{INTERNAL_DATA_KEY_ALLOW_UNASSIGN: True},
     )
 
 
@@ -723,12 +747,22 @@ def _get_custom_props(task):
 
 def can_user_cancel_workflow(workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID):
     task = workflow.get_task_from_id(task_id=task_id)
-    return task is not None and task.has_state(TaskState.READY) and _get_custom_props(task).get("can_user_cancel_workflow", None) == "1" and is_assigned_to_task(workflow=workflow, task_id=task_id, user_id=user_id)
+    return (
+        task is not None
+        and task.has_state(TaskState.READY)
+        and _get_custom_props(task).get("can_user_cancel_workflow", None) == "1"
+        and is_assigned_to_task(workflow=workflow, task_id=task_id, user_id=user_id)
+    )
 
 
 def can_user_delete_workflow(workflow: BpmnWorkflow, task_id: uuid.UUID, user_id: uuid.UUID):
     task = workflow.get_task_from_id(task_id=task_id)
-    return task is not None and task.has_state(TaskState.READY) and _get_custom_props(task).get("can_user_delete_workflow", None) == "1" and is_assigned_to_task(workflow=workflow, task_id=task_id, user_id=user_id)
+    return (
+        task is not None
+        and task.has_state(TaskState.READY)
+        and _get_custom_props(task).get("can_user_delete_workflow", None) == "1"
+        and is_assigned_to_task(workflow=workflow, task_id=task_id, user_id=user_id)
+    )
 
 
 def unassign_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
@@ -739,7 +773,7 @@ def unassign_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
             **{
                 INTERNAL_DATA_KEY_ASSIGNED_USER: None,
                 INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: None,
-            }
+            },
         )
     else:
         raise TaskCannotBeUnassignedException()
@@ -752,7 +786,7 @@ def unassign_task_without_checks(workflow: BpmnWorkflow, task_id: uuid.UUID):
         **{
             INTERNAL_DATA_KEY_ASSIGNED_USER: None,
             INTERNAL_DATA_KEY_ASSIGNED_DELEGATE_USER: None,
-        }
+        },
     )
 
 
@@ -760,10 +794,8 @@ def is_initiator_lane(workflow: BpmnWorkflow, lane_name: str | None) -> bool:
     is_initiator_lane = False
     if lane_name is not None:
         lane_mapping = get_lane_mapping(workflow=workflow)
-        initiator_property= lane_mapping.get(lane_name, {}).get("initiator", False) 
-        is_initiator_lane = (
-            initiator_property is not False and initiator_property is not None
-        )
+        initiator_property = lane_mapping.get(lane_name, {}).get("initiator", False)
+        is_initiator_lane = initiator_property is not False and initiator_property is not None
     return is_initiator_lane
 
 
@@ -775,7 +807,9 @@ def get_manually_assigned_roles(task: Task) -> set[str] | None:
 
 
 def set_manually_assigned_roles(
-    workflow: BpmnWorkflow, task_id: uuid.UUID, roles: set[str]
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
+    roles: set[str],
 ) -> str | None:
     task = workflow.get_task_from_id(task_id)
     task._set_internal_data(**{INTERNAL_DATA_KEY_ASSIGNED_ROLES: list(roles)})
@@ -827,7 +861,7 @@ def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
             functions_env=functions_env,
             preserve_unknown_fields=True,
             preserve_disabled_fields=True,
-            log_validation_errors=False
+            log_validation_errors=False,
         ).task_data
 
         task.data.clear()
@@ -862,8 +896,8 @@ def get_lane_mapping(workflow: BpmnWorkflow) -> dict[str, dict]:
         if lane_config is None:
             raise Exception((f"'roles' configured, but left empty in lane {lane['id']}"))
 
-        role_list = [r.strip() for r in lane_config.split(",")] # create list of strings and strip all spaces
-        role_list = [r for r in role_list if r != ""] # remove empty-string entries, so it's either an empty list [] or list of non-empty strings
+        role_list = [r.strip() for r in lane_config.split(",")]  # create list of strings and strip all spaces
+        role_list = [r for r in role_list if r != ""]  # remove empty-string entries, so it's either an empty list [] or list of non-empty strings
 
         notify_raw = custom_props.get("notify_role_members", None)
         notify_role_members = str(notify_raw).strip().lower() == "true" if notify_raw is not None else False
@@ -878,7 +912,10 @@ def get_lane_mapping(workflow: BpmnWorkflow) -> dict[str, dict]:
 
 
 def get_options_for_property(
-    workflow: BpmnWorkflow, task_id: uuid.UUID, property_path: list[str], form_data: dict|None,
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
+    property_path: list[str],
+    form_data: dict | None,
 ) -> list[tuple[str, str]]:
     options_folder = workflow_providers.get_workflow_directory(workflow.spec.name) / "options"
     functions_env = _get_workflow_functions_env(workflow.spec.name)
@@ -889,14 +926,21 @@ def get_options_for_property(
     jsonschema = formdata.jsonschema
 
     data = get_options(
-        jsonschema=jsonschema, property_path=property_path, options_folder=options_folder, form_data=form_data, functions_env=functions_env
+        jsonschema=jsonschema,
+        property_path=property_path,
+        options_folder=options_folder,
+        form_data=form_data,
+        functions_env=functions_env,
     )
 
     return data
 
 
 def get_options_detailed_for_property(
-    workflow: BpmnWorkflow, task_id: uuid.UUID, property_path: list[str], form_data: dict|None
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
+    property_path: list[str],
+    form_data: dict | None,
 ) -> dict[str, dict[str, Any]]:
     options_folder = workflow_providers.get_workflow_directory(workflow.spec.name) / "options"
     functions_env = _get_workflow_functions_env(workflow.spec.name)
@@ -910,7 +954,7 @@ def get_options_detailed_for_property(
         property_path=property_path,
         options_folder=options_folder,
         form_data=form_data,
-        functions_env=functions_env
+        functions_env=functions_env,
     )
 
     return data
@@ -927,7 +971,9 @@ def execute_erroneous_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
     if not task.has_state(TaskState.ERROR):
         raise TaskIsNotErroneousException()
     set_stacktrace(
-        workflow=workflow, task_id=task_id, stacktrace=None
+        workflow=workflow,
+        task_id=task_id,
+        stacktrace=None,
     )  # reset stacktrace
     success = task.run()
     if not success:
@@ -959,7 +1005,7 @@ def get_message_triggers(name: str) -> list[str]:
     if dmn_files:
         parser.add_dmn_files(dmn_files)
 
-    process_parser: ProcessParser|None = parser.get_process_parser(name)
+    process_parser: ProcessParser | None = parser.get_process_parser(name)
     message_names: list[str] = []
 
     if process_parser is not None and isinstance(process_parser, ProcessParser):
@@ -991,11 +1037,13 @@ class TimeEventResult:
     remaining_cycles: int | None = None
     note: str | None = None
 
+
 def _first_timer_def(task) -> TimerEventDefinition | None:
     ed = getattr(task.task_spec, "event_definition", None)
     if isinstance(ed, TimerEventDefinition):
         return ed
     return None
+
 
 def process_single_time_event(workflow: BpmnWorkflow, wte_record: TimeEvent) -> TimeEventResult:
     """

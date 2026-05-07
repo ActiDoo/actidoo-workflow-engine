@@ -20,13 +20,16 @@ from actidoo_wfe.settings import settings
 
 log = logging.getLogger(__name__)
 
+
 def is_debugger_active() -> bool:
     """Return if the debugger is currently active, see https://stackoverflow.com/questions/38634988/check-if-program-runs-in-debug-mode"""
     # sys.monitoring is the new feature of Python 3.12 and newer versions of VSCode or PyCharm will use it.
     return hasattr(sys, "gettrace") and sys.gettrace() is not None or sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None
 
+
 def shall_skip_sending_email() -> bool:
     return in_test() or is_debugger_active() or settings.email_skip
+
 
 def log_email(
     subject: str,
@@ -34,22 +37,18 @@ def log_email(
     recipient_or_recipients_list: list[str] | str,
     attachments: Dict[str, io.BytesIO],
 ):
-    rec_str = (
-        recipient_or_recipients_list
-        if isinstance(recipient_or_recipients_list, str)
-        else ", ".join(recipient_or_recipients_list)
-    )
+    rec_str = recipient_or_recipients_list if isinstance(recipient_or_recipients_list, str) else ", ".join(recipient_or_recipients_list)
     attachment_list = "\n\nATTACH: " + ", ".join(attachments.keys()) if attachments.keys() else ""
     log.info(
-        f"Printing email to '{rec_str}':\n"
-        + get_boxed_text(subject + "\n\n" + content + attachment_list)
-        + "\n"
+        f"Printing email to '{rec_str}':\n" + get_boxed_text(subject + "\n\n" + content + attachment_list) + "\n",
     )
+
 
 def _normalize_recipients(recipient_or_recipients_list: list[str] | str) -> list[str]:
     if isinstance(recipient_or_recipients_list, str):
         return [recipient_or_recipients_list]
     return recipient_or_recipients_list
+
 
 def _send_via_graph(subject: str, content: str, recipients_list: list[str], attachments: Dict[str, io.BytesIO]) -> None:
     token_endpoint_with_key = build_url(
@@ -62,7 +61,9 @@ def _send_via_graph(subject: str, content: str, recipients_list: list[str], atta
     client_secret = settings.email_client_secret
 
     with OAuth2Session(
-        client_id=client_id, client_secret=client_secret, scope=scope
+        client_id=client_id,
+        client_secret=client_secret,
+        scope=scope,
     ) as client:
         # Fetch token
         client.fetch_token(token_endpoint_with_key, grant_type="client_credentials")
@@ -105,11 +106,12 @@ def _send_via_graph(subject: str, content: str, recipients_list: list[str], atta
 
                 # Send email
                 response = client.post(url=send_endpoint_with_key, json=payload)
-                response.raise_for_status() # raises an exception for status_code >=400
+                response.raise_for_status()  # raises an exception for status_code >=400
                 successful_recipients.append(recipient)
         except Exception as error:
             log.error(f"error while sending email to '{recipient}'. Successful before was '{successful_recipients}'. All recipients are '{recipients_list}'. Attachments = {list(attachments.keys())}")
             raise error
+
 
 def _send_via_smtp(subject: str, content: str, recipients_list: list[str], attachments: Dict[str, io.BytesIO]) -> None:
     host = settings.email_smtp_host
@@ -161,6 +163,7 @@ def _send_via_smtp(subject: str, content: str, recipients_list: list[str], attac
         log.error(f"error while sending email via SMTP. Recipients: '{recipients_list}'. Attachments = {list(attachments.keys())}")
         raise error
 
+
 def send_text_mail(
     subject: str,
     content: str,
@@ -181,13 +184,15 @@ def send_text_mail(
 
     # Prepend email subject prefix if it exists
     if settings.email_subject_prefix is not None and isinstance(
-        settings.email_subject_prefix, str
+        settings.email_subject_prefix,
+        str,
     ):
         subject = settings.email_subject_prefix + " " + subject
 
     # Append email subject suffix if it exists
     if settings.email_subject_suffix is not None and isinstance(
-        settings.email_subject_suffix, str
+        settings.email_subject_suffix,
+        str,
     ):
         subject = subject + " " + settings.email_subject_suffix
 

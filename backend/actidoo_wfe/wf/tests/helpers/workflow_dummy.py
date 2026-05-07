@@ -54,9 +54,11 @@ class WorkflowDummy:
                 start_user_id = self.service_users[start_user].user.id
             else:
                 raise KeyError(f"start user {start_user} not found")
-            
+
             self.workflow_instance_id = service_application.start_workflow(
-                db=self.db, name=workflow_name, user_id=start_user_id
+                db=self.db,
+                name=workflow_name,
+                user_id=start_user_id,
             )
         else:
             self.workflow_instance_id = None
@@ -68,23 +70,20 @@ class WorkflowDummy:
             schnittmenge = set(users_with_roles.keys()) & set(service_users_with_roles.keys())
             if len(schnittmenge) > 0:
                 raise Exception(f"Do not use the same identifiers for users and service_users. {str(schnittmenge)}")
-            
+
         profiles = copy.deepcopy(TEST_PROFILES)
         if users_with_roles is not None:
             # self.users will have same keys as users_with_roles
-            self.users = {
-                k: self._create_user(profiles.pop(), role_names=roles, email=k)
-                for k, roles in users_with_roles.items()
-            }
+            self.users = {k: self._create_user(profiles.pop(), role_names=roles, email=k) for k, roles in users_with_roles.items()}
 
         if service_users_with_roles is not None:
-            self.service_users = {
-                k: self._create_service_user(profiles.pop(), role_names=roles)
-                for k, roles in service_users_with_roles.items()
-            }
-        
+            self.service_users = {k: self._create_service_user(profiles.pop(), role_names=roles) for k, roles in service_users_with_roles.items()}
 
-    def _create_user(self, profile: TestUserProfile, role_names=[], email: str = ""
+    def _create_user(
+        self,
+        profile: TestUserProfile,
+        role_names=[],
+        email: str = "",
     ) -> "UserDummy":
         if "@" not in email:
             email = email + "@example.com"
@@ -95,16 +94,18 @@ class WorkflowDummy:
             email=email,
             first_name=profile.first_name,
             last_name=profile.last_name,
-            is_service_user=False
+            is_service_user=False,
         )
         service_user.assign_roles(db=self.db, user_id=user.id, role_names=role_names)
 
-        user = service_user.get_user(db=self.db, user_id=user.id) # type: ignore
+        user = service_user.get_user(db=self.db, user_id=user.id)  # type: ignore
         assert user is not None
         return UserDummy(db=self.db, user=user)
-    
+
     def _create_service_user(
-        self, profile: TestUserProfile, role_names=[]
+        self,
+        profile: TestUserProfile,
+        role_names=[],
     ) -> "ServiceUserDummy":
         user = service_user.upsert_user(
             db=self.db,
@@ -113,14 +114,15 @@ class WorkflowDummy:
             email=None,
             first_name=None,
             last_name=None,
-            is_service_user=True
+            is_service_user=True,
         )
         service_user.assign_roles(db=self.db, user_id=user.id, role_names=role_names)
 
         user = service_user.get_user(db=self.db, user_id=user.id)
         assert user is not None
         return ServiceUserDummy(
-            db=self.db, user=user
+            db=self.db,
+            user=user,
         )
 
     def user(self, key) -> UserDummy:
@@ -130,7 +132,7 @@ class WorkflowDummy:
         user_helper = self.service_users[key]
         user_helper.workflow_instance_id = self.workflow_instance_id
         return user_helper
-    
+
     def auto_set_workflow_instance_id(self):
         q = select(WorkflowInstance)
         workflow_instance = self.db.execute(q).scalar_one()
@@ -138,9 +140,10 @@ class WorkflowDummy:
 
     def get_attachments(self, workflow_instance_id):
         return service_application.find_all_workflow_attachments(
-            db=self.db, workflow_instance_id=workflow_instance_id
+            db=self.db,
+            workflow_instance_id=workflow_instance_id,
         )
-    
+
     def assert_completed(self):
         workflow_instance = views.get_workflow_by_instance_id(db=self.db, workflow_instance_id=self.workflow_instance_id)
         assert workflow_instance.completed_at is not None

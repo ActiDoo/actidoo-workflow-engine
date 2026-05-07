@@ -49,7 +49,7 @@ def _start_workflow():
     workflow = WorkflowDummy(
         db_session=db_session,
         users_with_roles={  # dev-realm dummy
-            "initiator": ["wf-user"]
+            "initiator": ["wf-user"],
         },
         workflow_name=WF_NAME,
         start_user="initiator",
@@ -117,563 +117,561 @@ def test_transformation_camunda_form__returns__expected_snapshots():
 
 
 EXPECTED = {
-    "definitions": {
-    },
+    "definitions": {},
     "properties": {
         "Field_096r6we": {
             "title": "",
-            "type": "null"
+            "type": "null",
         },
         "Field_097qdo7": {
             "title": "",
-            "type": "null"
+            "type": "null",
         },
         "multi_default": {
             "items": {
                 "properties": {
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "",
-            "type": "array"
+            "type": "array",
         },
         "multiDefaultRequired": {
             "items": {
                 "properties": {
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "minItems": 1,
             "title": "",
-            "type": "array"
+            "type": "array",
         },
         "single_default": {
             "properties": {
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "",
-            "type": "object"
+            "type": "object",
         },
         "singleDefaultRequired": {
             "properties": {
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldMulti": {
             "items": {
                 "properties": {
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "Multi upload",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldMultiDisabled": {
             "items": {
                 "properties": {
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "Multi upload disabled",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldMultiRequired": {
             "items": {
                 "properties": {
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "minItems": 1,
             "title": "Multi upload required",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldMultiRequiredDisabledEmpty": {
             "items": {
                 "properties": {
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "Multi Upload required+disabled, empty",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldSingle": {
             "properties": {
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single upload",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldSingleDisabled": {
             "properties": {
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single upload disabled",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldSingleRequired": {
             "properties": {
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single upload required",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldSingleRequiredDisabledEmpty": {
             "properties": {
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single Upload required+disabled, empty",
-            "type": "object"
-        }
+            "type": "object",
+        },
     },
     "required": [
         "uploadFieldSingleRequired",
-        "singleDefaultRequired"
+        "singleDefaultRequired",
     ],
-    "type": "object"
+    "type": "object",
 }
 
 JSONSCHEMA_ORG = {
-    "definitions": {
-    },
+    "definitions": {},
     "properties": {
         "Field_096r6we": {
             "title": "",
-            "type": "null"
+            "type": "null",
         },
         "Field_097qdo7": {
             "title": "",
-            "type": "null"
+            "type": "null",
         },
         "multi_default": {
             "items": {
                 "properties": {
                     "datauri": {
                         "format": "data-url",
-                        "type": "string"
+                        "type": "string",
                     },
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "",
-            "type": "array"
+            "type": "array",
         },
         "multiDefaultRequired": {
             "items": {
                 "properties": {
                     "datauri": {
                         "format": "data-url",
-                        "type": "string"
+                        "type": "string",
                     },
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "minItems": 1,
             "title": "",
-            "type": "array"
+            "type": "array",
         },
         "single_default": {
             "properties": {
                 "datauri": {
                     "format": "data-url",
-                    "type": "string"
+                    "type": "string",
                 },
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "",
-            "type": "object"
+            "type": "object",
         },
         "singleDefaultRequired": {
             "properties": {
                 "datauri": {
                     "format": "data-url",
-                    "type": "string"
+                    "type": "string",
                 },
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldMulti": {
             "items": {
                 "properties": {
                     "datauri": {
                         "format": "data-url",
-                        "type": "string"
+                        "type": "string",
                     },
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "Multi upload",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldMultiDisabled": {
             "items": {
                 "properties": {
                     "datauri": {
                         "format": "data-url",
-                        "type": "string"
+                        "type": "string",
                     },
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "Multi upload disabled",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldMultiRequired": {
             "items": {
                 "properties": {
                     "datauri": {
                         "format": "data-url",
-                        "type": "string"
+                        "type": "string",
                     },
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "minItems": 1,
             "title": "Multi upload required",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldMultiRequiredDisabledEmpty": {
             "items": {
                 "properties": {
                     "datauri": {
                         "format": "data-url",
-                        "type": "string"
+                        "type": "string",
                     },
                     "filename": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "hash": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "id": {
-                        "type": "string"
+                        "type": "string",
                     },
                     "mimetype": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                    },
                 },
-                "type": "object"
+                "type": "object",
             },
             "title": "Multi Upload required+disabled, empty",
-            "type": "array"
+            "type": "array",
         },
         "uploadFieldSingle": {
             "properties": {
                 "datauri": {
                     "format": "data-url",
-                    "type": "string"
+                    "type": "string",
                 },
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single upload",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldSingleDisabled": {
             "properties": {
                 "datauri": {
                     "format": "data-url",
-                    "type": "string"
+                    "type": "string",
                 },
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single upload disabled",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldSingleRequired": {
             "properties": {
                 "datauri": {
                     "format": "data-url",
-                    "type": "string"
+                    "type": "string",
                 },
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single upload required",
-            "type": "object"
+            "type": "object",
         },
         "uploadFieldSingleRequiredDisabledEmpty": {
             "properties": {
                 "datauri": {
                     "format": "data-url",
-                    "type": "string"
+                    "type": "string",
                 },
                 "filename": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "hash": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
                 },
                 "mimetype": {
-                    "type": "string"
-                }
+                    "type": "string",
+                },
             },
             "title": "Single Upload required+disabled, empty",
-            "type": "object"
-        }
+            "type": "object",
+        },
     },
     "required": [
         "uploadFieldSingleRequired",
-        "singleDefaultRequired"
+        "singleDefaultRequired",
     ],
-    "type": "object"
+    "type": "object",
 }
 
 
@@ -685,7 +683,7 @@ def test__remove_data_uri_fields__works__as_expected(db_engine_ctx):
     with db_engine_ctx():
         workflow = _start_workflow()
         tasks = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)  # expect one task
-        
+
         # JSONSCHEMA_ORG and EXPECTED fit together, so make sure JSONSCHEMA_ORG has not changed due to an updated form or other changes:
         assert tasks[0].jsonschema == JSONSCHEMA_ORG
 
@@ -693,6 +691,7 @@ def test__remove_data_uri_fields__works__as_expected(db_engine_ctx):
         my_dict = copy.deepcopy(tasks[0].jsonschema)
         remove_data_uri_fields(my_dict)
         assert my_dict == EXPECTED
+
 
 def test__remove_data_uri_fields__works__as_expected__hard_coded():
     my_dict = copy.deepcopy(JSONSCHEMA_ORG)

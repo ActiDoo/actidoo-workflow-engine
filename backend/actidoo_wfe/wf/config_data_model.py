@@ -50,11 +50,7 @@ def add_workflow_participant_filter(query, wf_id_column, user: Any):
         WorkflowUserRole,
     )
 
-    user_role_names = (
-        select(WorkflowRole.name)
-        .join(WorkflowUserRole, WorkflowRole.id == WorkflowUserRole.role_id)
-        .where(WorkflowUserRole.user_id == user.id)
-    )
+    user_role_names = select(WorkflowRole.name).join(WorkflowUserRole, WorkflowRole.id == WorkflowUserRole.role_id).where(WorkflowUserRole.user_id == user.id)
 
     participant_wf_ids = (
         select(cast(WorkflowInstance.id, sa_types.String(100)))
@@ -73,7 +69,7 @@ def add_workflow_participant_filter(query, wf_id_column, user: Any):
                 WorkflowInstanceTask.assigned_user_id == user.id,
                 WorkflowInstanceTask.assigned_delegate_user_id == user.id,
                 WorkflowInstanceTaskRole.name.in_(user_role_names),
-            )
+            ),
         )
     )
 

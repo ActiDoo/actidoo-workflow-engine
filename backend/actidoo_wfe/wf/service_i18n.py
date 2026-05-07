@@ -30,31 +30,28 @@ def _available_locales_for(process: str, workflow_dir: pathlib.Path) -> List[str
     locales_dir = workflow_dir / "i18n" / "locales"
     if not locales_dir.exists():
         return []
-    return [
-        p.name for p in locales_dir.iterdir()
-        if p.is_dir() and (p / "LC_MESSAGES" / f"{process}.mo").exists()
-    ]
+    return [p.name for p in locales_dir.iterdir() if p.is_dir() and (p / "LC_MESSAGES" / f"{process}.mo").exists()]
 
 
 def _load_translations(process: str, locale: str, workflow_dir: pathlib.Path) -> Union[gettext.GNUTranslations, gettext.NullTranslations]:
     """
     Loads Babel translations with context support.
-    Expects: 
+    Expects:
       wf/processes/<process>/i18n/locales/<locale>/LC_MESSAGES/<process>.mo
     """
 
     available = _available_locales_for(process, workflow_dir)
-    
+
     # pick the best one
     chosen = match_translation(
         user_locale=locale or settings.default_locale,
-        available=available
+        available=available,
     )
 
     return Translations.load(
         dirname=workflow_dir / "i18n" / "locales",
         locales=[chosen],
-        domain=process
+        domain=process,
     )
 
 
@@ -111,9 +108,7 @@ def translate_form_data(
     def _translate_uischema(node: Any):
         if isinstance(node, dict):
             for k, v in list(node.items()):
-                if k in ("ui:description", "ui:label",
-                         "ui:arrayAddButtonText", "ui:arrayOverviewButtonText") \
-                   and isinstance(v, str):
+                if k in ("ui:description", "ui:label", "ui:arrayAddButtonText", "ui:arrayOverviewButtonText") and isinstance(v, str):
                     node[k] = _translate(v)
                 else:
                     _translate_uischema(v)
@@ -145,22 +140,24 @@ def translate_string(
 
     return _translate(msgid)
 
+
 def get_first(component, attrlist):
     for attr in attrlist:
         if attr in component:
             return component[attr]
 
+
 def extract_strings_from_form(form_json: dict) -> List[Tuple[str, str]]:
     entries: List[Tuple[str, str]] = []
 
-    def extract(component: dict, prefix:str = ""):
+    def extract(component: dict, prefix: str = ""):
         strid = get_first(component, ["path", "key", "id"])
 
         for key in ("label", "description", "text"):
             if key in component and isinstance(component[key], str):
                 msgid = component[key].strip()
                 msgctxt = f"{prefix}{strid}.{key}"
-                if key=="label" and "text" in component:
+                if key == "label" and "text" in component:
                     # Text-Views Fields have a label of "Text view" which we never show. These should not be translated.
                     continue
                 entries.append((msgid, msgctxt))
@@ -179,21 +176,23 @@ def extract_strings_from_form(form_json: dict) -> List[Tuple[str, str]]:
         extract(json_file)
     return entries
 
+
 def extract_strings_from_bpmn(xml_path: Path) -> List[Tuple[str, str]]:
     entries: List[Tuple[str, str]] = []
-    ns = {'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL'}
+    ns = {"bpmn": "http://www.omg.org/spec/BPMN/20100524/MODEL"}
 
     tree = ET.parse(str(xml_path))
     root = tree.getroot()
 
-    for tag in ('process', 'lane', 'userTask'):
-        for elem in root.findall(f'.//bpmn:{tag}', ns):
-            name = elem.get('name')
+    for tag in ("process", "lane", "userTask"):
+        for elem in root.findall(f".//bpmn:{tag}", ns):
+            name = elem.get("name")
             if name and name.strip():
-                elem_id = elem.get('id', 'unknown')
+                elem_id = elem.get("id", "unknown")
                 msgctxt = f"{elem_id}.{tag}"
                 entries.append((name.strip(), msgctxt))
     return entries
+
 
 def extract_messages_for_process(process: str):
     workflow_dir = _resolve_workflow_directory(process, None)
@@ -203,7 +202,7 @@ def extract_messages_for_process(process: str):
     catalog = Catalog(locale=None, project=process)
 
     for json_path in workflow_dir.glob("*.form"):
-        with open(json_path, 'r', encoding='utf-8') as f:
+        with open(json_path, "r", encoding="utf-8") as f:
             form = json.load(f)
         for msgid, msgctxt in extract_strings_from_form(form.get("components", [])):
             catalog.add(id=msgid, context=msgctxt)
@@ -212,16 +211,17 @@ def extract_messages_for_process(process: str):
         for msgid, msgctxt in extract_strings_from_bpmn(bpmn_path):
             catalog.add(id=msgid, context=msgctxt)
 
-    with open(pot_path, 'wb') as f:
+    with open(pot_path, "wb") as f:
         write_po(f, catalog, ignore_obsolete=True)
     return pot_path
 
+
 def update_catalogue(template_pot: Path, input_po: Path, output_po: Path, locale: str):
-    with open(template_pot, 'rb') as f:
+    with open(template_pot, "rb") as f:
         tpl = read_po(f)
 
     if input_po.exists():
-        with open(input_po, 'rb') as f:
+        with open(input_po, "rb") as f:
             existing = read_po(f)
         locale_used = existing.locale or locale
         project = existing.project
@@ -243,7 +243,7 @@ def update_catalogue(template_pot: Path, input_po: Path, output_po: Path, locale
                 for e in existing:
                     if e.context == msg.context and e.string:
                         m = updated.add(id=msg.id, string=e.string, context=msg.context)
-                        m.flags.add('fuzzy')
+                        m.flags.add("fuzzy")
                         added = True
                         break
         if not added:
@@ -254,11 +254,12 @@ def update_catalogue(template_pot: Path, input_po: Path, output_po: Path, locale
         for old in existing:
             if old.context not in tpl_ctxs:
                 obs = updated.add(id=old.id, string=old.string, context=old.context)
-                setattr(obs, 'obsolete', True)
+                setattr(obs, "obsolete", True)
 
     output_po.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_po, 'wb') as f:
+    with open(output_po, "wb") as f:
         write_po(f, updated)
+
 
 def update_process(process: str, locale: str):
     workflow_dir = _resolve_workflow_directory(process, None)
@@ -266,6 +267,7 @@ def update_process(process: str, locale: str):
     po = workflow_dir / "i18n" / "locales" / locale / "LC_MESSAGES" / f"{process}.po"
     update_catalogue(template_pot=pot, input_po=po, output_po=po, locale=locale)
     return po
+
 
 def compile_all():
     for workflow_dir in workflow_providers.iter_workflow_directories():
@@ -301,7 +303,7 @@ def get_supported_locales() -> List[dict[str, str]]:
     entries: List[dict[str, str]] = []
     seen_keys: set[str] = set()
     for code in localedata.locale_identifiers():
-        hyphenated = code.replace('_', '-')
+        hyphenated = code.replace("_", "-")
         if len(hyphenated) > MAX_LOCALE_KEY_LENGTH:
             continue
         try:
@@ -340,24 +342,27 @@ def get_supported_locales() -> List[dict[str, str]]:
         if hyphenated in seen_keys:
             continue
 
-        entries.append({'key': hyphenated, 'label': label})
+        entries.append({"key": hyphenated, "label": label})
         seen_keys.add(hyphenated)
 
     # Sort alphabetically by label
-    entries.sort(key=lambda x: x['label'])
+    entries.sort(key=lambda x: x["label"])
     return entries
 
 
-ACCEPT_LANG_RE = re.compile(r"""
+ACCEPT_LANG_RE = re.compile(
+    r"""
     \s*
     (?P<lang>[A-Za-z0-9\-_]+)      # language[-REGION]
     (?:\s*;\s*q=(?P<q>0(\.\d+)?|1(\.0+)?))?  # optional ;q=0.xxx or 1.0
     \s*
-""", re.VERBOSE)
+""",
+    re.VERBOSE,
+)
 
 
 def extract_primary_locale(
-    accept_language_header: str
+    accept_language_header: str,
 ) -> Optional[str]:
     """
     Parse Accept-Language, sort by quality, but *only* return a code that’s
@@ -397,7 +402,7 @@ def extract_primary_locale(
 
 def match_translation(
     user_locale: str,
-    available: list[str]
+    available: list[str],
 ) -> str:
     """
     1) Try exact match (case-insensitive) against available.

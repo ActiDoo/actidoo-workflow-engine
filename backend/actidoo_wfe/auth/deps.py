@@ -12,12 +12,12 @@ from actidoo_wfe.auth.core import (
 
 def require_authenticated(request: Request):
     """Ensure the current session is authenticated, otherwise raise 401."""
-    
+
     loginstate = get_login_state(request=request)
 
     if not loginstate.is_logged_in:
         raise HTTPException(status_code=401, detail="Not logged in")
-    
+
 
 @lru_cache(maxsize=None)
 def require_realm_role(role: str):

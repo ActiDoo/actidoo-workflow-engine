@@ -19,4 +19,3 @@ router.include_router(router=api_bff_user.router, prefix="/bff/user")
 router.include_router(router=api_bff_admin.router, prefix="/bff/admin")
 router.include_router(router=api_routes.router, prefix="/api/v1")
 router.include_router(router=workflow_data_router, prefix="/bff/user")
-

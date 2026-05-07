@@ -45,6 +45,7 @@ log = logging.getLogger(__name__)
 
 # Form Service
 
+
 def _extract_attribute_reference(node: ast.Attribute) -> tuple[int, str]:
     """
     Returns (hops_up, property_name) for attribute chains like:
@@ -82,8 +83,11 @@ def _extract_attribute_reference(node: ast.Attribute) -> tuple[int, str]:
 
     return hops, property_name
 
+
 def _find_property_upwards(
-    global_jsonschema: dict, starting_path: list[str], property: str
+    global_jsonschema: dict,
+    starting_path: list[str],
+    property: str,
 ):
     found = False
     found_path = None
@@ -124,11 +128,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
     # Die aktuelle Node (jsonschema) sollte direkt "properties" Kinder haben
     for key in jsonschema["properties"]:
         try:
-            if (
-                jsonschema["properties"][key]["type"] == "array"
-                and "items" in jsonschema["properties"][key]
-                and "properties" in jsonschema["properties"][key]["items"]
-            ):
+            if jsonschema["properties"][key]["type"] == "array" and "items" in jsonschema["properties"][key] and "properties" in jsonschema["properties"][key]["items"]:
                 convert_hide_if_props_to_declarative_jsonschema(
                     global_jsonschema=global_jsonschema,
                     path=path
@@ -143,10 +143,10 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
                 # Wir extrahieren das Schema für die Property, die versteckt werden soll
                 then_property = copy.deepcopy(
-                    jsonschema["properties"][key]
+                    jsonschema["properties"][key],
                 )  # Das ist der positive Fall, also der korrekte Schema
                 else_property = {
-                    "type": "null"
+                    "type": "null",
                 }  # Im negativen Fall, setzen wir den Typen auf null, dadurch wird das Feld nicht angezeigt
 
                 # Aufräumen: hideif Property löschen; im globalen Schema das Property auf "True" setzen, weil die eigentliche Definition erst im allOf Teil folgt; required rausziehen
@@ -165,26 +165,27 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
                 inner_ifthenschema["then"]["properties"][key] = copy.deepcopy(then_property)
                 if key in jsonschema.get("required", []):
-                    jsonschema["required"].remove(key) # cleanup the old 'required' entry
+                    jsonschema["required"].remove(key)  # cleanup the old 'required' entry
                     inner_ifthenschema["then"]["required"] = [key]
                 inner_ifthenschema["else"] = {
                     "properties": {key: else_property},
                     "type": "object",
                 }
                 outer_ifthenschema["else"] = _build_nested_schema_for_path(
-                    path, inner_ifthenschema["else"]
+                    path,
+                    inner_ifthenschema["else"],
                 )
 
                 # Das richtige if müssen wir nach dem parsen finden
                 # if = subschema mit werten, die gesetzt sein müssen (inkl. arrays...)
 
                 patched: str = hideif.lstrip("= ").strip(" ")
-                patched = patched.replace("\n"," ")
+                patched = patched.replace("\n", " ")
                 patched = _patch_expression(patched)
                 ast_tree = ast.parse(patched, mode="eval")
-                
+
                 # Prüfen, dass der Ausdruck ein Vergleich ist.
-                assert (isinstance(ast_tree.body, ast.Compare) or isinstance(ast_tree.body, ast.BoolOp))
+                assert isinstance(ast_tree.body, ast.Compare) or isinstance(ast_tree.body, ast.BoolOp)
 
                 # if = subschema mit werten, die gesetzt sein müssen (inkl. arrays...)
                 # For example the Camunda hide-if expression
@@ -192,9 +193,11 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                 # becomes
                 # {'anyOf': [{'type': 'object', 'properties': {'status': {'const': 'rejected', 'default': ''}}}, {'type': 'object', 'properties': {'action': {'const': 'update', 'default': ''}}}]}
                 if_not_schema, if_path = _camunda_hide_if_expression_ast_to_jsonschema(
-                    node=ast_tree.body, global_jsonschema=global_jsonschema, path=path
-                ) # can raise an exception
-                
+                    node=ast_tree.body,
+                    global_jsonschema=global_jsonschema,
+                    path=path,
+                )  # can raise an exception
+
                 # nun müssen wir im "allOfSchema" schema dem if_path folgen und das if_schema einfügen
                 pointer = outer_ifthenschema
                 for p in if_path:
@@ -203,7 +206,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                 pointer["if"] = {"not": if_not_schema}
 
         except Exception as error:
-            log.exception(f'{type(error).__name__}: {error.args}. Raised in convert_hide_if_props_to_declarative_jsonschema for key={key}')
+            log.exception(f"{type(error).__name__}: {error.args}. Raised in convert_hide_if_props_to_declarative_jsonschema for key={key}")
             raise error
 
 
@@ -215,7 +218,9 @@ def _patch_expression(invalid_python, lhs=""):
     for transformation in feel_fixes:
         if isinstance(transformation[1], str):
             proposed_python = re.sub(
-                transformation[0], transformation[1], proposed_python
+                transformation[0],
+                transformation[1],
+                proposed_python,
             )
         else:
             for x in re.findall(transformation[0], proposed_python):
@@ -232,28 +237,36 @@ def _patch_expression(invalid_python, lhs=""):
 
 def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonschema, path):
     if isinstance(node, ast.Compare):  # =; !=
-        assert (isinstance(node.left, ast.Name) or isinstance(node.left, ast.Constant) or isinstance(node.left, ast.Attribute))
-        assert (isinstance(node.comparators[0], ast.Name) or isinstance(node.comparators[0], ast.Constant) or isinstance(node.comparators[0], ast.Attribute))
+        assert isinstance(node.left, ast.Name) or isinstance(node.left, ast.Constant) or isinstance(node.left, ast.Attribute)
+        assert isinstance(node.comparators[0], ast.Name) or isinstance(node.comparators[0], ast.Constant) or isinstance(node.comparators[0], ast.Attribute)
 
         hops = 0
         if isinstance(node.left, ast.Name):
             property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
-                node.left, global_jsonschema, path
+                node.left,
+                global_jsonschema,
+                path,
             )
             value, _ = _camunda_hide_if_expression_ast_to_jsonschema(
-                node.comparators[0], global_jsonschema, path
+                node.comparators[0],
+                global_jsonschema,
+                path,
             )
         elif isinstance(node.left, ast.Constant):
             property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
-                node.comparators[0], global_jsonschema, path
+                node.comparators[0],
+                global_jsonschema,
+                path,
             )
             value, _ = _camunda_hide_if_expression_ast_to_jsonschema(
-                node.left, global_jsonschema, path
+                node.left,
+                global_jsonschema,
+                path,
             )
-        else: # ast.Attribute:
+        else:  # ast.Attribute:
             assert isinstance(node.left, ast.Attribute)
             hops, property = _extract_attribute_reference(node.left)
-            value, _ = _camunda_hide_if_expression_ast_to_jsonschema(node.comparators[0], global_jsonschema, path) # type: ignore
+            value, _ = _camunda_hide_if_expression_ast_to_jsonschema(node.comparators[0], global_jsonschema, path)  # type: ignore
 
         op = node.ops[0]
 
@@ -261,7 +274,8 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         starting_path = path[:-hops] if hops > 0 else path
         found_path = _find_property_upwards(global_jsonschema, starting_path, property)
         left_node = _get_subschema(
-            global_jsonschema=global_jsonschema, path=found_path
+            global_jsonschema=global_jsonschema,
+            path=found_path,
         )["properties"][property]
         property_type = left_node["type"] if isinstance(left_node, dict) else None
         # property_type can be a single string like "boolean" or "string" or a list of strings like: ["string", "null"]
@@ -274,7 +288,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
                 property: {
                     "const": value,
                     "default": False if value_type == "boolean" else "",
-                }
+                },
             },
         }
 
@@ -316,12 +330,14 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
     elif isinstance(node, ast.BoolOp):  # and/or
         values_jsonschema = []
         for i in range(len(node.values)):
-            assert (isinstance(node.values[i], ast.Compare) or isinstance(node.values[i], ast.BoolOp))
+            assert isinstance(node.values[i], ast.Compare) or isinstance(node.values[i], ast.BoolOp)
             value_jsonschema, _ = _camunda_hide_if_expression_ast_to_jsonschema(
-                node.values[i], global_jsonschema, path
+                node.values[i],
+                global_jsonschema,
+                path,
             )
             values_jsonschema.append(value_jsonschema)
-        
+
         if isinstance(node.op, ast.And):
             return {"allOf": values_jsonschema}, []
         elif isinstance(node.op, ast.Or):
@@ -380,7 +396,9 @@ def get_jsonschema_for_validation(
     uischema = copy.deepcopy(form.uischema)
     if not preserve_disabled_fields:
         convert_disabled_fields_to_null_fields(
-            global_jsonschema=schema, global_uischema=uischema, path=[]
+            global_jsonschema=schema,
+            global_uischema=uischema,
+            path=[],
         )
     convert_hide_if_props_to_declarative_jsonschema(schema, [])
 
@@ -397,10 +415,7 @@ def get_jsonschema_for_validation(
             d = {
                 k: setAdditionalProperties(
                     x,
-                    (
-                        set_no_additional_properties
-                        and k not in ["anyOf", "allOf", "if"]
-                    ),
+                    (set_no_additional_properties and k not in ["anyOf", "allOf", "if"]),
                 )
                 for k, x in d.items()
             }
@@ -426,7 +441,7 @@ def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None
             for item in path_list:
                 subdata = subdata[item]
             keys = list(
-                jsonschema._utils.find_additional_properties(err.instance, err.schema)
+                jsonschema._utils.find_additional_properties(err.instance, err.schema),
             )
             for k in keys:
                 value = subdata[k]
@@ -444,7 +459,7 @@ def get_static_options(jsonschema, path):
 
     if oneOf:
         return {x["const"]: {"value": x["const"], "label": x["title"]} for x in oneOf}
-    elif node.get("items"): # for multiselects we've got node.items.oneOf
+    elif node.get("items"):  # for multiselects we've got node.items.oneOf
         oneOf = node["items"].get("oneOf", [])
         return {x["const"]: {"value": x["const"], "label": x["title"]} for x in oneOf}
 
@@ -466,22 +481,23 @@ def get_file_options(options_folder, options_file) -> list[tuple[str, str]]:
                 if len(row) >= 2:  # Make sure there are at least two columns in the row
                     column1, column2 = row[:2]  # Get the first two columns
                     data.append(
-                        (column1, column2)
+                        (column1, column2),
                     )  # Append them as a tuple to the list
                 else:
                     log.error(f"get_file_options() of {options_folder}/{options_file}: row length={len(row)} instead of expected >= 2")
     except Exception as error:
-        log.exception(f'{type(error).__name__}: {error.args}.')
+        log.exception(f"{type(error).__name__}: {error.args}.")
         raise OptionsFileCouldNotBeReadException(f"{filepath}")
 
     return data
+
 
 def get_function_options(jsonschema, property_path, options_function, form_data, functions_env):
     try:
         func = functions_env[options_function]
     except KeyError:
         raise OptionFunctionNotFound(f"Error when looking up options_function '{options_function}'")
-    
+
     oth = OptionTaskHelper(
         form_data=form_data,
         property_path=property_path,
@@ -489,7 +505,7 @@ def get_function_options(jsonschema, property_path, options_function, form_data,
     )
     data = func(oth=oth)
     return data
-    
+
 
 def get_options(jsonschema, property_path, options_folder, form_data, functions_env):
     custom_properties = get_custom_properties(jsonschema=jsonschema, path=property_path)
@@ -500,12 +516,16 @@ def get_options(jsonschema, property_path, options_folder, form_data, functions_
 
     if options_file is not None:
         data = get_file_options(
-            options_folder=options_folder, options_file=options_file
+            options_folder=options_folder,
+            options_file=options_file,
         )
     elif options_function is not None:
         data = get_function_options(
-            jsonschema, property_path, options_function=options_function,
-            form_data=form_data, functions_env=functions_env
+            jsonschema,
+            property_path,
+            options_function=options_function,
+            form_data=form_data,
+            functions_env=functions_env,
         )
     else:
         static_options = get_static_options(jsonschema=jsonschema, path=property_path)
@@ -551,7 +571,11 @@ def get_options_detailed(jsonschema, property_path: list[str], options_folder, f
             raise OptionsFileCouldNotBeReadException(f"{filepath}")
     elif options_function is not None:
         data = get_function_options(
-            jsonschema, property_path, options_function=options_function, form_data=form_data, functions_env=functions_env
+            jsonschema,
+            property_path,
+            options_function=options_function,
+            form_data=form_data,
+            functions_env=functions_env,
         )
     else:
         static_options = get_static_options(jsonschema=jsonschema, path=property_path)
@@ -738,24 +762,25 @@ def remove_data_uri_fields(schema):
 
 def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, property_path, options_folder, functions_env):
     def custom_properties_validator(validator, value, instance, schema):
-        log.debug("custom_properties_validator: instance=%s, property_path=%s, value=%s)",instance, property_path, value)
+        log.debug("custom_properties_validator: instance=%s, property_path=%s, value=%s)", instance, property_path, value)
 
         options_file = schema.get("custom_properties", {}).get("options_file", None)
 
         if instance is not None and options_file:
             data = get_file_options(
-                options_folder=options_folder, options_file=options_file
+                options_folder=options_folder,
+                options_file=options_file,
             )
             if isinstance(instance, list):
                 for instance_item in instance:
                     if not any(x for x in data if x[0] == instance_item):
                         yield jsonschema.exceptions.ValidationError(
-                            f"Provided value {instance_item} not found in options_file {options_file}!"
+                            f"Provided value {instance_item} not found in options_file {options_file}!",
                         )
             else:
                 if not any(x for x in data if x[0] == instance):
                     yield jsonschema.exceptions.ValidationError(
-                        f"Provided value {instance} not found in options_file {options_file}!"
+                        f"Provided value {instance} not found in options_file {options_file}!",
                     )
 
         options_function = schema.get("custom_properties", {}).get("options_function", None)
@@ -766,9 +791,9 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
         # deleted from the path, when getting the subschema for validation:
         p = [x for x in property_path if not isinstance(x, int)]
 
-        required_list = _get_subschema(global_jsonschema=form.jsonschema, path=p).get("required",[])
+        required_list = _get_subschema(global_jsonschema=form.jsonschema, path=p).get("required", [])
 
-        is_required = p in required_list # TODO property_path is a list, can this work?
+        is_required = p in required_list  # TODO property_path is a list, can this work?
         # log.info("custom_properties_validator: required_list=%s,property_path=%s,is_required=%s",required_list, p, is_required)
         required_and_not_none = instance is not None and is_required
         not_required_but_exists = instance is not None and instance != "" and not is_required
@@ -780,15 +805,15 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
             # Eigentlich dürfte das Frontend gar keinen LeerString dafür erzeugen, sondern null oder undefined.
             try:
                 valid_options = get_function_options(
-                    jsonschema=form.jsonschema, 
+                    jsonschema=form.jsonschema,
                     property_path=list(property_path),
                     options_function=options_function,
                     functions_env=functions_env,
-                    form_data=task_data
+                    form_data=task_data,
                 )
             except OptionFunctionNotFound:
                 yield jsonschema.exceptions.ValidationError(
-                    f"The expected options_function '{options_function}' was not found in code!"
+                    f"The expected options_function '{options_function}' was not found in code!",
                 )
                 return
 
@@ -796,12 +821,12 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
                 for instance_item in instance:
                     if not any(x for x in valid_options if x[0] == instance_item):
                         yield jsonschema.exceptions.ValidationError(
-                            f"Provided value {instance_item} not found in options_function {options_function}!"
+                            f"Provided value {instance_item} not found in options_function {options_function}!",
                         )
             else:
                 if not any(x for x in valid_options if x[0] == instance):
                     yield jsonschema.exceptions.ValidationError(
-                        f"Provided value {instance} not found in options_function {options_function}!"
+                        f"Provided value {instance} not found in options_function {options_function}!",
                     )
 
         validation_function = schema.get("custom_properties", {}).get("validation_function", None)
@@ -819,10 +844,11 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
 
     return custom_properties_validator
 
+
 @dataclass
 class ValidationResult:
     task_data: dict
-    error_schema: dict|None
+    error_schema: dict | None
 
 
 def validate_task_data(
@@ -832,7 +858,7 @@ def validate_task_data(
     functions_env: dict,
     preserve_unknown_fields: bool = False,
     preserve_disabled_fields: bool = False,
-    log_validation_errors: bool = True
+    log_validation_errors: bool = True,
 ) -> ValidationResult:
     """Validate incoming task data against a form definition and clean it up.
 
@@ -841,7 +867,7 @@ def validate_task_data(
     definition, optionally remembers technical fields that should survive the
     check, and applies the hide-if handling so that hidden values cannot
     leak into user tasks. With ``preserve_disabled_fields`` callers can opt to
-    keep values of read-only/disabled form fields. The function returns the 
+    keep values of read-only/disabled form fields. The function returns the
     cleaned task data together with an error payload."""
 
     log.debug("> validate_task_data")
@@ -873,10 +899,10 @@ def validate_task_data(
             "custom_properties": make_custom_properties_validator(
                 options_folder=options_folder,
                 functions_env=functions_env,
-                task_data = cleaned_task_data,
+                task_data=cleaned_task_data,
                 property_path=position,
-                form=form
-            )
+                form=form,
+            ),
         },
     )
 
@@ -891,14 +917,13 @@ def validate_task_data(
             validator_instance.validate(instance=tracked_task_data)
         except jsonschema.ValidationError as ex:
             if ex.validator == "type" and ex.validator_value == "null":  # null fields are not allowed, we will remove them here
-
                 tracked_task_data = remove_item(tracked_task_data, ex.absolute_path)
                 removed.append(list(ex.absolute_path))
                 run_again = True
             elif log_validation_errors:
                 log.debug(f"Validation error: {ex.message}; path={ex.json_path}; instance={ex.instance}")
-            
-    error_schema = validate_and_create_error_dict(validator=validator_instance,instance=tracked_task_data)
+
+    error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data)
     # log.debug("removed = %s", removed)
 
     untracked_task_data = copy.deepcopy(tracked_task_data)
@@ -912,7 +937,7 @@ def validate_task_data(
     else:
         log.debug("< validate_task_data")
 
-    return ValidationResult(task_data = untracked_task_data, error_schema = error_schema)
+    return ValidationResult(task_data=untracked_task_data, error_schema=error_schema)
 
 
 def iterate_and_replace_datauri(json_data, replace_function):
@@ -988,14 +1013,15 @@ def convert_disabled_fields_to_null_fields(global_jsonschema, global_uischema, p
         if isinstance(uischema[k], dict) and uischema[k].get("ui:disabled", False):
             jsonschema["properties"][k]["type"] = "null"
 
-    for k in jsonschema.get("properties",{}).keys(): # properties might be missing. e.g. in a multi select, we will have an array of strings
-        if "type" in jsonschema["properties"][k] and jsonschema["properties"][k][
-            "type"
-        ] in ["object", "array"]:
+    for k in jsonschema.get("properties", {}).keys():  # properties might be missing. e.g. in a multi select, we will have an array of strings
+        if "type" in jsonschema["properties"][k] and jsonschema["properties"][k]["type"] in ["object", "array"]:
             convert_disabled_fields_to_null_fields(
                 global_jsonschema=global_jsonschema,
                 global_uischema=global_uischema,
-                path=path+[k,]
+                path=path
+                + [
+                    k,
+                ],
             )
 
 

@@ -101,7 +101,10 @@ class TestFieldsMetadata:
         """No fields config — returns all columns minus system columns."""
         api_cfg = WorkflowDataApiConfig()
         desc = DataModelDescriptor(
-            name="Test", model_class=ApiTestModel, namespace="apitest", api=api_cfg
+            name="Test",
+            model_class=ApiTestModel,
+            namespace="apitest",
+            api=api_cfg,
         )
         meta = _fields_metadata(desc)
         names = [m["name"] for m in meta]
@@ -115,7 +118,10 @@ class TestFieldsMetadata:
             fields=["name", "value"],
         )
         desc = DataModelDescriptor(
-            name="Test", model_class=ApiTestModel, namespace="apitest", api=api_cfg
+            name="Test",
+            model_class=ApiTestModel,
+            namespace="apitest",
+            api=api_cfg,
         )
         meta = _fields_metadata(desc)
         assert len(meta) == 2
@@ -128,7 +134,10 @@ class TestFieldsMetadata:
             fields=["name", vf],
         )
         desc = DataModelDescriptor(
-            name="Test", model_class=ApiTestModel, namespace="apitest", api=api_cfg
+            name="Test",
+            model_class=ApiTestModel,
+            namespace="apitest",
+            api=api_cfg,
         )
         meta = _fields_metadata(desc)
         assert len(meta) == 2
@@ -146,7 +155,9 @@ class TestFieldsMetadata:
 class TestSerialization:
     def test_serialize_row_excludes_mixin_system_columns(self):
         row = ApiTestModel(
-            workflow_instance_id="wf1", name="Test", value=42,
+            workflow_instance_id="wf1",
+            name="Test",
+            value=42,
             parent_workflow_instance_id="wf0",
             child_workflow_instance_id=None,
             action="create",
@@ -162,7 +173,9 @@ class TestSerialization:
 
     def test_serialize_row_with_fields(self):
         row = ApiTestModel(
-            workflow_instance_id="wf1", name="Test", value=42,
+            workflow_instance_id="wf1",
+            name="Test",
+            value=42,
         )
         result = _serialize_row(row, fields=["workflow_instance_id", "name"])
         assert result == {"workflow_instance_id": "wf1", "name": "Test"}
@@ -170,7 +183,9 @@ class TestSerialization:
     def test_serialize_row_with_virtual_field(self):
         vf = VirtualField("doubled", type="integer", value=lambda r: r.value * 2)
         row = ApiTestModel(
-            workflow_instance_id="wf1", name="Test", value=21,
+            workflow_instance_id="wf1",
+            name="Test",
+            value=21,
         )
         result = _serialize_row(row, fields=["name", vf])
         assert result == {"name": "Test", "doubled": 42}
@@ -186,7 +201,10 @@ class TestAccessControl:
         """No read_roles restriction = all authenticated users have access."""
         api_cfg = WorkflowDataApiConfig(read_roles=[])
         descriptor = DataModelDescriptor(
-            name="Test", model_class=ApiTestModel, namespace="apitest", api=api_cfg
+            name="Test",
+            model_class=ApiTestModel,
+            namespace="apitest",
+            api=api_cfg,
         )
         user = MagicMock()
         user.roles = []
@@ -195,7 +213,10 @@ class TestAccessControl:
     def test_user_has_read_access_with_role(self):
         api_cfg = WorkflowDataApiConfig(read_roles=["viewer"])
         descriptor = DataModelDescriptor(
-            name="Test", model_class=ApiTestModel, namespace="apitest", api=api_cfg
+            name="Test",
+            model_class=ApiTestModel,
+            namespace="apitest",
+            api=api_cfg,
         )
         role_mock = MagicMock()
         role_mock.role.name = "viewer"
@@ -206,7 +227,10 @@ class TestAccessControl:
     def test_user_lacks_read_access(self):
         api_cfg = WorkflowDataApiConfig(read_roles=["admin"])
         descriptor = DataModelDescriptor(
-            name="Test", model_class=ApiTestModel, namespace="apitest", api=api_cfg
+            name="Test",
+            model_class=ApiTestModel,
+            namespace="apitest",
+            api=api_cfg,
         )
         role_mock = MagicMock()
         role_mock.role.name = "viewer"
@@ -216,7 +240,10 @@ class TestAccessControl:
 
     def test_no_api_config(self):
         descriptor = DataModelDescriptor(
-            name="Test", model_class=ApiTestModel, namespace="apitest", api=None
+            name="Test",
+            model_class=ApiTestModel,
+            namespace="apitest",
+            api=None,
         )
         user = MagicMock()
         user.roles = []
@@ -231,22 +258,22 @@ class TestAccessControl:
 class TestListModels:
     def test_only_api_configured_models_listed(self):
         api_model = DataModelDescriptor(
-            name="WithApi", model_class=ApiTestModel, namespace="apitest",
+            name="WithApi",
+            model_class=ApiTestModel,
+            namespace="apitest",
             api=WorkflowDataApiConfig(),
         )
         no_api = DataModelDescriptor(
-            name="NoApi", model_class=ApiTestModel, namespace="apitest",
+            name="NoApi",
+            model_class=ApiTestModel,
+            namespace="apitest",
             api=None,
         )
         data_model_registry.register(api_model)
         data_model_registry.register(no_api)
 
         # Simulate the list_models filter logic (presence of api = exposed)
-        result = [
-            {"name": d.name, "columns": _columns_from_model(d.model_class)}
-            for d in data_model_registry.list_models()
-            if d.api
-        ]
+        result = [{"name": d.name, "columns": _columns_from_model(d.model_class)} for d in data_model_registry.list_models() if d.api]
         assert len(result) == 1
         assert result[0]["name"] == "WithApi"
 

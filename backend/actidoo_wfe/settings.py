@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 env_file = os.environ.get("ENV_FILE", ".env")
 
+
 class Settings(BaseSettings):
     """Settings Definitions and Defaults"""
 
@@ -29,7 +30,6 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Load engine-internal test workflows (TestFlow*) into the workflow list?
-    # Useful for local OSS engine development. (env: SHOW_TEST_WORKFLOWS=true)
     show_test_workflows: bool = False
 
     # Allow CORS request to our APIs?
@@ -47,11 +47,9 @@ class Settings(BaseSettings):
     oidc_discovery_url: str = ""
     oidc_client_id: str = ""
     oidc_client_secret: str = ""
-    #oidc_scopes: str = "openid profile email groups roles"
+    # oidc_scopes: str = "openid profile email groups roles"
     oidc_scopes: str = "openid profile email"
-    oidc_roles_claim_paths: str = (
-        "realm_access.roles,resource_access.{client_id}.roles,resource_access.*.roles,roles,groups,app_roles,appRoles"
-    )
+    oidc_roles_claim_paths: str = "realm_access.roles,resource_access.{client_id}.roles,resource_access.*.roles,roles,groups,app_roles,appRoles"
     oidc_username_claims: str = "preferred_username,name,email,upn"
     oidc_email_claims: str = "email,upn"
     oidc_first_name_claims: str = "given_name,first_name"
@@ -73,7 +71,7 @@ class Settings(BaseSettings):
     auth_debug_token_introspection: bool = False
 
     # Output Token Introspection in Auth Fallback View?
-    auth_fallback_redirect: str|None = None
+    auth_fallback_redirect: str | None = None
 
     ### Session settings
 
@@ -101,21 +99,23 @@ class Settings(BaseSettings):
     db_ssl_ca: str = ""
 
     ### Attachment Storage
-    storage_mode: Literal['LOCAL','AZURE_BLOB','AZURE_BLOB_TENANT'] = "LOCAL"
+    storage_mode: Literal["LOCAL", "AZURE_BLOB", "AZURE_BLOB_TENANT"] = "LOCAL"
     storage_local_upload_path: str = str((pathlib.Path(__file__).parent.parent / "upload_dir").absolute())
-    storage_azure_account_name: str|None = None
-    storage_azure_account_key: str|None = None # base64 encoded in case of local development for azureit; not base64 encoded for deployed Azure Tenant version (Client Secret of Service Principal)
-    storage_azure_override_proxy_envs: bool = False # libcloud in version 3.19 still does not respect no_proxy, it will use http_proxy (lowercase only!) if not overwritten, see https://github.com/apache/libcloud/pull/2079
+    storage_azure_account_name: str | None = None
+    storage_azure_account_key: str | None = None  # base64 encoded in case of local development for azureit; not base64 encoded for deployed Azure Tenant version (Client Secret of Service Principal)
+    storage_azure_override_proxy_envs: bool = (
+        False  # libcloud in version 3.19 still does not respect no_proxy, it will use http_proxy (lowercase only!) if not overwritten, see https://github.com/apache/libcloud/pull/2079
+    )
 
     # Azure-Blob Settings for development
-    storage_azure_override_host: str|None = None
-    storage_azure_override_port: str|None = None
-    storage_azure_override_endpoint: str|None = None
+    storage_azure_override_host: str | None = None
+    storage_azure_override_port: str | None = None
+    storage_azure_override_endpoint: str | None = None
     storage_azure_override_secure: bool = True
 
     # Azure-Blob-Tenant settings for deployed versions
-    storage_azure_tenant_id: str|None = None
-    storage_azure_client_id: str|None = None
+    storage_azure_tenant_id: str | None = None
+    storage_azure_client_id: str | None = None
 
     ### Email Settings
     email_transport: Literal["GRAPH", "SMTP"] = "GRAPH"
@@ -137,12 +137,12 @@ class Settings(BaseSettings):
     email_from_address: str = ""
 
     email_subject_suffix: str = ""
-    email_subject_prefix: str="[WF] "
+    email_subject_prefix: str = "[WF] "
     email_override_recipients_enable: bool = False
     email_override_recipients_list: list[str] = []
     email_skip: bool = False
     email_receivers_erroneous_tasks: list[str] = []
-    email_signature: str="""
+    email_signature: str = """
 Best regards,
 
 Workflow Engine
@@ -164,7 +164,7 @@ Workflow Engine
     workflows: list[str] = [""]
 
     # Connector instances — populated via env vars with nested delimiter '__'
-    # e.g. CONNECTORS__JIRA__EUROPE_PXC__URL=https://...
+    # e.g. CONNECTORS__JIRA__ABC__URL=https://...
     connectors: dict[str, dict[str, dict]] = {}
 
     # Data Model API pagination defaults
@@ -172,9 +172,11 @@ Workflow Engine
     data_model_api_max_page_size: int = 500
 
     model_config = SettingsConfigDict(
-        env_file=(".env.defaults", env_file, ".env.local"), secrets_dir="/run/secrets", env_nested_delimiter='__'
+        env_file=(".env.defaults", env_file, ".env.local"),
+        secrets_dir="/run/secrets",
+        env_nested_delimiter="__",
     )
-    
+
     @field_validator("api_path", mode="before")
     @classmethod
     def _validate_api_path(cls, value: str | None) -> str:

@@ -12,7 +12,8 @@ def import_submodules(from_module_name):
     if hasattr(module, "__path__"):
         # If it has a __path__ attribute, it's a package, so use pkgutil.walk_packages
         for loader, module_name, is_pkg in pkgutil.walk_packages(
-            module.__path__, module.__name__ + "."
+            module.__path__,
+            module.__name__ + ".",
         ):
             importlib.import_module(module_name)
 

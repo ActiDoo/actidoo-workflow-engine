@@ -44,11 +44,11 @@ def upsert_user(
     first_name: str | None,
     last_name: str | None,
     is_service_user: bool,
-    initial_locale: str | None = None
+    initial_locale: str | None = None,
 ) -> WorkflowUser:
     # look for ID first
     user = db.execute(
-        select(WorkflowUser).where(WorkflowUser.idp_id == idp_user_id)
+        select(WorkflowUser).where(WorkflowUser.idp_id == idp_user_id),
     ).scalar()
 
     # if ID is not found, look for username: if that username is found, it means that the username exists,
@@ -56,7 +56,7 @@ def upsert_user(
     # It is asserted that this can never happen in production code.
     if user is None:
         user = db.execute(
-            select(WorkflowUser).where(WorkflowUser.username == username)
+            select(WorkflowUser).where(WorkflowUser.username == username),
         ).scalar()
         if user is not None:
             # TODO log entry
@@ -66,7 +66,7 @@ def upsert_user(
 
     if user is None:
         user = WorkflowUser()
-        user.idp_id = idp_user_id 
+        user.idp_id = idp_user_id
         db.add(user)
 
     # "_locale" is the actual column and "locale" is a property with fallback to the default value (see WorkflowUser class in models.py)
@@ -110,10 +110,8 @@ def assign_roles(db: Session, user_id: uuid.UUID, role_names: List[str]):
 
     current_role_names = list(
         db.execute(
-            select(WorkflowRole.name)
-            .join(WorkflowUserRole, WorkflowUserRole.role_id == WorkflowRole.id)
-            .where(WorkflowUserRole.user_id == user.id)
-        ).scalars()
+            select(WorkflowRole.name).join(WorkflowUserRole, WorkflowUserRole.role_id == WorkflowRole.id).where(WorkflowUserRole.user_id == user.id),
+        ).scalars(),
     )
     to_add = set(role_names) - set(current_role_names)
     to_delete = set(current_role_names) - set(role_names)
@@ -133,8 +131,8 @@ def assign_roles(db: Session, user_id: uuid.UUID, role_names: List[str]):
                 and_(
                     WorkflowUserRole.user_id == user.id,
                     WorkflowUserRole.role_id == role.id,
-                )
-            )
+                ),
+            ),
         )
 
     db.flush()
@@ -142,7 +140,9 @@ def assign_roles(db: Session, user_id: uuid.UUID, role_names: List[str]):
 
 
 def search_users(
-    db: Session, search: str, include_value: None | str
+    db: Session,
+    search: str,
+    include_value: None | str,
 ) -> list[WorkflowUser]:
     user_by_value = None
     if include_value is not None:
@@ -164,10 +164,10 @@ def search_users(
                         eilike(WorkflowUser.last_name, word),
                     )
                     for word in search.split()
-                ]
-            )
+                ],
+            ),
         )
-        .limit(15)
+        .limit(15),
     ).scalars()
 
     results = [x for x in search_results]
@@ -181,27 +181,30 @@ def search_users(
 def get_users_of_role(db: Session, role_name: str):
     try:
         role = db.execute(
-            select(WorkflowRole)
-            .where(
-                WorkflowRole.name == role_name
-            )
+            select(WorkflowRole).where(
+                WorkflowRole.name == role_name,
+            ),
         ).scalar_one()
 
-        user_role_mapping = db.execute(
-            select(WorkflowUserRole)
-            .where(
-                WorkflowUserRole.role_id == role.id
+        user_role_mapping = (
+            db.execute(
+                select(WorkflowUserRole).where(
+                    WorkflowUserRole.role_id == role.id,
+                ),
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         users: list[UserRepresentation] = []
         for i in user_role_mapping:
             users.append(repository.load_user(db=db, user_id=i.user_id))
     except Exception as error:
-        log.exception(f'{type(error).__name__}: {error.args}. Raised in get_users_of_role for role_name={role_name}, returning now an empty list of users')
+        log.exception(f"{type(error).__name__}: {error.args}. Raised in get_users_of_role for role_name={role_name}, returning now an empty list of users")
         return []
 
     return users
+
 
 def set_user_delegations(
     db: Session,
@@ -215,9 +218,7 @@ def set_user_delegations(
     existing = {
         d.delegate_user_id: d
         for d in db.execute(
-            select(WorkflowUserDelegate)
-            .options(selectinload(WorkflowUserDelegate.delegate))
-            .where(WorkflowUserDelegate.principal_user_id == principal_user_id)
+            select(WorkflowUserDelegate).options(selectinload(WorkflowUserDelegate.delegate)).where(WorkflowUserDelegate.principal_user_id == principal_user_id),
         ).scalars()
     }
 
@@ -249,11 +250,13 @@ def set_user_delegations(
 
 
 def list_user_delegations(db: Session, principal_user_id: uuid.UUID) -> list[WorkflowUserDelegate]:
-    delegations = db.execute(
-        select(WorkflowUserDelegate)
-        .options(selectinload(WorkflowUserDelegate.delegate))
-        .where(WorkflowUserDelegate.principal_user_id == principal_user_id)
-    ).scalars().all()
+    delegations = (
+        db.execute(
+            select(WorkflowUserDelegate).options(selectinload(WorkflowUserDelegate.delegate)).where(WorkflowUserDelegate.principal_user_id == principal_user_id),
+        )
+        .scalars()
+        .all()
+    )
 
     for d in delegations:
         db.expunge(d)
@@ -262,15 +265,16 @@ def list_user_delegations(db: Session, principal_user_id: uuid.UUID) -> list[Wor
 
 
 def get_active_principals_for_delegate(
-    db: Session, delegate_user_id: uuid.UUID, reference_time: datetime.datetime | None = None
+    db: Session,
+    delegate_user_id: uuid.UUID,
+    reference_time: datetime.datetime | None = None,
 ) -> set[uuid.UUID]:
     now = reference_time or dt_now_naive()
     principal_ids = db.execute(
-        select(WorkflowUserDelegate.principal_user_id)
-        .where(
+        select(WorkflowUserDelegate.principal_user_id).where(
             WorkflowUserDelegate.delegate_user_id == delegate_user_id,
             or_(WorkflowUserDelegate.valid_until == None, WorkflowUserDelegate.valid_until >= now),
-        )
+        ),
     ).scalars()
     return {pid for pid in principal_ids}
 
@@ -283,12 +287,11 @@ def is_active_delegate_for(
 ) -> bool:
     now = reference_time or dt_now_naive()
     exists = db.execute(
-        select(WorkflowUserDelegate.id)
-        .where(
+        select(WorkflowUserDelegate.id).where(
             WorkflowUserDelegate.principal_user_id == principal_user_id,
             WorkflowUserDelegate.delegate_user_id == delegate_user_id,
             or_(WorkflowUserDelegate.valid_until == None, WorkflowUserDelegate.valid_until >= now),
-        )
+        ),
     ).first()
     return exists is not None
 
@@ -300,7 +303,7 @@ def update_user_settings(
     delegations: list[tuple[uuid.UUID, datetime.datetime | None]] | None = None,
 ) -> WorkflowUser:
     user = db.execute(
-        select(WorkflowUser).where(WorkflowUser.id == user_id)
+        select(WorkflowUser).where(WorkflowUser.id == user_id),
     ).scalar_one()
 
     user.locale = locale
@@ -313,11 +316,12 @@ def update_user_settings(
 
     return user
 
+
 def get_user_settings(
     db: Session,
     user_id: uuid.UUID,
 ) -> WorkflowUser:
     # Currently just returns the user
     return db.execute(
-        select(WorkflowUser).where(WorkflowUser.id == user_id)
+        select(WorkflowUser).where(WorkflowUser.id == user_id),
     ).scalar_one()

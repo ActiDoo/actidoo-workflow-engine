@@ -61,7 +61,7 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(
     dependencies=[Depends(require_realm_role("wf-user"))],
-    tags=["wfe-bff-user"]
+    tags=["wfe-bff-user"],
 )
 
 
@@ -72,7 +72,7 @@ def get_my_wfe_user(
 ) -> GetMyWfeUserResponse:
     wfe_user = service_application.get_user(db=db, user_id=user.id)
     workflows_the_user_is_admin_for = service_application.get_workflow_names_the_user_is_admin_for(db=db, user_id=user.id)
-    return GetMyWfeUserResponse.model_validate(dict(**wfe_user.model_dump(),workflows_the_user_is_admin_for=workflows_the_user_is_admin_for))
+    return GetMyWfeUserResponse.model_validate(dict(**wfe_user.model_dump(), workflows_the_user_is_admin_for=workflows_the_user_is_admin_for))
 
 
 @router.post("/start_workflow", name="start_workflow")
@@ -91,12 +91,14 @@ def start_workflow(
     except UserMayNotStartWorkflowException:
         log.warning(f"Starting workflow {reqdata.name} failed (not allowed)")
         raise HTTPException(
-            status_code=403, detail=f"Starting workflow {reqdata.name} not allowed"
+            status_code=403,
+            detail=f"Starting workflow {reqdata.name} not allowed",
         )
     except Exception:
         log.exception(f"Starting workflow {reqdata.name} failed")
         raise HTTPException(
-            status_code=500, detail=f"Starting workflow {reqdata.name} failed"
+            status_code=500,
+            detail=f"Starting workflow {reqdata.name} failed",
         )
     return StartWorkflowResponse(workflow_instance_id=workflow_id)
 
@@ -117,18 +119,21 @@ def start_workflow_preview_with_data(
     except UserMayNotStartWorkflowException:
         log.warning(f"Previewing workflow {reqdata.name} failed (not allowed)")
         raise HTTPException(
-            status_code=403, detail=f"Previewing workflow {reqdata.name} not allowed"
+            status_code=403,
+            detail=f"Previewing workflow {reqdata.name} not allowed",
         )
     except InvalidWorkflowSpecException:
         raise HTTPException(
-            status_code=404, detail=f"Workflow spec {reqdata.name} not found"
+            status_code=404,
+            detail=f"Workflow spec {reqdata.name} not found",
         )
     except ValidationResultContainsErrors as ex:
         raise HTTPException(status_code=400, detail=ex.error_schema)
     except Exception:
         log.exception(f"Previewing workflow {reqdata.name} failed")
         raise HTTPException(
-            status_code=500, detail=f"Previewing workflow {reqdata.name} failed"
+            status_code=500,
+            detail=f"Previewing workflow {reqdata.name} failed",
         )
 
     return StartWorkflowWithDataResponse.model_validate(preview.model_dump())
@@ -160,7 +165,8 @@ def get_workflow_copy_data(
         )
     except InvalidWorkflowSpecException:
         raise HTTPException(
-            status_code=404, detail="Workflow specification not found"
+            status_code=404,
+            detail="Workflow specification not found",
         )
     except Exception:
         log.exception(f"Creating workflow copy data for instance {workflow_instance_id} failed")
@@ -180,11 +186,14 @@ def get_my_usertasks(
     state: Annotated[Literal["ready", "completed"], Path()],
 ) -> GetUserTasksResponse:
     tasks: list[UserTaskRepresentation] = service_application.get_usertasks_for_user_id(
-        db=db, user_id=user.id, workflow_instance_id=workflow_instance_id, state=state
+        db=db,
+        user_id=user.id,
+        workflow_instance_id=workflow_instance_id,
+        state=state,
     )
 
     return GetUserTasksResponse(
-        usertasks=[GetUserTasksResponseUserTasks.model_validate(t) for t in tasks]
+        usertasks=[GetUserTasksResponseUserTasks.model_validate(t) for t in tasks],
     )
 
 
@@ -196,23 +205,30 @@ def submit_task_data(
     user: Annotated[WorkflowUser, Depends(get_user)],
     response: Response,
     delegate_comment: str | None = None,
-) -> GetUserTasksResponse|SubmitTaskDataErrorResponse:
+) -> GetUserTasksResponse | SubmitTaskDataErrorResponse:
     try:
         success, workflow_instance_id = service_application.submit_task_data(
-            db=db, user_id=user.id, task_id=task_id, task_data=task_data, delegate_comment=delegate_comment
+            db=db,
+            user_id=user.id,
+            task_id=task_id,
+            task_data=task_data,
+            delegate_comment=delegate_comment,
         )
-        
+
         tasks: list[UserTaskRepresentation] = service_application.get_usertasks_for_user_id(
-            db=db, user_id=user.id, workflow_instance_id=workflow_instance_id, state="ready"
+            db=db,
+            user_id=user.id,
+            workflow_instance_id=workflow_instance_id,
+            state="ready",
         )
 
         return GetUserTasksResponse(
-            usertasks=[GetUserTasksResponseUserTasks.model_validate(t) for t in tasks]
+            usertasks=[GetUserTasksResponseUserTasks.model_validate(t) for t in tasks],
         )
     except ValidationResultContainsErrors as ex:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return SubmitTaskDataErrorResponse(
-            error_schema=ex.error_schema
+            error_schema=ex.error_schema,
         )
 
 
@@ -233,47 +249,52 @@ WorkflowInstancesBffTableQuerySchema = bff_table.get_bff_table_query_schema(
 
 
 @router.post(
-    "/my_initiated_workflow_instances", name="get_my_initiated_workflow_instances"
+    "/my_initiated_workflow_instances",
+    name="get_my_initiated_workflow_instances",
 )
 def get_my_initiated_workflow_instances(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
     bff_table_request_params: Annotated[
-        bff_table.BffTableQuerySchemaBase, Depends(WorkflowInstancesBffTableQuerySchema)
+        bff_table.BffTableQuerySchemaBase,
+        Depends(WorkflowInstancesBffTableQuerySchema),
     ],  # type: ignore
 ) -> GetWorkflowInstancesResponse:
     ppp = WorkflowInstancesBffTableQuerySchema.parse_obj(bff_table_request_params)
 
-    workflows: GetWorkflowInstancesResponse = (
-        GetWorkflowInstancesResponse.model_validate(
-            service_application.bff_user_get_initiated_workflows(
-                db=db, bff_table_request_params=ppp, user_id=user.id
-            )
-        )
+    workflows: GetWorkflowInstancesResponse = GetWorkflowInstancesResponse.model_validate(
+        service_application.bff_user_get_initiated_workflows(
+            db=db,
+            bff_table_request_params=ppp,
+            user_id=user.id,
+        ),
     )
 
     return workflows
 
 
 @router.post(
-    "/workflow_instances_with_tasks/{state}", name="get_workflow_instances_with_tasks"
+    "/workflow_instances_with_tasks/{state}",
+    name="get_workflow_instances_with_tasks",
 )
 def get_workflow_instances_with_tasks(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
     bff_table_request_params: Annotated[
-        bff_table.BffTableQuerySchemaBase, Depends(WorkflowInstancesBffTableQuerySchema)
+        bff_table.BffTableQuerySchemaBase,
+        Depends(WorkflowInstancesBffTableQuerySchema),
     ],  # type: ignore
     state: Annotated[Literal["ready", "completed"], Path()],
 ) -> GetWorkflowInstancesResponse:
     ppp = WorkflowInstancesBffTableQuerySchema.parse_obj(bff_table_request_params)
 
-    workflows: GetWorkflowInstancesResponse = (
-        GetWorkflowInstancesResponse.model_validate(
-            service_application.bff_get_workflows_with_usertasks(
-                db=db, bff_table_request_params=ppp, user_id=user.id, state=state
-            )
-        )
+    workflows: GetWorkflowInstancesResponse = GetWorkflowInstancesResponse.model_validate(
+        service_application.bff_get_workflows_with_usertasks(
+            db=db,
+            bff_table_request_params=ppp,
+            user_id=user.id,
+            state=state,
+        ),
     )
 
     return workflows
@@ -281,13 +302,11 @@ def get_workflow_instances_with_tasks(
 
 @router.get("/workflows", name="get_workflows")
 def get_workflows(db: Annotated[Session, Depends(get_db)], user: Annotated[WorkflowUser, Depends(get_user)]):
-    
+
     workflows: list[WorkflowRepresentation] = service_application.get_allowed_workflows_to_start(db=db, user_id=user.id)
 
     return GetWorkflowsResponse(
-        workflows=[
-            GetWorkflowsResponseItem(name=x.name, title=x.title) for x in workflows
-        ]
+        workflows=[GetWorkflowsResponseItem(name=x.name, title=x.title) for x in workflows],
     )
 
 
@@ -298,7 +317,9 @@ def assign_task_to_me(
     reqdata: AssignTaskToMeRequest,
 ) -> AssignTaskToMeResponse:
     service_application.assign_task_to_me(
-        db=db, user_id=user.id, task_id=reqdata.task_id
+        db=db,
+        user_id=user.id,
+        task_id=reqdata.task_id,
     )
 
     return AssignTaskToMeResponse()
@@ -311,7 +332,9 @@ def unassign_task_from_me(
     reqdata: AssignTaskToMeRequest,
 ) -> AssignTaskToMeResponse:
     service_application.unassign_task_from_me(
-        db=db, user_id=user.id, task_id=reqdata.task_id
+        db=db,
+        user_id=user.id,
+        task_id=reqdata.task_id,
     )
 
     return AssignTaskToMeResponse()
@@ -330,14 +353,11 @@ def search_property_options(
         property_path=search_options.property_path,
         search=search_options.search,
         include_value=search_options.include_value,
-        form_data=search_options.form_data
+        form_data=search_options.form_data,
     )
 
     return SearchPropertyOptionsResponse(
-        options=[
-            SearchPropertyOptionsResponseItem(value=option[0], label=option[1])
-            for option in options
-        ]
+        options=[SearchPropertyOptionsResponseItem(value=option[0], label=option[1]) for option in options],
     )
 
 
@@ -347,13 +367,11 @@ def download_attachment(
     user: Annotated[WorkflowUser, Depends(get_user)],
     search_options: DownloadAttachmentRequest,
 ) -> Response:
-    attachment: Attachment = (
-        service_application.verify_assigned_user_and_download_attachment(
-            db=db,
-            user_id=user.id,
-            task_id=search_options.task_id,
-            hash=search_options.hash,
-        )
+    attachment: Attachment = service_application.verify_assigned_user_and_download_attachment(
+        db=db,
+        user_id=user.id,
+        task_id=search_options.task_id,
+        hash=search_options.hash,
     )
 
     return streaming_response_with_filecontent(
@@ -369,7 +387,7 @@ def refresh_get_workflow_spec(
     req_data: RefreshGetWorkflowSpecRequest,
 ) -> WorkflowSpecResponse:
     spec = service_application.refresh_get_workflow_spec(db=db, name=req_data.name, file_type="bpmn", version=None)
-    
+
     return WorkflowSpecResponse.model_validate(spec)
 
 
@@ -380,10 +398,13 @@ def cancel_workflow(
     reqdata: CancelWorkflowRequest,
 ) -> CancelWorkflowResponse:
     service_application.user_cancel_workflow(
-        db=db, user_id=user.id, task_id=reqdata.task_id
+        db=db,
+        user_id=user.id,
+        task_id=reqdata.task_id,
     )
 
     return CancelWorkflowResponse()
+
 
 @router.post("/delete_workflow", name="delete_workflow")
 def delete_workflow(
@@ -392,7 +413,9 @@ def delete_workflow(
     reqdata: DeleteWorkflowRequest,
 ) -> DeleteWorkflowResponse:
     service_application.user_delete_workflow(
-        db=db, user_id=user.id, task_id=reqdata.task_id
+        db=db,
+        user_id=user.id,
+        task_id=reqdata.task_id,
     )
 
     return DeleteWorkflowResponse()
@@ -400,16 +423,12 @@ def delete_workflow(
 
 @router.get("/statistics", name="get_workflow_statistics")
 def get_workflow_statistics(db: Annotated[Session, Depends(get_db)], user: Annotated[WorkflowUser, Depends(get_user)]):
-    
+
     workflows = service_application.get_workflow_statistics(db=db, user_id=user.id)
 
     return GetWorkflowStatisticsResponse(
-        workflows=[
-            GetWorkflowStatisticsResponseItem.model_validate(x) for x in workflows
-        ]
+        workflows=[GetWorkflowStatisticsResponseItem.model_validate(x) for x in workflows],
     )
-
-
 
 
 def _serialize_user_delegations(db: Session, user_id: uuid.UUID) -> list[UserDelegationResponse]:
@@ -427,9 +446,10 @@ def _serialize_user_delegations(db: Session, user_id: uuid.UUID) -> list[UserDel
                     username=delegate.username,
                     email=delegate.email,
                 ),
-            )
+            ),
         )
     return responses
+
 
 @router.post("/user_settings", name="save_user_settings")
 def save_user_settings(
@@ -438,11 +458,7 @@ def save_user_settings(
     reqdata: SaveUserSettingsRequest,
 ) -> UserSettingsResponse:
 
-    delegations = (
-        [(d.delegate_user_id, d.valid_until) for d in reqdata.delegations]
-        if reqdata.delegations is not None
-        else None
-    )
+    delegations = [(d.delegate_user_id, d.valid_until) for d in reqdata.delegations] if reqdata.delegations is not None else None
 
     updated_user = service_user.update_user_settings(
         db=db,
@@ -459,6 +475,7 @@ def save_user_settings(
         supported_locales=[LocaleItem(**l) for l in locales],
         delegations=delegation_responses,
     )
+
 
 @router.get("/user_settings", name="get_user_settings")
 def get_user_settings(

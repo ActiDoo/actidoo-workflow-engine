@@ -13,8 +13,10 @@ log: logging.Logger = logging.getLogger(__name__)
 
 setup_db(settings=settings)
 
+
 def mock_user():
     from actidoo_wfe.wf.service_user import upsert_user
+
     mockuser = upsert_user(
         db=SessionLocal(),
         idp_user_id="321",
@@ -22,7 +24,7 @@ def mock_user():
         email="",
         first_name="Mock",
         last_name="User",
-        is_service_user=False
+        is_service_user=False,
     )
     return mockuser
 
@@ -31,7 +33,7 @@ def test_refresh_get_workflow_spec(db_engine_ctx):
     with db_engine_ctx():
         client = Client()
         user = mock_user()
-        
+
         with override_get_user(client=client, user=user), disable_role_check(client):
             status, json_resp = client.post(
                 name="refresh_get_workflow_spec",

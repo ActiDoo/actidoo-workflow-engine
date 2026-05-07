@@ -14,7 +14,7 @@ TEST_DATA = {
         {
             "quantity_requested": 8,
             "unit": "modules",
-        }
+        },
     ],
     "summary_title": "Prototype Calibration Run",
     "lead_scientist": "Dr. Ada Vector",
@@ -47,15 +47,14 @@ TEST_DATA = {
                             "cycle_time": 3,
                             "cost_estimate": 3,
                         },
-                        
                     ],
                     "module_name": "Telemetry Array",
                     "Field_0f13pgm": None,
-                }
+                },
             ],
             "reference_code": "REF-001",
             "reference_label": "Mock Reference",
-        }
+        },
     ],
 }
 
@@ -104,7 +103,7 @@ def test_position_tracker_behaves_correctly_for_level_1_lists():
         {
             "quantity_requested": 8,
             "unit": "modules",
-        }
+        },
     ]
     assert position == []
 
@@ -231,6 +230,7 @@ def test_three_levels():
     assert val == 1
     assert position == ["payloads", 0, "systems", 0, "quotes", 0]
 
+
 FORM_DATA_BIG = {
     "articleList": [
         {
@@ -252,7 +252,7 @@ FORM_DATA_BIG = {
                             "price_printing": 37.35,
                             "time_printing_te": 14,
                             "price": 77.35,
-                        }
+                        },
                     ],
                     "modification_processing": "mechanical",
                     "modification_printing": "pad",
@@ -279,7 +279,7 @@ FORM_DATA_BIG = {
                             "time_printing_te": 54,
                             "price_printing": 10,
                             "price": 11,
-                        }
+                        },
                     ],
                     "modification_processing": "mechanical",
                     "modification_printing": "none",
@@ -303,7 +303,7 @@ FORM_DATA_BIG = {
             "comparisonArticle_number": "Vergleicher1",
             "comparisonArticle_name": "Bezeichner1",
             "standardArticle_price": 402,
-        }
+        },
     ],
     "next_step020": "forward",
     "instance_id": "40af9caf-8acf-42f5-bb11-d792631c131b",
@@ -330,9 +330,10 @@ FORM_DATA_BIG = {
     "Field_0y57654": None,
 }
 
+
 def test_deepcopy_after_removal_inside_big_structure():
     position, tracked_task_data = get_position_tracker(FORM_DATA_BIG)
-    
+
     removal_list = [
         ["hsNumber"],
         ["articleList", 0, "standardArticle_number"],
@@ -343,7 +344,7 @@ def test_deepcopy_after_removal_inside_big_structure():
         ["articleList", 0, "componentList", 0, "modification_printing"],
         ["articleList", 0, "componentList", 1, "standardComponent_number"],
         ["articleList", 0, "componentList", 1, "standardComponent_name"],
-        ["articleList", 0, "componentList", 1, "modification_processing"], # after deleting this, the old implementation was throwing an Recursion Error when doing copy.deepcopy
+        ["articleList", 0, "componentList", 1, "modification_processing"],  # after deleting this, the old implementation was throwing an Recursion Error when doing copy.deepcopy
         ["articleList", 0, "componentList", 1, "modification_printing"],
     ]
     for r in removal_list:
@@ -351,10 +352,9 @@ def test_deepcopy_after_removal_inside_big_structure():
         untracked = copy.deepcopy(tracked_task_data)
 
 
-
 def test_deepcopy_after_removal_inside_big_structure_2():
     position, tracked_task_data = get_position_tracker(FORM_DATA_BIG)
-    
+
     removal_list = [
         ["articleList", 0, "componentList", 0, "standardComponent_number"],
         ["articleList", 0, "componentList", 0, "standardComponent_name"],
@@ -373,15 +373,16 @@ def test_deepcopy_after_removal_inside_big_structure_2():
 
 def test_deepcopy():
     position, tracked_task_data = get_position_tracker(FORM_DATA_BIG)
-    
+
     # this still worked with the old solution. it is not the number of deepcopy-calls, but the depth of the deepcopy
     for i in range(10000):
         untracked = copy.deepcopy(tracked_task_data)
 
+
 def test_removal_create_deepcopy():
     position, tracked_task_data = get_position_tracker(FORM_DATA_BIG)
-    
-    #failed with the old solution at 10-th removal
+
+    # failed with the old solution at 10-th removal
     for i in range(100):
         try:
             tracked_task_data = remove_item(tracked_task_data, ["articleList", 0, "componentList", 0, "standardComponent_number"])
@@ -389,4 +390,3 @@ def test_removal_create_deepcopy():
         except Exception:
             print(f"Failed at {i}-th removal")
             raise
-        

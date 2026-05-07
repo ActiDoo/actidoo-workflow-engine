@@ -17,13 +17,13 @@ task_data = {
             "position_material": "Mat123",
             "position_tariff_number": "__ALT__",
             "position_origin": "__SAME__",
-        }
+        },
     ],
     "list_to_be_updated": [
         {
             "old_value": "will_be_kept",
             "update_me": "kick me",
-        }
+        },
     ],
     "list_to_be_truncated": [
         {

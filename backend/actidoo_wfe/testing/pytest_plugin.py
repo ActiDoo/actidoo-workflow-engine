@@ -181,9 +181,7 @@ def patch_connectors(specs: list[_InstanceSpec]) -> Iterator[InstanceMocks]:
         key = (type_name, instance_name)
         if key not in mocks:
             raise ConnectorInstanceNotFoundError(
-                f"No mock registered for connector {type_name}/{instance_name}. "
-                f"Add `mock_connector_instance({type_name!r}, {instance_name!r}, ...)` "
-                f"to your conftest."
+                f"No mock registered for connector {type_name}/{instance_name}. Add `mock_connector_instance({type_name!r}, {instance_name!r}, ...)` to your conftest.",
             )
         yield mocks[key]
 
@@ -211,7 +209,7 @@ def mock_connector_instance(
     for existing in _specs:
         if existing.type_name == type_name and existing.instance_name == instance_name:
             raise ValueError(
-                f"Connector instance {type_name}/{instance_name} is already mocked"
+                f"Connector instance {type_name}/{instance_name} is already mocked",
             )
     _specs.append(_InstanceSpec(type_name, instance_name, defaults))
 

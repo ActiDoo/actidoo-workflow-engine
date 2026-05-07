@@ -3,9 +3,11 @@
 
 _mixin_cache = {}
 
+
 def has_method_in_mro(cls, name: str) -> bool:
     """Check if any class in the MRO explicitly defines a method with this name."""
     return any(name in c.__dict__ for c in cls.__mro__)
+
 
 def ensure_mixin(parser_cls, mixin):
     """

@@ -17,14 +17,15 @@ from authlib.integrations.requests_client import OAuth2Session
 from authlib.jose import JsonWebToken
 from actidoo_wfe.settings import settings
 
+
 class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
     client_cls = OAuth2Session
 
-    # ---- Redirect helpers
+    #### Redirect helpers ####
     def redirect(self, url: str, status_code: int = 302) -> Response:
         return RedirectResponse(url, status_code=status_code)
 
-    # ---- State helpers to mirror flask.g
+    #### State helpers to mirror flask.g ####
     def get_state(self, request: Request) -> Any:
         return request.state
 
@@ -33,9 +34,8 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             return request.session  # type: ignore[attr-defined]
         except Exception as e:  # pragma: no cover
             raise RuntimeError(
-                "SessionMiddleware not configured. Add it to your Starlette/FastAPI app."
+                "SessionMiddleware not configured. Add it to your Starlette/FastAPI app.",
             ) from e
-
 
     # Public API mirrors Flask version. `request` must be passed explicitly.
 
@@ -43,9 +43,6 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         session = self._get_session(request)
         rv = self.create_authorization_url(redirect_uri=redirect_uri, **kwargs)
         url = rv.get("url")
-        #state = rv.get("state")
-        #nonce = rv.get("nonce")
-        #code_verifier = rv.get("code_verifier")
         session[self.name + ":state"] = rv
         return self.redirect(url)
 
@@ -71,7 +68,7 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         params: Dict[str, Any] = {"redirect_uri": redirect_uri, "authorization_response": str(request.url)}
         params = {k: v for k, v in params.items() if v is not None}
         leeway = kwargs.pop("leeway", 120)
-        token = self.fetch_access_token(**params, **kwargs, code_verifier = state_data.get("code_verifier"))
+        token = self.fetch_access_token(**params, **kwargs, code_verifier=state_data.get("code_verifier"))
         self.token = token
 
         # OIDC userinfo if present
@@ -100,20 +97,20 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         params["client_id"] = self.client_id
 
         return f"{end_session}?{urllib.parse.urlencode(params)}"
-    
+
     def access_token_claims_via_jwks(self, token: dict) -> Dict[str, Any]:
         at = token.get("access_token")
         if not at or at.count(".") != 2:
             return {}
-        
-        jwks = self.fetch_jwk_set() 
-        jwt = JsonWebToken(["RS256","RS384","RS512","ES256","ES384","ES512","PS256","PS384","PS512"])
+
+        jwks = self.fetch_jwk_set()
+        jwt = JsonWebToken(["RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512"])
         claims = jwt.decode(at, jwks)  # verify signature
         claims.validate()
 
         meta = self.load_server_metadata()
 
-        issuer =meta["issuer"]
+        issuer = meta["issuer"]
         if claims.get("iss") != issuer:
             raise ValueError("invalid issuer")
 
@@ -137,12 +134,12 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
 
         if claims.get("azp") and claims["azp"] != self.client_id:
             raise ValueError("invalid authorized party")
-        
+
         if time.time() > claims["exp"]:
             raise ValueError("token expired")
 
         return dict(claims)
-    
+
     def get_combined_userdata(self, token: dict) -> Dict[str, Any]:
         combined: Dict[str, Any] = {}
 
@@ -156,19 +153,8 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
             except ValueError as exc:
                 # Normalize validation failures to OAuthError so the caller can handle them consistently.
                 raise OAuthError(error=str(exc)) from exc
-            
+
             if claims:
                 combined.update(claims)
-
-        # userinfo = token.get("userinfo")
-        # if not isinstance(userinfo, dict):
-        #     try:
-        #         userinfo = self.userinfo(token=token)
-        #     except Exception:
-        #         userinfo = None
-
-        # if isinstance(userinfo, dict):
-        #     for key, value in userinfo.items():
-        #         combined.setdefault(key, value)
 
         return combined

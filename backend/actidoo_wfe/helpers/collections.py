@@ -5,6 +5,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def remove_item(obj, path):
     # log.info(f"remove_item {path} from {obj}")
     if not path:

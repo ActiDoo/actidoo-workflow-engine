@@ -46,8 +46,8 @@ def upgrade() -> None:
                 FROM workflow_attachments
                 WHERE data IS NOT NULL AND file IS NULL
                 LIMIT {batch_size}
-                """
-            )
+                """,
+            ),
         ).fetchall()
 
         if not rows:
@@ -74,12 +74,12 @@ def upgrade() -> None:
             SELECT COUNT(*)
             FROM workflow_attachments
             WHERE data IS NOT NULL AND file IS NULL
-            """
-        )
+            """,
+        ),
     ).scalar()
     if remaining:
         raise RuntimeError(
-            f"Unable to migrate {remaining} attachment(s) from workflow_attachments.data to workflow_attachments.file"
+            f"Unable to migrate {remaining} attachment(s) from workflow_attachments.data to workflow_attachments.file",
         )
 
     op.drop_column("workflow_attachments", "data")

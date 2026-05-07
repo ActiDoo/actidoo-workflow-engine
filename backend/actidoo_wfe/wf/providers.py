@@ -20,17 +20,13 @@ class WorkflowProvider(Protocol):
     name: str
     priority: int
 
-    def iter_workflow_names(self) -> Iterable[str]:
-        ...
+    def iter_workflow_names(self) -> Iterable[str]: ...
 
-    def get_workflow_directory(self, workflow_name: str) -> Optional[Path]:
-        ...
+    def get_workflow_directory(self, workflow_name: str) -> Optional[Path]: ...
 
-    def iter_directories(self) -> Iterable[Path]:
-        ...
+    def iter_directories(self) -> Iterable[Path]: ...
 
-    def get_module_path(self, workflow_name: str) -> Optional[str]:
-        ...
+    def get_module_path(self, workflow_name: str) -> Optional[str]: ...
 
 
 @dataclass(eq=False)
@@ -68,11 +64,8 @@ class WorkflowProviderRegistry:
     providers: List[WorkflowProvider] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        # Extensions (e.g. pxc-workflows) register their own provider via
-        # @register_workflow_provider.  The engine-internal test workflows
-        # (actidoo_wfe/wf/processes/) are only loaded when explicitly enabled
-        # via SHOW_TEST_WORKFLOWS=true.
         from actidoo_wfe.settings import settings
+
         if settings.show_test_workflows:
             builtin = FileSystemWorkflowProvider(base_path=BPMN_DIRECTORY)
             self.providers = self._sort_providers([builtin])
@@ -147,10 +140,7 @@ def _normalize_provider(candidate, label: str) -> Optional[WorkflowProvider]:
             log.error("Calling workflow provider factory '%s' failed: %s", label, error)
             return None
 
-    if all(
-        hasattr(obj, attr)
-        for attr in ("iter_workflow_names", "get_workflow_directory", "get_module_path")
-    ):
+    if all(hasattr(obj, attr) for attr in ("iter_workflow_names", "get_workflow_directory", "get_module_path")):
         return obj
 
     log.error("Workflow provider '%s' did not yield a valid provider.", label)

@@ -34,21 +34,17 @@ class DataModelRegistry:
             if existing.model_class is descriptor.model_class:
                 return  # dedup
             raise ValueError(
-                f"Data model '{descriptor.name}' already registered with a different model class "
-                f"(existing: {existing.model_class.__name__}, new: {descriptor.model_class.__name__})"
+                f"Data model '{descriptor.name}' already registered with a different model class (existing: {existing.model_class.__name__}, new: {descriptor.model_class.__name__})",
             )
         self._models[descriptor.name] = descriptor
-        log.debug("Registered data model %r (namespace=%s, table=%s)",
-                  descriptor.name, descriptor.namespace,
-                  getattr(descriptor.model_class, "__tablename__", "?"))
+        log.debug("Registered data model %r (namespace=%s, table=%s)", descriptor.name, descriptor.namespace, getattr(descriptor.model_class, "__tablename__", "?"))
 
     def get(self, name: str) -> DataModelDescriptor:
         try:
             return self._models[name]
         except KeyError:
             raise DataModelNotFoundError(
-                f"Data model '{name}' is not registered. "
-                f"Available: {sorted(self._models)}"
+                f"Data model '{name}' is not registered. Available: {sorted(self._models)}",
             ) from None
 
     def list_names(self) -> List[str]:
@@ -84,9 +80,7 @@ def register_data_model(
     def decorator(model_class: type) -> type:
         if api is not None and not issubclass(model_class, WorkflowManagedMixin):
             raise TypeError(
-                f"Data model '{name}' provides an api config but does not use "
-                f"WorkflowManagedMixin. Only workflow-managed models can be "
-                f"exposed via the API."
+                f"Data model '{name}' provides an api config but does not use WorkflowManagedMixin. Only workflow-managed models can be exposed via the API.",
             )
 
         namespace = getattr(model_class, "_ext_namespace", "")

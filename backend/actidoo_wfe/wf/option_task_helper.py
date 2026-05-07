@@ -10,8 +10,8 @@ from actidoo_wfe.database import SessionLocal
 
 class OptionTaskHelper:
     """
-        This class is instantiated and passed to functions for providing options for dynamic select form fields.
-        The options functions are defined in the processes.
+    This class is instantiated and passed to functions for providing options for dynamic select form fields.
+    The options functions are defined in the processes.
     """
 
     def __init__(
@@ -28,6 +28,7 @@ class OptionTaskHelper:
     def get_connector(self, type_name: str, instance_name: str):
         """Obtain a configured connector as a context manager."""
         from actidoo_wfe.connectors import get_connector
+
         return get_connector(type_name=type_name, instance_name=instance_name)
 
     def get_model(self, model_name: str) -> type:
@@ -38,6 +39,7 @@ class OptionTaskHelper:
         """
         from actidoo_wfe.wf.exceptions import DataModelAccessDeniedError
         from actidoo_wfe.wf.registry_data_model import data_model_registry
+
         if model_name not in self._allowed_data_models:
             raise DataModelAccessDeniedError(model_name, self._allowed_data_models)
         descriptor = data_model_registry.get(model_name)
@@ -54,7 +56,7 @@ class OptionTaskHelper:
                 current = current[key]
             else:
                 current = {}
-                #raise ValueError("Invalid property path or data structure")
+                # raise ValueError("Invalid property path or data structure")
 
             if isinstance(current, dict):
                 result.update(current)

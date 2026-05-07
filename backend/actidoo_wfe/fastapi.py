@@ -55,6 +55,7 @@ if settings.sentry_dsn:
         traces_sample_rate=settings.sentry_traces_sample_rate,
     )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """This function allows to execute before and after the app lifetime. It can be used for initialization and proper shutdown."""
@@ -74,6 +75,7 @@ async def lifespan(app: FastAPI):
 
     # Validate connector configurations (non-blocking)
     from actidoo_wfe.connectors import validate_configured_connectors
+
     for warning in validate_configured_connectors():
         log.warning("Connector config: %s", warning)
 
@@ -91,15 +93,18 @@ async def lifespan(app: FastAPI):
 
     await stop_executor()
     engine.dispose()
-       
+
+
 class ORJSONRequest(Request):
     async def json(self) -> Any:
         body = await self.body()
         return orjson.loads(body)
 
+
 class ORJSONResponse(JSONResponse):
     def render(self, content: Any) -> bytes:
         return orjson.dumps(content)
+
 
 class ORJSONRoute(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -111,15 +116,16 @@ class ORJSONRoute(APIRoute):
 
         return custom_route_handler
 
+
 app: FastAPI = FastAPI(
     lifespan=lifespan,
     debug=True,
     title="Workflow Engine",
     version="0.1.0",
-    docs_url ="/api/docs",
-    redoc_url = "/api/redoc",
-    openapi_url = "/api/openapi.json",
-    default_response_class = ORJSONResponse
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+    default_response_class=ORJSONResponse,
 )
 
 app.router.route_class = ORJSONRoute

@@ -61,21 +61,19 @@ from actidoo_wfe.helpers.datauri import sanitize_metadata_value
 
 
 # Repository
-def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: uuid.UUID|None=None):
+def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: uuid.UUID | None = None):
     """Stores the workflow and all tasks"""
     id = workflow.task_tree.id  # the id is the id of the top task
     name = workflow.spec.name
     title = workflow.spec.description
 
     db_workflow = db.execute(
-        select(WorkflowInstance).where(WorkflowInstance.id == id)
+        select(WorkflowInstance).where(WorkflowInstance.id == id),
     ).scalar()
 
     created_by_id = get_created_by_id(workflow=workflow)
     subtitle = get_subtitle(workflow=workflow)
-    instance_was_completed = (
-        db_workflow.is_completed if db_workflow is not None else False
-    )
+    instance_was_completed = db_workflow.is_completed if db_workflow is not None else False
 
     if db_workflow is None:
         db_workflow = WorkflowInstance()
@@ -95,21 +93,21 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
     db.add(db_workflow)
 
     # TASKS
- 
+
     all_tasks: list[Task] = workflow.get_tasks()
     lane_mapping = db_workflow.lane_mapping
 
-    engine_index=0
+    engine_index = 0
     for task in all_tasks:
-        engine_index+=1
-        
+        engine_index += 1
+
         db_task = db.execute(
             select(WorkflowInstanceTask)
             .join(
                 WorkflowInstance,
                 WorkflowInstanceTask.workflow_instance_id == WorkflowInstance.id,
             )
-            .where(and_(WorkflowInstance.id == id, WorkflowInstanceTask.id == task.id))
+            .where(and_(WorkflowInstance.id == id, WorkflowInstanceTask.id == task.id)),
         ).scalar()
 
         task_spec: BpmnTaskSpec = task.task_spec
@@ -129,8 +127,9 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
             db_task.bpmn_id = task_spec.bpmn_id
             db_task.lane = task_spec.lane
             if task_spec.lane is not None:
-                initiator= lane_mapping.get(task_spec.lane, {}).get(
-                    "initiator", False
+                initiator = lane_mapping.get(task_spec.lane, {}).get(
+                    "initiator",
+                    False,
                 )
                 # For now, we will just store, whether the lane is the initiator lane; not the defined initiator roles (as they are only relevent for start)
                 db_task.lane_initiator = initiator is not None and initiator is not False
@@ -154,17 +153,17 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
 
             db.flush()
         else:
-            is_new=False
+            is_new = False
 
         existing_roles = set(
             [
                 x
                 for x in db.execute(
-                    select(WorkflowInstanceTaskRole.name).where(                        
-                            WorkflowInstanceTaskRole.workflow_instance_task_id == task.id
-                    )
+                    select(WorkflowInstanceTaskRole.name).where(
+                        WorkflowInstanceTaskRole.workflow_instance_task_id == task.id,
+                    ),
                 ).scalars()
-            ]
+            ],
         )
 
         role_set = get_task_roles(workflow=workflow, task_id=task.id)
@@ -180,14 +179,14 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
 
         db.execute(
             delete(WorkflowInstanceTaskRole).where(
-                and_(WorkflowInstanceTaskRole.name.in_(to_remove_roles),
-                     WorkflowInstanceTaskRole.workflow_instance_task_id == task.id)
-            )
+                and_(WorkflowInstanceTaskRole.name.in_(to_remove_roles), WorkflowInstanceTaskRole.workflow_instance_task_id == task.id),
+            ),
         )
 
         db_task.sort = engine_index
         db_task.can_be_unassigned = can_be_unassigned(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
 
         if is_new or db_task.state != task.state:
@@ -209,16 +208,20 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
         assigned_user_id = get_assigned_user(workflow=workflow, task_id=task.id)
         db_task.assigned_user_id = assigned_user_id
         db_task.assigned_delegate_user_id = get_assigned_delegate_user(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
         db_task.completed_by_user_id = get_completed_by_user(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
         db_task.completed_by_delegate_user_id = get_completed_by_delegate_user(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
         db_task.delegate_submit_comment = get_delegate_submit_comment(
-            workflow=workflow, task_id=task.id
+            workflow=workflow,
+            task_id=task.id,
         )
 
         ### Conditionally fire TaskReadyForUserNotificationEvent / TaskReadyForRoleNotificationEvent
@@ -231,35 +234,25 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
         is_not_triggered_by_current_user = triggered_by is None or triggered_by != db_task.assigned_user_id
         is_excluded_by_property = _get_custom_props(task).get("send_assignment_email", None) == "no"
 
-        if (
-            is_manual_task and
-            is_ready_state and
-            has_assigned_user and
-            is_newly_assigned_or_newly_ready and
-            is_not_triggered_by_current_user and
-            not is_excluded_by_property
-        ):
-            events.publish_event(events.TaskReadyForUserNotificationEvent(
-                user_id=db_task.assigned_user_id, # type: ignore
-                task_id=db_task.id
-            ))
+        if is_manual_task and is_ready_state and has_assigned_user and is_newly_assigned_or_newly_ready and is_not_triggered_by_current_user and not is_excluded_by_property:
+            events.publish_event(
+                events.TaskReadyForUserNotificationEvent(
+                    user_id=db_task.assigned_user_id,  # type: ignore
+                    task_id=db_task.id,
+                )
+            )
         else:
             # Role-broadcast only fires when the task is newly ready, has no direct assignee,
             # and the lane is configured for it. Suppressed when the user-mail above fires.
             lane_cfg = lane_mapping.get(task_spec.lane, {}) if task_spec.lane else {}
             notify_role_members = lane_cfg.get("notify_role_members", False)
 
-            if (
-                is_manual_task and
-                is_ready_state and
-                is_newly_ready and
-                not has_assigned_user and
-                notify_role_members and
-                not is_excluded_by_property
-            ):
-                events.publish_event(events.TaskReadyForRoleNotificationEvent(
-                    task_id=db_task.id
-                ))
+            if is_manual_task and is_ready_state and is_newly_ready and not has_assigned_user and notify_role_members and not is_excluded_by_property:
+                events.publish_event(
+                    events.TaskReadyForRoleNotificationEvent(
+                        task_id=db_task.id,
+                    )
+                )
 
         ### Conditionally fire TaskBecameErroneousEvent
         if not task_was_erroneous and db_task.state_error:
@@ -271,9 +264,9 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
         delete(WorkflowInstanceTask).where(
             and_(
                 WorkflowInstanceTask.workflow_instance_id == db_workflow.id,
-                WorkflowInstanceTask.id.notin_(all_task_ids)
-            )
-        )
+                WorkflowInstanceTask.id.notin_(all_task_ids),
+            ),
+        ),
     )
 
     db.flush()
@@ -283,12 +276,11 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
     sync_timer_events(db=db, workflow=workflow)
 
 
-
 def load_workflow_instance(db: Session, workflow_id: uuid.UUID) -> BpmnWorkflow:
     """Restores a workflow"""
 
     db_wf: WorkflowInstance = db.execute(
-        select(WorkflowInstance).where(WorkflowInstance.id == workflow_id)
+        select(WorkflowInstance).where(WorkflowInstance.id == workflow_id),
     ).scalar_one()
     db.refresh(db_wf)
 
@@ -297,14 +289,15 @@ def load_workflow_instance(db: Session, workflow_id: uuid.UUID) -> BpmnWorkflow:
     return workflow
 
 
-def load_workflow_instance_by_task_id(db: Session, task_id: uuid.UUID)-> BpmnWorkflow:
+def load_workflow_instance_by_task_id(db: Session, task_id: uuid.UUID) -> BpmnWorkflow:
     """Restores a workflow by task_id"""
 
     db_task: WorkflowInstanceTask = db.execute(
-        select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id)
+        select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
     ).scalar_one()
 
     return restore(serialized_data=db_task.workflow_instance.data)
+
 
 def persist_workflow_spec(db: Session, name: str):
     try:
@@ -321,18 +314,13 @@ def persist_workflow_spec(db: Session, name: str):
             while True:
                 data = fd.read(BUF_SIZE)
                 if not data:
-                    break                
+                    break
                 hasher.update(data)
             hash = hasher.hexdigest()
         fs_hashes[f] = hash
-        
 
-    #workflow: WorkflowSpec|None = db.execute(
-    #    select(WorkflowSpec).where(WorkflowSpec.name == name).order_by(WorkflowSpec.version.desc()).limit(1)
-    #).scalar()
-
-    workflow: WorkflowSpec|None = db.execute(
-        select(WorkflowSpec).where(WorkflowSpec.name == name).limit(1)
+    workflow: WorkflowSpec | None = db.execute(
+        select(WorkflowSpec).where(WorkflowSpec.name == name).limit(1),
     ).scalar()
 
     workflow_files_changed = False
@@ -340,13 +328,15 @@ def persist_workflow_spec(db: Session, name: str):
     if workflow is None:
         workflow = WorkflowSpec()
         workflow.name = name
-        workflow.version = 1 #TODO: implement versioning
+        workflow.version = 1  # TODO: implement versioning
         db.add(workflow)
         workflow_files_changed = True
     else:
-        existing_db_files: list[WorkflowSpecFile] = list(db.execute(
-            select(WorkflowSpecFile).where(WorkflowSpecFile.workflow_spec_id == workflow.id)
-        ).scalars())
+        existing_db_files: list[WorkflowSpecFile] = list(
+            db.execute(
+                select(WorkflowSpecFile).where(WorkflowSpecFile.workflow_spec_id == workflow.id),
+            ).scalars()
+        )
 
         for f, hash in fs_hashes.items():
             fs_file_exists_in_db = any(x.file_name == f.name and x.file_hash == hash for x in existing_db_files)
@@ -357,7 +347,7 @@ def persist_workflow_spec(db: Session, name: str):
             db_file_exists_in_fs = any(x.file_name == f.name and x.file_hash == hash for f, hash in fs_hashes.items())
             if not db_file_exists_in_fs:
                 workflow_files_changed = True
-            
+
         if workflow_files_changed:
             for f in workflow.files:
                 db.delete(f)
@@ -377,24 +367,24 @@ def persist_workflow_spec(db: Session, name: str):
             db_file.file_hash = hash
             db_file.file_content = content
             db_file.file_name = name
-            
+
             spl = f.name.rsplit(".", 1)
 
-            db_file.file_type = spl[1].lower() if len(spl)==2 else ""
-            
+            db_file.file_type = spl[1].lower() if len(spl) == 2 else ""
+
             if content is not None:
                 pattern = r'<bpmn:process id="(.*?)"'
                 match = re.search(pattern, content)
                 if match:
                     process_id = match.group(1)
                     db_file.file_bpmn_process_id = process_id
-                
+
             db.add(db_file)
 
 
 def load_user(db: Session, user_id: uuid.UUID) -> UserRepresentation:
     user = db.execute(
-        select(WorkflowUser).where(WorkflowUser.id == user_id)
+        select(WorkflowUser).where(WorkflowUser.id == user_id),
     ).scalar_one()
     roles = {r.role.name for r in user.roles}
     claims = {claim.claim_key: claim.claim_value for claim in user.claims}
@@ -414,7 +404,7 @@ def load_user(db: Session, user_id: uuid.UUID) -> UserRepresentation:
 
 def load_user_by_email(db: Session, email: str) -> UserRepresentation:
     user = db.execute(
-        select(WorkflowUser).where(WorkflowUser.email == email)
+        select(WorkflowUser).where(WorkflowUser.email == email),
     ).scalar_one()
     roles = {r.role.name for r in user.roles}
     claims = {claim.claim_key: claim.claim_value for claim in user.claims}
@@ -434,7 +424,7 @@ def load_user_by_email(db: Session, email: str) -> UserRepresentation:
 
 def load_user_by_username(db: Session, username: str) -> UserRepresentation:
     user = db.execute(
-        select(WorkflowUser).where(WorkflowUser.username == username)
+        select(WorkflowUser).where(WorkflowUser.username == username),
     ).scalar_one()
     roles = {r.role.name for r in user.roles}
     claims = {claim.claim_key: claim.claim_value for claim in user.claims}
@@ -453,16 +443,19 @@ def load_user_by_username(db: Session, username: str) -> UserRepresentation:
 
 
 def load_users_by_ids(
-    db: Session, user_ids: set[uuid.UUID]
+    db: Session,
+    user_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, UserRepresentation]:
     if not user_ids:
         return {}
 
-    users = db.execute(
-        select(WorkflowUser)
-        .options(selectinload(WorkflowUser.roles).selectinload(WorkflowUserRole.role))
-        .where(WorkflowUser.id.in_(user_ids))
-    ).scalars().all()
+    users = (
+        db.execute(
+            select(WorkflowUser).options(selectinload(WorkflowUser.roles).selectinload(WorkflowUserRole.role)).where(WorkflowUser.id.in_(user_ids)),
+        )
+        .scalars()
+        .all()
+    )
 
     result: dict[uuid.UUID, UserRepresentation] = {}
     for user in users:
@@ -487,7 +480,7 @@ def upsert_user(
     email: str | None,
     first_name: str | None,
     last_name: str | None,
-    is_service_user: bool
+    is_service_user: bool,
 ):
     # The idp_user_id (i.e. the keycloak id) can be None when inserting a new user which has never logged in yet.
     # The can also be existing users in the database, where idp_user_id is still None.
@@ -495,11 +488,11 @@ def upsert_user(
     # but then we take the username.
     if idp_user_id is not None:
         user = db.execute(
-            select(WorkflowUser).where(WorkflowUser.idp_id == idp_user_id)
+            select(WorkflowUser).where(WorkflowUser.idp_id == idp_user_id),
         ).scalar()
     else:
         user = db.execute(
-            select(WorkflowUser).where(WorkflowUser.username == username)
+            select(WorkflowUser).where(WorkflowUser.username == username),
         ).scalar()
 
     if user is None:
@@ -522,20 +515,25 @@ def upsert_user(
 
 def find_attachment_by_hash(db: Session, hash: str) -> WorkflowAttachment | None:
     return db.execute(
-        select(WorkflowAttachment).where(WorkflowAttachment.hash == hash)
+        select(WorkflowAttachment).where(WorkflowAttachment.hash == hash),
     ).scalar()
 
 
 def find_attachment_by_id(
-    db: Session, attachment_id: uuid.UUID
+    db: Session,
+    attachment_id: uuid.UUID,
 ) -> WorkflowAttachment | None:
     return db.execute(
-        select(WorkflowAttachment).where(WorkflowAttachment.id == attachment_id)
+        select(WorkflowAttachment).where(WorkflowAttachment.id == attachment_id),
     ).scalar()
 
 
 def store_attachment(
-    db: Session, filename: str, mimetype: str | None, data: bytes, hash: str
+    db: Session,
+    filename: str,
+    mimetype: str | None,
+    data: bytes,
+    hash: str,
 ) -> WorkflowAttachment:
     obj = find_attachment_by_hash(db=db, hash=hash)
 
@@ -557,13 +555,16 @@ def store_attachment(
 
 
 def store_attachment_for_task(
-    db: Session, task_id: uuid.UUID, attachment_id: uuid.UUID, filename: str
+    db: Session,
+    task_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    filename: str,
 ) -> WorkflowInstanceTaskAttachment:
     obj = db.execute(
         select(WorkflowInstanceTaskAttachment).where(
             WorkflowInstanceTaskAttachment.workflow_attachment_id == attachment_id,
             WorkflowInstanceTaskAttachment.workflow_instance_task_id == task_id,
-        )
+        ),
     ).scalar()
 
     if not obj:
@@ -589,7 +590,7 @@ def store_attachment_for_workflow_instance(
         select(WorkflowInstanceAttachment).where(
             WorkflowInstanceAttachment.workflow_attachment_id == workflow_instance_id,
             WorkflowInstanceAttachment.workflow_instance_id == workflow_instance_id,
-        )
+        ),
     ).scalar()
 
     if not obj:
@@ -612,15 +613,16 @@ def find_task_attachments_by_task_id(db: Session, task_id: uuid.UUID):
             .options(joinedload(WorkflowInstanceTaskAttachment.attachment))
             .where(
                 and_(
-                    WorkflowInstanceTaskAttachment.workflow_instance_task_id == task_id
-                )
-            )
-        ).scalars()
+                    WorkflowInstanceTaskAttachment.workflow_instance_task_id == task_id,
+                ),
+            ),
+        ).scalars(),
     )
 
 
 def find_task_attachments_by_worfklow_instance_id(
-    db: Session, workflow_instance_id: uuid.UUID
+    db: Session,
+    workflow_instance_id: uuid.UUID,
 ):
     return list(
         db.execute(
@@ -628,18 +630,18 @@ def find_task_attachments_by_worfklow_instance_id(
             .options(joinedload(WorkflowInstanceTaskAttachment.attachment))
             .join(
                 WorkflowInstanceTask,
-                WorkflowInstanceTask.id
-                == WorkflowInstanceTaskAttachment.workflow_instance_task_id,
+                WorkflowInstanceTask.id == WorkflowInstanceTaskAttachment.workflow_instance_task_id,
             )
             .where(
-                and_(WorkflowInstanceTask.workflow_instance_id == workflow_instance_id)
-            )
-        ).scalars()
+                and_(WorkflowInstanceTask.workflow_instance_id == workflow_instance_id),
+            ),
+        ).scalars(),
     )
 
 
 def find_workflow_instance_attachments_by_worfklow_instance_id(
-    db: Session, workflow_instance_id: uuid.UUID
+    db: Session,
+    workflow_instance_id: uuid.UUID,
 ):
     return list(
         db.execute(
@@ -647,38 +649,41 @@ def find_workflow_instance_attachments_by_worfklow_instance_id(
             .options(joinedload(WorkflowInstanceAttachment.attachment))
             .where(
                 and_(
-                    WorkflowInstanceAttachment.workflow_instance_id
-                    == workflow_instance_id
-                )
-            )
-        ).scalars()
+                    WorkflowInstanceAttachment.workflow_instance_id == workflow_instance_id,
+                ),
+            ),
+        ).scalars(),
     )
 
 
 def delete_attachment_for_task(
-    db: Session, task_id: uuid.UUID, attachment_id: uuid.UUID
+    db: Session,
+    task_id: uuid.UUID,
+    attachment_id: uuid.UUID,
 ):
     db.execute(
         delete(WorkflowInstanceTaskAttachment).where(
             and_(
                 WorkflowInstanceTaskAttachment.workflow_instance_task_id == task_id,
                 WorkflowInstanceTaskAttachment.workflow_attachment_id == attachment_id,
-            )
-        )
+            ),
+        ),
     )
     db.flush()
 
 
 def delete_attachment_for_workflow_instance(
-    db: Session, workflow_instance_id: uuid.UUID, attachment_id: uuid.UUID
+    db: Session,
+    workflow_instance_id: uuid.UUID,
+    attachment_id: uuid.UUID,
 ):
     db.execute(
         delete(WorkflowInstanceAttachment).where(
             and_(
                 WorkflowInstanceAttachment.workflow_instance_id == workflow_instance_id,
                 WorkflowInstanceAttachment.workflow_attachment_id == attachment_id,
-            )
-        )
+            ),
+        ),
     )
     db.flush()
 
@@ -687,15 +692,11 @@ def delete_dangling_attachment(db: Session, attachment_id: uuid.UUID):
     attachment = find_attachment_by_id(db=db, attachment_id=attachment_id)
 
     n_tasks = db.execute(
-        select(func.count())
-        .select_from(WorkflowInstanceTaskAttachment)
-        .where(WorkflowInstanceTaskAttachment.workflow_attachment_id == attachment_id)
+        select(func.count()).select_from(WorkflowInstanceTaskAttachment).where(WorkflowInstanceTaskAttachment.workflow_attachment_id == attachment_id),
     ).scalar_one()
 
     n_workflow_instances = db.execute(
-        select(func.count())
-        .select_from(WorkflowInstanceAttachment)
-        .where(WorkflowInstanceAttachment.workflow_attachment_id == attachment_id)
+        select(func.count()).select_from(WorkflowInstanceAttachment).where(WorkflowInstanceAttachment.workflow_attachment_id == attachment_id),
     ).scalar_one()
 
     if n_tasks == 0 and n_workflow_instances == 0:
@@ -703,15 +704,16 @@ def delete_dangling_attachment(db: Session, attachment_id: uuid.UUID):
 
     db.flush()
 
+
 def store_message(
-        db: Session,
-        message_name: str,
-        correlation_key: str, 
-        data: dict,
-        sent_by_user_id: uuid.UUID|None,
-        sent_by_workflow_instance_id: uuid.UUID|None
-    ):
-    
+    db: Session,
+    message_name: str,
+    correlation_key: str,
+    data: dict,
+    sent_by_user_id: uuid.UUID | None,
+    sent_by_workflow_instance_id: uuid.UUID | None,
+):
+
     msg = WorkflowMessage()
     msg.name = message_name
     msg.correlation_key = correlation_key
@@ -720,15 +722,16 @@ def store_message(
     msg.sent_by_workflow_instance_id = sent_by_workflow_instance_id
     db.add(msg)
     db.flush()
-    
+
+
 def store_message_processed(
-        db: Session,
-        message_id: uuid.UUID,
-        processed_by_workflow_instance_ids: set[uuid.UUID]
-    ):
-    
+    db: Session,
+    message_id: uuid.UUID,
+    processed_by_workflow_instance_ids: set[uuid.UUID],
+):
+
     msg_ex = db.execute(select(WorkflowMessage).filter(WorkflowMessage.id == message_id)).scalar_one()
-    
+
     msg_ex.processed_at = dt_now_naive()
 
     db.flush()
@@ -743,27 +746,28 @@ def store_message_processed(
 
 
 def load_unprocessed_messages(
-    db: Session
+    db: Session,
 ):
     return list(
         db.execute(
-            select(WorkflowMessage).filter(WorkflowMessage.processed_at == null())
-        ).scalars()
+            select(WorkflowMessage).filter(WorkflowMessage.processed_at == null()),
+        ).scalars(),
     )
+
 
 def queue_waiting_receive_messages(
     db: Session,
-    workflow: BpmnWorkflow
+    workflow: BpmnWorkflow,
 ):
     iter = [t for t in workflow.get_tasks_iterator(state=TaskState.WAITING, spec_class=CatchingEvent)]
-    waiting_event_tasks:list[Task] = [t for t in iter if t.task_spec.event_definition.details(t).event_type == "MessageEventDefinition"]
+    waiting_event_tasks: list[Task] = [t for t in iter if t.task_spec.event_definition.details(t).event_type == "MessageEventDefinition"]
 
     existing_subscriptions = db.execute(
         select(WorkflowMessageSubscription)
         .join(WorkflowInstanceTask, WorkflowMessageSubscription.workflow_instance_task_id == WorkflowInstanceTask.id)
         .where(
-            WorkflowInstanceTask.workflow_instance_id == workflow.task_tree.id
-        )
+            WorkflowInstanceTask.workflow_instance_id == workflow.task_tree.id,
+        ),
     ).scalars()
 
     for sub in existing_subscriptions:
@@ -785,13 +789,15 @@ def queue_waiting_receive_messages(
 
     db.flush()
 
+
 def get_subscriptions_by_message_name_and_correlation_key(db: Session, message_name: str, correlation_key: str):
     subscriptions = db.execute(
-        select(WorkflowMessageSubscription)
-        .where(and_(
-            WorkflowMessageSubscription.name == message_name,
-            WorkflowMessageSubscription.correlation_key == correlation_key
-        ))
+        select(WorkflowMessageSubscription).where(
+            and_(
+                WorkflowMessageSubscription.name == message_name,
+                WorkflowMessageSubscription.correlation_key == correlation_key,
+            )
+        ),
     ).scalars()
 
     return subscriptions
@@ -800,13 +806,13 @@ def get_subscriptions_by_message_name_and_correlation_key(db: Session, message_n
 def delete_workflow_instance(db: Session, workflow: BpmnWorkflow):
     """Deletes a workflow instance comletely"""
     id = workflow.task_tree.id  # the id is the id of the top task
-    
+
     db.execute(
         delete(WorkflowInstance).where(
-            WorkflowInstance.id == id
-        )
+            WorkflowInstance.id == id,
+        ),
     )
-    
+
     db.flush()
 
 
@@ -814,13 +820,10 @@ def list_due_time_events(db: Session, *, now: datetime.datetime, limit: int = 20
     """Return scheduled time events due at or before 'now' as domain objects."""
     rows: list[WorkflowTimeEvent] = list(
         db.execute(
-            select(WorkflowTimeEvent)
-            .where(and_(WorkflowTimeEvent.status == "scheduled", WorkflowTimeEvent.due_at <= now))
-            .order_by(WorkflowTimeEvent.due_at.asc())
-            .limit(limit)
+            select(WorkflowTimeEvent).where(and_(WorkflowTimeEvent.status == "scheduled", WorkflowTimeEvent.due_at <= now)).order_by(WorkflowTimeEvent.due_at.asc()).limit(limit),
         )
         .scalars()
-        .all()
+        .all(),
     )
     return [
         TimeEvent(
@@ -835,10 +838,12 @@ def list_due_time_events(db: Session, *, now: datetime.datetime, limit: int = 20
         for r in rows
     ]
 
+
 def _get_wte_by_id(db: Session, wte_id: uuid.UUID) -> WorkflowTimeEvent:
     return db.execute(
-        select(WorkflowTimeEvent).where(WorkflowTimeEvent.id == wte_id)
+        select(WorkflowTimeEvent).where(WorkflowTimeEvent.id == wte_id),
     ).scalar_one()
+
 
 def _get_wte_from_any(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, uuid.UUID]) -> WorkflowTimeEvent:
     if isinstance(wte, WorkflowTimeEvent):
@@ -851,9 +856,10 @@ def _get_wte_from_any(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, uuid
             and_(
                 WorkflowTimeEvent.workflow_instance_id == wte.workflow_instance_id,
                 WorkflowTimeEvent.timer_task_id == wte.timer_task_id,
-            )
-        )
+            ),
+        ),
     ).scalar_one()
+
 
 def mark_timer_completed(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, uuid.UUID]):
     """Mark a timer as completed; accepts ORM, domain, or id."""
@@ -861,11 +867,13 @@ def mark_timer_completed(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, u
     rec.status = "completed"
     db.flush()
 
+
 def cancel_timer_for_task(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, uuid.UUID]):
     rec = _get_wte_from_any(db, wte)
     if rec.status not in ("completed", "cancelled"):
         rec.status = "cancelled"
         db.flush()
+
 
 def reschedule_cycle(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, uuid.UUID], next_due: datetime.datetime, remaining_cycles: int):
     rec = _get_wte_from_any(db, wte)
@@ -875,17 +883,20 @@ def reschedule_cycle(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, uuid.
     rec.fire_count += 1
     db.flush()
 
+
 def fail_and_release(db: Session, wte: Union[WorkflowTimeEvent, TimeEvent, uuid.UUID], err: str):
     rec = _get_wte_from_any(db, wte)
     rec.status = "error"
     rec.last_error = (err or "")[:4000]
     db.flush()
 
+
 def _first_timer_def(task: Task) -> TimerEventDefinition | None:
     ed = getattr(task.task_spec, "event_definition", None)
     if ed and isinstance(ed, TimerEventDefinition):
         return ed
     return None
+
 
 def _prepare_timer_events(workflow: BpmnWorkflow) -> list[TimeEvent]:
     """
@@ -901,27 +912,29 @@ def _prepare_timer_events(workflow: BpmnWorkflow) -> list[TimeEvent]:
         if ed is None:
             continue
 
-        details = ed.details(t) # Read the PendingBpmnEvent for this task
-        ev_type = details.event_type     # e.g., "TimeDateEventDefinition", "DurationTimerEventDefinition", "CycleTimerEventDefinition"
+        details = ed.details(t)  # Read the PendingBpmnEvent for this task
+        ev_type = details.event_type  # e.g., "TimeDateEventDefinition", "DurationTimerEventDefinition", "CycleTimerEventDefinition"
         ev_value = details.value  # already populated by update_hook
 
         interrupting = bool(getattr(t.task_spec, "cancel_activity", True))
 
         if ev_type in ("TimeDateEventDefinition", "DurationTimerEventDefinition"):
             # ev_value is ISO datetime string
-            if not isinstance(ev_value, str): # Defensive Fallback
+            if not isinstance(ev_value, str):  # Defensive Fallback
                 continue
             due = TimerEventDefinition.get_datetime(ev_value)  # UTC
-            kind: Literal["time_date","time_duration"] = "time_date" if ev_type == "TimeDateEventDefinition" else "time_duration"
-            plans.append(TimeEvent(
-                workflow_instance_id=wf_id,
-                timer_task_id=t.id,
-                timer_kind=kind,
-                due_at=due.astimezone(datetime.timezone.utc),
-                interrupting=interrupting,
-                expression=ev_value,
-                remaining_cycles=None,
-            ))
+            kind: Literal["time_date", "time_duration"] = "time_date" if ev_type == "TimeDateEventDefinition" else "time_duration"
+            plans.append(
+                TimeEvent(
+                    workflow_instance_id=wf_id,
+                    timer_task_id=t.id,
+                    timer_kind=kind,
+                    due_at=due.astimezone(datetime.timezone.utc),
+                    interrupting=interrupting,
+                    expression=ev_value,
+                    remaining_cycles=None,
+                )
+            )
         elif ev_type == "CycleTimerEventDefinition":
             # ev_value is dict {'cycles': int, 'next': iso, 'duration': seconds}
             if not isinstance(ev_value, dict):
@@ -932,15 +945,17 @@ def _prepare_timer_events(workflow: BpmnWorkflow) -> list[TimeEvent]:
                 continue
             due = TimerEventDefinition.get_datetime(next_iso)
 
-            plans.append(TimeEvent(
-                workflow_instance_id=wf_id,
-                timer_task_id=t.id,
-                timer_kind="time_cycle",
-                due_at=due.astimezone(datetime.timezone.utc),
-                interrupting=interrupting,
-                expression=None,
-                remaining_cycles=int(cycles) if cycles is not None else -1,
-            ))
+            plans.append(
+                TimeEvent(
+                    workflow_instance_id=wf_id,
+                    timer_task_id=t.id,
+                    timer_kind="time_cycle",
+                    due_at=due.astimezone(datetime.timezone.utc),
+                    interrupting=interrupting,
+                    expression=None,
+                    remaining_cycles=int(cycles) if cycles is not None else -1,
+                )
+            )
         else:
             # Not a timer event we schedule
             continue
@@ -951,15 +966,13 @@ def _prepare_timer_events(workflow: BpmnWorkflow) -> list[TimeEvent]:
 def sync_timer_events(
     db: Session,
     *,
-    workflow: BpmnWorkflow
+    workflow: BpmnWorkflow,
 ) -> None:
     workflow_instance_id = workflow.task_tree.id
     plans = _prepare_timer_events(workflow)
 
     existing: list[WorkflowTimeEvent] = list(
-        db.execute(select(WorkflowTimeEvent).where(WorkflowTimeEvent.workflow_instance_id == workflow_instance_id))
-        .scalars()
-        .all()
+        db.execute(select(WorkflowTimeEvent).where(WorkflowTimeEvent.workflow_instance_id == workflow_instance_id)).scalars().all(),
     )
     existing_by_task = {e.timer_task_id: e for e in existing}
     planned_task_ids = {str(p.timer_task_id) for p in plans}
@@ -977,16 +990,15 @@ def sync_timer_events(
         if e is None:
             e = WorkflowTimeEvent()
             db.add(e)
-            e.workflow_instance_id=workflow_instance_id
-            e.timer_task_id=p.timer_task_id
+            e.workflow_instance_id = workflow_instance_id
+            e.timer_task_id = p.timer_task_id
 
-
-        e.timer_kind=p.timer_kind
-        e.expression=p.expression
-        e.interrupting=p.interrupting
-        e.due_at=p.due_at
-        e.remaining_cycles=p.remaining_cycles
-        e.status="scheduled"
-        e.created_at=now
+        e.timer_kind = p.timer_kind
+        e.expression = p.expression
+        e.interrupting = p.interrupting
+        e.due_at = p.due_at
+        e.remaining_cycles = p.remaining_cycles
+        e.status = "scheduled"
+        e.created_at = now
 
     db.flush()

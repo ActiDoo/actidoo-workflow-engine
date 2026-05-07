@@ -71,10 +71,12 @@ class GetAllTasksResponseItem(BaseModel):
 
 GetAllTasksResponse = PaginatedDataSchema[GetAllTasksResponseItem]
 
+
 class GetSingleTaskResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     task: GetAllTasksResponseItem
+
 
 class GetAllWorkflowInstancesResponseItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -89,9 +91,7 @@ class GetAllWorkflowInstancesResponseItem(BaseModel):
     created_at: datetime.datetime
 
 
-GetAllWorkflowInstancesResponse = PaginatedDataSchema[
-    GetAllWorkflowInstancesResponseItem
-]
+GetAllWorkflowInstancesResponse = PaginatedDataSchema[GetAllWorkflowInstancesResponseItem]
 
 
 class ReplaceTaskDataRequest(BaseModel):
@@ -101,7 +101,7 @@ class ReplaceTaskDataRequest(BaseModel):
     data: dict
 
 
-#class ReplaceTaskDataResponse(BaseModel):
+# class ReplaceTaskDataResponse(BaseModel):
 #    model_config = ConfigDict(from_attributes=True)
 
 
@@ -139,7 +139,7 @@ class AssignUserRequest(BaseModel):
     user_id: uuid.UUID
 
 
-#class AssignUserResponse(BaseModel):
+# class AssignUserResponse(BaseModel):
 #    model_config = ConfigDict(from_attributes=True)
 
 
@@ -148,7 +148,7 @@ class UnassignUserRequest(BaseModel):
     task_id: uuid.UUID
 
 
-#class UnassignUserResponse(BaseModel):
+# class UnassignUserResponse(BaseModel):
 #    model_config = ConfigDict(from_attributes=True)
 
 

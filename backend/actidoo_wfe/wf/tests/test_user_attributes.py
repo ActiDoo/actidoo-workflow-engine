@@ -37,7 +37,9 @@ def test_resolve_attributes_with_access_token(db_engine_ctx):
         calls: list[dict] = []
 
         @register_user_attribute_provider(
-            keys=["manager_upn"], needs=["access_token"], source_name="graph_on_behalf_of"
+            keys=["manager_upn"],
+            needs=["access_token"],
+            source_name="graph_on_behalf_of",
         )
         def _provider(ctx):
             calls.append(ctx.access_token or {})
@@ -53,7 +55,7 @@ def test_resolve_attributes_with_access_token(db_engine_ctx):
         stored_claims = {
             claim.claim_key: claim
             for claim in db.execute(
-                select(WorkflowUserClaim).where(WorkflowUserClaim.user_id == user.id)
+                select(WorkflowUserClaim).where(WorkflowUserClaim.user_id == user.id),
             ).scalars()
         }
 
@@ -81,7 +83,9 @@ def test_provider_skipped_without_access_token(db_engine_ctx):
         called = False
 
         @register_user_attribute_provider(
-            keys=["manager_upn"], needs=["access_token"], source_name="graph_on_behalf_of"
+            keys=["manager_upn"],
+            needs=["access_token"],
+            source_name="graph_on_behalf_of",
         )
         def _provider(ctx):
             nonlocal called
@@ -97,8 +101,8 @@ def test_provider_skipped_without_access_token(db_engine_ctx):
 
         stored_claims = list(
             db.execute(
-                select(WorkflowUserClaim).where(WorkflowUserClaim.user_id == user.id)
-            ).scalars()
+                select(WorkflowUserClaim).where(WorkflowUserClaim.user_id == user.id),
+            ).scalars(),
         )
 
         assert called is False

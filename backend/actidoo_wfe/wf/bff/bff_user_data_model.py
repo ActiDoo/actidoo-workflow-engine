@@ -45,22 +45,26 @@ def _fields_metadata(descriptor: DataModelDescriptor) -> list[dict]:
     result = []
     for f in descriptor.api.fields:
         if isinstance(f, VirtualField):
-            result.append({
-                "name": f.name,
-                "type": f.type,
-                "nullable": True,
-                "primary_key": False,
-                "virtual": True,
-            })
+            result.append(
+                {
+                    "name": f.name,
+                    "type": f.type,
+                    "nullable": True,
+                    "primary_key": False,
+                    "virtual": True,
+                }
+            )
         elif isinstance(f, str):
             col = col_map.get(f)
             if col is not None:
-                result.append({
-                    "name": col.key,
-                    "type": str(col.type),
-                    "nullable": col.nullable,
-                    "primary_key": col.primary_key,
-                })
+                result.append(
+                    {
+                        "name": col.key,
+                        "type": str(col.type),
+                        "nullable": col.nullable,
+                        "primary_key": col.primary_key,
+                    }
+                )
     return result
 
 
@@ -83,11 +87,7 @@ def _serialize_row(row: Any, fields: list[str | VirtualField] | None = None) -> 
     """Serialize a SQLAlchemy model instance to a dict."""
     if fields is None:
         mapper = sa_inspect(type(row))
-        return {
-            col.key: _serialize_value(getattr(row, col.key))
-            for col in mapper.columns
-            if col.key not in _MIXIN_SYSTEM_COLUMNS
-        }
+        return {col.key: _serialize_value(getattr(row, col.key)) for col in mapper.columns if col.key not in _MIXIN_SYSTEM_COLUMNS}
 
     result = {}
     for f in fields:
@@ -134,11 +134,7 @@ def list_models(
     db: Session = Depends(get_db),
 ):
     """List workflow-data models the current user can access, including column metadata."""
-    return [
-        {"name": d.name, "columns": _fields_metadata(d)}
-        for d in data_model_registry.list_models()
-        if d.api and _user_has_read_access(user, d, db)
-    ]
+    return [{"name": d.name, "columns": _fields_metadata(d)} for d in data_model_registry.list_models() if d.api and _user_has_read_access(user, d, db)]
 
 
 @workflow_data_router.get("/{model_name}")
@@ -180,7 +176,7 @@ def list_rows(
 
     total = db.scalar(select(func.count()).select_from(query.subquery()))
     items = db.scalars(
-        query.offset((page - 1) * effective_page_size).limit(effective_page_size)
+        query.offset((page - 1) * effective_page_size).limit(effective_page_size),
     ).all()
 
     fields = descriptor.api.fields
@@ -240,7 +236,7 @@ def get_version_chain(
     if descriptor.api and descriptor.api.row_filter:
         head = chain[-1]
         check_query = select(model_class).where(
-            model_class.workflow_instance_id == head.workflow_instance_id
+            model_class.workflow_instance_id == head.workflow_instance_id,
         )
         check_query = descriptor.api.row_filter(check_query, db, user)
         if db.scalars(check_query).first() is None:

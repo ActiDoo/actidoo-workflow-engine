@@ -44,9 +44,9 @@ from actidoo_wfe.wf.types import Attachment, ReducedWorkflowInstanceResponse, Wo
 log = logging.getLogger(__name__)
 
 router = APIRouter(
-     # fine-grained authorization in functions
+    # fine-grained authorization in functions
     dependencies=[Depends(require_realm_role("wf-user"))],
-    tags=["wfe-bff-admin"]
+    tags=["wfe-bff-admin"],
 )
 
 
@@ -119,10 +119,10 @@ def get_all_tasks(
         GetAllTasksResponse: A response containing the paginated list of tasks.
     """
 
-    tasks: PaginatedDataSchema[
-        WorkflowInstanceTaskAdminRepresentation
-    ] = service_application.bff_admin_get_all_tasks(
-        db=db, user_id=user.id, bff_table_request_params=bff_table_request_params
+    tasks: PaginatedDataSchema[WorkflowInstanceTaskAdminRepresentation] = service_application.bff_admin_get_all_tasks(
+        db=db,
+        user_id=user.id,
+        bff_table_request_params=bff_table_request_params,
     )
 
     return GetAllTasksResponse.model_validate(tasks)
@@ -221,7 +221,9 @@ def get_all_workflow_instances(
             workflow instances.
     """
     tasks: PaginatedDataSchema[WorkflowInstanceRepresentation] = service_application.bff_admin_get_all_workflow_instances(
-        db=db, user_id=user.id, bff_table_request_params=bff_table_request_params
+        db=db,
+        user_id=user.id,
+        bff_table_request_params=bff_table_request_params,
     )
 
     return GetAllWorkflowInstancesResponse.model_validate(tasks)
@@ -238,7 +240,9 @@ def get_all_users(
 ) -> GetAllUsersResponse:
     try:
         users = service_application.bff_admin_get_all_users(
-            db=db, user_id=user.id, bff_table_request_params=bff_table_request_params
+            db=db,
+            user_id=user.id,
+            bff_table_request_params=bff_table_request_params,
         )
     except UserMayNotAdministrateUsersException:
         raise HTTPException(status_code=403)
@@ -253,7 +257,9 @@ def get_user_detail(
 ) -> GetUserDetailResponse:
     try:
         detail = service_application.admin_get_user_detail(
-            db=db, admin_user_id=user.id, target_user_id=req_data.user_id
+            db=db,
+            admin_user_id=user.id,
+            target_user_id=req_data.user_id,
         )
     except UserMayNotAdministrateUsersException:
         raise HTTPException(status_code=403)
@@ -288,17 +294,20 @@ def replace_task_data(
     user: Annotated[WorkflowUser, Depends(get_user)],
     req_data: Annotated[ReplaceTaskDataRequest, Body()],
 ) -> GetSingleTaskResponse:
-    
+
     try:
         service_application.admin_replace_task_data(
-            db=db, user_id=user.id, task_id=req_data.task_id, task_data=req_data.data
+            db=db,
+            user_id=user.id,
+            task_id=req_data.task_id,
+            task_data=req_data.data,
         )
         task = service_application.admin_get_single_task(db=db, user_id=user.id, task_id=req_data.task_id)
         return GetSingleTaskResponse.model_validate(dict(task=task))
     except UserMayNotAdministrateThisWorkflowException as ex:
         log.warning(f"User {user.username} is not allowed to call replace_task_data for task_id {req_data.task_id}")
         raise HTTPException(status_code=403)
-        
+
 
 @router.post("/execute_erroneous_task", name="bff_admin_execute_erroneous_task")
 def execute_erroneous_task(
@@ -306,18 +315,20 @@ def execute_erroneous_task(
     user: Annotated[WorkflowUser, Depends(get_user)],
     req_data: Annotated[ExecuteErroneousTaskRequest, Body()],
 ) -> GetAllTasksResponse:
-    
+
     try:
         workflow_instance_id = service_application.admin_execute_erroneous_task(
-            db=db, user_id=user.id, task_id=req_data.task_id
+            db=db,
+            user_id=user.id,
+            task_id=req_data.task_id,
         )
 
         tasks = service_application.bff_admin_get_all_tasks(
             db=db,
             user_id=user.id,
             bff_table_request_params=AdminWorkflowInstanceTasksBffTableQuerySchema.validate(
-                {"f_workflow_instance_id": str(workflow_instance_id)}
-            )
+                {"f_workflow_instance_id": str(workflow_instance_id)},
+            ),
         )
 
         return GetAllTasksResponse.model_validate(tasks)
@@ -325,15 +336,18 @@ def execute_erroneous_task(
         log.warning(f"User {user.username} is not allowed to call execute_erroneous_task for task_id {req_data.task_id}")
         raise HTTPException(status_code=403)
 
+
 @router.post("/download_attachment", name="bff_admin_download_attachment")
 def download_attachment(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
-    reqdata: DownloadAttachmentRequest
+    reqdata: DownloadAttachmentRequest,
 ) -> Response:
-    
+
     attachment: Attachment = service_application.download_attachment(
-        db=db, task_id=reqdata.task_id, hash=reqdata.hash
+        db=db,
+        task_id=reqdata.task_id,
+        hash=reqdata.hash,
     )
 
     return streaming_response_with_filecontent(
@@ -347,11 +361,13 @@ def download_attachment(
 def search_wf_users(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
-    search_options: SearchUsersRequest
+    search_options: SearchUsersRequest,
 ) -> SearchUsersResponse:
 
     options = search_users(
-        db=db, search=search_options.search, include_value=search_options.include_value
+        db=db,
+        search=search_options.search,
+        include_value=search_options.include_value,
     )
 
     return SearchUsersResponse(
@@ -361,7 +377,7 @@ def search_wf_users(
                 label=f"{option.first_name} {option.last_name} ({option.username})",
             )
             for option in options
-        ]
+        ],
     )
 
 
@@ -370,20 +386,24 @@ def search_wf_users(
 
 @router.post("/assign_task", name="bff_admin_assign_task")
 def assign_user(
-    db: Annotated[Session, Depends(get_db)], 
+    db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
-    reqdata: AssignUserRequest
+    reqdata: AssignUserRequest,
 ) -> GetSingleTaskResponse:
     try:
         service_application.admin_assign_task_to_user_without_checks(
-            db=db, admin_user_id=user.id, assign_to_user_id=reqdata.user_id, task_id=reqdata.task_id, remove_roles=False
+            db=db,
+            admin_user_id=user.id,
+            assign_to_user_id=reqdata.user_id,
+            task_id=reqdata.task_id,
+            remove_roles=False,
         )
         task = views.admin_get_single_task(db=db, task_id=reqdata.task_id)
         return GetSingleTaskResponse.model_validate(dict(task=task))
     except UserMayNotAdministrateThisWorkflowException as ex:
         log.warning(f"User {user.username} is not allowed to call assign_user for task_id {reqdata.task_id}")
         raise HTTPException(status_code=403)
-    
+
 
 @router.post("/unassign_task", name="bff_admin_unassign_task")
 def unassign_task(
@@ -391,7 +411,7 @@ def unassign_task(
     user: Annotated[WorkflowUser, Depends(get_user)],
     reqdata: UnassignUserRequest,
 ) -> GetSingleTaskResponse:
-    
+
     try:
         service_application.admin_unassign_task_without_checks(db=db, admin_user_id=user.id, task_id=reqdata.task_id)
         task = views.admin_get_single_task(db=db, task_id=reqdata.task_id)
@@ -399,7 +419,7 @@ def unassign_task(
     except UserMayNotAdministrateThisWorkflowException as ex:
         log.warning(f"User {user.username} is not allowed to call unassign_task for task_id {reqdata.task_id}")
         raise HTTPException(status_code=403)
-    
+
 
 # cancel workflow
 
@@ -410,32 +430,34 @@ def cancel_workflow_instance(
     user: Annotated[WorkflowUser, Depends(get_user)],
     reqdata: CancelWorkflowInstanceRequest,
 ) -> CancelWorkflowInstanceResponse:
-    
+
     try:
         service_application.admin_cancel_workflow(
-            db=db, user_id=user.id, workflow_instance_id=reqdata.workflow_instance_id
+            db=db,
+            user_id=user.id,
+            workflow_instance_id=reqdata.workflow_instance_id,
         )
         return CancelWorkflowInstanceResponse()
-    
+
     except UserMayNotAdministrateThisWorkflowException as ex:
         log.warning(f"User {user.username} is not allowed to call cancel_workflow_instance for task_id {reqdata.task_id}")
         raise HTTPException(status_code=403)
 
 
-
 @router.get("/system_information", name="bff_admin_system_information")
 def get_system_information() -> GetSystemInformationResponse:
-    
+
     resp = GetSystemInformationResponse()
     resp.build_number = os.environ.get("CI_COMMIT_SHA", "dev")
 
     return resp
 
+
 @router.get("/get_task_states_per_workflow", name="bff_admin_get_task_states_per_workflow")
 def get_task_states_per_workflow(
-    db: Annotated[Session, Depends(get_db)], 
+    db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
-    wf_name: str
+    wf_name: str,
 ) -> WorkflowStateResponse:
     result = service_application.admin_get_task_states_per_workflow(db=db, wf_name=wf_name, admin_user_id=user.id)
     return result

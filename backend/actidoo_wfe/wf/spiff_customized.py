@@ -65,17 +65,23 @@ from actidoo_wfe.wf.types import TaskToUserMapping
 
 log = logging.getLogger(__name__)
 
+
 class MyUserTask(UserTask):
     def __init__(self, wf_spec, name, form, custom_props, **kwargs):
         super().__init__(wf_spec, name, form, **kwargs)
         self.custom_props = custom_props
+
 
 class MyCamundaUserTaskParser(CamundaTaskParser):
     def create_task(self):
         form = self.get_form()
         custom_props = self.get_custom_props()
         return self.spec_class(
-            self.spec, self.bpmn_id, form=form, custom_props=custom_props, **self.bpmn_attributes
+            self.spec,
+            self.bpmn_id,
+            form=form,
+            custom_props=custom_props,
+            **self.bpmn_attributes,
         )
 
     def get_custom_props(self):
@@ -87,16 +93,17 @@ class MyCamundaUserTaskParser(CamundaTaskParser):
         """Camunda provides a simple form builder; this extracts the form details and constructs a form model."""
         if self.filename is None:
             raise FormNotFoundException(
-                f"form file not found for process {self.process_parser.bpmn_id} and usertask {self.bpmn_id}: filename is None"
+                f"form file not found for process {self.process_parser.bpmn_id} and usertask {self.bpmn_id}: filename is None",
             )
         form_file_path = Path(self.filename).parent / (self.bpmn_id + ".form")
         if not form_file_path.exists():
             log.exception(f"form file not found for process {self.process_parser.bpmn_id} and usertask {self.bpmn_id}: {str(form_file_path)}")
             raise FormNotFoundException(
-                f"form file not found for process {self.process_parser.bpmn_id} and usertask {self.bpmn_id}: {str(form_file_path)}"
+                f"form file not found for process {self.process_parser.bpmn_id} and usertask {self.bpmn_id}: {str(form_file_path)}",
             )
         form = transform_camunda_form_from_file(form_file_path)
         return form
+
 
 class MyCamundaStartEventParser(CamundaStartEventParser):
     def create_task(self):
@@ -113,11 +120,15 @@ class MyCamundaStartEventParser(CamundaStartEventParser):
         form = transform_camunda_form_from_file(form_file_path)
         return form
 
+
 class MyCamundaServiceTaskParser(CamundaTaskParser):
     def create_task(self):
         service_type = self.get_service_type()
         return self.spec_class(
-            self.spec, self.bpmn_id, service_type=service_type, **self.bpmn_attributes
+            self.spec,
+            self.bpmn_id,
+            service_type=service_type,
+            **self.bpmn_attributes,
         )
 
     def get_service_type(self):
@@ -127,6 +138,7 @@ class MyCamundaServiceTaskParser(CamundaTaskParser):
             taskDefinitionElement = taskDefinitionElements[0]
             service_type = taskDefinitionElement.attrib["type"]
         return service_type
+
 
 class MyServiceTask(ServiceTask):
     # see SpiffWorkflow.spiff.specs.mixins.ServiceTask
@@ -147,7 +159,7 @@ class MyServiceTask(ServiceTask):
         try:
             result = task.workflow.script_engine.call_service(self.service_type, task)
         except Exception as error:
-            log.exception(f'Exception in MyServiceTask_execute -> {type(error).__name__}: {error.args}')
+            log.exception(f"Exception in MyServiceTask_execute -> {type(error).__name__}: {error.args}")
             task.error()
             s_traceback = traceback.format_exc()
             task._set_internal_data(**{INTERNAL_DATA_KEY_STACKTRACE: str(s_traceback)})
@@ -157,6 +169,7 @@ class MyServiceTask(ServiceTask):
         parsed_result = orjson.loads(result)
         task.data[self._result_variable(task)] = parsed_result
         return True
+
 
 class MyCamundaIntermediateThrowEventParser(CamundaIntermediateThrowEventParser):
     def create_task(self):
@@ -172,6 +185,7 @@ class MyCamundaIntermediateThrowEventParser(CamundaIntermediateThrowEventParser)
             taskDefinitionElement = taskDefinitionElements[0]
             service_type = taskDefinitionElement.attrib["type"]
         return service_type
+
 
 class MyIntermediateThrowEvent(IntermediateThrowEvent):
     def __init__(self, *args, **kw):
@@ -202,6 +216,7 @@ class MyIntermediateThrowEvent(IntermediateThrowEvent):
     def _run_hook(self, task):
         return self._execute(task)
 
+
 class MyCamundaIntermediateCatchEventParser(CamundaIntermediateCatchEventParser):
     def create_task(self):
         task = super().create_task()
@@ -228,6 +243,7 @@ class MyCamundaIntermediateCatchEventParser(CamundaIntermediateCatchEventParser)
         form = transform_camunda_form_from_file(form_file_path)
         return form
 
+
 class MyIntermediateCatchEvent(IntermediateCatchEvent):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
@@ -241,10 +257,15 @@ class MyIntermediateCatchEvent(IntermediateCatchEvent):
         self.correlation_key = correlation_key
 
     def evaluate_correlation_key(self, task):
-        result = task.workflow.script_engine.evaluate(task, self.correlation_key, {
-            "instance_id": str(task.workflow.task_tree.id)
-        })
+        result = task.workflow.script_engine.evaluate(
+            task,
+            self.correlation_key,
+            {
+                "instance_id": str(task.workflow.task_tree.id),
+            },
+        )
         return result
+
 
 class FeelExpressionReference:
     """
@@ -254,6 +275,7 @@ class FeelExpressionReference:
     - set(): forbidden (read-only expression)
     Note: No caching; expressions are evaluated on each access.
     """
+
     def __init__(self, expr: str, bpmn_id: str):
         self.expr = expr.strip()
         self.bpmn_id = bpmn_id
@@ -270,9 +292,11 @@ class FeelExpressionReference:
 
     def set(self, task, value):
         raise WorkflowDataException(
-            f'Cannot set value of FEEL expression "{self.expr}".', task
+            f'Cannot set value of FEEL expression "{self.expr}".',
+            task,
         )
-    
+
+
 class MultiInstanceMixin:
     def _add_multiinstance_task(self, loop_characteristics):
         """
@@ -291,23 +315,23 @@ class MultiInstanceMixin:
           </bpmn:multiInstanceLoopCharacteristics>
         """
         # --- basic flags ---
-        sequential = loop_characteristics.get('isSequential') == 'true'
+        sequential = loop_characteristics.get("isSequential") == "true"
 
         # --- resolve Zeebe loopCharacteristics node ---
-        z_nodes = self.xpath('./bpmn:multiInstanceLoopCharacteristics/bpmn:extensionElements/zeebe:loopCharacteristics')
+        z_nodes = self.xpath("./bpmn:multiInstanceLoopCharacteristics/bpmn:extensionElements/zeebe:loopCharacteristics")
         if not z_nodes:
             self.raise_validation_exception("Missing zeebe:loopCharacteristics inside multiInstanceLoopCharacteristics.")
         z = z_nodes[0]
 
         # --- read attributes (Camunda semantics) ---
-        in_coll_raw = z.get('inputCollection')        # FEEL (required)
-        in_elem_raw = z.get('inputElement')           # string (required)
-        out_coll_raw = z.get('outputCollection')      # string (optional)
-        out_elem_raw = z.get('outputElement')         # FEEL (optional)
+        in_coll_raw = z.get("inputCollection")  # FEEL (required)
+        in_elem_raw = z.get("inputElement")  # string (required)
+        out_coll_raw = z.get("outputCollection")  # string (optional)
+        out_elem_raw = z.get("outputElement")  # FEEL (optional)
 
         # completionCondition primarily on BPMN node; Zeebe attr rarely used
-        cond_nodes = self.xpath('./bpmn:multiInstanceLoopCharacteristics/bpmn:completionCondition')
-        condition = cond_nodes[0].text if len(cond_nodes) > 0 else z.get('completionCondition')
+        cond_nodes = self.xpath("./bpmn:multiInstanceLoopCharacteristics/bpmn:completionCondition")
+        condition = cond_nodes[0].text if len(cond_nodes) > 0 else z.get("completionCondition")
 
         # --- minimal validation for Camunda style ---
         if not in_coll_raw:
@@ -321,7 +345,7 @@ class MultiInstanceMixin:
         # FEEL inputCollection → evaluate at runtime
         loop_input = FeelExpressionReference(
             expr=in_coll_raw,
-            bpmn_id=f'{self.bpmn_id}::inputCollection',
+            bpmn_id=f"{self.bpmn_id}::inputCollection",
         )
 
         # inputElement (plain string)
@@ -331,33 +355,44 @@ class MultiInstanceMixin:
         loop_output = TaskDataReference(out_coll_raw) if out_coll_raw else None
 
         # FEEL outputElement (optional; evaluated per child)
-        output_item = FeelExpressionReference(
-            expr=out_elem_raw,
-            bpmn_id=f'{self.bpmn_id}::outputElement',
-        ) if out_elem_raw else None
+        output_item = (
+            FeelExpressionReference(
+                expr=out_elem_raw,
+                bpmn_id=f"{self.bpmn_id}::outputElement",
+            )
+            if out_elem_raw
+            else None
+        )
 
         # --- create Spiff MI task (no cardinality support in this simplified variant) ---
         original = self.spec.task_specs.pop(self.task.name)
         params = {
-            'task_spec': '',
-            'cardinality': None,           # not supported in this simplified Camunda mode
-            'data_input': loop_input,
-            'data_output': loop_output,
-            'input_item': input_item,
-            'output_item': output_item,
-            'condition': condition,        # FEEL string (kept with '='), evaluated at runtime
+            "task_spec": "",
+            "cardinality": None,  # not supported in this simplified Camunda mode
+            "data_input": loop_input,
+            "data_output": loop_output,
+            "input_item": input_item,
+            "output_item": output_item,
+            "condition": condition,  # FEEL string (kept with '='), evaluated at runtime
         }
 
         if sequential:
             self.task = self.SEQUENTIAL_MI_CLASS(
-                self.spec, original.name, description='Sequential MultiInstance', **params
+                self.spec,
+                original.name,
+                description="Sequential MultiInstance",
+                **params,
             )
         else:
             self.task = self.PARALLEL_MI_CLASS(
-                self.spec, original.name, description='Parallel MultiInstance', **params
+                self.spec,
+                original.name,
+                description="Parallel MultiInstance",
+                **params,
             )
 
         self._copy_task_attrs(original, loop_characteristics)
+
 
 def apply_mixin_overrides(override_map, mixin):
     """
@@ -367,6 +402,7 @@ def apply_mixin_overrides(override_map, mixin):
     for tag, (parser_cls, model_cls) in override_map.items():
         new_map[tag] = (ensure_mixin(parser_cls, mixin), model_cls)
     return new_map
+
 
 OVERRIDE_PARSER_CLASSES = copy(BpmnParser.PARSER_CLASSES)
 OVERRIDE_PARSER_CLASSES.update(CamundaParser.OVERRIDE_PARSER_CLASSES)
@@ -389,6 +425,7 @@ OVERRIDE_PARSER_CLASSES = apply_mixin_overrides(OVERRIDE_PARSER_CLASSES, MultiIn
 
 MY_NSMAP = copy(NSMAP)
 MY_NSMAP["zeebe"] = "http://camunda.org/schema/zeebe/1.0"
+
 
 class MyProcessParser(ProcessParser):
     def get_wflanes(self):
@@ -425,7 +462,7 @@ class MyProcessParser(ProcessParser):
                 "id": lane_id,
                 "name": lane_name,
                 "custom_properties": custom_properties,
-                "nodes": nodes_list
+                "nodes": nodes_list,
             }
 
         return wflanes
@@ -442,12 +479,14 @@ class MyProcessParser(ProcessParser):
         self.spec.wflanes = self.get_wflanes()
         return ret
 
+
 class MyCamundaParser(CamundaParser):
     OVERRIDE_PARSER_CLASSES = OVERRIDE_PARSER_CLASSES
     PROCESS_PARSER_CLASS = MyProcessParser
 
     def __init__(self, namespaces=None, validator=None):
         super().__init__(namespaces=namespaces or MY_NSMAP, validator=validator)
+
 
 class MyUserTaskConverter(UserTaskConverter):
     def to_dict(self, spec):
@@ -462,6 +501,7 @@ class MyUserTaskConverter(UserTaskConverter):
     def from_dict(self, dct):
         return self.task_spec_from_dict(dct)
 
+
 class MyServiceTaskConverter(BpmnTaskSpecConverter):
     def __init__(self, target_class, registry):
         super().__init__(target_class, registry)
@@ -474,6 +514,7 @@ class MyServiceTaskConverter(BpmnTaskSpecConverter):
     def from_dict(self, dct):
         return self.task_spec_from_dict(dct)
 
+
 class MyStartEventConverter(EventConverter):
     def to_dict(self, spec):
         dct = super().to_dict(spec)
@@ -482,6 +523,7 @@ class MyStartEventConverter(EventConverter):
 
     def from_dict(self, dct):
         return super().from_dict(dct=dct)
+
 
 class MyIntermediateThrowEventConverter(EventConverter):
     def to_dict(self, spec):
@@ -492,6 +534,7 @@ class MyIntermediateThrowEventConverter(EventConverter):
     def from_dict(self, dct):
         return super().from_dict(dct=dct)
 
+
 class MyIntermediateCatchEventConverter(EventConverter):
     def to_dict(self, spec):
         dct = super().to_dict(spec)
@@ -501,6 +544,7 @@ class MyIntermediateCatchEventConverter(EventConverter):
 
     def from_dict(self, dct):
         return super().from_dict(dct=dct)
+
 
 class MyBpmnProcessSpecConverter(BpmnProcessSpecConverter):
     def to_dict(self, spec):
@@ -515,6 +559,7 @@ class MyBpmnProcessSpecConverter(BpmnProcessSpecConverter):
         ret.custom_props = dct.get("custom_props", None)
         return ret
 
+
 class FeelDataSpecificationConverter(BpmnConverter):
     """
     Serializer for FEEL DataSpecs.
@@ -524,7 +569,7 @@ class FeelDataSpecificationConverter(BpmnConverter):
     def to_dict(self, data_spec: FeelExpressionReference):
         # Only JSON-safe fields; no caching metadata
         return {
-            "expr": data_spec.expr,      # including leading '=' if present
+            "expr": data_spec.expr,  # including leading '=' if present
             "bpmn_id": data_spec.bpmn_id,
         }
 
@@ -534,6 +579,7 @@ class FeelDataSpecificationConverter(BpmnConverter):
             expr=dct.get("expr", ""),
             bpmn_id=dct.get("bpmn_id", ""),
         )
+
 
 MY_CAMUNDA_SPEC_CONFIG = deepcopy(CAMUNDA_CONFIG)
 MY_CAMUNDA_SPEC_CONFIG[MyServiceTask] = MyServiceTaskConverter
@@ -554,18 +600,21 @@ MY_CAMUNDA_SPEC_CONFIG[FeelExpressionReference] = FeelDataSpecificationConverter
 MY_CAMUNDA_SPEC_CONFIG[ParallelMultiInstanceTask] = MultiInstanceTaskConverter
 MY_CAMUNDA_SPEC_CONFIG[SequentialMultiInstanceTask] = MultiInstanceTaskConverter
 
+
 def get_parser():
     parser = MyCamundaParser()
     return parser
 
+
 def get_serializer():
     registry = BpmnWorkflowSerializer.configure(
-        config=MY_CAMUNDA_SPEC_CONFIG
+        config=MY_CAMUNDA_SPEC_CONFIG,
     )
     serializer = BpmnWorkflowSerializer(
-        registry=registry
+        registry=registry,
     )
     return serializer
+
 
 class MyScriptEngine(FeelLikeScriptEngine):
     def __init__(self, environment):
@@ -585,7 +634,7 @@ class MyScriptEngine(FeelLikeScriptEngine):
             raise Exception(f"Service for {service_type} is not defined")
         else:
             task_to_user_mapping: TaskToUserMapping = self.get_task_to_user_mapping(
-                workflow=workflow
+                workflow=workflow,
             )
 
             sth = ServiceTaskHelper(
@@ -594,7 +643,7 @@ class MyScriptEngine(FeelLikeScriptEngine):
                 task_to_user_mapping=task_to_user_mapping,
                 task_uuid=task.id,
                 allowed_data_models=set(
-                    self.environment.globals.get("DATA_MODELS", [])
+                    self.environment.globals.get("DATA_MODELS", []),
                 ),
             )
             result = service_def(sth=sth)
@@ -613,13 +662,16 @@ class MyScriptEngine(FeelLikeScriptEngine):
     def _evaluate(self, expression, context, external_context=None):
         if expression.startswith("="):
             return FeelLikeScriptEngine._evaluate(
-                self, expression.lstrip("= "), context, external_context = external_context
+                self,
+                expression.lstrip("= "),
+                context,
+                external_context=external_context,
             )
         else:
             return self.environment.evaluate(expression, context, external_context)
-            #return PythonScriptEngine.evaluate(
+            # return PythonScriptEngine.evaluate(
             #    self, expression, context, external_context
-            #)
+            # )
 
     def patch_expression(self, invalid_python, lhs=""):
         patched = super().patch_expression(invalid_python, lhs)
@@ -635,6 +687,7 @@ class MyScriptEngine(FeelLikeScriptEngine):
             if user is not None:
                 mapping[task] = user
         return mapping
+
 
 def get_script_engine(workflow_name):
     env_globals: Dict[str, object] = {}

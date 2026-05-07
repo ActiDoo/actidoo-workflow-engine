@@ -47,6 +47,7 @@ def _create_workflow_instance_and_complete_it(db):
 
     return workflow
 
+
 def test_admin_get_all_tasks(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
@@ -55,7 +56,9 @@ def test_admin_get_all_tasks(db_engine_ctx):
 
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
-                name="bff_admin_get_all_tasks", json={}, cls=GetAllTasksResponse
+                name="bff_admin_get_all_tasks",
+                json={},
+                cls=GetAllTasksResponse,
             )
 
         assert len(json_resp.ITEMS) > 0
@@ -99,7 +102,7 @@ def test_cancel_workflow(db_engine_ctx):
             status, json_resp = client.post(
                 name="bff_admin_cancel_workflow_instance",
                 json={
-                    "workflow_instance_id": str(workflow.workflow_instance_id)
+                    "workflow_instance_id": str(workflow.workflow_instance_id),
                 },
                 cls=CancelWorkflowInstanceResponse,
             )
@@ -108,11 +111,14 @@ def test_cancel_workflow(db_engine_ctx):
 
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
-                name="bff_admin_get_all_tasks", json={}, cls=GetAllTasksResponse
+                name="bff_admin_get_all_tasks",
+                json={},
+                cls=GetAllTasksResponse,
             )
 
         assert len(json_resp.ITEMS) > 0
         assert any(x.state_cancelled for x in json_resp.ITEMS)
+
 
 def test_admin_assign(db_engine_ctx):
     with db_engine_ctx():
@@ -131,25 +137,29 @@ def test_admin_assign(db_engine_ctx):
         task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
 
         workflow.user("initiator").assign_task(
-            task_id=task[0].id
+            task_id=task[0].id,
         )
 
         client = Client()
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
-                name="bff_admin_unassign_task", json={
-                    "task_id": str(task[0].id)
-                }, cls=GetSingleTaskResponse
+                name="bff_admin_unassign_task",
+                json={
+                    "task_id": str(task[0].id),
+                },
+                cls=GetSingleTaskResponse,
             )
 
         assert json_resp.task.assigned_user is None
 
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
-                name="bff_admin_assign_task", json={
+                name="bff_admin_assign_task",
+                json={
                     "task_id": str(task[0].id),
-                    "user_id": str(workflow.user("initiator").user.id)
-                }, cls=GetSingleTaskResponse
+                    "user_id": str(workflow.user("initiator").user.id),
+                },
+                cls=GetSingleTaskResponse,
             )
 
         assert json_resp.task.assigned_user is not None and str(json_resp.task.assigned_user.id) == str(workflow.user("initiator").user.id)
@@ -180,7 +190,9 @@ def test_admin_user_listing_and_delegations(db_engine_ctx):
         assert any(u["id"] == principal.id for u in users.ITEMS)
 
         detail = service_application.admin_get_user_detail(
-            db=db, admin_user_id=admin.id, target_user_id=principal.id
+            db=db,
+            admin_user_id=admin.id,
+            target_user_id=principal.id,
         )
         assert detail["user"]["id"] == principal.id
 
@@ -194,7 +206,7 @@ def test_admin_user_listing_and_delegations(db_engine_ctx):
         assert any(d["delegate"]["id"] == delegate.id for d in updated_detail["delegations"])
 
         filtered_params = bff_admin.AdminWorkflowUsersBffTableQuerySchema.parse_obj(
-            {"f_roles": "wf-admin"}
+            {"f_roles": "wf-admin"},
         )
         filtered_users = service_application.bff_admin_get_all_users(
             db=db,

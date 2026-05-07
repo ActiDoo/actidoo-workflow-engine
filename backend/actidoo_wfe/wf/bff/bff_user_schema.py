@@ -9,10 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from actidoo_wfe.helpers.schema import PaginatedDataSchema
 
-# class OperationStatus(enum.Enum):
-#    SUCCESS = "success"
-#    ERROR = "error"
-
 
 class ErrorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -39,6 +35,7 @@ class StartWorkflowWithDataRequest(BaseModel):
     name: str
     data: dict | None = Field(default=None)
 
+
 class GetWorkflowCopyDataResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -46,10 +43,12 @@ class GetWorkflowCopyDataResponse(BaseModel):
     task_name: str
     data: dict
 
+
 class SubmitTaskDataErrorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     error_schema: dict
+
 
 class GetUserTasksResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -115,10 +114,10 @@ class GetWorkflowInstancesResponseItem(BaseModel):
     created_at: datetime.datetime
     completed_at: datetime.datetime | None
     active_tasks: list[GetWorkflowInstancesResponseItemTask] = Field(
-        default_factory=lambda: []
+        default_factory=lambda: [],
     )
     completed_tasks: list[GetWorkflowInstancesResponseItemTask] = Field(
-        default_factory=lambda: []
+        default_factory=lambda: [],
     )
 
 
@@ -136,6 +135,7 @@ class GetWorkflowsResponseItem(BaseModel):
 
     name: str
     title: str
+
 
 class GetWorkflowStatisticsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -218,9 +218,9 @@ class GetMyWfeUserResponse(BaseModel):
 
 class RefreshGetWorkflowSpecRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     name: str
-    #version: int|None = Field(default=None)
+    # version: int|None = Field(default=None)
 
 
 class WorkflowSpecResponseFile(BaseModel):
@@ -231,13 +231,13 @@ class WorkflowSpecResponseFile(BaseModel):
     file_name: str
     file_type: str
     file_hash: str
-    file_content: str|None
+    file_content: str | None
     file_bpmn_process_id: str
 
 
 class WorkflowSpecResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: uuid.UUID
     created_at: datetime.datetime
     name: str
@@ -262,14 +262,17 @@ class DeleteWorkflowRequest(BaseModel):
 class DeleteWorkflowResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+
 class SaveUserSettingsRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     locale: str
     delegations: List["UserDelegationRequest"] | None = Field(default=None)
 
+
 class LocaleItem(BaseModel):
     key: str
     label: str
+
 
 class UserSettingsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

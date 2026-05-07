@@ -31,17 +31,17 @@ log = logging.getLogger(__name__)
 ### Setup and Connection
 def get_mysql_options(settings: Settings) -> dict:
     if settings.db_ssl_ca:
-        return  {
+        return {
             "connect_timeout": 20,
             "ssl": {
-                "ca": settings.db_ssl_ca
+                "ca": settings.db_ssl_ca,
             },
-            "init_command": "SET SESSION time_zone='+00:00', innodb_lock_wait_timeout=3"
+            "init_command": "SET SESSION time_zone='+00:00', innodb_lock_wait_timeout=3",
         }
     else:
         return {
             "connect_timeout": 20,
-            "init_command": "SET SESSION time_zone='+00:00', innodb_lock_wait_timeout=3"
+            "init_command": "SET SESSION time_zone='+00:00', innodb_lock_wait_timeout=3",
         }
 
 
@@ -61,7 +61,6 @@ def setup_db(settings: Settings) -> Engine:
         pool_size=10,
         max_overflow=150,
         echo=settings.db_echo,
-        #echo_pool="debug",
         pool_pre_ping=True,
         pool_recycle=60 * 5,
         pool_timeout=300,
@@ -72,6 +71,7 @@ def setup_db(settings: Settings) -> Engine:
     setup_db_session(engine)
 
     return engine
+
 
 def create_null_pool_engine(settings: Settings, isolation_level="REPEATABLE READ"):
     db_uri = get_uri(settings)
@@ -86,6 +86,7 @@ def create_null_pool_engine(settings: Settings, isolation_level="REPEATABLE READ
 
     return engine
 
+
 def get_uri(settings: Settings):
     """Composes the database connection string based on the application settings"""
     encoded_password = parse.quote_plus(settings.db_password)
@@ -94,10 +95,12 @@ def get_uri(settings: Settings):
         db_uri += "?" + settings.db_query
     return db_uri
 
+
 def get_dsn(settings: Settings):
     encoded_password = parse.quote_plus(settings.db_password)
-    db_uri = f'dbname={settings.db_name} user={settings.db_user} password={encoded_password} host={settings.db_host} port={settings.db_port}'
+    db_uri = f"dbname={settings.db_name} user={settings.db_user} password={encoded_password} host={settings.db_host} port={settings.db_port}"
     return db_uri
+
 
 def wait(settings: Settings):
     """Waits synchronously for the configured database server to be available (reachable via socket)"""
@@ -134,14 +137,10 @@ def _session_local_scopefunc() -> str:
     """
 
     if correlation_id.get() is not None:
-        #log.debug(
-        #    f"SqlAlchemy SessionLocal scopefunc using Correlation-ID: {correlation_id.get()}"
-        #)
         ret: str = str(correlation_id.get())
     else:
         random_id = uuid.uuid4()
         correlation_id.set(str(random_id))
-        #log.debug(f"SqlAlchemy SessionLocal scopefunc using RANDOM-ID: {random_id}")
         ret: str = str(random_id)
     return ret
 
@@ -151,7 +150,8 @@ SessionMaker: sessionmaker = sessionmaker(autocommit=False, autoflush=True)
 
 # Factory for creating a new session or returning an active session for the currently active scope. Scope is defined by _session_local_scopefunc.
 SessionLocal: scoped_session = scoped_session(
-    SessionMaker, scopefunc=_session_local_scopefunc
+    SessionMaker,
+    scopefunc=_session_local_scopefunc,
 )
 
 
@@ -167,7 +167,6 @@ def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency for providing a database session. Usage is enclosed in a transaction!"""
     db: Session = SessionLocal()
     if db.in_transaction():
-        #raise Exception("already in transaction")
         with db.begin_nested():
             yield db
     else:
@@ -199,28 +198,20 @@ ESCAPE_CHAR = "*"
 
 def elike(column, string, prefix_wildcard=True, suffix_wildcard=True):
     return column.like(
-        ("%" if prefix_wildcard else "")
-        + escape_like(string, escape_char=ESCAPE_CHAR)
-        + ("%" if suffix_wildcard else ""),
+        ("%" if prefix_wildcard else "") + escape_like(string, escape_char=ESCAPE_CHAR) + ("%" if suffix_wildcard else ""),
         escape=ESCAPE_CHAR,
     )
 
 
 def eilike(column, string, prefix_wildcard=True, suffix_wildcard=True):
     return column.ilike(
-        ("%" if prefix_wildcard else "")
-        + escape_like(string, escape_char=ESCAPE_CHAR)
-        + ("%" if suffix_wildcard else ""),
+        ("%" if prefix_wildcard else "") + escape_like(string, escape_char=ESCAPE_CHAR) + ("%" if suffix_wildcard else ""),
         escape=ESCAPE_CHAR,
     )
 
 
 def escape_like(string, escape_char=ESCAPE_CHAR):
-    return (
-        string.replace(escape_char, escape_char * 2)
-        .replace("%", escape_char + "%")
-        .replace("_", escape_char + "_")
-    )
+    return string.replace(escape_char, escape_char * 2).replace("%", escape_char + "%").replace("_", escape_char + "_")
 
 
 def search_uuid_by_prefix(column, prefix):
@@ -240,7 +231,7 @@ def generate_uuid_bounds(uuid_prefix):
         return uuid.UUID(lower), uuid.UUID(upper)
     except Exception:
         return uuid.UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"), uuid.UUID(
-            "ffffffff-ffff-ffff-ffff-ffffffffffff"
+            "ffffffff-ffff-ffff-ffff-ffffffffffff",
         )
 
 
@@ -248,7 +239,8 @@ def _run_with_advisory_lock(engine, lock_name: str, fn):
     """Execute *fn* while holding a MySQL advisory lock (max 30s wait)."""
     with engine.connect() as conn:
         acquired = conn.execute(
-            text("SELECT GET_LOCK(:name, 30)"), {"name": lock_name}
+            text("SELECT GET_LOCK(:name, 30)"),
+            {"name": lock_name},
         ).scalar()
         if acquired != 1:
             raise RuntimeError(f"Could not acquire migration lock '{lock_name}' (result={acquired})")
@@ -262,7 +254,7 @@ def _run_main_migrations(engine):
     """Run the main-project Alembic migrations."""
     with engine.connect() as conn:
         initialized = conn.execute(
-            text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'alembic_version'")
+            text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'alembic_version'"),
         ).scalar()
 
     alembic_cfg = alembic.config.Config(attributes={"engine": engine})
@@ -332,7 +324,8 @@ def run_migrations(settings: Settings):
             ext_alembic_path = Path(ext_alembic_module.__file__).parent
             lock_name = f"alembic_ext_{entry_point.name}"
             _run_with_advisory_lock(
-                engine, lock_name,
+                engine,
+                lock_name,
                 lambda eng, p=ext_alembic_path, n=entry_point.name: _run_extension_migrations(eng, p, n),
             )
         except Exception as error:
@@ -343,7 +336,7 @@ def run_migrations(settings: Settings):
 
 
 def create_revision(settings: Settings, message: str):
-    """ only used by the cli app """
+    """only used by the cli app"""
     engine = create_engine(
         get_uri(settings),
         poolclass=NullPool,
@@ -393,6 +386,7 @@ class UTCDateTime(TypeDecorator):
             value = value.replace(tzinfo=datetime.timezone.utc)
         return value
 
+
 class JSONBlob(TypeDecorator):
     impl = LONGTEXT
     cache_ok = True
@@ -408,12 +402,14 @@ class JSONBlob(TypeDecorator):
             # Decode bytes to JSON string and then convert to Python object
             value = json.loads(value)
         return value
-    
+
+
 class ZlibJSONBlob(TypeDecorator):
     """
     SQLAlchemy type for storing JSON as zlib-compressed binary data.
     On load it falls back to plain JSON if decompression fails.
     """
+
     impl = LONGBLOB
     cache_ok = True
 

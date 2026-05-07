@@ -70,7 +70,6 @@ async def test_cleanupAfterRunFindsNoResults(db_engine_ctx):
         async_scheduling._worker_idle_sleep_seconds = 1
         async_scheduling._keep_task_results = dict(seconds=1)
 
-
         # Modify cleanup cron
         del task_registry["ts_schedule_cleanup"]
         task_registry["ts_schedule_cleanup"] = CronTask(cron="* * * * * */3", name="ts_schedule_cleanup", func=schedule_cleanup)
@@ -99,18 +98,20 @@ async def test_cleanupAfterRunFindsNoResults(db_engine_ctx):
         while not task_completed.is_set():
             await asyncio.sleep(1)
 
-        await asyncio.sleep(3) # Wait for cleanup to run
+        await asyncio.sleep(3)  # Wait for cleanup to run
 
         # Wait for the task to complete
         scheduler_task.cancel()
         await scheduler_task
 
-
         db: Session = SessionMaker()
 
-        ts_results = [x for x in db.execute(
-            select(TaskResult).where(TaskResult.name == "test_task")
-        ).scalars()]
+        ts_results = [
+            x
+            for x in db.execute(
+                select(TaskResult).where(TaskResult.name == "test_task"),
+            ).scalars()
+        ]
 
         db.close()
 
@@ -141,8 +142,8 @@ def test_cron_task_reschedules_if_interval_not_elapsed(db_engine_ctx):
                     "result": {},
                     "error_log": "",
                     "is_error": False,
-                }
-            )
+                },
+            ),
         )
 
         # Step 2: enqueue a task that claims to be due now
@@ -154,8 +155,8 @@ def test_cron_task_reschedules_if_interval_not_elapsed(db_engine_ctx):
                     "execute_after": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=1),
                     "name": task_name,
                     "params": {},
-                }
-            )
+                },
+            ),
         )
         db.commit()
 
@@ -164,7 +165,7 @@ def test_cron_task_reschedules_if_interval_not_elapsed(db_engine_ctx):
             async_scheduling.run_worker(settings, db)
 
             queued_task = db.execute(
-                t_task_queue.select().where(t_task_queue.c.id == task_id)
+                t_task_queue.select().where(t_task_queue.c.id == task_id),
             ).fetchone()
 
             # Step 4: verify the task was re-enqueued rather than executed
@@ -177,9 +178,7 @@ def test_cron_task_reschedules_if_interval_not_elapsed(db_engine_ctx):
             # Step 5: confirm the new schedule obeys the next allowed execution time
             persisted_last_execution = (
                 db.execute(
-                    select(t_task_results.c.executed_at)
-                    .where(t_task_results.c.name == task_name)
-                    .order_by(t_task_results.c.executed_at.desc())
+                    select(t_task_results.c.executed_at).where(t_task_results.c.name == task_name).order_by(t_task_results.c.executed_at.desc()),
                 )
                 .scalars()
                 .first()
@@ -226,8 +225,8 @@ def test_failed_task_does_not_rerun_immediately(db_engine_ctx):
                         "execute_after": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=10),
                         "name": task_name,
                         "params": {},
-                    }
-                )
+                    },
+                ),
             )
             db.commit()
 
@@ -237,9 +236,7 @@ def test_failed_task_does_not_rerun_immediately(db_engine_ctx):
             assert run_count["count"] == 1
 
             last_result = db.execute(
-                t_task_results.select()
-                .where(t_task_results.c.name == task_name)
-                .order_by(t_task_results.c.executed_at.desc())
+                t_task_results.select().where(t_task_results.c.name == task_name).order_by(t_task_results.c.executed_at.desc()),
             ).fetchone()
 
             assert last_result is not None
@@ -254,18 +251,15 @@ def test_failed_task_does_not_rerun_immediately(db_engine_ctx):
                         "execute_after": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=10),
                         "name": task_name,
                         "params": {},
-                    }
-                )
+                    },
+                ),
             )
             db.commit()
 
             # Step 4: run the worker again; it should just requeue the task
             async_scheduling.run_worker(settings, db)
 
-            queued_task = (
-                db.execute(t_task_queue.select().where(t_task_queue.c.id == new_task_id))
-                .fetchone()
-            )
+            queued_task = db.execute(t_task_queue.select().where(t_task_queue.c.id == new_task_id)).fetchone()
 
             assert queued_task is not None, "Failed task should be postponed before rerunning"
             assert run_count["count"] == 1
@@ -307,8 +301,8 @@ def test_task_runs_do_not_overlap(db_engine_ctx):
                         "execute_after": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=1),
                         "name": task_name,
                         "params": {},
-                    }
-                )
+                    },
+                ),
             )
             db.commit()
             db.close()
@@ -354,12 +348,9 @@ def test_schedule_task_persists_keys(db_engine_ctx):
             session = SessionMaker()
             async_scheduling.run_worker(settings, session)
 
-            result = (
-                session.execute(
-                    t_task_results.select().where(t_task_results.c.name == task_name)
-                )
-                .fetchone()
-            )
+            result = session.execute(
+                t_task_results.select().where(t_task_results.c.name == task_name),
+            ).fetchone()
             session.close()
 
             assert result is not None
@@ -402,8 +393,8 @@ def test_concurrency_lock_defers_same_key(db_engine_ctx):
                         "params": {},
                         "key_concurrent": "user-1",
                         "key_dedup": "user-1",
-                    }
-                )
+                    },
+                ),
             )
             db.commit()
             db.close()
@@ -414,7 +405,7 @@ def test_concurrency_lock_defers_same_key(db_engine_ctx):
 
             db_check = SessionMaker()
             queued = db_check.execute(
-                t_task_queue.select().where(t_task_queue.c.id == task_id)
+                t_task_queue.select().where(t_task_queue.c.id == task_id),
             ).fetchone()
             db_check.close()
 
@@ -442,7 +433,9 @@ def test_dedup_reschedules_latest(db_engine_ctx):
             runs.append(params["version"])
 
         task_registry[task_name] = CronTask(
-            cron=None, name=task_name, func=run_once
+            cron=None,
+            name=task_name,
+            func=run_once,
         )
 
         try:
@@ -485,7 +478,9 @@ def test_concurrent_keys_allow_parallel(db_engine_ctx):
             runs.append(params["user"])
 
         task_registry[task_name] = CronTask(
-            cron=None, name=task_name, func=record
+            cron=None,
+            name=task_name,
+            func=record,
         )
 
         try:
@@ -530,6 +525,8 @@ def test_concurrent_keys_allow_parallel(db_engine_ctx):
         finally:
             clear_task_registry()
             task_registry.update(previous_tasks)
+
+
 def test_retry_policy_reschedules_after_failure(db_engine_ctx):
     with db_engine_ctx():
         db: Session = SessionMaker()
@@ -560,8 +557,8 @@ def test_retry_policy_reschedules_after_failure(db_engine_ctx):
                         "execute_after": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=5),
                         "name": task_name,
                         "params": {"foo": "bar"},
-                    }
-                )
+                    },
+                ),
             )
             db.commit()
 
@@ -572,16 +569,14 @@ def test_retry_policy_reschedules_after_failure(db_engine_ctx):
 
             # Step 4: fetch the retry entry and ensure internal metadata is set
             retry_entry = db.execute(
-                t_task_queue.select().where(t_task_queue.c.name == task_name)
+                t_task_queue.select().where(t_task_queue.c.name == task_name),
             ).fetchone()
 
             assert retry_entry is not None
             assert retry_entry.params.get("_cron_retry_count") == 1
 
             db.execute(
-                t_task_queue.update()
-                .where(t_task_queue.c.id == retry_entry.id)
-                .values(execute_after=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=1))
+                t_task_queue.update().where(t_task_queue.c.id == retry_entry.id).values(execute_after=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=1)),
             )
             db.commit()
 
@@ -591,7 +586,7 @@ def test_retry_policy_reschedules_after_failure(db_engine_ctx):
             assert run_count["count"] == 2
 
             still_queued = db.execute(
-                t_task_queue.select().where(t_task_queue.c.name == task_name)
+                t_task_queue.select().where(t_task_queue.c.name == task_name),
             ).fetchone()
             assert still_queued is None
         finally:
@@ -627,8 +622,8 @@ def test_retry_policy_respects_max_retries(db_engine_ctx):
                         "execute_after": datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=5),
                         "name": task_name,
                         "params": {},
-                    }
-                )
+                    },
+                ),
             )
             db.commit()
 
@@ -637,14 +632,12 @@ def test_retry_policy_respects_max_retries(db_engine_ctx):
             assert run_count["value"] == 1
 
             retry_entry = db.execute(
-                t_task_queue.select().where(t_task_queue.c.name == task_name)
+                t_task_queue.select().where(t_task_queue.c.name == task_name),
             ).fetchone()
             assert retry_entry is not None
 
             db.execute(
-                t_task_queue.update()
-                .where(t_task_queue.c.id == retry_entry.id)
-                .values(execute_after=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=1))
+                t_task_queue.update().where(t_task_queue.c.id == retry_entry.id).values(execute_after=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=1)),
             )
             db.commit()
 
@@ -653,7 +646,7 @@ def test_retry_policy_respects_max_retries(db_engine_ctx):
             assert run_count["value"] == 2
 
             final_entry = db.execute(
-                t_task_queue.select().where(t_task_queue.c.name == task_name)
+                t_task_queue.select().where(t_task_queue.c.name == task_name),
             ).fetchone()
             assert final_entry is None
         finally:

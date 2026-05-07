@@ -20,23 +20,23 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(
     dependencies=[],
-    tags=["wfe-api"]
+    tags=["wfe-api"],
 )
- 
+
+
 @router.post("/send_message", name="api_v1_send_message")
 def api_send_message(
     reqdata: SendMessageRequest,
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(dep_require_service_user)],
 ) -> SendMessageResponse:
-    
+
     service_application.receive_message(
         db=db,
         message_name=reqdata.message_name,
         correlation_key=reqdata.correlation_key,
         data=reqdata.data,
-        user_id=user.id
+        user_id=user.id,
     )
 
     return SendMessageResponse()
-

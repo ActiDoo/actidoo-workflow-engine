@@ -8,6 +8,7 @@ This is a fork of uvicorns ProxyHeadersMiddleware: https://github.com/encode/uvi
 - Support X-Forwarded-Host header for correctly building absolute URLs
 
 """
+
 from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union, cast
 
@@ -27,15 +28,16 @@ class ProxyHeadersNetworkMiddleware:
         self,
         app: "ASGI3Application",
         trusted_networks: Union[
-            List[Union[IPv4Network, IPv6Network, str]], Union[IPv4Network, IPv6Network, str]
+            List[Union[IPv4Network, IPv6Network, str]],
+            Union[IPv4Network, IPv6Network, str],
         ] = "127.0.0.1/32",
     ) -> None:
         self.app = app
-        
+
         # Normalize trusted_networks to a list of network objects
         if not isinstance(trusted_networks, list):
             trusted_networks = [trusted_networks]
-        
+
         self.trusted_networks = []
         for net in trusted_networks:
             if isinstance(net, str):
@@ -44,7 +46,8 @@ class ProxyHeadersNetworkMiddleware:
                 self.trusted_networks.append(net)
 
     def get_trusted_client_host(
-        self, x_forwarded_for_hosts: List[str]
+        self,
+        x_forwarded_for_hosts: List[str],
     ) -> Optional[str]:
         """
         Traverse the list of IPs from right (most recent) to left.
@@ -57,22 +60,25 @@ class ProxyHeadersNetworkMiddleware:
                 # If we can't parse the IP (e.g. "unknown"), skip or return it depending on policy.
                 # Usually safest to return it as the client if it's the edge.
                 return host
-            
+
             is_trusted = any(addr in net for net in self.trusted_networks)
             if not is_trusted:
                 return host
         return None
 
     async def __call__(
-        self, scope: "Scope", receive: "ASGIReceiveCallable", send: "ASGISendCallable"
+        self,
+        scope: "Scope",
+        receive: "ASGIReceiveCallable",
+        send: "ASGISendCallable",
     ) -> None:
         if scope["type"] in ("http", "websocket"):
             scope = cast(Union["HTTPScope", "WebSocketScope"], scope)
-            
+
             # 1. Check if the direct connection is from a Trusted Proxy
             client_addr: Optional[Tuple[str, int]] = scope.get("client")
             client_host = client_addr[0] if client_addr else None
-            
+
             is_proxied = False
             if client_host:
                 try:
@@ -95,9 +101,7 @@ class ProxyHeadersNetworkMiddleware:
                 # ---------------------------------------------------------
                 if b"x-forwarded-for" in headers:
                     x_forwarded_for = headers[b"x-forwarded-for"].decode("latin1")
-                    x_forwarded_for_hosts = [
-                        item.strip() for item in x_forwarded_for.split(",")
-                    ]
+                    x_forwarded_for_hosts = [item.strip() for item in x_forwarded_for.split(",")]
                     real_host = self.get_trusted_client_host(x_forwarded_for_hosts)
                     if real_host:
                         # We set port to 0 because we don't know the client's actual source port

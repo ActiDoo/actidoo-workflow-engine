@@ -50,7 +50,7 @@ def _register_provider(keys: Set[str], needs: Set[str], source_name: str, fn: Pr
             needs=needs,
             source_name=source_name,
             fn=fn,
-        )
+        ),
     )
 
 
@@ -100,7 +100,10 @@ def resolve_user_attributes_on_login(
 ) -> None:
     """Execute registered providers and persist returned user attributes."""
     context = AttributeProviderContext(
-        user=user, claims=claims or {}, access_token=access_token, db=db
+        user=user,
+        claims=claims or {},
+        access_token=access_token,
+        db=db,
     )
     available = _available_needs(access_token)
     for provider in list(_providers):
@@ -142,11 +145,7 @@ def resolve_user_attributes_on_login(
 
 def _filter_keys(data: Dict[str, Any], allowed_keys: Iterable[str]) -> Dict[str, Any]:
     allowed = set(allowed_keys)
-    return {
-        key: value
-        for key, value in data.items()
-        if value is not None and (not allowed or key in allowed)
-    }
+    return {key: value for key, value in data.items() if value is not None and (not allowed or key in allowed)}
 
 
 def _persist_claims(
@@ -163,7 +162,7 @@ def _persist_claims(
             select(WorkflowUserClaim).where(
                 WorkflowUserClaim.user_id == user_id,
                 WorkflowUserClaim.claim_key.in_(keys),
-            )
+            ),
         ).scalars()
     }
 

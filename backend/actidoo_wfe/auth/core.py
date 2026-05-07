@@ -16,10 +16,12 @@ from actidoo_wfe.auth.authlib_starlette import StarletteOAuth2App
 from actidoo_wfe.auth.constants import ROLE_TO_LOGIN_STATE_MAP, SESSION_TOKEN_KEY
 from actidoo_wfe.settings import settings
 
-class FrameworkOAuth2Token():
+
+class FrameworkOAuth2Token:
     def update_token(token, refresh_token=None, access_token=None):
         pass
-    
+
+
 client: StarletteOAuth2App = StarletteOAuth2App(
     framework=FrameworkOAuth2Token(),
     name="idp",
@@ -27,23 +29,28 @@ client: StarletteOAuth2App = StarletteOAuth2App(
     client_secret=settings.oidc_client_secret,
     server_metadata_url=settings.oidc_discovery_url,
     client_kwargs={
-        "scope": settings.oidc_scopes
+        "scope": settings.oidc_scopes,
     },
     code_challenge_method="S256",
 )
 
+
 def set_token_in_session(request: Request, token: Dict[str, Any]) -> None:
     request.session[SESSION_TOKEN_KEY] = token
 
-def get_token_from_session(request: Request) -> Dict[str, Any]|None:
+
+def get_token_from_session(request: Request) -> Dict[str, Any] | None:
     token = request.session.get(SESSION_TOKEN_KEY)
     return token
+
 
 def token_needs_refresh(token: Dict[str, Any]) -> Optional[int]:
     return OAuth2Token(token).is_expired(leeway=settings.oidc_token_refresh_skew_seconds)
 
+
 def token_is_expired(token: Dict[str, Any]) -> Optional[int]:
     return OAuth2Token(token).is_expired(leeway=0)
+
 
 def is_logged_in(request: Request) -> bool:
     token = get_token_from_session(request)
@@ -53,13 +60,15 @@ def is_logged_in(request: Request) -> bool:
         return False
     return True
 
+
 def has_role(request: Request, role: str) -> bool:
     return role in set(get_roles(request))
+
 
 def get_login_state(request: Request) -> LoginStateSchema:
     logged_in = is_logged_in(request)
     roles = get_roles(request) if logged_in else []
-    
+
     permissions: Dict[str, bool] = {}
 
     for key, required_role in ROLE_TO_LOGIN_STATE_MAP.items():

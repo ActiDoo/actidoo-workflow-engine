@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 
 log.info("Starting CLI")
 
+
 class AsyncTyper(typer.Typer):
     def async_command(self, *args, **kwargs):
         def decorator(async_func):
@@ -55,8 +56,10 @@ async def run_migrations():
 async def create_revision(message: str):
     database.create_revision(settings, message)
 
+
 def compress_json(json_text: str) -> bytes:
-    return zlib.compress(json_text.encode('utf-8'))
+    return zlib.compress(json_text.encode("utf-8"))
+
 
 @app.command()
 def migrate_jsonblob():
@@ -73,7 +76,7 @@ def migrate_jsonblob():
     # 1) workflow_instance_tasks
     for column in ("data", "jsonschema", "uischema"):
         rows = session.execute(
-            text(f"SELECT id, `{column}` FROM workflow_instance_tasks WHERE `{column}` IS NOT NULL")
+            text(f"SELECT id, `{column}` FROM workflow_instance_tasks WHERE `{column}` IS NOT NULL"),
         ).fetchall()
 
         for task_id, original in rows:
@@ -93,7 +96,7 @@ def migrate_jsonblob():
 
                 session.execute(
                     text(f"UPDATE workflow_instance_tasks SET `{column}` = :c WHERE id = :id"),
-                    {"c": compressed, "id": str(task_id)}
+                    {"c": compressed, "id": str(task_id)},
                 )
 
     # 2) workflow_instances.data
@@ -112,7 +115,7 @@ def migrate_jsonblob():
         json.loads(text_value)
         session.execute(
             text("UPDATE workflow_instances SET data = :c WHERE id = :id"),
-            {"c": compress_json(text_value), "id": str(inst_id)}
+            {"c": compress_json(text_value), "id": str(inst_id)},
         )
 
     # 3) workflow_messages.data
@@ -131,9 +134,11 @@ def migrate_jsonblob():
         json.loads(text_value)
         session.execute(
             text("UPDATE workflow_messages SET data = :c WHERE id = :id"),
-            {"c": compress_json(text_value), "id": str(msg_id)}
+            {"c": compress_json(text_value), "id": str(msg_id)},
         )
 
     session.commit()
+
+
 if __name__ == "__main__":
     app()

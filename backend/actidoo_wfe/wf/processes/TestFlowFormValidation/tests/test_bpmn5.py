@@ -8,21 +8,22 @@ from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.wf.exceptions import ValidationResultContainsErrors
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
-WF_NAME = "TestFlowFormValidation" # must match the "Process ID" inside bpmn and the folder name in actidoo_wfe/wf/processes (but not the bpmn file name itself)
+WF_NAME = "TestFlowFormValidation"  # must match the "Process ID" inside bpmn and the folder name in actidoo_wfe/wf/processes (but not the bpmn file name itself)
+
 
 def start_my_workflow():
-    db_session=SessionLocal()
+    db_session = SessionLocal()
     wf = WorkflowDummy(
-            
-            db_session=db_session,
-            users_with_roles={
-                "initiator": ["wf-user"]
-            },            
-            workflow_name=WF_NAME,
-            start_user="initiator",
-        )
-    
+        db_session=db_session,
+        users_with_roles={
+            "initiator": ["wf-user"],
+        },
+        workflow_name=WF_NAME,
+        start_user="initiator",
+    )
+
     return wf, db_session
+
 
 def test_startWorkflow_hasTasksForInitiator_whenThereIsALaneMapping(db_engine_ctx):
     with db_engine_ctx():
@@ -31,6 +32,7 @@ def test_startWorkflow_hasTasksForInitiator_whenThereIsALaneMapping(db_engine_ct
         # expect 1 user tasks, there is a lane mapping which will add the initiator to the user task
         workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
 
+
 def test_submit_fails_forEmptyTaskDataWhenRequired(db_engine_ctx):
     with db_engine_ctx():
         workflow, db_session = start_my_workflow()
@@ -38,21 +40,22 @@ def test_submit_fails_forEmptyTaskDataWhenRequired(db_engine_ctx):
         # 'initiator' initiates and submits a workflow with EMPTY task data, which will fail
         with pytest.raises(ValidationResultContainsErrors):
             workflow.user("initiator").submit(
-                task_data={}, # --> empty task data!
-                workflow_instance_id = workflow.workflow_instance_id,
+                task_data={},  # --> empty task data!
+                workflow_instance_id=workflow.workflow_instance_id,
             )
 
         # 'initiator' initiates and submits a workflow with wrong task data, which will fail
         with pytest.raises(ValidationResultContainsErrors):
             workflow.user("initiator").submit(
                 task_data={
-                    "junk": "yard"
-                }, # --> wrong task data!
-                workflow_instance_id = workflow.workflow_instance_id,
+                    "junk": "yard",
+                },  # --> wrong task data!
+                workflow_instance_id=workflow.workflow_instance_id,
             )
 
         # afterwards the user still has this task:
         workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
+
 
 def test_submit_fails_forWrongTaskDataWhenRequired(db_engine_ctx):
     with db_engine_ctx():
@@ -62,13 +65,14 @@ def test_submit_fails_forWrongTaskDataWhenRequired(db_engine_ctx):
         with pytest.raises(ValidationResultContainsErrors):
             workflow.user("initiator").submit(
                 task_data={
-                    "junk": "yard"
-                }, # --> wrong task data!
-                workflow_instance_id = workflow.workflow_instance_id,
+                    "junk": "yard",
+                },  # --> wrong task data!
+                workflow_instance_id=workflow.workflow_instance_id,
             )
 
         # afterwards the user still has this task:
         workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
+
 
 def test_submit_succeeds_forRequiredTaskData(db_engine_ctx):
     with db_engine_ctx():
@@ -77,13 +81,14 @@ def test_submit_succeeds_forRequiredTaskData(db_engine_ctx):
         # 'initiator' initiates and submits a workflow
         workflow.user("initiator").submit(
             task_data={
-                "text1": "Value of text1"
+                "text1": "Value of text1",
             },
-            workflow_instance_id = workflow.workflow_instance_id,
+            workflow_instance_id=workflow.workflow_instance_id,
         )
 
         # afterwards the initiator has no more tasks:
         workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 0)
+
 
 # TODO für neuen Test:
 # eigentlich dürfte user.submit() keine Exception raisen, weil das der richtige Code auch nicht macht.
@@ -102,4 +107,3 @@ def test_submit_succeeds_forRequiredTaskData(db_engine_ctx):
 
 
 # assert service_application.is_faulty(db_session, workflow.workflow_instance_id) # type: ignore
-        

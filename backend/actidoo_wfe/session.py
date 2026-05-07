@@ -25,18 +25,22 @@ class SessionModel(Base):
     __tablename__ = "sessions"
     id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
     token: Mapped[str] = mapped_column(
-        ty.String(64), nullable=False, unique=True, index=True
+        ty.String(64),
+        nullable=False,
+        unique=True,
+        index=True,
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        UTCDateTime(), default=dt_now_naive, nullable=False, index=True
+        UTCDateTime(),
+        default=dt_now_naive,
+        nullable=False,
+        index=True,
     )
     data: Mapped[dict[str, str]] = mapped_column(JSON)
 
 
 def generate_session_id():
-    return "".join(
-        secrets.choice(string.ascii_letters + string.digits) for x in range(64)
-    )
+    return "".join(secrets.choice(string.ascii_letters + string.digits) for x in range(64))
 
 
 def load_session(db, token):
@@ -67,8 +71,8 @@ def delete_session(db, id=id):
 def session_cleanup(db, max_age_seconds):
     db.execute(
         delete(SessionModel).where(
-            SessionModel.created_at <= dt_ago_naive(seconds=max_age_seconds)
-        )
+            SessionModel.created_at <= dt_ago_naive(seconds=max_age_seconds),
+        ),
     )
 
 
@@ -123,7 +127,7 @@ class SessionMiddleware:
                         session_cleanup(db=db, max_age_seconds=self.server_max_age)
                     model = load_session(db=db, token=data)
                     if model is not None and model.created_at < dt_ago_aware(
-                        seconds=self.server_max_age
+                        seconds=self.server_max_age,
                     ):
                         model = None
 
@@ -161,13 +165,11 @@ class SessionMiddleware:
                             )
 
                     headers = MutableHeaders(scope=message)
-                    header_value = (
-                        "{session_cookie}={data}; path={path}; {security_flags}".format(  # noqa E501
-                            session_cookie=self.session_cookie,
-                            data=scope["session_token"],
-                            path=self.path,
-                            security_flags=self.security_flags,
-                        )
+                    header_value = "{session_cookie}={data}; path={path}; {security_flags}".format(  # noqa E501
+                        session_cookie=self.session_cookie,
+                        data=scope["session_token"],
+                        path=self.path,
+                        security_flags=self.security_flags,
                     )
                     headers.append("Set-Cookie", header_value)
                 elif not initial_session_was_empty:

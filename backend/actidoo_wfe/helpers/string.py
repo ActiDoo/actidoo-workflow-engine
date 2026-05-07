@@ -11,14 +11,6 @@ def create_random_string(length=30, characters=(string.ascii_letters + string.di
     return "".join(secrets.choice(characters) for x in range(length))
 
 
-def lstrip_word(text, word):
-    return text[len(word) :] if text[: len(word)] == word else text  # fmt: off
-
-
-def rstrip_word(text, word):
-    return text[: -len(word)] if text[-len(word) :] == word else text  # fmt: off
-
-
 def is_true_string(value):
     true_strings = {"1", "true", "True", "yes", "Yes", "y", "Y", "t", "T", "on", "On"}
     return str(value).strip() in true_strings

@@ -15,9 +15,7 @@ def guess_local_ip():
     except OSError:
         return "0.0.0.0"
 
+
 def generate_instance_name():
-    _instance_name = (
-        f"{socket.getfqdn()} - {guess_local_ip()} - "
-        f"{create_random_string(length=8, characters=string.ascii_letters)}"
-    )
+    _instance_name = f"{socket.getfqdn()} - {guess_local_ip()} - {create_random_string(length=8, characters=string.ascii_letters)}"
     return _instance_name

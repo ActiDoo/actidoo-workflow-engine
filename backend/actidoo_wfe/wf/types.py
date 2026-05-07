@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_seriali
 from SpiffWorkflow.task import Task
 from actidoo_wfe.settings import settings
 
+
 class UserRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -22,7 +23,7 @@ class UserRepresentation(BaseModel):
     is_service_user: bool
     locale: str = Field(default=settings.default_locale)
     claims: dict[str, Any] = Field(default_factory=dict)
-    
+
     def is_same(self, other: Optional["UserRepresentation"]) -> bool:
         return other is not None and other.id == self.id
 
@@ -45,13 +46,14 @@ class UserRepresentation(BaseModel):
     def serialize_roles(self, roles: set[str], _info):
         return list(roles)
 
+
 class InlineUserRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     first_name: str | None = Field(default_factory=lambda: None)
     last_name: str | None = Field(default_factory=lambda: None)
-    email: str|None
+    email: str | None
     is_service_user: bool = Field(default_factory=lambda: False)
 
     @property
@@ -86,13 +88,14 @@ class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     completed_by_delegate_user_id: uuid.UUID | None = Field(default=None)
     delegate_submit_comment: str | None = Field(default=None)
 
+
 class UserTaskRepresentation(UserTaskWithoutNestedAssignedUserRepresentation):
     model_config = ConfigDict(from_attributes=True)
     assigned_user: UserRepresentation | None
     assigned_delegate_user: UserRepresentation | None = Field(default=None)
     completed_by_user: UserRepresentation | None = Field(default=None)
     completed_by_delegate_user: UserRepresentation | None = Field(default=None)
-    
+
 
 class ReactJsonSchemaFormData(NamedTuple):
     jsonschema: dict
@@ -122,10 +125,10 @@ class WorkflowInstanceRepresentation(BaseModel):
     subtitle: str | None = Field(default_factory=lambda: None)
     is_completed: bool
     active_tasks: list[WorkflowInstanceTaskInlineRepresentation] = Field(
-        default_factory=lambda: []
+        default_factory=lambda: [],
     )
     completed_tasks: list[WorkflowInstanceTaskInlineRepresentation] = Field(
-        default_factory=lambda: []
+        default_factory=lambda: [],
     )
     completed_at: datetime.datetime | None = Field(default=None)
     created_at: datetime.datetime
@@ -162,7 +165,7 @@ class WorkflowPreviewRepresentation(BaseModel):
     subtitle: str | None = Field(default=None)
 
     task: UserTaskRepresentation | None
-    
+
 
 class WorkflowCopyInstruction(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -171,17 +174,19 @@ class WorkflowCopyInstruction(BaseModel):
     task_name: str
     data: dict
 
+
 class WorkflowStatisticsRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     name: str
     title: str
-    
+
     active_instances: int | None = Field(default=None)
     completed_instances: int | None = Field(default=None)
     estimated_saved_mins_per_instance: int | None = Field(default=None)
     estimated_instances_per_year: int | None = Field(default=None)
     estimated_savings_per_year: float | None = Field(default=None)
+
 
 class UploadedAttachmentRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -236,6 +241,7 @@ class WorkflowInstanceTaskAdminRepresentation(BaseModel):
 
 TaskToUserMapping = dict[Task, uuid.UUID]
 
+
 class WorkflowSpecFileRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -244,12 +250,13 @@ class WorkflowSpecFileRepresentation(BaseModel):
     file_name: str
     file_type: str
     file_hash: str
-    file_content: str|None
+    file_content: str | None
     file_bpmn_process_id: str
+
 
 class WorkflowSpecRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: uuid.UUID
     created_at: datetime.datetime
     name: str
@@ -259,10 +266,11 @@ class WorkflowSpecRepresentation(BaseModel):
 
 class MessageEventDefinitionRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     name: str
     event_type: str
     value: Any
+
 
 class MessageSubscriptionRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -271,14 +279,17 @@ class MessageSubscriptionRepresentation(BaseModel):
     correlation_key: str
     workflow_instance_task_id: uuid.UUID
 
+
 class TaskState(BaseModel):
     title: str
     ready_counter: int
     error_counter: int
 
+
 class WorkflowStateResponse(BaseModel):
     workflow_name: str
     tasks: Dict[str, TaskState]
+
 
 class TimeEvent(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -290,6 +301,7 @@ class TimeEvent(BaseModel):
     interrupting: bool
     remaining_cycles: int | None = Field(default=None)
     expression: str | None = Field(default=None)
+
 
 class ReducedWorkflowState(BaseModel):
     id: uuid.UUID

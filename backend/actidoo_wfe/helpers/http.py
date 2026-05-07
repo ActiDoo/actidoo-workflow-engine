@@ -53,11 +53,11 @@ class HTTPSession(object):
 
     def __init__(
         self,
-        testclient_fastapi_app: FastAPI|None=None,
+        testclient_fastapi_app: FastAPI | None = None,
         request_hook: Optional[Callable] = None,
         response_hook: Optional[Callable] = None,
     ):
-        self.testclient_fastapi_app: FastAPI|None = testclient_fastapi_app
+        self.testclient_fastapi_app: FastAPI | None = testclient_fastapi_app
         self.request_hook: Optional[Callable] = request_hook
         self.response_hook: Optional[Callable] = response_hook
 
@@ -92,9 +92,7 @@ def build_url(url: str, params: dict[str, str]) -> str:
 
 def rfc5987_content_disposition(filename):
     """Generates a Content-Disposition Header for the given filename (triggers download in the browser)"""
-    ascii_name = (
-        unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode()
-    )
+    ascii_name = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode()
     header = 'attachment; filename="{}"'.format(ascii_name)
     if ascii_name != filename:
         quoted_name = urllib.parse.quote(filename)
@@ -104,7 +102,9 @@ def rfc5987_content_disposition(filename):
 
 
 def streaming_response_with_filecontent(
-    binary, filename, mimetype
+    binary,
+    filename,
+    mimetype,
 ) -> StreamingResponse:
     """Streams a given binary as download"""
 

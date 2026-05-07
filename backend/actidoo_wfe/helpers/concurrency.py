@@ -59,7 +59,7 @@ async def stop_executor():
 
     if not background_task_executor._work_queue.empty():
         log.info(
-            "Waiting for up to 5 minutes to finish pending and queued background tasks"
+            "Waiting for up to 5 minutes to finish pending and queued background tasks",
         )
 
     WAIT_FOR_QUEUED = 5 * 60
@@ -71,11 +71,12 @@ async def stop_executor():
         await asyncio.sleep(5)
         if time.time() - wait_start > WAIT_FOR_QUEUED:
             log.error(
-                "Waited 5 minutes for pending + queued tasks; clearing queue now and finish pending tasks..."
+                "Waited 5 minutes for pending + queued tasks; clearing queue now and finish pending tasks...",
             )
             break
 
     background_task_executor.shutdown(wait=True, cancel_futures=True)
+
 
 def _submit_tracked(background_task):
     future = background_task_executor.submit(background_task)
@@ -98,11 +99,13 @@ def commit_db_and_run_background_task(db: Session, task, *args, **kwargs):
 
     _submit_tracked(background_task)
 
+
 def run_background_task(task, *args, **kwargs):
     def background_task():
         try:
             task(*args, **kwargs)
         except Exception:
             log.exception("Unexpected error during background_task")
+
     # kein Event-Loop nötig
     _submit_tracked(background_task)

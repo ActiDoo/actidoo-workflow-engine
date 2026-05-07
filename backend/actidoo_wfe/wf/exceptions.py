@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+
 class WorkflowSpecNotFoundException(Exception):
     pass
+
 
 class InvalidWorkflowSpecException(Exception):
     pass
 
+
 class UserMayNotStartWorkflowException(Exception):
     pass
 
+
 class UserMayNotCopyWorkflowException(Exception):
     pass
+
 
 class FormNotFoundException(Exception):
     pass
@@ -40,6 +45,7 @@ class OptionsFileNotExistsException(Exception):
 class OptionsFileCouldNotBeReadException(Exception):
     pass
 
+
 class OptionFunctionNotFound(Exception):
     pass
 
@@ -51,15 +57,16 @@ class AttachmentNotFoundException(Exception):
 class TaskCannotBeUnassignedException(Exception):
     pass
 
+
 class TaskContainsUnexpectedData(Exception):
     def __init__(self, message):
         super().__init__(message)
+
 
 class ValidationResultContainsErrors(Exception):
     def __init__(self, message, error_schema):
         super().__init__(message)
         self.error_schema = error_schema
-    
 
 
 class UserMayNotAdministrateThisWorkflowException(Exception):
@@ -68,6 +75,7 @@ class UserMayNotAdministrateThisWorkflowException(Exception):
 
 class UserMayNotAdministrateUsersException(Exception):
     pass
+
 
 class TaskIsNotErroneousException(Exception):
     pass
@@ -84,6 +92,5 @@ class DataModelAccessDeniedError(Exception):
         self.model_name = model_name
         self.allowed = allowed
         super().__init__(
-            f"Access denied to data model '{model_name}'. "
-            f"Allowed models for this workflow: {sorted(allowed)}"
+            f"Access denied to data model '{model_name}'. Allowed models for this workflow: {sorted(allowed)}",
         )

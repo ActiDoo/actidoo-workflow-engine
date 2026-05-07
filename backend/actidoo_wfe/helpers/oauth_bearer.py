@@ -18,8 +18,6 @@ from actidoo_wfe.settings import settings
 logger = logging.getLogger(__name__)
 
 
-
-
 def _resolve_path(payload: Any, path: str) -> Any:
     """Resolve a dotted path inside a nested mapping structure."""
 
@@ -44,6 +42,7 @@ def coerce_to_list(value: Any) -> list[str]:
         return [str(item) for item in value if item not in (None, "")]
     return [str(value)]
 
+
 def extract_first_list(payload: dict[str, Any], paths: Sequence[str]) -> list[str]:
     """Return the first non-empty list resolved via the given claim paths."""
 
@@ -54,6 +53,7 @@ def extract_first_list(payload: dict[str, Any], paths: Sequence[str]) -> list[st
             return values
     return []
 
+
 def get_token_endpoint():
     token_endpoint = settings.oauth_bearer_token_endpoint
 
@@ -63,11 +63,11 @@ def get_token_endpoint():
             token_endpoint = httpx.get(url=token_endpoint).json().get("token_endpoint")
         except Exception:
             logger.exception("OAUTH_BEARER_TOKEN_ENDPOINT has been set to an openid-configuration endpoint, but the token_endpoint could not be retrieved from it")
-        
+
         if not token_endpoint:
             logger.exception("OAUTH_BEARER_TOKEN_ENDPOINT has been set to an openid-configuration endpoint, but the token_endpoint could not be retrieved from it")
 
-    #TODO: Cache result for x minutes
+    # TODO: Cache result for x minutes
 
     return token_endpoint
 
@@ -81,11 +81,11 @@ def get_introspection_endpoint():
             introspection_endpoint = httpx.get(url=introspection_endpoint).json().get("introspection_endpoint")
         except Exception:
             logger.exception("OAUTH_BEARER_INTROSPECTION_ENDPOINT has been set to an openid-configuration endpoint, but the introspection_endpoint could not be retrieved from it")
-        
+
         if not introspection_endpoint:
             logger.exception("OAUTH_BEARER_INTROSPECTION_ENDPOINT has been set to an openid-configuration endpoint, but the introspection_endpoint could not be retrieved from it")
 
-    #TODO: Cache result for x minutes
+    # TODO: Cache result for x minutes
 
     return introspection_endpoint
 
@@ -125,7 +125,7 @@ class OAuth2ClientCredentialsBearer(OAuth2):
 class TokenInformation:
     sub: str
     preferred_username: Optional[str]
-    aud: str|list[str]
+    aud: str | list[str]
     roles: list[str]
     resource_roles: dict[str, list[str]]
     raw: dict[str, Any]
@@ -139,7 +139,7 @@ async def oauth_bearer_validate_token(token: Annotated[str, Security(OAuth2Clien
         introspection_response = await client.post(
             url,
             data={"token": token},
-            auth=(settings.oauth_bearer_client_id, settings.oauth_bearer_client_secret)  # Replace with your client credentials
+            auth=(settings.oauth_bearer_client_id, settings.oauth_bearer_client_secret),  # Replace with your client credentials
         )
 
         introspection_data = introspection_response.json()
@@ -149,23 +149,17 @@ async def oauth_bearer_validate_token(token: Annotated[str, Security(OAuth2Clien
 
         # Validate token audience
         token_audience = introspection_data.get("aud")
-        if not (
-                token_audience == settings.oauth_bearer_client_id
-            or (isinstance(token_audience, list) and settings.oauth_bearer_client_id in token_audience)
-        ):
+        if not (token_audience == settings.oauth_bearer_client_id or (isinstance(token_audience, list) and settings.oauth_bearer_client_id in token_audience)):
             raise HTTPException(status_code=401, detail="Token audience is invalid")
-        
+
         # Validate token expiration time (exp claim)
         token_expiration = introspection_data.get("exp")
         current_time = int(time.time())
         if token_expiration is not None and token_expiration < current_time:
             raise HTTPException(status_code=401, detail="Token has expired")
-        
+
         preferred_username = introspection_data.get("preferred_username") or introspection_data.get("username")
-        role_claim_paths = [
-            path.replace("{client_id}", settings.oauth_bearer_client_id)
-            for path in settings.oauth_bearer_role_claim_paths
-        ]
+        role_claim_paths = [path.replace("{client_id}", settings.oauth_bearer_client_id) for path in settings.oauth_bearer_role_claim_paths]
         roles = extract_first_list(introspection_data, role_claim_paths)
         resource_roles: dict[str, list[str]] = {}
         for client, meta in (introspection_data.get("resource_access") or {}).items():
@@ -181,9 +175,9 @@ async def oauth_bearer_validate_token(token: Annotated[str, Security(OAuth2Clien
             resource_roles=resource_roles,
             raw=introspection_data,
         )
-    
 
-def oauth_bearer_require_client_role(role: str, client_id: str=settings.oauth_bearer_client_id):
+
+def oauth_bearer_require_client_role(role: str, client_id: str = settings.oauth_bearer_client_id):
 
     def oauth_bearer_require_client_role_dependency(token_information: Annotated[TokenInformation, Depends(oauth_bearer_validate_token)]) -> TokenInformation:
         client_roles = token_information.resource_roles.get(client_id)
@@ -195,9 +189,9 @@ def oauth_bearer_require_client_role(role: str, client_id: str=settings.oauth_be
         if not has_role:
             logger.info(f'"{token_information.sub}" does not have required role "{role}" for client_id "{client_id}"')
             raise HTTPException(status_code=403, detail="Token does not have the required role")
-        
+
         return token_information
-        
+
     return oauth_bearer_require_client_role_dependency
 
 
@@ -208,5 +202,5 @@ def oauth_bearer_require_realm_role(role: str):
             logger.info(f'"{token_information.sub}" does not have required realm role "{role}"')
             raise HTTPException(status_code=403, detail="Token does not have the required role")
         return token_information
-        
+
     return oauth_bearer_require_realm_role_dependency

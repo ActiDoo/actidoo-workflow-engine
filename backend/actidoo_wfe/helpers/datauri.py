@@ -191,11 +191,12 @@ class DataURI(str):
         field_schema.update(
             pattern=DATA_URI_REGEX,
             examples=[
-                "data:text/plain;charset=utf-8;base64,VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUgbGF6eSBkb2cu"
+                "data:text/plain;charset=utf-8;base64,VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUgbGF6eSBkb2cu",
             ],
         )
 
-def sanitize_metadata_value(value: str|None) -> str:
+
+def sanitize_metadata_value(value: str | None) -> str:
     """
     Convert an arbitrary string (e.g. filename with umlauts)
     into an ASCII-only value suitable for Azure Blob metadata.

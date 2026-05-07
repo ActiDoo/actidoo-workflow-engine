@@ -11,8 +11,10 @@ log: logging.Logger = logging.getLogger(__name__)
 
 setup_db(settings=settings)
 
+
 def mock_service_user():
     from actidoo_wfe.wf.service_user import upsert_user
+
     svc_user = upsert_user(
         db=SessionLocal(),
         idp_user_id="123",
@@ -20,11 +22,14 @@ def mock_service_user():
         email="",
         first_name="Service",
         last_name="User",
-        is_service_user=True
+        is_service_user=True,
     )
     return svc_user
 
-def test_send_message(db_engine_ctx,):
+
+def test_send_message(
+    db_engine_ctx,
+):
     from actidoo_wfe.wf.api.api_schema import SendMessageResponse
     from actidoo_wfe.wf.api.deps import dep_require_service_user
 

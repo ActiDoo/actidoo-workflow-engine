@@ -38,21 +38,25 @@ def wf_on_login(request: Request, db: Session, login_state: LoginStateSchema):
             access_token=get_token_from_session(request),
         )
         service_user.assign_roles(
-            db=db, user_id=user.id, role_names=login_state.roles
+            db=db,
+            user_id=user.id,
+            role_names=login_state.roles,
         )
+
 
 @events.event_handler(events.TaskReadyForUserNotificationEvent)
 def handle_task_ready_for_user_notification(event: events.TaskReadyForUserNotificationEvent):
     with get_db_contextmanager() as db:
         send_user_assigned_to_task_mail(task_id=event.task_id, user_id=event.user_id, db=db)
 
+
 @events.event_handler(events.TaskReadyForRoleNotificationEvent)
 def handle_task_ready_for_role_notification(event: events.TaskReadyForRoleNotificationEvent):
     with get_db_contextmanager() as db:
         send_task_ready_to_role_members_mail(task_id=event.task_id, db=db)
 
+
 @events.event_handler(events.TaskBecameErroneousEvent)
 def handle_erroneous_task(event: events.TaskBecameErroneousEvent):
     with get_db_contextmanager() as db:
         send_task_became_erroneous_mail(task_id=event.task_id, db=db)
-    

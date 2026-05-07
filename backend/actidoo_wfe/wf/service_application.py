@@ -2,7 +2,7 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 """
-    This module implements the application services (services which must be used by the APIs).
+This module implements the application services (services which must be used by the APIs).
 """
 
 import hashlib
@@ -63,7 +63,7 @@ from actidoo_wfe.wf.types import (
     WorkflowRepresentation,
     WorkflowSpecRepresentation,
     WorkflowStatisticsRepresentation,
-    WorkflowStateResponse
+    WorkflowStateResponse,
 )
 
 log = logging.getLogger(__name__)
@@ -73,13 +73,13 @@ def start_workflow(db: Session, name: str, user_id: uuid.UUID, initial_task_data
     """Starts a workflow with the given name, and the given user as creator. Returns the workflow ID."""
     user_rep = repository.load_user(db=db, user_id=user_id)
     repository.persist_workflow_spec(db=db, name=name)
-    
+
     if not service_workflow.can_load_workflow(name=name):
         raise InvalidWorkflowSpecException()
 
     if not service_workflow.user_may_start_workflow(name=name, user=user_rep):
         raise UserMayNotStartWorkflowException()
-    
+
     workflow = service_workflow.start_process(name=name, created_by=user_rep)
     service_workflow.run_workflow(workflow=workflow)
 
@@ -87,7 +87,9 @@ def start_workflow(db: Session, name: str, user_id: uuid.UUID, initial_task_data
 
     if initial_task_data is not None:
         ready_tasks_in_new_workflow = service_workflow.get_usertasks_for_user(
-            workflow=workflow, user=user_rep, state="ready"
+            workflow=workflow,
+            user=user_rep,
+            state="ready",
         )
 
         if not ready_tasks_in_new_workflow:
@@ -141,8 +143,8 @@ def get_workflow_preview(
     workflow_rep = WorkflowPreviewRepresentation(
         name=workflow.spec.name,
         title=service_workflow.get_workflow_title_cached(workflow.spec.name),
-        subtitle=subtitle, 
-        task=None
+        subtitle=subtitle,
+        task=None,
     )
 
     usertasks = service_workflow.get_usertasks_for_user(
@@ -288,7 +290,7 @@ def start_workflow_with_message(db: Session, name: str, message: WorkflowMessage
     service_workflow.send_event(
         workflow=workflow,
         name=message.name,
-        payload=message.data
+        payload=message.data,
     )
 
     service_workflow.run_workflow(workflow=workflow)
@@ -297,16 +299,15 @@ def start_workflow_with_message(db: Session, name: str, message: WorkflowMessage
     return workflow.task_tree.id
 
 
-def receive_message(db: Session, message_name: str, correlation_key: str, data: dict, user_id: uuid.UUID|None):
+def receive_message(db: Session, message_name: str, correlation_key: str, data: dict, user_id: uuid.UUID | None):
     repository.store_message(
         db=db,
         message_name=message_name,
         correlation_key=correlation_key,
         data=data,
         sent_by_user_id=user_id,
-        sent_by_workflow_instance_id=None
+        sent_by_workflow_instance_id=None,
     )
-    
 
 
 def handle_messages(db: Session):
@@ -318,7 +319,8 @@ def handle_messages(db: Session):
 
         # Handle Starts
         workflow_names = service_workflow.get_workflows_to_trigger_by_start_message(
-            message_name = message.name, user=sent_by_user
+            message_name=message.name,
+            user=sent_by_user,
         )
         for workflow in workflow_names:
             wf_id = start_workflow_with_message(db=db, name=workflow, message=message)
@@ -327,8 +329,8 @@ def handle_messages(db: Session):
         # Handle Correlations
         subscriptions = repository.get_subscriptions_by_message_name_and_correlation_key(
             db=db,
-            message_name = message.name,
-            correlation_key = message.correlation_key
+            message_name=message.name,
+            correlation_key=message.correlation_key,
         )
         for sub in subscriptions:
             workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=sub.workflow_instance_task_id)
@@ -388,7 +390,9 @@ def handle_timeevents(db: Session, *, batch_size: int = 200):
 
 
 def bff_user_get_initiated_workflows(
-    db: Session, bff_table_request_params: BffTableQuerySchemaBase, user_id: uuid.UUID
+    db: Session,
+    bff_table_request_params: BffTableQuerySchemaBase,
+    user_id: uuid.UUID,
 ):
     user = get_user(db=db, user_id=user_id)
     instances: PaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_user_get_initiated_workflows(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id)
@@ -416,19 +420,17 @@ def bff_get_workflows_with_usertasks(
         for task in instance.active_tasks:
             task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
             assigned_user_id = task.assigned_user.id if task.assigned_user else None
-            task.can_be_assigned_as_delegate = (
-                (assigned_user_id in delegate_targets and task.assigned_delegate_user is None)
-                if assigned_user_id
-                else False
-            )
+            task.can_be_assigned_as_delegate = (assigned_user_id in delegate_targets and task.assigned_delegate_user is None) if assigned_user_id else False
         for task in instance.completed_tasks:
             task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
             task.can_be_assigned_as_delegate = False
 
     return instances
 
+
 def _enrich_user_tasks_with_nested_users(
-    db: Session, usertasks: list[UserTaskWithoutNestedAssignedUserRepresentation]
+    db: Session,
+    usertasks: list[UserTaskWithoutNestedAssignedUserRepresentation],
 ) -> list[UserTaskRepresentation]:
     user_ids: set[uuid.UUID] = set()
     for ut in usertasks:
@@ -452,15 +454,21 @@ def _enrich_user_tasks_with_nested_users(
                 assigned_delegate_user=users_by_id.get(ut.assigned_delegate_user_id),
                 completed_by_user=users_by_id.get(ut.completed_by_user_id),
                 completed_by_delegate_user=users_by_id.get(ut.completed_by_delegate_user_id),
-            )
+            ),
         )
     return enriched
 
+
 def _translate_UserTaskRepresentationForms(db: Session, workflow_name: str, usertask: UserTaskRepresentation, locale) -> UserTaskRepresentation:
     if usertask.jsonschema and usertask.uischema:
-        translated = service_i18n.translate_form_data(form_data=ReactJsonSchemaFormData(
-            jsonschema=usertask.jsonschema, uischema=usertask.uischema
-        ), workflow_name=workflow_name, locale=locale)
+        translated = service_i18n.translate_form_data(
+            form_data=ReactJsonSchemaFormData(
+                jsonschema=usertask.jsonschema,
+                uischema=usertask.uischema,
+            ),
+            workflow_name=workflow_name,
+            locale=locale,
+        )
         usertask.jsonschema = translated.jsonschema
         usertask.uischema = translated.uischema
         if usertask.lane:
@@ -483,7 +491,10 @@ def get_usertasks_for_user_id(
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
     delegate_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
     usertasks = service_workflow.get_usertasks_for_user(
-        workflow=workflow, user=user, state=state, delegation_targets=delegate_targets
+        workflow=workflow,
+        user=user,
+        state=state,
+        delegation_targets=delegate_targets,
     )
 
     usertasks = _enrich_user_tasks_with_nested_users(db=db, usertasks=usertasks)
@@ -528,36 +539,6 @@ def _clean_submitted_task_data(workflow, task, submitted_data):
     return validation_result.task_data
 
 
-# def _clean_full_task_data(workflow, task, task_data):
-#     """Validate and clean an existing task payload (e.g. when copying).
-
-#     In this mode we keep technical fields that are not represented in the
-#     schema, but we still apply the hide-if cleanup so the new task only exposes
-#     allowed user-facing data."""
-
-#     assert task.uischema and task.jsonschema
-#     form = ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema)
-#     options_folder = workflow_providers.get_workflow_directory(workflow.spec.name) / "options"
-
-#     module_path = workflow_providers.get_workflow_module_path(workflow.spec.name)
-#     functions_env = env_from_module(module_path) if module_path else {}
-
-#     validation_result = service_form.validate_task_data(
-#         form=form,
-#         task_data=task_data,
-#         options_folder=options_folder,
-#         functions_env=functions_env,
-#         preserve_unknown_fields=True,
-#         preserve_disabled_fields=True,
-#     )
-
-#     if validation_result.error_schema:
-#         log.error("Errors during validation of submitted task data" + str(validation_result.error_schema))
-#         raise ValidationResultContainsErrors(message="Errors during validation of submitted task data", error_schema=validation_result.error_schema)
-
-#     return validation_result.task_data
-
-
 def _persist_copied_attachments(
     db: Session,
     workflow_instance_id: uuid.UUID,
@@ -571,7 +552,8 @@ def _persist_copied_attachments(
     for task_id, attachments in task_attachments:
         for attachment in attachments:
             attachment_obj = repository.find_attachment_by_id(
-                db=db, attachment_id=attachment.id
+                db=db,
+                attachment_id=attachment.id,
             )
             if attachment_obj is None:
                 raise AttachmentNotFoundException()
@@ -591,6 +573,7 @@ def _persist_copied_attachments(
                 attachment_id=attachment_obj.id,
                 filename=attachment.filename,
             )
+
 
 def submit_task_data(
     db: Session,
@@ -613,10 +596,10 @@ def submit_task_data(
     if task_id not in [t.id for t in usertasks]:
         raise TaskIsNotInReadyUsertasksException()
 
-    #process attachments START
+    # process attachments START
     def process_uploads(datauri):
-        obj = _upload_attachment(db=db, task_id=task_id, datauri=datauri) # datauri = e.g. 'data:image/png;name=example1.png;base64,B64_ENCODED_CONTENTS'
-        return obj.model_dump() # model_dump creates a dict from the obj (which is a 'UplaodedAttachmentRepresentation)
+        obj = _upload_attachment(db=db, task_id=task_id, datauri=datauri)  # datauri = e.g. 'data:image/png;name=example1.png;base64,B64_ENCODED_CONTENTS'
+        return obj.model_dump()  # model_dump creates a dict from the obj (which is a 'UplaodedAttachmentRepresentation)
 
     # We will process all uploads, also those that should not be accepted according to the json schema
     # Validating the JSON schema including the datauri fields would be just too slow...
@@ -639,17 +622,15 @@ def submit_task_data(
     # process attachments END
 
     assigned_delegate_user_id = service_workflow.get_assigned_delegate_user(
-        workflow=workflow, task_id=task_id
+        workflow=workflow,
+        task_id=task_id,
     )
     assigned_user_id = service_workflow.get_assigned_user(
-        workflow=workflow, task_id=task_id
+        workflow=workflow,
+        task_id=task_id,
     )
 
-    if (
-        assigned_delegate_user_id is not None
-        and assigned_user_id == user.id
-        and assigned_delegate_user_id != user.id
-    ):
+    if assigned_delegate_user_id is not None and assigned_user_id == user.id and assigned_delegate_user_id != user.id:
         raise TaskIsNotInReadyUsertasksException()
 
     acting_user_id: uuid.UUID | None = None
@@ -677,12 +658,13 @@ def get_allowed_workflows_to_start(db: Session, user_id: uuid.UUID):
 
     workflows = [
         WorkflowRepresentation(
-            name=name, title=service_workflow.get_workflow_title_cached(name)
+            name=name,
+            title=service_workflow.get_workflow_title_cached(name),
         )
         for name in service_workflow.get_allowed_workflow_names_to_start(user=user)
     ]
-    
-    workflows.sort(key=lambda x: x.title) # sort by title
+
+    workflows.sort(key=lambda x: x.title)  # sort by title
     return workflows
 
 
@@ -690,7 +672,8 @@ def assign_task_to_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     user = repository.load_user(db=db, user_id=user_id)
     assigned_user_id = service_workflow.get_assigned_user(
-        workflow=workflow, task_id=task_id
+        workflow=workflow,
+        task_id=task_id,
     )
 
     if assigned_user_id is None:
@@ -699,7 +682,9 @@ def assign_task_to_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
         repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
     elif assigned_user_id != user.id:
         if not service_user.is_active_delegate_for(
-            db=db, delegate_user_id=user.id, principal_user_id=assigned_user_id
+            db=db,
+            delegate_user_id=user.id,
+            principal_user_id=assigned_user_id,
         ):
             raise TaskAlreadyAssignedToDifferentUserException()
 
@@ -716,18 +701,21 @@ def assign_task_to_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
 def unassign_task_from_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     task = workflow.get_task_from_id(task_id=task_id)
-    
+
     if service_workflow.is_task_completed(workflow=workflow, task_id=task_id):
         raise TaskCannotBeUnassignedException()
 
     assigned_user_id = service_workflow.get_assigned_user(
-        workflow=workflow, task_id=task_id
+        workflow=workflow,
+        task_id=task_id,
     )
     assigned_delegate_user_id = service_workflow.get_assigned_delegate_user(
-        workflow=workflow, task_id=task_id
+        workflow=workflow,
+        task_id=task_id,
     )
     can_unassign = service_workflow.can_be_unassigned(
-        workflow=workflow, task_id=task_id
+        workflow=workflow,
+        task_id=task_id,
     )
     if assigned_delegate_user_id == user_id:
         service_workflow.unassign_delegate_from_task(workflow=workflow, task_id=task_id)
@@ -745,20 +733,26 @@ def search_property_options(
     property_path: list[str],
     search: str,
     include_value: str | list[str] | None,
-    form_data: dict|None
+    form_data: dict | None,
 ) -> list[tuple[str, str]]:
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     user = repository.load_user(db=db, user_id=user_id)
     delegation_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
 
     usertasks: list[UserTaskWithoutNestedAssignedUserRepresentation] = service_workflow.get_usertasks_for_user(
-        workflow=workflow, user=user, state=["ready", "completed"], delegation_targets=delegation_targets
+        workflow=workflow,
+        user=user,
+        state=["ready", "completed"],
+        delegation_targets=delegation_targets,
     )
     if task_id not in [t.id for t in usertasks]:
         raise TaskIsNotInReadyUsertasksException()
 
     options = service_workflow.get_options_for_property(
-        workflow=workflow, task_id=task_id, property_path=property_path, form_data=form_data
+        workflow=workflow,
+        task_id=task_id,
+        property_path=property_path,
+        form_data=form_data,
     )
 
     options_by_value = []
@@ -769,39 +763,37 @@ def search_property_options(
             for o in options:
                 if o[0] == val:
                     options_by_value.append(o)
-                    
+
     elif include_value:
         for o in options:
             if o[0] == include_value:
                 options_by_value.append(o)
 
-    options.sort(key=lambda x: x[1]) # sort according to the label
-    if (('new', '- New -')) in options:
+    options.sort(key=lambda x: x[1])  # sort according to the label
+    if (("new", "- New -")) in options:
         # Workaround to always have the 'New' option at the top
-        index_to_move = options.index(('new', '- New -'))
+        index_to_move = options.index(("new", "- New -"))
         element = options.pop(index_to_move)
         options.insert(0, element)
 
     for word in search.split():
-        options = [
-            x
-            for x in options
-            if word.lower() in x[1].lower() or word.lower() in x[0].lower()
-        ]
+        options = [x for x in options if word.lower() in x[1].lower() or word.lower() in x[0].lower()]
 
     options_limit = 15
     try:
         task = workflow.get_task_from_id(task_id)
         formdata = service_workflow.get_react_json_schema_form_data(task=task)
         options_limit = service_form.get_options_limit(
-            jsonschema=formdata.jsonschema, path=property_path, default_limit=15
+            jsonschema=formdata.jsonschema,
+            path=property_path,
+            default_limit=15,
         )
     except Exception:
         options_limit = 15
 
     if options_limit is not None:
         options = options[:options_limit]
-    
+
     for val in options_by_value:
         if val[0] not in {o[0] for o in options}:
             options.append(val)
@@ -810,7 +802,9 @@ def search_property_options(
 
 
 def _upload_attachment(
-    db: Session, task_id: uuid.UUID, datauri: str
+    db: Session,
+    task_id: uuid.UUID,
+    datauri: str,
 ) -> UploadedAttachmentRepresentation:
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
 
@@ -827,7 +821,11 @@ def _upload_attachment(
     hash = hasher.hexdigest()
 
     attachment = store_attachment(
-        db=db, filename=filename, mimetype=mimetype, data=data, hash=hash
+        db=db,
+        filename=filename,
+        mimetype=mimetype,
+        data=data,
+        hash=hash,
     )
     store_attachment_for_workflow_instance(
         db=db,
@@ -836,11 +834,17 @@ def _upload_attachment(
         filename=filename,
     )
     store_attachment_for_task(
-        db=db, task_id=task_id, attachment_id=attachment.id, filename=filename
+        db=db,
+        task_id=task_id,
+        attachment_id=attachment.id,
+        filename=filename,
     )
 
     return UploadedAttachmentRepresentation(
-        hash=hash, filename=filename, id=attachment.id, mimetype=mimetype
+        hash=hash,
+        filename=filename,
+        id=attachment.id,
+        mimetype=mimetype,
     )
 
 
@@ -853,7 +857,8 @@ def _delete_unused_attachments(
     delete_ids = []
 
     current_task_attachments_by_task = repository.find_task_attachments_by_task_id(
-        db=db, task_id=task_id
+        db=db,
+        task_id=task_id,
     )
 
     for ca in current_task_attachments_by_task:
@@ -861,32 +866,27 @@ def _delete_unused_attachments(
             delete_ids.append(ca.attachment.id)
             db.delete(ca)
 
-    current_task_attachments_by_workflow = (
-        repository.find_task_attachments_by_worfklow_instance_id(
-            db=db, workflow_instance_id=workflow_instance_id
-        )
+    current_task_attachments_by_workflow = repository.find_task_attachments_by_worfklow_instance_id(
+        db=db,
+        workflow_instance_id=workflow_instance_id,
     )
 
-    current_workflow_attachments = (
-        repository.find_workflow_instance_attachments_by_worfklow_instance_id(
-            db=db, workflow_instance_id=workflow_instance_id
-        )
+    current_workflow_attachments = repository.find_workflow_instance_attachments_by_worfklow_instance_id(
+        db=db,
+        workflow_instance_id=workflow_instance_id,
     )
 
     for ca in current_workflow_attachments:
         if not any([ga.hash == ca.attachment.hash for ga in attachments]):
             if not any(
-                [
-                    ga.attachment.hash == ca.attachment.hash
-                    for ga in current_task_attachments_by_workflow
-                ]
+                [ga.attachment.hash == ca.attachment.hash for ga in current_task_attachments_by_workflow],
             ):
                 delete_ids.append(ca.attachment.id)
                 db.delete(ca)
 
     db.flush()
 
-    delete_ids = list(set(delete_ids)) # remove duplicate entries
+    delete_ids = list(set(delete_ids))  # remove duplicate entries
     for deleteid in delete_ids:
         repository.delete_dangling_attachment(db=db, attachment_id=deleteid)
 
@@ -895,10 +895,12 @@ def _delete_unused_attachments(
 
 def find_attachment_by_hash(db: Session, workflow_instance_id: uuid.UUID, hash: str):
     attachments = repository.find_task_attachments_by_worfklow_instance_id(
-        db=db, workflow_instance_id=workflow_instance_id
+        db=db,
+        workflow_instance_id=workflow_instance_id,
     )
     att: WorkflowInstanceTaskAttachment | None = next(
-        (a for a in attachments if a.attachment.hash == hash), None
+        (a for a in attachments if a.attachment.hash == hash),
+        None,
     )
     if att is None:
         raise AttachmentNotFoundException()
@@ -915,7 +917,8 @@ def find_attachment_by_hash(db: Session, workflow_instance_id: uuid.UUID, hash: 
 
 def find_all_workflow_attachments(db: Session, workflow_instance_id: uuid.UUID):
     attachments = repository.find_task_attachments_by_worfklow_instance_id(
-        db=db, workflow_instance_id=workflow_instance_id
+        db=db,
+        workflow_instance_id=workflow_instance_id,
     )
     result: list[Attachment] = []
     for att in attachments:
@@ -928,37 +931,45 @@ def find_all_workflow_attachments(db: Session, workflow_instance_id: uuid.UUID):
                 filename=att.attachment.first_filename,
                 mimetype=att.attachment.mimetype,
                 data=get_file_content(att.attachment.file.file_id),
-            )
+            ),
         )
     return result
 
 
 def verify_assigned_user_and_download_attachment(
-    db: Session, user_id: uuid.UUID, task_id: uuid.UUID, hash: str
+    db: Session,
+    user_id: uuid.UUID,
+    task_id: uuid.UUID,
+    hash: str,
 ) -> Attachment:
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
-    assert (
-        service_workflow.is_assigned_to_task(
-            workflow=workflow, task_id=task_id, user_id=user_id
-        )
-        or service_workflow.is_delegate_assigned_to_task(
-            workflow=workflow, task_id=task_id, user_id=user_id
-        )
+    assert service_workflow.is_assigned_to_task(
+        workflow=workflow,
+        task_id=task_id,
+        user_id=user_id,
+    ) or service_workflow.is_delegate_assigned_to_task(
+        workflow=workflow,
+        task_id=task_id,
+        user_id=user_id,
     )
 
     return download_attachment(db=db, task_id=task_id, hash=hash)
 
 
 def download_attachment(
-    db: Session, task_id: uuid.UUID, hash: str
+    db: Session,
+    task_id: uuid.UUID,
+    hash: str,
 ) -> Attachment:
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
 
     attachments = repository.find_task_attachments_by_worfklow_instance_id(
-        db=db, workflow_instance_id=workflow.task_tree.id
+        db=db,
+        workflow_instance_id=workflow.task_tree.id,
     )
     att: WorkflowInstanceTaskAttachment | None = next(
-        (a for a in attachments if a.attachment.hash == hash), None
+        (a for a in attachments if a.attachment.hash == hash),
+        None,
     )
     if att is None:
         raise AttachmentNotFoundException()
@@ -986,15 +997,16 @@ def list_users(db: Session, user_id: uuid.UUID) -> UserRepresentation:
     return repository.load_user(db=db, user_id=user_id)
 
 
-def refresh_get_workflow_spec(db: Session, name: str, version: int|None, file_type: str) -> WorkflowSpecRepresentation:
+def refresh_get_workflow_spec(db: Session, name: str, version: int | None, file_type: str) -> WorkflowSpecRepresentation:
     repository.persist_workflow_spec(db=db, name=name)
     spec = views.get_workflow_spec(db=db, name=name, version=version)
     if spec is None:
         raise WorkflowSpecNotFoundException()
 
     return WorkflowSpecRepresentation.model_validate(
-        dict(spec.__dict__, files=[x for x in spec.files if x.file_type == file_type])
+        dict(spec.__dict__, files=[x for x in spec.files if x.file_type == file_type]),
     )
+
 
 def is_completed(
     db: Session,
@@ -1003,6 +1015,7 @@ def is_completed(
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
     unfinished_tasks = service_workflow.get_unfinished_tasks(workflow)
     return len(unfinished_tasks) == 0
+
 
 def is_faulty(
     db: Session,
@@ -1016,7 +1029,9 @@ def is_faulty(
 def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     can_cancel = service_workflow.can_user_cancel_workflow(
-        workflow=workflow, task_id=task_id, user_id=user_id
+        workflow=workflow,
+        task_id=task_id,
+        user_id=user_id,
     )
     if can_cancel:
         service_workflow.cancel_workflow(workflow=workflow)
@@ -1026,10 +1041,13 @@ def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
 def user_delete_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     can_delete = service_workflow.can_user_delete_workflow(
-        workflow=workflow, task_id=task_id, user_id=user_id
+        workflow=workflow,
+        task_id=task_id,
+        user_id=user_id,
     )
     if can_delete:
         repository.delete_workflow_instance(db=db, workflow=workflow)
+
 
 #### Statistics ####
 
@@ -1039,7 +1057,7 @@ def get_workflow_statistics(db: Session, user_id: uuid.UUID):
         WorkflowStatisticsRepresentation(
             name=wf_name,
             title=service_workflow.get_workflow_title_cached(wf_name),
-            estimated_saved_mins_per_instance=service_workflow.get_workflow_saved_minutes_per_instance_cached(wf_name)
+            estimated_saved_mins_per_instance=service_workflow.get_workflow_saved_minutes_per_instance_cached(wf_name),
         )
         for wf_name in service_workflow.get_all_activated_workflow_names()
     ]
@@ -1049,14 +1067,15 @@ def get_workflow_statistics(db: Session, user_id: uuid.UUID):
         wfstats.active_instances = stats["active_instances"]
         wfstats.completed_instances = stats["completed_instances"]
         wfstats.estimated_instances_per_year = stats["estimated_instances_per_year"]
-        wfstats.estimated_savings_per_year =  (wfstats.estimated_instances_per_year * wfstats.estimated_saved_mins_per_instance) / 60.0
-    
-    workflows.sort(key=lambda x: x.title) # sort by title
-    
+        wfstats.estimated_savings_per_year = (wfstats.estimated_instances_per_year * wfstats.estimated_saved_mins_per_instance) / 60.0
+
+    workflows.sort(key=lambda x: x.title)  # sort by title
+
     return workflows
 
 
 #### Admin ####
+
 
 def is_global_admin(db: Session, user_id):
     user = get_user(db=db, user_id=user_id)
@@ -1092,31 +1111,38 @@ def get_workflow_names_the_user_is_admin_for(db: Session, user_id):
 
 
 def require_workflow_admin_by_task_id(db, user_id, task_id):
-    is_global_workflow_admin  = is_global_admin(db=db, user_id=user_id)
+    is_global_workflow_admin = is_global_admin(db=db, user_id=user_id)
     if not is_global_workflow_admin:
         allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
         task = views.get_single_task(db=db, task_id=task_id)
         if task.workflow_instance.name not in allowed_workflow_names:
             raise UserMayNotAdministrateThisWorkflowException(f"User is not admin for workflow {task.workflow_instance.name}")
-        
+
+
 def require_workflow_admin_by_instance_id(db, user_id, instance_id):
-    is_global_workflow_admin  = is_global_admin(db=db, user_id=user_id)
+    is_global_workflow_admin = is_global_admin(db=db, user_id=user_id)
     if not is_global_workflow_admin:
         allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
         instance = views.get_workflow_by_instance_id(db=db, workflow_instance_id=instance_id)
         if instance.name not in allowed_workflow_names:
             raise UserMayNotAdministrateThisWorkflowException(f"User is not admin for workflow {instance.name}")
 
+
 def bff_admin_get_all_tasks(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
     allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
     return views.bff_admin_get_all_tasks(
-        db=db, bff_table_request_params=bff_table_request_params, allowed_workflow_names = allowed_workflow_names
+        db=db,
+        bff_table_request_params=bff_table_request_params,
+        allowed_workflow_names=allowed_workflow_names,
     )
+
 
 def bff_admin_get_all_workflow_instances(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
     allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
     return views.bff_admin_get_all_workflow_instances(
-        db=db, bff_table_request_params=bff_table_request_params, allowed_workflow_names = allowed_workflow_names
+        db=db,
+        bff_table_request_params=bff_table_request_params,
+        allowed_workflow_names=allowed_workflow_names,
     )
 
 
@@ -1149,9 +1175,11 @@ def admin_set_user_delegations(
 
     return views.admin_get_user_detail(db=db, user_id=principal_user_id)
 
+
 def admin_get_single_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
     return views.admin_get_single_task(db=db, task_id=task_id)
+
 
 def admin_replace_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, task_data: dict):
 
@@ -1160,7 +1188,9 @@ def admin_replace_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID,
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
 
     service_workflow.replace_task_data(
-        workflow=workflow, task_id=task_id, task_data=task_data
+        workflow=workflow,
+        task_id=task_id,
+        task_data=task_data,
     )
 
     repository.store_workflow_instance(db=db, workflow=workflow)
@@ -1175,8 +1205,8 @@ def admin_execute_erroneous_task(db: Session, user_id: uuid.UUID, task_id: uuid.
     return workflow.task_tree.id
 
 
-def admin_cancel_workflow(db: Session, user_id:uuid.UUID, workflow_instance_id: uuid.UUID):
-    
+def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID):
+
     require_workflow_admin_by_instance_id(db=db, user_id=user_id, instance_id=workflow_instance_id)
 
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
@@ -1185,21 +1215,30 @@ def admin_cancel_workflow(db: Session, user_id:uuid.UUID, workflow_instance_id: 
 
 
 def admin_assign_task_to_user_without_checks(
-    db: Session, task_id: uuid.UUID, admin_user_id: uuid.UUID, assign_to_user_id: uuid.UUID, remove_roles: bool
+    db: Session,
+    task_id: uuid.UUID,
+    admin_user_id: uuid.UUID,
+    assign_to_user_id: uuid.UUID,
+    remove_roles: bool,
 ):
-    
+
     require_workflow_admin_by_task_id(db=db, user_id=admin_user_id, task_id=task_id)
 
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     user = repository.load_user(db=db, user_id=assign_to_user_id)
     if remove_roles:
         service_workflow.set_manually_assigned_roles(
-            workflow=workflow, task_id=task_id, roles=set()
+            workflow=workflow,
+            task_id=task_id,
+            roles=set(),
         )
     service_workflow.assign_task_without_checks(
-        workflow=workflow, task_id=task_id, user_id=user.id
+        workflow=workflow,
+        task_id=task_id,
+        user_id=user.id,
     )
     repository.store_workflow_instance(db=db, workflow=workflow)
+
 
 def admin_unassign_task_without_checks(db: Session, admin_user_id: uuid.UUID, task_id: uuid.UUID):
     require_workflow_admin_by_task_id(db=db, user_id=admin_user_id, task_id=task_id)
@@ -1207,6 +1246,7 @@ def admin_unassign_task_without_checks(db: Session, admin_user_id: uuid.UUID, ta
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
     service_workflow.unassign_task_without_checks(workflow=workflow, task_id=task_id)
     repository.store_workflow_instance(db=db, workflow=workflow)
+
 
 def admin_get_task_states_per_workflow(db: Session, wf_name: str, admin_user_id: uuid.UUID) -> WorkflowStateResponse:
     allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=admin_user_id)

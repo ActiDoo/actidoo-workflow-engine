@@ -39,5 +39,6 @@ def call_login_hooks(request, db):
         for cb in __login_hooks:
             cb(request, db, login_state)
 
+
 def get_login_state(request) -> LoginStateSchema:
     return _get_login_state(request=request)

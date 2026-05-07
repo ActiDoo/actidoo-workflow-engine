@@ -54,12 +54,14 @@ _worker_idle_sleep_seconds = 5
 # Assertion that the master-lock refresh time is not too big
 assert _refresh_lease < _lease_duration / 2
 
+
 class MasterInstance(Base):
     __tablename__ = "master_instance"
 
     id: Mapped[int] = mapped_column(ty.Integer, primary_key=True)
     instance_name: Mapped[str] = mapped_column(ty.String(255), nullable=False, unique=True)
-    last_updated: Mapped[datetime.datetime] = mapped_column(UTCDateTime(),server_default=func.now())
+    last_updated: Mapped[datetime.datetime] = mapped_column(UTCDateTime(), server_default=func.now())
+
 
 class TaskQueue(Base):
     __tablename__ = "ts_queue"
@@ -70,7 +72,8 @@ class TaskQueue(Base):
     params: Mapped[dict] = mapped_column(JSON(), nullable=False, default={})
     key_concurrent: Mapped[str | None] = mapped_column(ty.String(255), nullable=True, index=True, default=None)
     key_dedup: Mapped[str | None] = mapped_column(ty.String(255), nullable=True, index=True, default=None)
- 
+
+
 class TaskResult(Base):
     __tablename__ = "ts_results"
 
@@ -84,9 +87,10 @@ class TaskResult(Base):
     key_concurrent: Mapped[str | None] = mapped_column(ty.String(255), nullable=True, index=True, default=None)
     key_dedup: Mapped[str | None] = mapped_column(ty.String(255), nullable=True, index=True, default=None)
 
-t_master_instance: Table = MasterInstance.__table__ # type: ignore
-t_task_queue: Table = TaskQueue.__table__ # type: ignore
-t_task_results: Table = TaskResult.__table__ # type: ignore
+
+t_master_instance: Table = MasterInstance.__table__  # type: ignore
+t_task_queue: Table = TaskQueue.__table__  # type: ignore
+t_task_results: Table = TaskResult.__table__  # type: ignore
 
 
 class CancelledStatus:
@@ -108,11 +112,11 @@ async def run_scheduler(settings: Settings):
         _log.info("Stopping scheduler")
 
 
-def loop_elect_master_instance(settings: Settings, instance_name:str, cancelled_status: CancelledStatus):
+def loop_elect_master_instance(settings: Settings, instance_name: str, cancelled_status: CancelledStatus):
     while True:
         if cancelled_status.is_cancelled:
             break
-    
+
         engine = None
         try:
             engine = create_null_pool_engine(settings=settings, isolation_level="READ COMMITTED")
@@ -125,7 +129,7 @@ def loop_elect_master_instance(settings: Settings, instance_name:str, cancelled_
         finally:
             if engine is not None:
                 engine.dispose()
- 
+
         for i in range(0, _refresh_lease):
             if not cancelled_status.is_cancelled:
                 time.sleep(1.0)
@@ -133,38 +137,39 @@ def loop_elect_master_instance(settings: Settings, instance_name:str, cancelled_
 
 def elect_master_instance(conn: Connection, instance_name):
     try:
-
         conn.execute(text("LOCK TABLES master_instance WRITE;"))
-        
+
         row = conn.execute(
             select(
                 t_master_instance.c.id,
                 t_master_instance.c.instance_name,
                 t_master_instance.c.last_updated,
-                literal_column(f"DATE_SUB(CURRENT_TIMESTAMP, INTERVAL {_lease_duration} SECOND)", UTCDateTime).label("mintime")
-            ).select_from(t_master_instance).with_for_update()
+                literal_column(f"DATE_SUB(CURRENT_TIMESTAMP, INTERVAL {_lease_duration} SECOND)", UTCDateTime).label("mintime"),
+            )
+            .select_from(t_master_instance)
+            .with_for_update(),
         ).fetchone()
-        
+
         if row is None:
             conn.execute(
                 insert(t_master_instance).values(
                     id=1,
-                    instance_name = instance_name,
-                    last_updated = text("CURRENT_TIMESTAMP")
-                )
+                    instance_name=instance_name,
+                    last_updated=text("CURRENT_TIMESTAMP"),
+                ),
             )
         elif row.instance_name == instance_name or row.last_updated < row.mintime:
             conn.execute(
                 t_master_instance.update().values(
                     id=1,
-                    instance_name = instance_name,
-                    last_updated = text("CURRENT_TIMESTAMP")
-                )
+                    instance_name=instance_name,
+                    last_updated=text("CURRENT_TIMESTAMP"),
+                ),
             )
         else:
             conn.rollback()
             return None
-        
+
         conn.commit()
         return instance_name
     except OperationalError:
@@ -178,6 +183,7 @@ def elect_master_instance(conn: Connection, instance_name):
     finally:
         conn.execute(text("UNLOCK TABLES"))
 
+
 def is_master_instance(conn: Connection, instance_name):
     try:
         row = conn.execute(
@@ -185,8 +191,8 @@ def is_master_instance(conn: Connection, instance_name):
                 t_master_instance.c.id,
                 t_master_instance.c.instance_name,
                 t_master_instance.c.last_updated,
-                literal_column(f"DATE_SUB(CURRENT_TIMESTAMP, INTERVAL {_lease_duration} SECOND)", UTCDateTime).label("mintime")
-            ).select_from(t_master_instance)
+                literal_column(f"DATE_SUB(CURRENT_TIMESTAMP, INTERVAL {_lease_duration} SECOND)", UTCDateTime).label("mintime"),
+            ).select_from(t_master_instance),
         ).fetchone()
         if row is not None and row.instance_name == instance_name and row.last_updated >= row.mintime:
             return True
@@ -214,7 +220,7 @@ class CronRetryPolicy:
 
 
 class CronTask:
-    def __init__(self, name:str, cron: str | None, func: Callable, retry_policy: "CronRetryPolicy | None" = None):
+    def __init__(self, name: str, cron: str | None, func: Callable, retry_policy: "CronRetryPolicy | None" = None):
         self.cron_expression = cron
         base = dt_now_naive().astimezone(pytz.timezone(CRON_TIMEZONE))
         self.croniter = croniter.croniter(cron, start_time=base, day_or=False) if cron else None
@@ -222,7 +228,7 @@ class CronTask:
         self.name = name
         self.minimum_interval = self._compute_minimum_interval(base)
         self.retry_policy = retry_policy
-    
+
     def _compute_minimum_interval(self, base_time: datetime.datetime) -> datetime.timedelta | None:
         if self.croniter is None:
             return None
@@ -237,7 +243,7 @@ class CronTask:
         except Exception:
             _log.exception("Unable to derive minimum interval for cron task %s", self.name)
             return None
-    
+
     def next(self):
         if self.croniter is None:
             return None
@@ -246,10 +252,7 @@ class CronTask:
 
 def _get_last_task_execution(db: Session, task_name: str) -> datetime.datetime | None:
     row = db.execute(
-        select(t_task_results.c.executed_at)
-        .where(t_task_results.c.name == task_name)
-        .order_by(t_task_results.c.executed_at.desc())
-        .limit(1)
+        select(t_task_results.c.executed_at).where(t_task_results.c.name == task_name).order_by(t_task_results.c.executed_at.desc()).limit(1),
     ).fetchone()
     if row is None:
         return None
@@ -282,6 +285,7 @@ def _strip_retry_metadata(params: dict | None) -> dict:
         return {}
     return {k: v for k, v in params.items() if k != _RETRY_COUNT_PARAM}
 
+
 def _task_lock_name(task_name: str, key_concurrent: str | None) -> str:
     if key_concurrent:
         return f"cron:{task_name}:{key_concurrent}"
@@ -290,13 +294,10 @@ def _task_lock_name(task_name: str, key_concurrent: str | None) -> str:
 
 def _acquire_task_lock(db: Session, *, task_name: str, key_concurrent: str | None) -> bool:
     try:
-        lock_result = (
-            db.execute(
-                text("SELECT GET_LOCK(:lock_name, 0)"),
-                {"lock_name": _task_lock_name(task_name, key_concurrent)},
-            )
-            .scalar()
-        )
+        lock_result = db.execute(
+            text("SELECT GET_LOCK(:lock_name, 0)"),
+            {"lock_name": _task_lock_name(task_name, key_concurrent)},
+        ).scalar()
         return lock_result == 1
     except Exception:
         _log.exception("Error acquiring advisory lock for task %s", task_name)
@@ -328,7 +329,7 @@ def _schedule_retry_attempt(
         return
 
     execute_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
-        seconds=task.retry_policy.retry_delay_seconds
+        seconds=task.retry_policy.retry_delay_seconds,
     )
 
     params = dict(user_params)
@@ -341,11 +342,13 @@ def _schedule_retry_attempt(
                 "execute_after": execute_after,
                 "name": queue_row.name,
                 "params": params,
-            }
-        )
+            },
+        ),
     )
 
+
 task_registry: dict[str, CronTask] = dict()
+
 
 def clear_task_registry():
     task_registry.clear()
@@ -370,22 +373,19 @@ def schedule_task(
         engine = create_null_pool_engine(settings=settings, isolation_level="READ COMMITTED")
         with engine.connect() as conn:
             if key_dedup:
-                existing = (
-                    conn.execute(
-                        t_task_queue.select()
-                        .where(
-                            t_task_queue.c.name == task_name,
-                            t_task_queue.c.key_dedup == key_dedup,
-                        )
-                        .with_for_update(skip_locked=True)
+                existing = conn.execute(
+                    t_task_queue.select()
+                    .where(
+                        t_task_queue.c.name == task_name,
+                        t_task_queue.c.key_dedup == key_dedup,
                     )
-                    .fetchall()
-                )
+                    .with_for_update(skip_locked=True),
+                ).fetchall()
                 if existing:
                     conn.execute(
                         t_task_queue.delete().where(
-                            t_task_queue.c.id.in_([row.id for row in existing])
-                        )
+                            t_task_queue.c.id.in_([row.id for row in existing]),
+                        ),
                     )
 
             conn.execute(
@@ -397,8 +397,8 @@ def schedule_task(
                         "params": params or {},
                         "key_concurrent": key_concurrent,
                         "key_dedup": key_dedup,
-                    }
-                )
+                    },
+                ),
             )
             conn.commit()
     except Exception:
@@ -407,17 +407,19 @@ def schedule_task(
         if engine is not None:
             engine.dispose()
 
+
 def cron_task(task_name: str, cron: str, *, retry_policy: CronRetryPolicy | None = None):
     """
-        Use with 
-            @cron_task("* * * * *")
-            def mytask(db: Session):
-                pass
+    Use with
+        @cron_task("* * * * *")
+        def mytask(db: Session):
+            pass
     """
+
     def decorator(
         wrapped: Callable[
             [
-                Session
+                Session,
             ],
             None,
         ],
@@ -431,19 +433,22 @@ def cron_task(task_name: str, cron: str, *, retry_policy: CronRetryPolicy | None
                 func=wrapped,
                 retry_policy=retry_policy,
             )
+
         venusian.attach(wrapped, callback)
         return wrapped
+
     return decorator
 
 
 def register_task(task_name: str):
     """
-        Use with
-            @register_task("mytask")
-            def mytask(db: Session, params: dict):
-                pass
-        Registers a non-cron task that can be enqueued via schedule_task().
+    Use with
+        @register_task("mytask")
+        def mytask(db: Session, params: dict):
+            pass
+    Registers a non-cron task that can be enqueued via schedule_task().
     """
+
     def decorator(
         wrapped: Callable[
             [
@@ -461,16 +466,18 @@ def register_task(task_name: str):
                 name=task_name,
                 func=wrapped,
             )
+
         venusian.attach(wrapped, callback)
         return wrapped
+
     return decorator
 
 
-def loop_schedule_next_executions(settings: Settings, instance_name:str, cancelled_status: CancelledStatus):
+def loop_schedule_next_executions(settings: Settings, instance_name: str, cancelled_status: CancelledStatus):
     while True:
         if cancelled_status.is_cancelled:
             break
-    
+
         engine = None
         try:
             engine = create_null_pool_engine(settings=settings, isolation_level="READ COMMITTED")
@@ -482,10 +489,11 @@ def loop_schedule_next_executions(settings: Settings, instance_name:str, cancell
         finally:
             if engine is not None:
                 engine.dispose()
- 
+
         for i in range(0, _schedule_every):
             if not cancelled_status.is_cancelled:
                 time.sleep(1.0)
+
 
 def schedule_next_executions(conn: Connection):
     for task in list(task_registry.values()):
@@ -496,39 +504,49 @@ def schedule_next_executions(conn: Connection):
 
         db_next_run = conn.execute(
             t_task_queue.select().where(
-                t_task_queue.c.name == task.name
-            )
+                t_task_queue.c.name == task.name,
+            ),
         ).fetchone()
         if db_next_run is None:
             _log.debug(f"Scheduling task {task.name} at {str(task_next_utc)}")
             conn.execute(
-                t_task_queue.insert().values({
-                    "execute_after": task_next_utc,
-                    "name": task.name,
-                    "params": dict(),
-                    "key_concurrent": None,
-                    "key_dedup": None,
-                })
+                t_task_queue.insert().values(
+                    {
+                        "execute_after": task_next_utc,
+                        "name": task.name,
+                        "params": dict(),
+                        "key_concurrent": None,
+                        "key_dedup": None,
+                    }
+                ),
             )
         elif db_next_run.execute_after >= dt_in_aware(minutes=5) and to_timezone_naive_in_utc(db_next_run.execute_after) != task_next_utc:
             _log.debug(f"Update existing task schedule {task.name} at {str(task_next_utc)}")
-            conn.execute(t_task_queue.update().values({
-                    "execute_after": task_next_utc,
-                    "name": task.name,
-                    "params": dict(),
-                    "key_concurrent": None,
-                    "key_dedup": None,
-            }).where(
-                t_task_queue.c.name == task.name
-            ))
+            conn.execute(
+                t_task_queue.update()
+                .values(
+                    {
+                        "execute_after": task_next_utc,
+                        "name": task.name,
+                        "params": dict(),
+                        "key_concurrent": None,
+                        "key_dedup": None,
+                    }
+                )
+                .where(
+                    t_task_queue.c.name == task.name,
+                )
+            )
         conn.commit()
 
 
 @cron_task(task_name="ts_schedule_cleanup", cron="1 * * * *")
 def schedule_cleanup(db: Session):
-    db.execute(t_task_results.delete().where(
-        t_task_results.c.executed_at <= dt_ago_naive(**_keep_task_results)
-    ))
+    db.execute(
+        t_task_results.delete().where(
+            t_task_results.c.executed_at <= dt_ago_naive(**_keep_task_results),
+        )
+    )
     db.commit()
 
 
@@ -536,8 +554,7 @@ def loop_worker(settings: Settings, cancelled_status: CancelledStatus):
     while True:
         if cancelled_status.is_cancelled:
             break
-    
-        
+
         try_again = True
         while try_again:
             engine = None
@@ -553,7 +570,7 @@ def loop_worker(settings: Settings, cancelled_status: CancelledStatus):
                 with engine.connect() as conn:
                     db = Session(bind=conn)
                     try_again = run_worker(settings, db)
-                    
+
             except OperationalError:
                 _log.exception("Error while running worker")
                 try_again = True
@@ -567,15 +584,19 @@ def loop_worker(settings: Settings, cancelled_status: CancelledStatus):
         for i in range(0, _worker_idle_sleep_seconds):
             if not cancelled_status.is_cancelled:
                 time.sleep(1.0)
-        
+
 
 def run_worker(settings, db: Session):
     has_found_task = False
 
     db_next_run = db.execute(
-        t_task_queue.select().with_for_update(skip_locked=True).where(
-            t_task_queue.c.execute_after <= text("CURRENT_TIMESTAMP"),   
-        ).order_by(text("rand()")).limit(1)
+        t_task_queue.select()
+        .with_for_update(skip_locked=True)
+        .where(
+            t_task_queue.c.execute_after <= text("CURRENT_TIMESTAMP"),
+        )
+        .order_by(text("rand()"))
+        .limit(1),
     ).fetchone()
 
     if db_next_run is not None:
@@ -584,7 +605,7 @@ def run_worker(settings, db: Session):
         if db_next_run.name not in task_registry:
             _log.error(f"Scheduled task {db_next_run.name} not found in task_registry; Removing schedule.")
             db.execute(
-                t_task_queue.delete().where(t_task_queue.c.id == db_next_run.id)
+                t_task_queue.delete().where(t_task_queue.c.id == db_next_run.id),
             )
             db.commit()
             return True
@@ -596,24 +617,22 @@ def run_worker(settings, db: Session):
             is_retry_attempt = retry_count > 0
 
             lock_acquired = _acquire_task_lock(
-                db=db, task_name=task.name, key_concurrent=db_next_run.key_concurrent
+                db=db,
+                task_name=task.name,
+                key_concurrent=db_next_run.key_concurrent,
             )
 
             try:
                 if not lock_acquired:
-                    delay_until = datetime.datetime.now(datetime.timezone.utc) + (
-                        task.minimum_interval or datetime.timedelta(seconds=_worker_idle_sleep_seconds)
-                    )
+                    delay_until = datetime.datetime.now(datetime.timezone.utc) + (task.minimum_interval or datetime.timedelta(seconds=_worker_idle_sleep_seconds))
                     db.execute(
-                        t_task_queue.update()
-                        .where(t_task_queue.c.id == db_next_run.id)
-                        .values(execute_after=delay_until)
+                        t_task_queue.update().where(t_task_queue.c.id == db_next_run.id).values(execute_after=delay_until),
                     )
                     db.commit()
                     return True
 
                 db.execute(
-                    t_task_queue.delete().where(t_task_queue.c.id == db_next_run.id)
+                    t_task_queue.delete().where(t_task_queue.c.id == db_next_run.id),
                 )
 
                 # Ensure cron tasks cannot run more frequently than their cron expression allows
@@ -628,18 +647,20 @@ def run_worker(settings, db: Session):
                         delay_until.isoformat(),
                     )
                     db.execute(
-                        t_task_queue.insert().values({
-                            "id": db_next_run.id,
-                            "execute_after": delay_until,
-                            "name": db_next_run.name,
-                            "params": db_next_run.params,
-                            "key_concurrent": db_next_run.key_concurrent,
-                            "key_dedup": db_next_run.key_dedup,
-                        })
+                        t_task_queue.insert().values(
+                            {
+                                "id": db_next_run.id,
+                                "execute_after": delay_until,
+                                "name": db_next_run.name,
+                                "params": db_next_run.params,
+                                "key_concurrent": db_next_run.key_concurrent,
+                                "key_dedup": db_next_run.key_dedup,
+                            }
+                        ),
                     )
                     db.commit()
                     return True
-                
+
                 kw = dict()
                 task_db_session = None
 
@@ -671,24 +692,28 @@ def run_worker(settings, db: Session):
                         task_db_session.close()
 
                     db.execute(
-                        t_task_results.insert().values({
-                            "id": db_next_run.id,
-                            "name": db_next_run.name,
-                            "executed_at": execution_timestamp,
-                            "params": db_next_run.params,
-                            "result": result,
-                            "error_log": error_log or "",
-                            "is_error": error_log is not None,
-                            "key_concurrent": db_next_run.key_concurrent,
-                            "key_dedup": db_next_run.key_dedup,
-                        })
+                        t_task_results.insert().values(
+                            {
+                                "id": db_next_run.id,
+                                "name": db_next_run.name,
+                                "executed_at": execution_timestamp,
+                                "params": db_next_run.params,
+                                "result": result,
+                                "error_log": error_log or "",
+                                "is_error": error_log is not None,
+                                "key_concurrent": db_next_run.key_concurrent,
+                                "key_dedup": db_next_run.key_dedup,
+                            }
+                        ),
                     )
             finally:
                 if lock_acquired:
                     _release_task_lock(
-                        db=db, task_name=task.name, key_concurrent=db_next_run.key_concurrent
+                        db=db,
+                        task_name=task.name,
+                        key_concurrent=db_next_run.key_concurrent,
                     )
-    
+
     db.commit()
 
     return has_found_task

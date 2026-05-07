@@ -28,7 +28,8 @@ def build_field_name(*parts):
 
 def get_db_field(field_name, query: Select, field_to_dbfield_map: dict):
     return field_to_dbfield_map.get(field_name) or getattr(
-        query.exported_columns, field_name
+        query.exported_columns,
+        field_name,
     )
 
 
@@ -53,7 +54,10 @@ class FilterField:
         raise NotImplementedError()
 
     def get_database_global_search_query_clause(
-        self, query: Select, search: str, field_to_dbfield_map: dict
+        self,
+        query: Select,
+        search: str,
+        field_to_dbfield_map: dict,
     ):
         raise NotImplementedError()
 
@@ -72,7 +76,9 @@ class IntegerSearchFilterField(FilterField):
         field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         from_filter = getattr(request_params, "f_" + self.name + "_geq", None)
@@ -91,10 +97,15 @@ class IntegerSearchFilterField(FilterField):
         return query
 
     def get_database_global_search_query_clause(
-        self, query: Select, search: str, field_to_dbfield_map: dict
+        self,
+        query: Select,
+        search: str,
+        field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         clause = False
@@ -122,7 +133,9 @@ class UUidSearchFilterField(FilterField):
         field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         search_prefix = getattr(request_params, "f_" + self.name, None)
@@ -133,10 +146,15 @@ class UUidSearchFilterField(FilterField):
         return query
 
     def get_database_global_search_query_clause(
-        self, query: Select, search: str, field_to_dbfield_map: dict
+        self,
+        query: Select,
+        search: str,
+        field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         clause = False
@@ -159,21 +177,28 @@ class TextSearchFilterField(FilterField):
         field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         if getattr(request_params, "f_" + self.name, None) is not None:
             query = query.where(
-                eilike(dbfield, getattr(request_params, "f_" + self.name))
+                eilike(dbfield, getattr(request_params, "f_" + self.name)),
             )
 
         return query
 
     def get_database_global_search_query_clause(
-        self, query: Select, search: str, field_to_dbfield_map: dict
+        self,
+        query: Select,
+        search: str,
+        field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         clause = False
@@ -187,8 +212,6 @@ class TextSearchFilterField(FilterField):
 @dataclasses.dataclass
 class DatetimeSearchFilterField(FilterField):
     def add_GET_parameters(self, schema_query_params):
-        # schema_query_params["f_"+self.name+"_from"] = (datetime.datetime, None)
-        # schema_query_params["f_"+self.name+"_to"] = (datetime.datetime, None)
         schema_query_params["f_" + self.name + "_eq"] = (Optional[str], None)
 
     def add_database_query_parameters(
@@ -197,23 +220,7 @@ class DatetimeSearchFilterField(FilterField):
         request_params: "BffTableQuerySchemaBase",
         field_to_dbfield_map: dict,
     ):
-        #dbfield = get_db_field(
-        #    field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
-        #)
-
-        # from_filter = getattr(request_params, "f_"+self.name+"_from", None)
-        # to_filter = getattr(request_params, "f_"+self.name+"_to", None)
         eq_filter = getattr(request_params, "f_" + self.name + "_eq", None)
-
-        # if from_filter:
-        #    query = query.where(
-        #        dbfield >= from_filter
-        #    )
-
-        # if to_filter:
-        #    query = query.where(
-        #        dbfield <= to_filter
-        #    )
 
         if eq_filter:
             search_clause = self.get_database_global_search_query_clause(
@@ -227,10 +234,15 @@ class DatetimeSearchFilterField(FilterField):
         return query
 
     def get_database_global_search_query_clause(
-        self, query: Select, search: str, field_to_dbfield_map: dict
+        self,
+        query: Select,
+        search: str,
+        field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         clause = False
@@ -249,7 +261,7 @@ class DatetimeSearchFilterField(FilterField):
                 log.debug(f"Global search {search} could not be parsed as date")
             except Exception:
                 log.exception(
-                    f"Global search {search} raised an unexpected error during date parsing"
+                    f"Global search {search} raised an unexpected error during date parsing",
                 )
 
         return clause
@@ -269,7 +281,9 @@ class BooleanFilterField(FilterField):
         field_to_dbfield_map: dict,
     ):
         dbfield = get_db_field(
-            field_name=self.name, field_to_dbfield_map=field_to_dbfield_map, query=query
+            field_name=self.name,
+            field_to_dbfield_map=field_to_dbfield_map,
+            query=query,
         )
 
         req_value = getattr(request_params, "f_" + self.name, None)
@@ -280,7 +294,10 @@ class BooleanFilterField(FilterField):
         return query
 
     def get_database_global_search_query_clause(
-        self, query: Select, search: str, field_to_dbfield_map: dict
+        self,
+        query: Select,
+        search: str,
+        field_to_dbfield_map: dict,
     ):
         return False
 
@@ -288,7 +305,10 @@ class BooleanFilterField(FilterField):
 class BffTableQuerySchemaBase(pydantic.v1.BaseModel):
     def get_offset(self):
         return get_min_max(
-            getattr(self, "offset", None), maxv=9999999, default=0, minv=0
+            getattr(self, "offset", None),
+            maxv=9999999,
+            default=0,
+            minv=0,
         )
 
     def get_limit(self):
@@ -324,6 +344,7 @@ class BFFTable:
         get_paginated_data: Executes the query with pagination and returns a PaginatedData object containing the results
                             and total count.
     """
+
     def __init__(
         self,
         db: Session,
@@ -395,8 +416,6 @@ class BFFTable:
 
         self.query = self.query.order_by(*order_by_clauses)
 
-        # print(str(self.query))
-
     def _get_scalars(self) -> ScalarResult:
         """Execute the current query with limit and offset parameters,
         retrieving the scalar results from the database.
@@ -447,7 +466,8 @@ class BFFTable:
             count of matching records.
         """
         return PaginatedData(
-            items=list(self._get_scalars().all()), count=self._get_count() or 0
+            items=list(self._get_scalars().all()),
+            count=self._get_count() or 0,
         )
 
 
@@ -488,7 +508,9 @@ def get_bff_table_query_schema(
             return filter_fields
 
     model = pydantic.v1.create_model(
-        schema_name, __base__=MyBffTableQuerySchemaBase, **query_params_definition
+        schema_name,
+        __base__=MyBffTableQuerySchemaBase,
+        **query_params_definition,
     )
 
     # model = create_model()

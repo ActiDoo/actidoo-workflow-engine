@@ -323,7 +323,7 @@ def _fetch_session_data(client: TestClient) -> dict[str, Any]:
     assert token, "session cookie missing"
     with get_db_contextmanager() as db:
         record = db.execute(
-            select(SessionModel).where(SessionModel.token == token)
+            select(SessionModel).where(SessionModel.token == token),
         ).scalar_one_or_none()
         if record is None or record.data is None:
             return {}
@@ -331,7 +331,9 @@ def _fetch_session_data(client: TestClient) -> dict[str, Any]:
 
 
 def test_login_redirect_respects_configured_scope(
-    oidc_environment, auth_test_client, monkeypatch
+    oidc_environment,
+    auth_test_client,
+    monkeypatch,
 ):
     client = auth_test_client
     custom_scope = "openid email offline_access"
@@ -375,7 +377,8 @@ def test_full_login_flow_happy_path(oidc_environment, auth_test_client):
 
 
 def test_login_callback_with_invalid_code_redirects_to_original_target(
-    oidc_environment, auth_test_client
+    oidc_environment,
+    auth_test_client,
 ):
     client = auth_test_client
     state, redirect_target = _initiate_login(client, redirect_url="/desired")
@@ -395,7 +398,9 @@ def test_login_callback_with_invalid_code_redirects_to_original_target(
 
 
 def test_login_callback_redirects_to_fallback_after_many_failures(
-    oidc_environment, auth_test_client, monkeypatch
+    oidc_environment,
+    auth_test_client,
+    monkeypatch,
 ):
     import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
@@ -437,7 +442,9 @@ def test_login_callback_redirects_to_fallback_after_many_failures(
 
 
 def test_login_callback_invalid_claims_redirects_to_original_target(
-    oidc_environment, auth_test_client, monkeypatch
+    oidc_environment,
+    auth_test_client,
+    monkeypatch,
 ):
     import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
@@ -472,7 +479,9 @@ def test_login_callback_invalid_claims_redirects_to_original_target(
 
 
 def test_login_callback_value_error_redirects_to_original_target(
-    oidc_environment, auth_test_client, monkeypatch
+    oidc_environment,
+    auth_test_client,
+    monkeypatch,
 ):
     import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
@@ -525,7 +534,9 @@ def test_login_callback_provider_error_redirects_to_original_target(
 
 
 def test_login_callback_can_skip_access_token_validation(
-    oidc_environment, auth_test_client, monkeypatch
+    oidc_environment,
+    auth_test_client,
+    monkeypatch,
 ):
     import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
@@ -669,7 +680,7 @@ def test_expired_session_reports_logged_out(oidc_environment, auth_test_client):
 
     with get_db_contextmanager() as db:
         record = db.execute(
-            select(SessionModel).where(SessionModel.token == session_cookie)
+            select(SessionModel).where(SessionModel.token == session_cookie),
         ).scalar_one()
         mutated_data = dict(record.data or {})
         mutated_token = dict(mutated_data.get(SESSION_TOKEN_KEY, {}))

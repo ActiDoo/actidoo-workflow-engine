@@ -17,7 +17,7 @@ def wait_for_server(host, port):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((host, port))
-                #log.info(f"Successfully connected to {host}:{port}")
+                # log.info(f"Successfully connected to {host}:{port}")
                 break
         except socket.error:
             log.info(f"Waiting for {host}:{port}")
