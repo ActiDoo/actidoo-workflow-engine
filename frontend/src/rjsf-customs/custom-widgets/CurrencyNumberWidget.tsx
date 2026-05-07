@@ -134,38 +134,24 @@ const CurrencyNumberWidget = (props: WidgetProps): ReactElement => {
   };
 
   return (
-    <div className="mb-0">
-      {props.label && (
-        <label className={'text-sm ' + (props.disabled ? 'opacity-75' : '')}>
-          {props.required ? props.label + '*' : props.label}
-        </label>
+    <div className="flex items-center">
+      <input
+        className="form-control"
+        type="text"
+        inputMode="decimal"
+        value={draft}
+        onFocus={onFocus}
+        onChange={handleInput}
+        onBlur={onBlur}
+        required={props.required}
+        disabled={props.disabled}
+        readOnly={props.readonly}
+      />
+      {symbol && (
+        <span className="ml-2 text-sm" aria-hidden="true">
+          {symbol}
+        </span>
       )}
-
-      <div className="flex items-center">
-        <input
-          className="form-control"
-          type="text"
-          inputMode="decimal"
-          value={draft}
-          onFocus={onFocus}
-          onChange={handleInput}
-          onBlur={onBlur}
-          required={props.required}
-          disabled={props.disabled}
-          readOnly={props.readonly}
-        />
-        {symbol && (
-          <span className="ml-2 text-sm" aria-hidden="true">
-            {symbol}
-          </span>
-        )}
-      </div>
-
-      {props.options.description ? (
-        <p className={'text-gray-500 text-xs ' + (props.disabled ? 'opacity-80' : '')}>
-          {props.options.description}
-        </p>
-      ) : null}
     </div>
   );
 };
