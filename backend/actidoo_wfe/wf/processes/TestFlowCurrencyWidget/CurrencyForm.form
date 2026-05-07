@@ -1,0 +1,38 @@
+{
+  "components": [
+    {
+      "label": "Amount (Euro suffix → triggers CurrencyNumberWidget)",
+      "type": "number",
+      "layout": { "row": "Row_eur", "columns": null },
+      "id": "Field_eur",
+      "key": "amount_eur",
+      "description": "Number field with appearance.suffixAdorner = € — engine maps this to ui:widget=CurrencyNumberWidget.",
+      "appearance": { "suffixAdorner": "€" },
+      "validate": { "required": true }
+    },
+    {
+      "label": "Price (custom_properties.currency = USD → triggers CurrencyNumberWidget with $-style)",
+      "type": "number",
+      "layout": { "row": "Row_usd", "columns": null },
+      "id": "Field_usd",
+      "key": "amount_usd",
+      "description": "Number field with custom_properties.currency = USD.",
+      "properties": { "currency": "USD" }
+    },
+    {
+      "label": "Weight (kg suffix — control case, plain NumberWidget, no currency formatting)",
+      "type": "number",
+      "layout": { "row": "Row_kg", "columns": null },
+      "id": "Field_kg",
+      "key": "weight_kg",
+      "description": "Number field with appearance.suffixAdorner = kg — should NOT use CurrencyNumberWidget.",
+      "appearance": { "suffixAdorner": "kg" }
+    }
+  ],
+  "type": "default",
+  "id": "CurrencyForm",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "exporter": { "name": "Camunda Modeler", "version": "5.21.0" },
+  "schemaVersion": 15
+}
