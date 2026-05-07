@@ -261,7 +261,6 @@ def oidc_environment(monkeypatch):
     monkeypatch.setattr(auth_core, "client", remote_app)
     monkeypatch.setattr(auth_fastapi, "client", remote_app)
 
-    monkeypatch.setattr(settings, "disable_login_check", False)
     monkeypatch.setattr(
         settings,
         "oidc_discovery_url",

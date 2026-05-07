@@ -28,9 +28,6 @@ class Settings(BaseSettings):
     # Set default log level
     log_level: str = "INFO"
 
-    # Disable Login and ALLOW ALL REQUESTS? (Only for DEV!!!!)
-    disable_login_check: bool = False
-
     # Load engine-internal test workflows (TestFlow*) into the workflow list?
     # Useful for local OSS engine development. (env: SHOW_TEST_WORKFLOWS=true)
     show_test_workflows: bool = False
