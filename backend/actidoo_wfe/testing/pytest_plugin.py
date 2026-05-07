@@ -5,7 +5,10 @@ import contextlib
 import logging
 import pathlib
 import tempfile
-from unittest.mock import patch
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
+from typing import Any, TypeAlias
+from unittest.mock import MagicMock, patch
 
 import pytest
 from libcloud.storage.drivers.local import LocalStorageDriver
@@ -127,3 +130,107 @@ def mock_send_text_mail():
 
     with patch("actidoo_wfe.helpers.mail.send_text_mail", new=mock_send):
         yield emails
+
+
+ConnectorMockSetup: TypeAlias = Callable[[MagicMock], None]
+"""Callable hook to seed a connector's MagicMock with default behavior."""
+
+ConnectorMockDefaults: TypeAlias = ConnectorMockSetup | dict[str, Any]
+"""Shorthand for default mock behavior — a dict of ``{method_name: return_value}``
+or a callable that mutates the MagicMock directly."""
+
+InstanceMocks: TypeAlias = dict[tuple[str, str], MagicMock]
+"""Mapping of ``(type_name, instance_name)`` to its per-test MagicMock instance."""
+
+
+@dataclass(frozen=True)
+class _InstanceSpec:
+    type_name: str
+    instance_name: str
+    defaults: ConnectorMockDefaults | None = None
+
+
+_specs: list[_InstanceSpec] = []
+
+
+def _apply_defaults(mock: MagicMock, defaults: ConnectorMockDefaults) -> None:
+    if callable(defaults):
+        defaults(mock)
+        return
+    for method_name, return_value in defaults.items():
+        getattr(mock, method_name).return_value = return_value
+
+
+@contextlib.contextmanager
+def patch_connectors(specs: list[_InstanceSpec]) -> Iterator[InstanceMocks]:
+    """Replace ``actidoo_wfe.connectors.get_connector`` with a stub that yields
+    per-instance MagicMocks for every spec. Unknown ``(type, instance)`` lookups
+    raise ``ConnectorInstanceNotFoundError`` to surface accidental calls.
+    """
+    from actidoo_wfe.connectors import ConnectorInstanceNotFoundError
+
+    mocks: InstanceMocks = {}
+    for spec in specs:
+        mock = MagicMock(name=f"{spec.type_name}_{spec.instance_name}_mock")
+        if spec.defaults is not None:
+            _apply_defaults(mock, spec.defaults)
+        mocks[(spec.type_name, spec.instance_name)] = mock
+
+    @contextlib.contextmanager
+    def fake_get_connector(type_name: str, instance_name: str):
+        key = (type_name, instance_name)
+        if key not in mocks:
+            raise ConnectorInstanceNotFoundError(
+                f"No mock registered for connector {type_name}/{instance_name}. "
+                f"Add `mock_connector_instance({type_name!r}, {instance_name!r}, ...)` "
+                f"to your conftest."
+            )
+        yield mocks[key]
+
+    with patch("actidoo_wfe.connectors.get_connector", new=fake_get_connector):
+        yield mocks
+
+
+def mock_connector_instance(
+    type_name: str,
+    instance_name: str,
+    *,
+    defaults: ConnectorMockDefaults | None = None,
+) -> Callable[..., MagicMock]:
+    """Declare a mocked connector instance and return a pytest fixture for it.
+
+    Assign the result at module scope in your conftest::
+
+        mock_jira_abc = mock_connector_instance(
+            "jira", "abc",
+            defaults={"create_issue": {"id": "10001", "key": "TEST-1"}},
+        )
+
+    Tests then depend on it directly: ``def test_x(mock_jira_abc): ...``
+    """
+    for existing in _specs:
+        if existing.type_name == type_name and existing.instance_name == instance_name:
+            raise ValueError(
+                f"Connector instance {type_name}/{instance_name} is already mocked"
+            )
+    _specs.append(_InstanceSpec(type_name, instance_name, defaults))
+
+    @pytest.fixture
+    def fixture(mocked_connectors: InstanceMocks) -> MagicMock:
+        return mocked_connectors[(type_name, instance_name)]
+
+    return fixture
+
+
+@pytest.fixture(autouse=True)
+def mocked_connectors() -> Iterator[InstanceMocks]:
+    """Patch ``get_connector`` with stubs for all declared connector instances.
+
+    Inactive (real ``get_connector`` runs) when no specs are registered — this lets
+    the engine's own connector tests exercise the real resolver without interference.
+    """
+    if not _specs:
+        yield {}
+        return
+    with patch_connectors(_specs) as mocks:
+        yield mocks
