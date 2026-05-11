@@ -52,6 +52,18 @@ def _translated_task_title(task: WorkflowInstanceTask, locale: str) -> str:
     )
 
 
+def _build_signature_block() -> str:
+    """Return the signature block (with a "--" separator) or empty string if none is configured.
+
+    The signature is plain text from settings.email_signature; deployments can put a
+    multi-line, multi-language farewell there and it is rendered as-is — no translation.
+    """
+    sig = (settings.email_signature or "").strip()
+    if not sig:
+        return ""
+    return f"\n\n-- \n{sig}\n"
+
+
 def compile_email_template(template: str, params: dict, locale: str, template_dir=MAIL_TEMPLATE_DIR) -> str:
     mylookup = TemplateLookup(directories=[template_dir], strict_undefined=True)
     mytemplate = mylookup.get_template(template)
@@ -61,6 +73,7 @@ def compile_email_template(template: str, params: dict, locale: str, template_di
                 params,
                 generate_instance_url=_generate_instance_url,
                 generate_workflow_instance_admin_url=_generate_workflow_instance_admin_url,
+                signature_block=_build_signature_block(),
                 _=lambda s: service_i18n.translate_mail_string(s, locale),
             )
         )  # type: ignore

@@ -4,3 +4,4 @@ ${_("Workflow:")} ${workflow_title}${(" / "+task.workflow_instance.subtitle) if 
 ${_("Task:")} ${task_title}
 
 ${generate_workflow_instance_admin_url(task.workflow_instance.id)}
+${signature_block}

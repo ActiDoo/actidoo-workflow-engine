@@ -23,3 +23,4 @@ ${generate_instance_url(t.id)}
 
 % endfor
 % endif
+${signature_block}
