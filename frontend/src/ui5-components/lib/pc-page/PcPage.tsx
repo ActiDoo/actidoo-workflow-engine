@@ -26,11 +26,11 @@ export const PcPage: React.FC<PcPageProps> = props => {
   const { header } = props;
   const innerSpacing = props.innerSpacing ?? true;
   return (
-    <>
+    <div className="flex flex-col flex-1">
       {header && <PcPageHeader header={header} />}
       <div className={`flex-1 ${header && innerSpacing ? 'px-12 py-8' : 'pc-page__no-spacing'}`}>
         {props.children}
       </div>
-    </>
+    </div>
   );
 };

@@ -120,7 +120,7 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
         className="z-[100] fixed top-0 pc-px-header-responsive "
       />
       <div className="relative flex flex-col flex-1 overflow-auto mt-11 h-[calc(100vh-2.75rem)]">
-        <div className="flex-1">{props.children}</div>
+        <div className="flex flex-col flex-1">{props.children}</div>
       </div>
     </div>
   );
