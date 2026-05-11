@@ -13,8 +13,8 @@ from sqlalchemy_file import File, FileField
 
 from actidoo_wfe.database import Base, JSONBlob, UTCDateTime, ZlibJSONBlob
 from actidoo_wfe.helpers.time import dt_now_naive
+from actidoo_wfe.i18n import get_supported_locales
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf.service_i18n import get_supported_locales
 
 
 class WorkflowUser(Base):

@@ -1,32 +1,36 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+"""Per-workflow gettext catalog handling.
+
+Each workflow ships its own ``i18n/locales/<locale>/LC_MESSAGES/<wf>.po`` and is
+loaded via ``translate_string`` / ``translate_form_data``.
+
+Generic catalog utilities (locale matching, PO/MO compile, supported-locale
+listing, global ``messages`` catalog) live in :mod:`actidoo_wfe.i18n`.
+"""
 
 import copy
 import gettext
 import json
 import pathlib
-import re
 import xml.etree.ElementTree as ET
-from functools import cache
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
-import pycountry
-from babel import Locale as BabelLocale
-from babel import localedata
 from babel.messages.catalog import Catalog
-from babel.messages.mofile import write_mo
-from babel.messages.pofile import read_po, write_po
+from babel.messages.pofile import write_po
 from babel.support import Translations
 
+from actidoo_wfe.i18n import (
+    compile_global_catalog,
+    compile_po_to_mo,
+    match_translation,
+    update_catalogue,
+)
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import providers as workflow_providers
-from actidoo_wfe.wf.constants import MAIL_TEMPLATE_DIR
 from actidoo_wfe.wf.types import ReactJsonSchemaFormData
-
-MAIL_CATALOG_DOMAIN = "mails"
-MAIL_I18N_DIR = MAIL_TEMPLATE_DIR / "i18n"
 
 
 def _available_locales_for(process: str, workflow_dir: pathlib.Path) -> List[str]:
@@ -145,40 +149,6 @@ def translate_string(
     return _translate(msgid)
 
 
-def _available_mail_locales() -> List[str]:
-    locales_dir = MAIL_I18N_DIR / "locales"
-    if not locales_dir.exists():
-        return []
-    return [p.name for p in locales_dir.iterdir() if p.is_dir() and (p / "LC_MESSAGES" / f"{MAIL_CATALOG_DOMAIN}.mo").exists()]
-
-
-def _load_mail_translations(locale: str) -> Union[gettext.GNUTranslations, gettext.NullTranslations]:
-    """Load the global mail gettext catalog for a given locale."""
-    available = _available_mail_locales()
-    chosen = match_translation(
-        user_locale=locale or settings.default_locale,
-        available=available,
-    )
-    return Translations.load(
-        dirname=MAIL_I18N_DIR / "locales",
-        locales=[chosen],
-        domain=MAIL_CATALOG_DOMAIN,
-    )
-
-
-def translate_mail_string(msgid: str, locale: Optional[str] = None) -> str:
-    """Translate a static mail string (Subject or template literal) for the given recipient locale.
-
-    Workflow-specific strings (task/instance titles) must continue to use translate_string()
-    with the workflow's own catalog.
-    """
-    if not msgid or not msgid.strip():
-        return msgid
-    effective_locale = locale or settings.default_locale
-    t = _load_mail_translations(effective_locale)
-    return t.gettext(msgid)
-
-
 def get_first(component, attrlist):
     for attr in attrlist:
         if attr in component:
@@ -254,51 +224,6 @@ def extract_messages_for_process(process: str):
     return pot_path
 
 
-def update_catalogue(template_pot: Path, input_po: Path, output_po: Path, locale: str):
-    with open(template_pot, "rb") as f:
-        tpl = read_po(f)
-
-    if input_po.exists():
-        with open(input_po, "rb") as f:
-            existing = read_po(f)
-        locale_used = existing.locale or locale
-        project = existing.project
-    else:
-        existing = None
-        locale_used = locale
-        project = tpl.project
-
-    updated = Catalog(locale=locale_used, project=project)
-
-    for msg in tpl:
-        added = False
-        if existing:
-            old_exact = existing.get(msg.id, msg.context)
-            if old_exact and old_exact.string:
-                updated.add(id=msg.id, string=old_exact.string, context=msg.context)
-                added = True
-            else:
-                for e in existing:
-                    if e.context == msg.context and e.string:
-                        m = updated.add(id=msg.id, string=e.string, context=msg.context)
-                        m.flags.add("fuzzy")
-                        added = True
-                        break
-        if not added:
-            updated.add(id=msg.id, context=msg.context)
-
-    if existing:
-        tpl_ctxs = {m.context for m in tpl}
-        for old in existing:
-            if old.context not in tpl_ctxs:
-                obs = updated.add(id=old.id, string=old.string, context=old.context)
-                setattr(obs, "obsolete", True)
-
-    output_po.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_po, "wb") as f:
-        write_po(f, updated)
-
-
 def update_process(process: str, locale: str):
     workflow_dir = _resolve_workflow_directory(process, None)
     pot = workflow_dir / "i18n" / f"{process}.pot"
@@ -307,212 +232,13 @@ def update_process(process: str, locale: str):
     return po
 
 
-_MAIL_GETTEXT_CALL_RE = re.compile(r'_\(\s*(?:r?"((?:[^"\\]|\\.)*)"|r?\'((?:[^\'\\]|\\.)*)\')\s*\)')
-_MAIL_PY_FILE = pathlib.Path(__file__).parent / "mail.py"
-
-
-def extract_mail_messages() -> Path:
-    """Extract translatable strings from Mail templates and mail.py subject literals
-    into a global mails.pot under templates/mails/i18n/.
-    """
-    pot_path = MAIL_I18N_DIR / f"{MAIL_CATALOG_DOMAIN}.pot"
-    pot_path.parent.mkdir(parents=True, exist_ok=True)
-
-    catalog = Catalog(locale=None, project=MAIL_CATALOG_DOMAIN)
-    seen: set[str] = set()
-
-    def _add(msgid: str):
-        s = msgid.strip()
-        if not s or s in seen:
-            return
-        seen.add(s)
-        catalog.add(id=s)
-
-    # 1) Scan Mako templates for _("...") calls
-    for mako_path in MAIL_TEMPLATE_DIR.glob("*.mako"):
-        text = mako_path.read_text(encoding="utf-8")
-        for m in _MAIL_GETTEXT_CALL_RE.finditer(text):
-            _add(m.group(1) or m.group(2))
-
-    # 2) Scan mail.py for _("...") calls (Subject templates wrapped in _(...))
-    if _MAIL_PY_FILE.exists():
-        text = _MAIL_PY_FILE.read_text(encoding="utf-8")
-        for m in _MAIL_GETTEXT_CALL_RE.finditer(text):
-            _add(m.group(1) or m.group(2))
-
-    with open(pot_path, "wb") as f:
-        write_po(f, catalog, ignore_obsolete=True)
-    return pot_path
-
-
-def update_mail_catalogue(locale: str) -> Path:
-    pot = MAIL_I18N_DIR / f"{MAIL_CATALOG_DOMAIN}.pot"
-    po = MAIL_I18N_DIR / "locales" / locale / "LC_MESSAGES" / f"{MAIL_CATALOG_DOMAIN}.po"
-    update_catalogue(template_pot=pot, input_po=po, output_po=po, locale=locale)
-    return po
-
-
-def _compile_po_to_mo(po_file: Path):
-    mo_file = po_file.with_suffix(".mo")
-    mo_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(po_file, "r", encoding="utf-8") as f:
-        original_catalog = read_po(f)
-
-    flat_catalog = Catalog(locale=original_catalog.locale, project=original_catalog.project)
-    for message in original_catalog:
-        if message.id and message.string:
-            flat_catalog.add(id=message.id, string=message.string)
-
-    with open(mo_file, "wb") as f:
-        write_mo(f, flat_catalog)
-
-
 def compile_all():
+    """Compile every workflow's .po into .mo, then the global ``messages`` catalog."""
     for workflow_dir in workflow_providers.iter_workflow_directories():
         locales_root = workflow_dir / "i18n" / "locales"
         if not locales_root.exists():
             continue
         for po_file in locales_root.glob("**/LC_MESSAGES/*.po"):
-            _compile_po_to_mo(po_file)
+            compile_po_to_mo(po_file)
 
-    mail_locales_root = MAIL_I18N_DIR / "locales"
-    if mail_locales_root.exists():
-        for po_file in mail_locales_root.glob(f"**/LC_MESSAGES/{MAIL_CATALOG_DOMAIN}.po"):
-            _compile_po_to_mo(po_file)
-
-
-MAX_LOCALE_KEY_LENGTH = 10  # workflow_users.locale column length
-
-
-@cache
-def get_supported_locales() -> List[dict[str, str]]:
-    """
-    Return all Babel-known locales, with labels like
-      "German (Austria)", "German (Austria, Latn)", "English", etc.
-    Include script in label when needed to distinguish variants.
-    Skip any codes that don’t parse or map to a known language/country.
-    """
-    entries: List[dict[str, str]] = []
-    seen_keys: set[str] = set()
-    for code in localedata.locale_identifiers():
-        hyphenated = code.replace("_", "-")
-        if len(hyphenated) > MAX_LOCALE_KEY_LENGTH:
-            continue
-        try:
-            loc = BabelLocale.parse(code)
-        except (ValueError, LookupError):
-            continue
-
-        # lookup language name
-        lang = pycountry.languages.get(alpha_2=loc.language)
-        if not lang:
-            continue
-        lang_name = lang.name
-
-        # prepare label components
-        label_parts = [lang_name]
-        territory = loc.territory
-        script = loc.script
-
-        if territory:
-            country = pycountry.countries.get(alpha_2=territory)
-            if not country:
-                continue
-            label_parts.append(country.name)
-        else:
-            continue
-
-        if script:
-            label_parts.append(script)
-
-        # build label string
-        if len(label_parts) > 1:
-            label = f"{label_parts[0]} ({', '.join(label_parts[1:])})"
-        else:
-            label = label_parts[0]
-
-        if hyphenated in seen_keys:
-            continue
-
-        entries.append({"key": hyphenated, "label": label})
-        seen_keys.add(hyphenated)
-
-    # Sort alphabetically by label
-    entries.sort(key=lambda x: x["label"])
-    return entries
-
-
-ACCEPT_LANG_RE = re.compile(
-    r"""
-    \s*
-    (?P<lang>[A-Za-z0-9\-_]+)      # language[-REGION]
-    (?:\s*;\s*q=(?P<q>0(\.\d+)?|1(\.0+)?))?  # optional ;q=0.xxx or 1.0
-    \s*
-""",
-    re.VERBOSE,
-)
-
-
-def extract_primary_locale(
-    accept_language_header: str,
-) -> Optional[str]:
-    """
-    Parse Accept-Language, sort by quality, but *only* return a code that’s
-    in your supported_locales list (exact or language-only fallback);
-    otherwise return None.
-    """
-    # 1) collect (code, q)
-    entries = []
-    for part in accept_language_header.split(","):
-        m = ACCEPT_LANG_RE.fullmatch(part)
-        if not m:
-            continue
-        code = m.group("lang")
-        q = float(m.group("q")) if m.group("q") is not None else 1.0
-        entries.append((code, q))
-
-    if not entries:
-        return None
-
-    # 2) sort by q desc
-    entries.sort(key=lambda x: x[1], reverse=True)
-
-    # 3) build a lowercase→canonical map of supported keys
-    supported = {loc["key"].lower(): loc["key"] for loc in get_supported_locales()}
-
-    # 4) pick the first entry that matches supported (exact or base)
-    for code, _ in entries:
-        lc = code.lower()
-        if lc in supported:
-            return supported[lc]
-        base = lc.split("-", 1)[0]
-        if base in supported:
-            return supported[base]
-
-    return None
-
-
-def match_translation(
-    user_locale: str,
-    available: list[str],
-) -> str:
-    """
-    1) Try exact match (case-insensitive) against available.
-    2) Fallback to the base language (case-insensitive).
-    3) Return default_locale from settings.
-    """
-    # build a map lowercased → original
-    lowered_map = {locale.lower(): locale for locale in available}
-    ul = user_locale.lower()
-
-    # 1) exact (language+region) match
-    if ul in lowered_map:
-        return lowered_map[ul]
-
-    # 2) try just the language part
-    base = ul.split("-", 1)[0]
-    if base in lowered_map:
-        return lowered_map[base]
-
-    # 3) fallback
-    return settings.default_locale
+    compile_global_catalog()

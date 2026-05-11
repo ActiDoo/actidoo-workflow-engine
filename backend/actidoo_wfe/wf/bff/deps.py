@@ -7,7 +7,7 @@ import actidoo_wfe.wf.service_user as service_user
 from actidoo_wfe.database import get_db_contextmanager
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf.cross_context.imports import get_login_state
-from actidoo_wfe.wf.service_i18n import extract_primary_locale
+from actidoo_wfe.i18n import extract_primary_locale
 
 
 def get_user(request: Request):

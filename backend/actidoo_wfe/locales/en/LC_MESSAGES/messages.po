@@ -2,12 +2,12 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: mails VERSION\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"Report-Msgid-Bugs-To: info@actidoo.com\n"
 "POT-Creation-Date: 2026-05-11 07:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: de\n"
-"Language-Team: de <LL@li.org>\n"
+"Last-Translator: ActiDoo <info@actidoo.com>\n"
+"Language: en\n"
+"Language-Team: en <info@actidoo.com>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -15,16 +15,16 @@ msgstr ""
 "Generated-By: Babel 2.17.0\n"
 
 msgid "A task notification was sent only to a capped subset of role members."
-msgstr "Eine Aufgaben-Benachrichtigung wurde nur an eine begrenzte Teilmenge der Rollenmitglieder verschickt."
+msgstr "A task notification was sent only to a capped subset of role members."
 
 msgid "Workflow:"
 msgstr "Workflow:"
 
 msgid "Task:"
-msgstr "Aufgabe:"
+msgstr "Task:"
 
 msgid "Role(s):"
-msgstr "Rolle(n):"
+msgstr "Role(s):"
 
 #, python-brace-format
 msgid ""
@@ -32,53 +32,53 @@ msgid ""
 "the configured cap of {cap}. Only the first {cap} members (sorted by "
 "email) were notified."
 msgstr ""
-"Die Rolle enthält {total} Mitglieder mit E-Mail-Adresse, was das "
-"konfigurierte Limit von {cap} überschreitet. Nur die ersten {cap} "
-"Mitglieder (sortiert nach E-Mail) wurden benachrichtigt."
+"The role contains {total} members with an email address, which exceeds "
+"the configured cap of {cap}. Only the first {cap} members (sorted by "
+"email) were notified."
 
 msgid "Hello"
-msgstr "Hallo"
+msgstr "Hello"
 
 msgid "A new task has been assigned to you:"
-msgstr "Ihnen wurde eine neue Aufgabe zugewiesen:"
+msgstr "A new task has been assigned to you:"
 
 msgid "A task became erroneous:"
-msgstr "Eine Aufgabe ist in einen Fehlerzustand übergegangen:"
+msgstr "A task became erroneous:"
 
 #, python-brace-format
 msgid "A task in your role(s) {roles} is waiting for someone to pick it up:"
-msgstr "eine Aufgabe in Ihrer Rolle/Ihren Rollen {roles} wartet auf Bearbeitung:"
+msgstr "A task in your role(s) {roles} is waiting for someone to pick it up:"
 
 msgid ""
 "Currently you have personally assigned tasks in the following workflow "
 "instances:"
 msgstr ""
-"aktuell sind Ihnen Aufgaben in folgenden Workflow-Instanzen persönlich "
-"zugewiesen:"
+"Currently you have personally assigned tasks in the following workflow "
+"instances:"
 
 msgid ""
 "There are also tasks for the groups you are a member of. Feel free to "
 "assign these tasks to yourself:"
 msgstr ""
-"Es gibt außerdem Aufgaben für Gruppen, in denen Sie Mitglied sind. Sie "
-"können sich diese Aufgaben selbst zuweisen:"
+"There are also tasks for the groups you are a member of. Feel free to "
+"assign these tasks to yourself:"
 
 #, python-brace-format
 msgid "{n_assigned} assigned tasks / {n_available} available tasks"
-msgstr "{n_assigned} zugewiesene Aufgaben / {n_available} verfügbare Aufgaben"
+msgstr "{n_assigned} assigned tasks / {n_available} available tasks"
 
 #, python-brace-format
 msgid "A task is assigned to you in \"{workflow_title}\""
-msgstr "Ihnen wurde eine Aufgabe in \"{workflow_title}\" zugewiesen"
+msgstr "A task is assigned to you in \"{workflow_title}\""
 
 #, python-brace-format
 msgid "A task is waiting in your role for \"{workflow_title}\""
-msgstr "In Ihrer Rolle wartet eine Aufgabe für \"{workflow_title}\""
+msgstr "A task is waiting in your role for \"{workflow_title}\""
 
 #, python-brace-format
 msgid "Role notification limit exceeded for \"{workflow_title}\""
-msgstr "Rollen-Benachrichtigungslimit überschritten für \"{workflow_title}\""
+msgstr "Role notification limit exceeded for \"{workflow_title}\""
 
 #, python-brace-format
 msgid "A task became erroneous \"{workflow_title}\""
-msgstr "Eine Aufgabe ist fehlerhaft \"{workflow_title}\""
+msgstr "A task became erroneous \"{workflow_title}\""

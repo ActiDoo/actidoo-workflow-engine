@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from actidoo_wfe.helpers import mail
+from actidoo_wfe.i18n import make_translator
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_i18n
 from actidoo_wfe.wf.constants import MAIL_TEMPLATE_DIR
@@ -74,7 +75,7 @@ def compile_email_template(template: str, params: dict, locale: str, template_di
                 generate_instance_url=_generate_instance_url,
                 generate_workflow_instance_admin_url=_generate_workflow_instance_admin_url,
                 signature_block=_build_signature_block(),
-                _=lambda s: service_i18n.translate_mail_string(s, locale),
+                _=make_translator(locale),
             )
         )  # type: ignore
     except NameError as e:
@@ -94,8 +95,7 @@ def send_personal_status_mail(db: Session):
 
         if (len(assigned_to_me) > 0 or len(assigned_by_role) > 0) and user.email:
             locale = user.locale
-            def _(s):
-                return service_i18n.translate_mail_string(s, locale)
+            _ = make_translator(locale)
 
 
             # Pre-translate instance + task titles per workflow so the template renders them already localized.
@@ -158,8 +158,7 @@ def send_user_assigned_to_task_mail(db: Session, user_id: uuid.UUID, task_id: uu
     else:
         if user.email is not None:
             locale = user.locale
-            def _(s):
-                return service_i18n.translate_mail_string(s, locale)
+            _ = make_translator(locale)
 
             workflow_title = _translated_instance_title(task, locale)
             task_title = _translated_task_title(task, locale)
@@ -232,8 +231,7 @@ def send_task_ready_to_role_members_mail(db: Session, task_id: uuid.UUID):
     num_sent = 0
     for user in ordered_recipients:
         locale = user.locale
-        def _(s):
-            return service_i18n.translate_mail_string(s, locale)
+        _ = make_translator(locale)
 
         workflow_title = _translated_instance_title(task, locale)
         task_title = _translated_task_title(task, locale)
@@ -316,8 +314,7 @@ def send_role_notification_limit_exceeded_mail(
 
     num_sent = 0
     for email, locale in recipients:
-        def _(s):
-            return service_i18n.translate_mail_string(s, locale)
+        _ = make_translator(locale)
 
         workflow_title = _translated_instance_title(task, locale)
         task_title = _translated_task_title(task, locale)
@@ -357,8 +354,7 @@ def send_task_became_erroneous_mail(db: Session, task_id: uuid.UUID):
 
     num_sent = 0
     for email, locale in recipients:
-        def _(s):
-            return service_i18n.translate_mail_string(s, locale)
+        _ = make_translator(locale)
 
         workflow_title = _translated_instance_title(task, locale)
         task_title = _translated_task_title(task, locale)

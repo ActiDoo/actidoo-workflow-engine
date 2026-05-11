@@ -7,10 +7,11 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select
 
+from actidoo_wfe import i18n as global_i18n
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf import service_application, service_form, service_i18n, service_user
+from actidoo_wfe.wf import service_application, service_form, service_user
 from actidoo_wfe.wf.bff.bff_user import WorkflowInstancesBffTableQuerySchema
 from actidoo_wfe.wf.exceptions import (
     TaskAlreadyAssignedToDifferentUserException,
@@ -560,10 +561,10 @@ def test_cannot_unassign_completed_task(db_engine_ctx):
 
 
 def test_supported_locales_fit_db_column():
-    service_i18n.get_supported_locales.cache_clear()
-    locales = service_i18n.get_supported_locales()
+    global_i18n.get_supported_locales.cache_clear()
+    locales = global_i18n.get_supported_locales()
     assert locales  # ensure at least one locale is available
-    assert all(len(loc["key"]) <= service_i18n.MAX_LOCALE_KEY_LENGTH for loc in locales)
+    assert all(len(loc["key"]) <= global_i18n.MAX_LOCALE_KEY_LENGTH for loc in locales)
 
 
 @pytest.mark.parametrize(
@@ -588,7 +589,7 @@ def test_supported_locales_fit_db_column():
     ],
 )
 def test_extract_primary_locale(header, expected):
-    assert service_i18n.extract_primary_locale(header) == expected
+    assert global_i18n.extract_primary_locale(header) == expected
 
 
 @pytest.mark.parametrize(
@@ -616,5 +617,5 @@ def test_match_translation(user_locale, available, default, expected, monkeypatc
     # configure default fallback
     monkeypatch.setattr(settings, "default_locale", default)
 
-    result = service_i18n.match_translation(user_locale=user_locale, available=available)
+    result = global_i18n.match_translation(user_locale=user_locale, available=available)
     assert result == expected, f"match_translation({user_locale!r}, {available}, default={default!r}) -> {result!r}, expected {expected!r}"

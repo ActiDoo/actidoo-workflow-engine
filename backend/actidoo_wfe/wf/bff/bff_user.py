@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 import actidoo_wfe.helpers.bff_table as bff_table
 import actidoo_wfe.wf.service_application as service_application
-import actidoo_wfe.wf.service_i18n as service_i18n
+from actidoo_wfe import i18n as global_i18n
 import actidoo_wfe.wf.service_user as service_user
 from actidoo_wfe.database import get_db
 from actidoo_wfe.helpers.http import HTTPException, streaming_response_with_filecontent
@@ -467,7 +467,7 @@ def save_user_settings(
         delegations=delegations,
     )
 
-    locales = service_i18n.get_supported_locales()
+    locales = global_i18n.get_supported_locales()
     delegation_responses = _serialize_user_delegations(db=db, user_id=user.id)
 
     return UserSettingsResponse(
@@ -487,7 +487,7 @@ def get_user_settings(
         user_id=user.id,
     )
 
-    locales = service_i18n.get_supported_locales()
+    locales = global_i18n.get_supported_locales()
     delegation_responses = _serialize_user_delegations(db=db, user_id=user.id)
 
     return UserSettingsResponse(
