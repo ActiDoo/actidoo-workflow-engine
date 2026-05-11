@@ -29,7 +29,7 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
     def get_state(self, request: Request) -> Any:
         return request.state
 
-    def _get_session(self, request: Request) -> Dict[str, Any]:  # starlette session dict
+    def _get_request_session(self, request: Request) -> Dict[str, Any]:  # starlette session dict
         try:
             return request.session  # type: ignore[attr-defined]
         except Exception as e:  # pragma: no cover
@@ -40,7 +40,7 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
     # Public API mirrors Flask version. `request` must be passed explicitly.
 
     def authorize_redirect(self, request: Request, redirect_uri: str, **kwargs):
-        session = self._get_session(request)
+        session = self._get_request_session(request)
         rv = self.create_authorization_url(redirect_uri=redirect_uri, **kwargs)
         url = rv.get("url")
         session[self.name + ":state"] = rv
@@ -54,7 +54,7 @@ class StarletteOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         claims_cls: Optional[Any] = None,
         **kwargs,
     ):
-        session = self._get_session(request)
+        session = self._get_request_session(request)
         state_data = session.pop(self.name + ":state", None)
         if not state_data:
             raise OAuthError("Missing state in session")

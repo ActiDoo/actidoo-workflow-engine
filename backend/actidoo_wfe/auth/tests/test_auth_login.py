@@ -244,7 +244,7 @@ def oidc_environment(monkeypatch):
     original_authorize_access_token = remote_app.authorize_access_token
 
     def _authorize_access_token(self, request, redirect_uri, **kwargs):
-        state_data = self._get_session(request).get(f"{self.name}:state") or {}
+        state_data = self._get_request_session(request).get(f"{self.name}:state") or {}
         state_value = state_data.get("state")
         if state_value:
             provider["last_state"]["value"] = state_value
