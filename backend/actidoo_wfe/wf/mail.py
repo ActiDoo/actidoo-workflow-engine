@@ -65,7 +65,7 @@ def _build_signature_block() -> str:
     return f"\n\n-- \n{sig}\n"
 
 
-def compile_email_template(template: str, params: dict, locale: str, template_dir=MAIL_TEMPLATE_DIR) -> str:
+def compile_email_template(template: str, params: dict, locale: str | None = None, template_dir=MAIL_TEMPLATE_DIR) -> str:
     mylookup = TemplateLookup(directories=[template_dir], strict_undefined=True)
     mytemplate = mylookup.get_template(template)
     try:
