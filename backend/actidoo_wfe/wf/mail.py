@@ -7,10 +7,11 @@ import uuid
 from mako.lookup import TemplateLookup
 from markupsafe import Markup
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from actidoo_wfe.helpers import mail
 from actidoo_wfe.settings import settings
+from actidoo_wfe.wf import service_i18n
 from actidoo_wfe.wf.constants import MAIL_TEMPLATE_DIR
 from actidoo_wfe.wf.models import WorkflowInstanceTask, WorkflowUser
 from actidoo_wfe.wf.service_user import get_all_users, get_users_of_role
@@ -30,7 +31,28 @@ def _generate_workflow_instance_admin_url(workflow_instance_id):
     return Markup(settings.frontend_base_url.rstrip("/") + "/admin/all-workflows/" + str(workflow_instance_id))
 
 
-def compile_email_template(template: str, params: dict, template_dir=MAIL_TEMPLATE_DIR) -> str:
+def _translated_instance_title(task: WorkflowInstanceTask, locale: str) -> str:
+    raw = task.workflow_instance.title or task.workflow_instance.name
+    if not task.workflow_instance.title:
+        return raw
+    return service_i18n.translate_string(
+        msgid=task.workflow_instance.title,
+        workflow_name=task.workflow_instance.name,
+        locale=locale,
+    )
+
+
+def _translated_task_title(task: WorkflowInstanceTask, locale: str) -> str:
+    if not task.title:
+        return task.title
+    return service_i18n.translate_string(
+        msgid=task.title,
+        workflow_name=task.workflow_instance.name,
+        locale=locale,
+    )
+
+
+def compile_email_template(template: str, params: dict, locale: str, template_dir=MAIL_TEMPLATE_DIR) -> str:
     mylookup = TemplateLookup(directories=[template_dir], strict_undefined=True)
     mytemplate = mylookup.get_template(template)
     try:
@@ -39,7 +61,7 @@ def compile_email_template(template: str, params: dict, template_dir=MAIL_TEMPLA
                 params,
                 generate_instance_url=_generate_instance_url,
                 generate_workflow_instance_admin_url=_generate_workflow_instance_admin_url,
-                email_signature=settings.email_signature,
+                _=lambda s: service_i18n.translate_mail_string(s, locale),
             )
         )  # type: ignore
     except NameError as e:
@@ -58,16 +80,44 @@ def send_personal_status_mail(db: Session):
         assigned_by_role = [x for x in wf_instances if not all(t.assigned_user_id is not None for t in x.active_tasks)]
 
         if (len(assigned_to_me) > 0 or len(assigned_by_role) > 0) and user.email:
+            locale = user.locale
+            def _(s):
+                return service_i18n.translate_mail_string(s, locale)
+
+
+            # Pre-translate instance + task titles per workflow so the template renders them already localized.
+            def _translate_instance(instance):
+                instance.title = service_i18n.translate_string(
+                    msgid=instance.title or instance.name,
+                    workflow_name=instance.name,
+                    locale=locale,
+                )
+                for t in instance.active_tasks + instance.completed_tasks:
+                    if t.title:
+                        t.title = service_i18n.translate_string(
+                            msgid=t.title,
+                            workflow_name=instance.name,
+                            locale=locale,
+                        )
+                return instance
+
+            assigned_to_me_t = [_translate_instance(x) for x in assigned_to_me]
+            assigned_by_role_t = [_translate_instance(x) for x in assigned_by_role]
+
             text = compile_email_template(
                 template="personal_status_mail.mako",
                 params={
                     "user": user,
-                    "assigned_to_me": assigned_to_me,
-                    "not_assigned": assigned_by_role,
+                    "assigned_to_me": assigned_to_me_t,
+                    "not_assigned": assigned_by_role_t,
                 },
+                locale=locale,
             )
 
-            subject = f"{len(assigned_to_me)} assigned tasks / {len(assigned_by_role)} available tasks"
+            subject = _("{n_assigned} assigned tasks / {n_available} available tasks").format(
+                n_assigned=len(assigned_to_me),
+                n_available=len(assigned_by_role),
+            )
 
             mail.send_text_mail(
                 subject=subject,
@@ -94,15 +144,25 @@ def send_user_assigned_to_task_mail(db: Session, user_id: uuid.UUID, task_id: uu
         log.warning("trying to send user_assigned_to_task mail, but the provided user does not match the assigned user in the database")
     else:
         if user.email is not None:
+            locale = user.locale
+            def _(s):
+                return service_i18n.translate_mail_string(s, locale)
+
+            workflow_title = _translated_instance_title(task, locale)
+            task_title = _translated_task_title(task, locale)
+
             text = compile_email_template(
                 template="user_assigned_to_task.mako",
                 params={
                     "user": user,
                     "task": task,
+                    "workflow_title": workflow_title,
+                    "task_title": task_title,
                 },
+                locale=locale,
             )
 
-            subject = f'A task is assigned to you in "{task.workflow_instance.title or task.workflow_instance.name}"'
+            subject = _('A task is assigned to you in "{workflow_title}"').format(workflow_title=workflow_title)
 
             mail.send_text_mail(
                 subject=subject,
@@ -158,16 +218,26 @@ def send_task_ready_to_role_members_mail(db: Session, task_id: uuid.UUID):
 
     num_sent = 0
     for user in ordered_recipients:
+        locale = user.locale
+        def _(s):
+            return service_i18n.translate_mail_string(s, locale)
+
+        workflow_title = _translated_instance_title(task, locale)
+        task_title = _translated_task_title(task, locale)
+
         text = compile_email_template(
             template="task_ready_for_role_members.mako",
             params={
                 "user": user,
                 "task": task,
                 "role_names": role_names,
+                "workflow_title": workflow_title,
+                "task_title": task_title,
             },
+            locale=locale,
         )
 
-        subject = f'A task is waiting in your role for "{task.workflow_instance.title or task.workflow_instance.name}"'
+        subject = _('A task is waiting in your role for "{workflow_title}"').format(workflow_title=workflow_title)
 
         mail.send_text_mail(
             subject=subject,
@@ -191,6 +261,28 @@ def send_task_ready_to_role_members_mail(db: Session, task_id: uuid.UUID):
     return num_sent
 
 
+def _collect_admin_owner_recipients(db: Session, task: WorkflowInstanceTask) -> list[tuple[str, str]]:
+    """Return list of (email, locale) for admin + workflow-owner recipients.
+
+    settings.email_receivers_erroneous_tasks contains plain emails (no User row) — those
+    get the default_locale. Owner-role members have their own user.locale.
+    """
+    out: dict[str, str] = {}
+
+    for email in settings.email_receivers_erroneous_tasks:
+        if email:
+            out.setdefault(email, settings.default_locale)
+
+    owner = get_workflow_owner(task.workflow_instance.name)
+    if owner is not None:
+        for u in get_users_of_role(db=db, role_name=owner):
+            if u.email:
+                # Owner user.locale wins over the default-locale entry from settings.
+                out[u.email] = u.locale
+
+    return [(email, locale) for email, locale in out.items()]
+
+
 def send_role_notification_limit_exceeded_mail(
     db: Session,
     task_id: uuid.UUID,
@@ -200,12 +292,7 @@ def send_role_notification_limit_exceeded_mail(
 ):
     task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
 
-    recipients = set(settings.email_receivers_erroneous_tasks)
-
-    owner = get_workflow_owner(task.workflow_instance.name)
-    if owner is not None:
-        owner_users = get_users_of_role(db=db, role_name=owner)
-        recipients |= {u.email for u in owner_users if u.email}
+    recipients = _collect_admin_owner_recipients(db=db, task=task)
 
     if not recipients:
         log.warning(
@@ -214,56 +301,75 @@ def send_role_notification_limit_exceeded_mail(
         )
         return 0
 
-    text = compile_email_template(
-        template="role_notification_limit_exceeded.mako",
-        params={
-            "task": task,
-            "role_names": role_names,
-            "total_role_members": total_role_members,
-            "cap": cap,
-        },
-    )
+    num_sent = 0
+    for email, locale in recipients:
+        def _(s):
+            return service_i18n.translate_mail_string(s, locale)
 
-    subject = f'Role notification limit exceeded for "{task.workflow_instance.title or task.workflow_instance.name}"'
+        workflow_title = _translated_instance_title(task, locale)
+        task_title = _translated_task_title(task, locale)
 
-    mail.send_text_mail(
-        subject=subject,
-        content=text,
-        recipient_or_recipients_list=list(recipients),
-        attachments=dict(),
-    )
+        text = compile_email_template(
+            template="role_notification_limit_exceeded.mako",
+            params={
+                "task": task,
+                "role_names": role_names,
+                "total_role_members": total_role_members,
+                "cap": cap,
+                "workflow_title": workflow_title,
+                "task_title": task_title,
+            },
+            locale=locale,
+        )
 
-    log.info(f"Sent role_notification_limit_exceeded for task {task_id} to {','.join(recipients)}")
+        subject = _('Role notification limit exceeded for "{workflow_title}"').format(workflow_title=workflow_title)
 
-    return len(recipients)
+        mail.send_text_mail(
+            subject=subject,
+            content=text,
+            recipient_or_recipients_list=email,
+            attachments=dict(),
+        )
+        num_sent += 1
+
+    log.info(f"Sent role_notification_limit_exceeded for task {task_id} to {num_sent} recipients")
+
+    return num_sent
 
 
 def send_task_became_erroneous_mail(db: Session, task_id: uuid.UUID):
     task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
 
-    recipients = set(settings.email_receivers_erroneous_tasks)
+    recipients = _collect_admin_owner_recipients(db=db, task=task)
 
-    owner = get_workflow_owner(task.workflow_instance.name)
-    if owner is not None:
-        owner_users = get_users_of_role(db=db, role_name=owner)
-        recipients |= {u.email for u in owner_users if u.email}
+    num_sent = 0
+    for email, locale in recipients:
+        def _(s):
+            return service_i18n.translate_mail_string(s, locale)
 
-    text = compile_email_template(
-        template="task_became_erroneous.mako",
-        params={
-            "task": task,
-        },
-    )
+        workflow_title = _translated_instance_title(task, locale)
+        task_title = _translated_task_title(task, locale)
 
-    subject = f'A task became erroneous "{task.workflow_instance.title or task.workflow_instance.name}"'
+        text = compile_email_template(
+            template="task_became_erroneous.mako",
+            params={
+                "task": task,
+                "workflow_title": workflow_title,
+                "task_title": task_title,
+            },
+            locale=locale,
+        )
 
-    mail.send_text_mail(
-        subject=subject,
-        content=text,
-        recipient_or_recipients_list=list(recipients),
-        attachments=dict(),
-    )
+        subject = _('A task became erroneous "{workflow_title}"').format(workflow_title=workflow_title)
 
-    log.info(f"Sent task_became_erroneous to {','.join(recipients)}")
+        mail.send_text_mail(
+            subject=subject,
+            content=text,
+            recipient_or_recipients_list=email,
+            attachments=dict(),
+        )
+        num_sent += 1
 
-    return len(recipients)
+    log.info(f"Sent task_became_erroneous to {num_sent} recipients")
+
+    return num_sent

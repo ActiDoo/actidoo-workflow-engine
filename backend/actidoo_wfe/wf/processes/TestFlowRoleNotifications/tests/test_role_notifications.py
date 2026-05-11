@@ -101,6 +101,51 @@ def test_taskInRoleLane_sendsLimitWarningMail_whenRoleExceedsCap(db_engine_ctx, 
 
         limit_mails = [e for e in mock_send_text_mail if "Role notification limit exceeded" in e["subject"]]
         assert len(limit_mails) == 1
-        assert limit_mails[0]["recipients"] == ["admin@example.com"]
+        # New per-recipient loop: each admin/owner gets their own mail (string recipient).
+        assert limit_mails[0]["recipients"] == "admin@example.com"
         assert "3 members" in limit_mails[0]["content"]
         assert "cap of 2" in limit_mails[0]["content"]
+
+
+def test_taskInRoleLane_rendersMailInRecipientLocale(db_engine_ctx, mock_send_text_mail):
+    """Each recipient receives the task-ready mail in their own user.locale."""
+    from actidoo_wfe.wf import service_i18n
+
+    service_i18n.compile_all()
+
+    with db_engine_ctx():
+        db_session = SessionLocal()
+
+        workflow = WorkflowDummy(
+            db_session=db_session,
+            users_with_roles={
+                "initiator": ["wf-user"],
+                "de-user@example.com": ["wf-user", "wf-test-role"],
+                "en-user@example.com": ["wf-user", "wf-test-role"],
+            },
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+
+        workflow.user("de-user@example.com").user.locale = "de-DE"
+        workflow.user("en-user@example.com").user.locale = "en-US"
+        db_session.commit()
+
+        workflow.user("initiator").submit({}, workflow.workflow_instance_id)
+
+        wait_for_results(mock_send_text_mail, 2, 3)
+        assert len(mock_send_text_mail) == 2
+
+        by_recipient = {e["recipients"]: e for e in mock_send_text_mail}
+
+        de_mail = by_recipient["de-user@example.com"]
+        assert "wartet eine Aufgabe für" in de_mail["subject"], f"Got subject: {de_mail['subject']}"
+        assert "Hallo " in de_mail["content"]
+        assert "Aufgabe:" in de_mail["content"]
+        # Sie-form check
+        assert "Ihrer Rolle" in de_mail["content"] or "Ihren Rollen" in de_mail["content"]
+
+        en_mail = by_recipient["en-user@example.com"]
+        assert "A task is waiting in your role" in en_mail["subject"]
+        assert "Hello " in en_mail["content"]
+        assert "Task:" in en_mail["content"]

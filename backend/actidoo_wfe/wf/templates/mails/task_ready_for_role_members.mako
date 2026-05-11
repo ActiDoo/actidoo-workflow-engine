@@ -1,10 +1,8 @@
-Dear ${user.full_name or user.email},
+${_("Hello")} ${user.full_name or user.email},
 
-A task in your role${"s" if len(role_names) > 1 else ""} ${", ".join(role_names)} is waiting for someone to pick it up:
+${_("A task in your role(s) {roles} is waiting for someone to pick it up:").format(roles=", ".join(role_names))}
 
-Workflow: ${task.workflow_instance.title}${(" / "+task.workflow_instance.subtitle) if task.workflow_instance.subtitle else ""}
-Task: ${task.title}
+${_("Workflow:")} ${workflow_title}${(" / "+task.workflow_instance.subtitle) if task.workflow_instance.subtitle else ""}
+${_("Task:")} ${task_title}
 
 ${generate_instance_url(task.workflow_instance.id)}
-
-${email_signature}

@@ -87,3 +87,106 @@ def test_getAllowedWorkflowsToStart_translatesTitlePerUserLocale(db_engine_ctx):
         translated_de = next((w for w in results if w.name == WF_NAME), None)
         assert translated_de is not None
         assert translated_de.title == "Der deutsche Name des Prozesses"
+
+
+def test_getWorkflowStatistics_translatesTitlePerUserLocale(db_engine_ctx):
+    with db_engine_ctx():
+        db_session = SessionLocal()
+
+        workflow = WorkflowDummy(
+            db_session=db_session,
+            users_with_roles={"initiator": ["wf-user"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+
+        service_i18n.compile_all()
+        from actidoo_wfe.wf import service_workflow
+        service_workflow.get_workflow_title_cached.cache_clear()
+
+        user = workflow.user("initiator").user
+        user.locale = "en-US"
+        db_session.commit()
+
+        stats = service_application.get_workflow_statistics(db=db_session, user_id=user.id)
+        entry = next((s for s in stats if s.name == WF_NAME), None)
+        assert entry is not None
+        assert entry.title == "English name of the process"
+
+        service_workflow.get_workflow_title_cached.cache_clear()
+        user.locale = "de-DE"
+        db_session.commit()
+
+        stats = service_application.get_workflow_statistics(db=db_session, user_id=user.id)
+        entry_de = next((s for s in stats if s.name == WF_NAME), None)
+        assert entry_de is not None
+        assert entry_de.title == "Der deutsche Name des Prozesses"
+
+
+def test_bffAdminGetAllWorkflowInstances_translatesTitlePerUserLocale(db_engine_ctx):
+    from actidoo_wfe.wf.bff.bff_admin import AdminWorkflowInstancesBffTableQuerySchema
+
+    with db_engine_ctx():
+        db_session = SessionLocal()
+
+        workflow = WorkflowDummy(
+            db_session=db_session,
+            users_with_roles={"admin": ["wf-user", "wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="admin",
+        )
+
+        service_i18n.compile_all()
+
+        admin = workflow.user("admin").user
+        admin.locale = "en-US"
+        db_session.commit()
+
+        result = service_application.bff_admin_get_all_workflow_instances(
+            db=db_session,
+            user_id=admin.id,
+            bff_table_request_params=AdminWorkflowInstancesBffTableQuerySchema(),
+        )
+        instance = next((i for i in result.ITEMS if i.name == WF_NAME), None)
+        assert instance is not None
+        assert instance.title == "English name of the process"
+
+        admin.locale = "de-DE"
+        db_session.commit()
+
+        result_de = service_application.bff_admin_get_all_workflow_instances(
+            db=db_session,
+            user_id=admin.id,
+            bff_table_request_params=AdminWorkflowInstancesBffTableQuerySchema(),
+        )
+        instance_de = next((i for i in result_de.ITEMS if i.name == WF_NAME), None)
+        assert instance_de is not None
+        assert instance_de.title == "Der deutsche Name des Prozesses"
+
+
+def test_adminGetTaskStatesPerWorkflow_translatesTaskTitlePerAdminLocale(db_engine_ctx):
+    with db_engine_ctx():
+        db_session = SessionLocal()
+
+        workflow = WorkflowDummy(
+            db_session=db_session,
+            users_with_roles={"admin": ["wf-user", "wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="admin",
+        )
+
+        service_i18n.compile_all()
+
+        admin = workflow.user("admin").user
+        admin.locale = "en-US"
+        db_session.commit()
+
+        result = service_application.admin_get_task_states_per_workflow(db=db_session, wf_name=WF_NAME, admin_user_id=admin.id)
+        # The active user task in the BPMN is "SimpleForm.userTask" with msgid "Un formulaire simple avec des sélections"
+        assert any("The first task" == ts.title for ts in result.tasks.values()), f"Got titles: {[ts.title for ts in result.tasks.values()]}"
+
+        admin.locale = "de-DE"
+        db_session.commit()
+
+        result_de = service_application.admin_get_task_states_per_workflow(db=db_session, wf_name=WF_NAME, admin_user_id=admin.id)
+        assert any("Die erste Aufgabe" == ts.title for ts in result_de.tasks.values()), f"Got titles: {[ts.title for ts in result_de.tasks.values()]}"

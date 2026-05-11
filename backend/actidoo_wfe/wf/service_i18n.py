@@ -22,7 +22,11 @@ from babel.support import Translations
 
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import providers as workflow_providers
+from actidoo_wfe.wf.constants import MAIL_TEMPLATE_DIR
 from actidoo_wfe.wf.types import ReactJsonSchemaFormData
+
+MAIL_CATALOG_DOMAIN = "mails"
+MAIL_I18N_DIR = MAIL_TEMPLATE_DIR / "i18n"
 
 
 def _available_locales_for(process: str, workflow_dir: pathlib.Path) -> List[str]:
@@ -139,6 +143,40 @@ def translate_string(
         return translated
 
     return _translate(msgid)
+
+
+def _available_mail_locales() -> List[str]:
+    locales_dir = MAIL_I18N_DIR / "locales"
+    if not locales_dir.exists():
+        return []
+    return [p.name for p in locales_dir.iterdir() if p.is_dir() and (p / "LC_MESSAGES" / f"{MAIL_CATALOG_DOMAIN}.mo").exists()]
+
+
+def _load_mail_translations(locale: str) -> Union[gettext.GNUTranslations, gettext.NullTranslations]:
+    """Load the global mail gettext catalog for a given locale."""
+    available = _available_mail_locales()
+    chosen = match_translation(
+        user_locale=locale or settings.default_locale,
+        available=available,
+    )
+    return Translations.load(
+        dirname=MAIL_I18N_DIR / "locales",
+        locales=[chosen],
+        domain=MAIL_CATALOG_DOMAIN,
+    )
+
+
+def translate_mail_string(msgid: str, locale: Optional[str] = None) -> str:
+    """Translate a static mail string (Subject or template literal) for the given recipient locale.
+
+    Workflow-specific strings (task/instance titles) must continue to use translate_string()
+    with the workflow's own catalog.
+    """
+    if not msgid or not msgid.strip():
+        return msgid
+    effective_locale = locale or settings.default_locale
+    t = _load_mail_translations(effective_locale)
+    return t.gettext(msgid)
 
 
 def get_first(component, attrlist):
@@ -269,24 +307,78 @@ def update_process(process: str, locale: str):
     return po
 
 
+_MAIL_GETTEXT_CALL_RE = re.compile(r'_\(\s*(?:r?"((?:[^"\\]|\\.)*)"|r?\'((?:[^\'\\]|\\.)*)\')\s*\)')
+_MAIL_PY_FILE = pathlib.Path(__file__).parent / "mail.py"
+
+
+def extract_mail_messages() -> Path:
+    """Extract translatable strings from Mail templates and mail.py subject literals
+    into a global mails.pot under templates/mails/i18n/.
+    """
+    pot_path = MAIL_I18N_DIR / f"{MAIL_CATALOG_DOMAIN}.pot"
+    pot_path.parent.mkdir(parents=True, exist_ok=True)
+
+    catalog = Catalog(locale=None, project=MAIL_CATALOG_DOMAIN)
+    seen: set[str] = set()
+
+    def _add(msgid: str):
+        s = msgid.strip()
+        if not s or s in seen:
+            return
+        seen.add(s)
+        catalog.add(id=s)
+
+    # 1) Scan Mako templates for _("...") calls
+    for mako_path in MAIL_TEMPLATE_DIR.glob("*.mako"):
+        text = mako_path.read_text(encoding="utf-8")
+        for m in _MAIL_GETTEXT_CALL_RE.finditer(text):
+            _add(m.group(1) or m.group(2))
+
+    # 2) Scan mail.py for _("...") calls (Subject templates wrapped in _(...))
+    if _MAIL_PY_FILE.exists():
+        text = _MAIL_PY_FILE.read_text(encoding="utf-8")
+        for m in _MAIL_GETTEXT_CALL_RE.finditer(text):
+            _add(m.group(1) or m.group(2))
+
+    with open(pot_path, "wb") as f:
+        write_po(f, catalog, ignore_obsolete=True)
+    return pot_path
+
+
+def update_mail_catalogue(locale: str) -> Path:
+    pot = MAIL_I18N_DIR / f"{MAIL_CATALOG_DOMAIN}.pot"
+    po = MAIL_I18N_DIR / "locales" / locale / "LC_MESSAGES" / f"{MAIL_CATALOG_DOMAIN}.po"
+    update_catalogue(template_pot=pot, input_po=po, output_po=po, locale=locale)
+    return po
+
+
+def _compile_po_to_mo(po_file: Path):
+    mo_file = po_file.with_suffix(".mo")
+    mo_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(po_file, "r", encoding="utf-8") as f:
+        original_catalog = read_po(f)
+
+    flat_catalog = Catalog(locale=original_catalog.locale, project=original_catalog.project)
+    for message in original_catalog:
+        if message.id and message.string:
+            flat_catalog.add(id=message.id, string=message.string)
+
+    with open(mo_file, "wb") as f:
+        write_mo(f, flat_catalog)
+
+
 def compile_all():
     for workflow_dir in workflow_providers.iter_workflow_directories():
         locales_root = workflow_dir / "i18n" / "locales"
         if not locales_root.exists():
             continue
         for po_file in locales_root.glob("**/LC_MESSAGES/*.po"):
-            mo_file = po_file.with_suffix(".mo")
-            mo_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(po_file, "r", encoding="utf-8") as f:
-                original_catalog = read_po(f)
+            _compile_po_to_mo(po_file)
 
-            flat_catalog = Catalog(locale=original_catalog.locale, project=original_catalog.project)
-            for message in original_catalog:
-                if message.id and message.string:
-                    flat_catalog.add(id=message.id, string=message.string)
-
-            with open(mo_file, "wb") as f:
-                write_mo(f, flat_catalog)
+    mail_locales_root = MAIL_I18N_DIR / "locales"
+    if mail_locales_root.exists():
+        for po_file in mail_locales_root.glob(f"**/LC_MESSAGES/{MAIL_CATALOG_DOMAIN}.po"):
+            _compile_po_to_mo(po_file)
 
 
 MAX_LOCALE_KEY_LENGTH = 10  # workflow_users.locale column length

@@ -142,7 +142,7 @@ def get_workflow_preview(
 
     workflow_rep = WorkflowPreviewRepresentation(
         name=workflow.spec.name,
-        title=service_workflow.get_workflow_title_cached(workflow.spec.name),
+        title=service_workflow.get_workflow_title_cached(workflow.spec.name, locale=user_rep.locale),
         subtitle=subtitle,
         task=None,
     )
@@ -1054,10 +1054,13 @@ def user_delete_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
 
 
 def get_workflow_statistics(db: Session, user_id: uuid.UUID):
+    user = repository.load_user(db=db, user_id=user_id)
+    locale = user.locale
+
     workflows = [
         WorkflowStatisticsRepresentation(
             name=wf_name,
-            title=service_workflow.get_workflow_title_cached(wf_name),
+            title=service_workflow.get_workflow_title_cached(wf_name, locale=locale),
             estimated_saved_mins_per_instance=service_workflow.get_workflow_saved_minutes_per_instance_cached(wf_name),
         )
         for wf_name in service_workflow.get_all_activated_workflow_names()
@@ -1139,12 +1142,22 @@ def bff_admin_get_all_tasks(db: Session, user_id: uuid.UUID, bff_table_request_p
 
 
 def bff_admin_get_all_workflow_instances(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
+    user = get_user(db=db, user_id=user_id)
     allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
-    return views.bff_admin_get_all_workflow_instances(
+    instances = views.bff_admin_get_all_workflow_instances(
         db=db,
         bff_table_request_params=bff_table_request_params,
         allowed_workflow_names=allowed_workflow_names,
     )
+
+    for instance in instances.ITEMS:
+        instance.title = service_i18n.translate_string(msgid=instance.title, workflow_name=instance.name, locale=user.locale)
+        for task in instance.active_tasks:
+            task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
+        for task in instance.completed_tasks:
+            task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
+
+    return instances
 
 
 def bff_admin_get_all_users(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
@@ -1250,8 +1263,14 @@ def admin_unassign_task_without_checks(db: Session, admin_user_id: uuid.UUID, ta
 
 
 def admin_get_task_states_per_workflow(db: Session, wf_name: str, admin_user_id: uuid.UUID) -> WorkflowStateResponse:
+    admin = get_user(db=db, user_id=admin_user_id)
     allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=admin_user_id)
-    return views.admin_get_task_states_per_workflow(db=db, wf_name=wf_name, allowed_workflow_names=allowed_workflow_names)
+    response = views.admin_get_task_states_per_workflow(db=db, wf_name=wf_name, allowed_workflow_names=allowed_workflow_names)
+
+    for task_state in response.tasks.values():
+        task_state.title = service_i18n.translate_string(msgid=task_state.title, workflow_name=wf_name, locale=admin.locale)
+
+    return response
 
 
 def admin_get_statistics_graph_timestamps(db: Session) -> ReducedWorkflowInstanceResponse:
