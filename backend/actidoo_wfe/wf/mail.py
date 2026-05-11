@@ -129,27 +129,35 @@ def send_task_ready_to_role_members_mail(db: Session, task_id: uuid.UUID):
 
     role_names = [r.name for r in task.lane_roles]
 
-    recipients: dict = {}
+    recipients_by_id: dict = {}
     for role_name in role_names:
         for u in get_users_of_role(db=db, role_name=role_name):
             if u.email:
-                recipients[u.id] = u
+                recipients_by_id[u.id] = u
 
-    if not recipients:
+    if not recipients_by_id:
         return 0
 
-    if len(recipients) > cap:
+    # Stable, deterministic order so the same first `cap` users are picked across calls.
+    ordered_recipients = sorted(
+        recipients_by_id.values(),
+        key=lambda u: ((u.email or "").lower(), str(u.id)),
+    )
+    total = len(ordered_recipients)
+
+    capped = total > cap
+    if capped:
         log.warning(
-            "Skipping role-broadcast for task %s: %d recipients > cap %d (lane=%s)",
+            "Capping role-broadcast for task %s: %d recipients > cap %d (lane=%s)",
             task_id,
-            len(recipients),
+            total,
             cap,
             task.lane,
         )
-        return 0
+        ordered_recipients = ordered_recipients[:cap]
 
     num_sent = 0
-    for user in recipients.values():
+    for user in ordered_recipients:
         text = compile_email_template(
             template="task_ready_for_role_members.mako",
             params={
@@ -170,7 +178,64 @@ def send_task_ready_to_role_members_mail(db: Session, task_id: uuid.UUID):
         num_sent += 1
 
     log.info(f"Sent task_ready_for_role_members for task {task_id} to {num_sent} recipients")
+
+    if capped:
+        send_role_notification_limit_exceeded_mail(
+            db=db,
+            task_id=task_id,
+            total_role_members=total,
+            cap=cap,
+            role_names=role_names,
+        )
+
     return num_sent
+
+
+def send_role_notification_limit_exceeded_mail(
+    db: Session,
+    task_id: uuid.UUID,
+    total_role_members: int,
+    cap: int,
+    role_names: list[str],
+):
+    task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
+
+    recipients = set(settings.email_receivers_erroneous_tasks)
+
+    owner = get_workflow_owner(task.workflow_instance.name)
+    if owner is not None:
+        owner_users = get_users_of_role(db=db, role_name=owner)
+        recipients |= {u.email for u in owner_users if u.email}
+
+    if not recipients:
+        log.warning(
+            "Role notification limit exceeded for task %s, but no admin/owner recipients configured",
+            task_id,
+        )
+        return 0
+
+    text = compile_email_template(
+        template="role_notification_limit_exceeded.mako",
+        params={
+            "task": task,
+            "role_names": role_names,
+            "total_role_members": total_role_members,
+            "cap": cap,
+        },
+    )
+
+    subject = f'Role notification limit exceeded for "{task.workflow_instance.title or task.workflow_instance.name}"'
+
+    mail.send_text_mail(
+        subject=subject,
+        content=text,
+        recipient_or_recipients_list=list(recipients),
+        attachments=dict(),
+    )
+
+    log.info(f"Sent role_notification_limit_exceeded for task {task_id} to {','.join(recipients)}")
+
+    return len(recipients)
 
 
 def send_task_became_erroneous_mail(db: Session, task_id: uuid.UUID):

@@ -655,11 +655,12 @@ def submit_task_data(
 
 def get_allowed_workflows_to_start(db: Session, user_id: uuid.UUID):
     user = repository.load_user(db=db, user_id=user_id)
+    locale = user.locale
 
     workflows = [
         WorkflowRepresentation(
             name=name,
-            title=service_workflow.get_workflow_title_cached(name),
+            title=service_workflow.get_workflow_title_cached(name, locale=locale),
         )
         for name in service_workflow.get_allowed_workflow_names_to_start(user=user)
     ]

@@ -477,15 +477,28 @@ def get_all_activated_workflow_names() -> Generator[str, Any, None]:
 
 
 @cache
-def get_workflow_title_cached(name: str):
+def get_workflow_title_cached(name: str, locale: str | None = None):
     assert name is not None and name != ""
 
     try:
         process = load_process_from_file(name=name)
-        return process.spec.description
+        raw_title = process.spec.description
     except Exception:
         log.exception(f"Cannot get workflow title (description) for workflow {name}")
         return name
+
+    if not locale or not raw_title:
+        return raw_title
+
+    # Lazy import: service_i18n imports providers, and we want to avoid touching
+    # gettext loading on the hot path when callers do not pass a locale.
+    from actidoo_wfe.wf import service_i18n
+
+    try:
+        return service_i18n.translate_string(msgid=raw_title, workflow_name=name, locale=locale)
+    except Exception:
+        log.exception(f"Cannot translate workflow title for workflow {name} (locale={locale})")
+        return raw_title
 
 
 @cache
