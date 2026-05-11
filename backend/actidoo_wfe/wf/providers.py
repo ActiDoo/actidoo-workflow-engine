@@ -45,7 +45,10 @@ class FileSystemWorkflowProvider:
     def iter_directories(self) -> Iterable[Path]:
         if not self.base_path.exists():
             return []
-        return [path for path in self.base_path.iterdir() if path.is_dir()]
+        # A workflow directory is identified by at least one .bpmn file directly in it.
+        # This filters out unrelated subdirs (e.g. __pycache__, asset folders) that may
+        # live next to real workflows in shared filesystem layouts.
+        return [path for path in self.base_path.iterdir() if path.is_dir() and any(path.glob("*.bpmn"))]
 
     def get_workflow_directory(self, workflow_name: str) -> Optional[Path]:
         candidate = self.base_path / workflow_name
