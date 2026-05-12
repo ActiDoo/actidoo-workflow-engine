@@ -80,7 +80,9 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   );
   const canSubmitTask =
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR: false should fall through
-    !!(task?.assigned_to_me || task?.assigned_to_me_as_delegate) && !isBlockedByDelegateAssignment;
+    !!(task?.assigned_to_me || task?.assigned_to_me_as_delegate) &&
+    !isBlockedByDelegateAssignment &&
+    !task?.is_readonly;
   const isDelegateSubmission = !!task?.assigned_to_me_as_delegate;
 
   if (jsonschema && uiSchema) {

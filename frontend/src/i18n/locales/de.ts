@@ -167,6 +167,8 @@ export const de = {
     submit: 'Absenden',
   },
   singleTaskHeader: {
+    readonlyDefinitionMissing:
+      'Diese Workflow-Definition ist nicht mehr verfügbar. Die Instanz ist schreibgeschützt.',
     notAssigned: 'Aufgabe ist derzeit nicht zugewiesen',
     startNewWorkflowWithData: 'Neuen Workflow mit diesen Daten starten',
     assignToMe: 'Mir zuweisen',

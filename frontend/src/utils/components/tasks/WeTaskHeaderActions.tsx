@@ -147,6 +147,10 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
     );
   };
 
+  // The workflow definition has been removed from all providers; admin actions on this task
+  // cannot succeed (no script engine, no notifications), so disable them.
+  const isReadonly = !!props.data?.is_readonly;
+
   return (
     <>
       <div className="flex gap-3">
@@ -154,6 +158,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
           icon="user-edit"
           design={ButtonDesign.Transparent}
           tooltip={t('admin.assignUserTooltip')}
+          disabled={isReadonly}
           onClick={() => {
             setUserDialogOpen(true);
           }}
@@ -164,6 +169,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
             icon="begin"
             design={ButtonDesign.Transparent}
             tooltip={t('admin.skipTasksTooltip')}
+            disabled={isReadonly}
             onClick={() => {
               handleSkipTask();
             }}
@@ -178,7 +184,7 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
             icon="synchronize"
             design={ButtonDesign.Transparent}
             tooltip={t('admin.tryAgainTooltip')}
-            disabled={!props.data?.state_error}
+            disabled={!props.data?.state_error || isReadonly}
             onClick={() => {
               handleTryAgain();
             }}

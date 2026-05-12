@@ -55,11 +55,15 @@ export const myOpenWorkflowsColumns = (
         return '';
       }
 
+      // When the workflow definition has been removed, the task is read-only. Use the
+      // "show" icon to signal "view" rather than "edit".
+      const isReadonly = !!data.is_readonly;
+
       return (
         <Link
           to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
           className="w-full text-center">
-          <Button icon="edit" />
+          <Button icon={isReadonly ? 'show' : 'edit'} />
         </Link>
       );
     },

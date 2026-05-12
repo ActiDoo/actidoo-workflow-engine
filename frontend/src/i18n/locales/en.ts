@@ -165,6 +165,8 @@ export const en = {
     submit: 'Submit',
   },
   singleTaskHeader: {
+    readonlyDefinitionMissing:
+      'This workflow definition is no longer available. The instance is read-only.',
     notAssigned: 'Task is currently not assigned',
     startNewWorkflowWithData: 'Start new workflow with this data',
     assignToMe: 'Assign to me',

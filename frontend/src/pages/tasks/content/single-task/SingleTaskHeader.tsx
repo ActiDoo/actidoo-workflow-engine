@@ -65,11 +65,18 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     task.assigned_delegate_user &&
     !task.assigned_to_me_as_delegate
   );
+  // When the workflow definition has been removed from all providers, the instance is frozen:
+  // no assign/unassign/cancel/delete actions. The backend already forces all can_* flags to
+  // false in that case, but we also guard the unconditional assign-button below.
+  const isReadonly = !!task.is_readonly;
   const canShowAssignButton =
-    (!task.assigned_user || task.can_be_assigned_as_delegate) && !task.assigned_to_me;
+    !isReadonly &&
+    (!task.assigned_user || task.can_be_assigned_as_delegate) &&
+    !task.assigned_to_me;
   const canUnassignTask =
+    !isReadonly &&
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
-    task.can_be_unassigned || task.assigned_to_me_as_delegate || isDelegatedToMyDelegate;
+    (task.can_be_unassigned || task.assigned_to_me_as_delegate || isDelegatedToMyDelegate);
 
   useEffect(() => {
     handleResponse(
@@ -180,7 +187,15 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
           <Text>{workflowInstance?.title}</Text>
           <Title level={TitleLevel.H3}>{task.title}</Title>
         </div>
-        {!task.assigned_user && (
+        {isReadonly && (
+          <MessageStrip
+            hideCloseButton={true}
+            design={MessageStripDesign.Warning}
+            className="w-auto">
+            {t('singleTaskHeader.readonlyDefinitionMissing')}
+          </MessageStrip>
+        )}
+        {!isReadonly && !task.assigned_user && (
           <MessageStrip
             hideCloseButton={true}
             design={MessageStripDesign.Warning}
@@ -188,7 +203,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
             {t('singleTaskHeader.notAssigned')}
           </MessageStrip>
         )}
-        {task?.state_completed && task.assigned_to_me ? (
+        {!isReadonly && task?.state_completed && task.assigned_to_me ? (
           <BusyIndicator active={copyInstanceLoadState} delay={0} className="text-white">
             <Button
               disabled={copyInstanceLoadState}
@@ -200,7 +215,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
             </Button>
           </BusyIndicator>
         ) : null}
-        {!task.assigned_user ? (
+        {!isReadonly && !task.assigned_user ? (
           <BusyIndicator active={assignTaskToMeLoadState} delay={0} className="text-white">
             <Button
               disabled={assignTaskToMeLoadState}
@@ -213,15 +228,17 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
           </BusyIndicator>
         ) : (
           <>
-            <Text>
-              <span className="text-xs text-neutral-700">{t('singleTaskHeader.assignedTo')}</span>
-              <br />
-              {task.assigned_delegate_user
-                ? `${task.assigned_delegate_user.full_name} (${t('singleTaskHeader.assignedTo')} ${
-                    task.assigned_user.full_name
-                  })`
-                : task.assigned_user.full_name}
-            </Text>
+            {task.assigned_user ? (
+              <Text>
+                <span className="text-xs text-neutral-700">{t('singleTaskHeader.assignedTo')}</span>
+                <br />
+                {task.assigned_delegate_user
+                  ? `${task.assigned_delegate_user.full_name} (${t(
+                      'singleTaskHeader.assignedTo'
+                    )} ${task.assigned_user.full_name})`
+                  : task.assigned_user.full_name}
+              </Text>
+            ) : null}
             {canUnassignTask ? (
               <BusyIndicator active={unassignTaskFromMeLoadState} delay={0} className="">
                 <Button

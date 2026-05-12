@@ -37,6 +37,7 @@ export interface UserTask {
   completed_by_user?: { id: string; full_name: string } | null;
   completed_by_delegate_user?: { id: string; full_name: string } | null;
   delegate_submit_comment?: string | null;
+  is_readonly?: boolean;
 }
 
 export interface GetUserTasksResponse {
@@ -88,6 +89,7 @@ export interface WorkflowInstance {
   is_completed?: boolean;
   active_tasks?: ActiveTaskInstance[];
   completed_tasks?: ActiveTaskInstance[];
+  is_readonly?: boolean;
 }
 export interface AdminGraphInstance {
   id: string;
@@ -105,6 +107,7 @@ export interface AdminWorkflowInstance {
   is_completed?: boolean;
   has_task_in_error_state?: boolean;
   created_by?: User;
+  is_readonly?: boolean;
 }
 
 export interface MyInitiatedWorkflowInstance {
@@ -115,6 +118,7 @@ export interface MyInitiatedWorkflowInstance {
   active_tasks?: ActiveTaskInstance[];
   created_at?: Date;
   completed_at?: Date;
+  is_readonly?: boolean;
 }
 
 export interface ActiveTaskInstance {
@@ -127,6 +131,7 @@ export interface ActiveTaskInstance {
   completed_by_delegate_user?: User | null;
   delegate_submit_comment?: string | null;
   can_be_assigned_as_delegate?: boolean;
+  is_readonly?: boolean;
 }
 
 export interface TaskItem {
@@ -153,6 +158,7 @@ export interface TaskItem {
   completed_at?: Date;
   workflow_instance?: WorkflowInstance;
   error_stacktrace?: string;
+  is_readonly?: boolean;
 }
 
 export interface User {
