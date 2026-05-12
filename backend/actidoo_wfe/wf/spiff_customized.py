@@ -691,7 +691,13 @@ class MyScriptEngine(FeelLikeScriptEngine):
 
 def get_script_engine(workflow_name):
     env_globals: Dict[str, object] = {}
-    module_path = workflow_providers.get_workflow_module_path(workflow_name)
+    try:
+        module_path = workflow_providers.get_workflow_module_path(workflow_name)
+    except FileNotFoundError:
+        # Workflow definition has been removed from all providers — proceed with an empty
+        # script environment so restoring the workflow object still succeeds. Read-only paths
+        # (BFF task list) can then serve the instance from DB without running service tasks.
+        module_path = None
     if module_path:
         try:
             env_globals.update(env_from_module(module_path))

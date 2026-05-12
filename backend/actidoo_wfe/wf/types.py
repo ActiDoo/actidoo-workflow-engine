@@ -87,6 +87,7 @@ class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     completed_by_user_id: uuid.UUID | None = Field(default=None)
     completed_by_delegate_user_id: uuid.UUID | None = Field(default=None)
     delegate_submit_comment: str | None = Field(default=None)
+    is_readonly: bool = Field(default=False)
 
 
 class UserTaskRepresentation(UserTaskWithoutNestedAssignedUserRepresentation):
@@ -114,6 +115,7 @@ class WorkflowInstanceTaskInlineRepresentation(BaseModel):
     completed_by_delegate_user: InlineUserRepresentation | None = Field(default=None)
     delegate_submit_comment: str | None = Field(default=None)
     can_be_assigned_as_delegate: bool = Field(default=False)
+    is_readonly: bool = Field(default=False)
 
 
 class WorkflowInstanceRepresentation(BaseModel):
@@ -134,6 +136,7 @@ class WorkflowInstanceRepresentation(BaseModel):
     created_at: datetime.datetime
     created_by: InlineUserRepresentation
     has_task_in_error_state: bool
+    is_readonly: bool = Field(default=False)
 
 
 class WorkflowInstanceWithoutTasksRepresentation(BaseModel):
@@ -148,6 +151,7 @@ class WorkflowInstanceWithoutTasksRepresentation(BaseModel):
     created_at: datetime.datetime
     created_by: InlineUserRepresentation
     has_task_in_error_state: bool
+    is_readonly: bool = Field(default=False)
 
 
 class WorkflowRepresentation(BaseModel):
@@ -237,6 +241,7 @@ class WorkflowInstanceTaskAdminRepresentation(BaseModel):
     completed_at: datetime.datetime | None = Field(default=None)
     workflow_instance: WorkflowInstanceWithoutTasksRepresentation  # new
     error_stacktrace: str | None = Field(default=None)
+    is_readonly: bool = Field(default=False)
 
 
 TaskToUserMapping = dict[Task, uuid.UUID]

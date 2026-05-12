@@ -289,6 +289,48 @@ def load_workflow_instance(db: Session, workflow_id: uuid.UUID) -> BpmnWorkflow:
     return workflow
 
 
+def get_workflow_instance_name(db: Session, workflow_instance_id: uuid.UUID) -> str | None:
+    """Lightweight lookup of the workflow name for a given instance id, without restoring the workflow."""
+    return db.execute(
+        select(WorkflowInstance.name).where(WorkflowInstance.id == workflow_instance_id),
+    ).scalar_one_or_none()
+
+
+def get_workflow_instance_name_by_task_id(db: Session, task_id: uuid.UUID) -> str | None:
+    """Lightweight lookup of the workflow name via a task id, without restoring the workflow."""
+    return db.execute(
+        select(WorkflowInstance.name)
+        .join(WorkflowInstanceTask, WorkflowInstanceTask.workflow_instance_id == WorkflowInstance.id)
+        .where(WorkflowInstanceTask.id == task_id),
+    ).scalar_one_or_none()
+
+
+def get_workflow_instance_names(db: Session, workflow_instance_ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """Batch lookup of workflow names for a set of instance ids without restoring the workflows.
+
+    Used by cron paths (handle_timeevents, handle_messages) to decide for many events at once
+    whether their definitions are still available — a single SELECT instead of one per event.
+    """
+    if not workflow_instance_ids:
+        return {}
+    rows = db.execute(
+        select(WorkflowInstance.id, WorkflowInstance.name).where(WorkflowInstance.id.in_(workflow_instance_ids)),
+    ).all()
+    return {row[0]: row[1] for row in rows}
+
+
+def get_workflow_instance_names_by_task_ids(db: Session, task_ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """Batch lookup of workflow names via task ids."""
+    if not task_ids:
+        return {}
+    rows = db.execute(
+        select(WorkflowInstanceTask.id, WorkflowInstance.name)
+        .join(WorkflowInstance, WorkflowInstance.id == WorkflowInstanceTask.workflow_instance_id)
+        .where(WorkflowInstanceTask.id.in_(task_ids)),
+    ).all()
+    return {row[0]: row[1] for row in rows}
+
+
 def load_workflow_instance_by_task_id(db: Session, task_id: uuid.UUID) -> BpmnWorkflow:
     """Restores a workflow by task_id"""
 

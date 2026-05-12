@@ -78,6 +78,7 @@ class GetUserTasksResponseUserTasks(BaseModel):
     completed_by_user: Optional["InlineUserResponse"]
     completed_by_delegate_user: Optional["InlineUserResponse"]
     delegate_submit_comment: str | None = Field(default=None)
+    is_readonly: bool = Field(default=False)
 
 
 class StartWorkflowWithDataResponse(BaseModel):
@@ -101,6 +102,7 @@ class GetWorkflowInstancesResponseItemTask(BaseModel):
     completed_by_delegate_user: Optional["InlineUserResponse"]
     delegate_submit_comment: str | None = Field(default=None)
     can_be_assigned_as_delegate: bool
+    is_readonly: bool = Field(default=False)
 
 
 class GetWorkflowInstancesResponseItem(BaseModel):
@@ -119,6 +121,7 @@ class GetWorkflowInstancesResponseItem(BaseModel):
     completed_tasks: list[GetWorkflowInstancesResponseItemTask] = Field(
         default_factory=lambda: [],
     )
+    is_readonly: bool = Field(default=False)
 
 
 GetWorkflowInstancesResponse = PaginatedDataSchema[GetWorkflowInstancesResponseItem]

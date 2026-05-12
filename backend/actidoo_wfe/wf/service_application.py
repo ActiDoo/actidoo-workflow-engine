@@ -327,12 +327,24 @@ def handle_messages(db: Session):
             wf_instance_ids.append(wf_id)
 
         # Handle Correlations
-        subscriptions = repository.get_subscriptions_by_message_name_and_correlation_key(
+        subscriptions = list(
+            repository.get_subscriptions_by_message_name_and_correlation_key(
+                db=db,
+                message_name=message.name,
+                correlation_key=message.correlation_key,
+            ),
+        )
+        # Resolve all workflow names for this message's subscriptions in one SELECT.
+        sub_names_by_task_id = repository.get_workflow_instance_names_by_task_ids(
             db=db,
-            message_name=message.name,
-            correlation_key=message.correlation_key,
+            task_ids={s.workflow_instance_task_id for s in subscriptions},
         )
         for sub in subscriptions:
+            # Skip subscriptions whose workflow definition has been removed —
+            # we can't run the workflow, so leave the subscription pending until the definition returns.
+            sub_instance_name = sub_names_by_task_id.get(sub.workflow_instance_task_id)
+            if sub_instance_name and not workflow_providers.workflow_definition_available(sub_instance_name):
+                continue
             workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=sub.workflow_instance_task_id)
             service_workflow.send_event(
                 workflow=workflow,
@@ -350,13 +362,36 @@ def handle_messages(db: Session):
 def handle_timeevents(db: Session, *, batch_size: int = 200):
     now = dt_now_naive()
 
+    # Orphan timer events stay in status="scheduled" because we don't want to destructively
+    # cancel them — the definition may come back. We must therefore remember which ones we
+    # already skipped this run so the outer while-loop terminates instead of fetching the
+    # same batch forever.
+    seen_orphan_keys: set[tuple] = set()
+
     while True:
         due = repository.list_due_time_events(db=db, now=now, limit=batch_size)
+        if seen_orphan_keys:
+            due = [w for w in due if (w.workflow_instance_id, w.timer_task_id) not in seen_orphan_keys]
         if not due:
             break
 
+        # Resolve all workflow names in this batch with a single SELECT, then check the
+        # provider registry per name (lru-cached). This replaces what would otherwise be
+        # one DB round-trip per due event.
+        names_by_id = repository.get_workflow_instance_names(
+            db=db,
+            workflow_instance_ids={w.workflow_instance_id for w in due},
+        )
+
         for wte in due:
             try:
+                # Skip events whose workflow definition has been removed —
+                # leave the timer in "scheduled" state until the definition returns.
+                wte_instance_name = names_by_id.get(wte.workflow_instance_id)
+                if wte_instance_name is not None and not workflow_providers.workflow_definition_available(wte_instance_name):
+                    seen_orphan_keys.add((wte.workflow_instance_id, wte.timer_task_id))
+                    continue
+
                 # Load aggregate
                 wf = repository.load_workflow_instance(db=db, workflow_id=wte.workflow_instance_id)
 
@@ -389,6 +424,17 @@ def handle_timeevents(db: Session, *, batch_size: int = 200):
                 repository.fail_and_release(db, wte, err=str(ex))
 
 
+def _mark_instance_readonly(instance: WorkflowInstanceRepresentation) -> None:
+    """Mark an instance and all its tasks as read-only because its workflow definition is missing."""
+    instance.is_readonly = True
+    for task in instance.active_tasks:
+        task.is_readonly = True
+        task.can_be_assigned_as_delegate = False
+    for task in instance.completed_tasks:
+        task.is_readonly = True
+        task.can_be_assigned_as_delegate = False
+
+
 def bff_user_get_initiated_workflows(
     db: Session,
     bff_table_request_params: BffTableQuerySchemaBase,
@@ -398,6 +444,9 @@ def bff_user_get_initiated_workflows(
     instances: PaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_user_get_initiated_workflows(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id)
 
     for instance in instances.ITEMS:
+        if not workflow_providers.workflow_definition_available(instance.name):
+            _mark_instance_readonly(instance)
+            continue
         instance.title = service_i18n.translate_string(msgid=instance.title, workflow_name=instance.name, locale=user.locale)
         for task in instance.active_tasks:
             task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
@@ -416,6 +465,9 @@ def bff_get_workflows_with_usertasks(
     instances: PaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_get_workflows_with_usertasks(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id, state=state)
 
     for instance in instances.ITEMS:
+        if not workflow_providers.workflow_definition_available(instance.name):
+            _mark_instance_readonly(instance)
+            continue
         instance.title = service_i18n.translate_string(msgid=instance.title, workflow_name=instance.name, locale=user.locale)
         for task in instance.active_tasks:
             task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)
@@ -499,6 +551,16 @@ def get_usertasks_for_user_id(
 
     usertasks = _enrich_user_tasks_with_nested_users(db=db, usertasks=usertasks)
     usertasks = [_translate_UserTaskRepresentationForms(db=db, workflow_name=workflow.spec.name, usertask=ut, locale=user.locale) for ut in usertasks]
+
+    # If the workflow definition has been removed, the workflow can no longer be progressed.
+    # Mark all tasks as read-only so the frontend can disable actions.
+    if not workflow_providers.workflow_definition_available(workflow.spec.name):
+        for ut in usertasks:
+            ut.is_readonly = True
+            ut.can_be_assigned_as_delegate = False
+            ut.can_be_unassigned = False
+            ut.can_cancel_workflow = False
+            ut.can_delete_workflow = False
 
     return usertasks
 
@@ -1134,11 +1196,19 @@ def require_workflow_admin_by_instance_id(db, user_id, instance_id):
 
 def bff_admin_get_all_tasks(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
     allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
-    return views.bff_admin_get_all_tasks(
+    tasks = views.bff_admin_get_all_tasks(
         db=db,
         bff_table_request_params=bff_table_request_params,
         allowed_workflow_names=allowed_workflow_names,
     )
+
+    for task in tasks.ITEMS:
+        if not workflow_providers.workflow_definition_available(task.workflow_instance.name):
+            task.is_readonly = True
+            task.workflow_instance.is_readonly = True
+            task.can_be_unassigned = False
+
+    return tasks
 
 
 def bff_admin_get_all_workflow_instances(db: Session, user_id: uuid.UUID, bff_table_request_params: BffTableQuerySchemaBase):
@@ -1151,6 +1221,9 @@ def bff_admin_get_all_workflow_instances(db: Session, user_id: uuid.UUID, bff_ta
     )
 
     for instance in instances.ITEMS:
+        if not workflow_providers.workflow_definition_available(instance.name):
+            _mark_instance_readonly(instance)
+            continue
         instance.title = service_i18n.translate_string(msgid=instance.title, workflow_name=instance.name, locale=user.locale)
         for task in instance.active_tasks:
             task.title = service_i18n.translate_string(msgid=task.title, workflow_name=instance.name, locale=user.locale)

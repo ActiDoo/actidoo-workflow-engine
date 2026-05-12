@@ -63,9 +63,12 @@ def _load_translations(process: str, locale: str, workflow_dir: pathlib.Path) ->
     )
 
 
-def _resolve_workflow_directory(process: str, base: Optional[pathlib.Path]) -> pathlib.Path:
+def _resolve_workflow_directory(process: str, base: Optional[pathlib.Path]) -> Optional[pathlib.Path]:
     if base is None:
-        return workflow_providers.get_workflow_directory(process)
+        try:
+            return workflow_providers.get_workflow_directory(process)
+        except FileNotFoundError:
+            return None
     if (base / "i18n").exists():
         return base
     return base / process
@@ -83,6 +86,9 @@ def translate_form_data(
     """
     # 1) Load translations
     workflow_dir = _resolve_workflow_directory(workflow_name, base_i18n_dir)
+    if workflow_dir is None:
+        # Workflow definition not available (e.g. extension removed); leave msgids untranslated.
+        return copy.deepcopy(form_data)
     t = _load_translations(workflow_name, locale, workflow_dir)
 
     # 2) Lookup function with context and fallback logic
@@ -137,6 +143,8 @@ def translate_string(
 ) -> str:
     # 1) Load translations
     workflow_dir = _resolve_workflow_directory(workflow_name, base_i18n_dir)
+    if workflow_dir is None:
+        return msgid
     t = _load_translations(workflow_name, locale, workflow_dir)
 
     # 2) Lookup function with context and fallback logic
@@ -204,6 +212,8 @@ def extract_strings_from_bpmn(xml_path: Path) -> List[Tuple[str, str]]:
 
 def extract_messages_for_process(process: str):
     workflow_dir = _resolve_workflow_directory(process, None)
+    if workflow_dir is None:
+        raise FileNotFoundError(f"No workflow named '{process}' found in registered providers.")
     pot_path = workflow_dir / "i18n" / f"{process}.pot"
     pot_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -226,6 +236,8 @@ def extract_messages_for_process(process: str):
 
 def update_process(process: str, locale: str):
     workflow_dir = _resolve_workflow_directory(process, None)
+    if workflow_dir is None:
+        raise FileNotFoundError(f"No workflow named '{process}' found in registered providers.")
     pot = workflow_dir / "i18n" / f"{process}.pot"
     po = workflow_dir / "i18n" / "locales" / locale / "LC_MESSAGES" / f"{process}.po"
     update_catalogue(template_pot=pot, input_po=po, output_po=po, locale=locale)

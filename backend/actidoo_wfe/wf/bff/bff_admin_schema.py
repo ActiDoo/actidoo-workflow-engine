@@ -38,6 +38,7 @@ class InlineWorkflowInstance(BaseModel):
     created_at: datetime.datetime
     completed_at: datetime.datetime | None
     created_by: InlineUserResponse
+    is_readonly: bool = Field(default=False)
 
 
 class GetAllTasksResponseItem(BaseModel):
@@ -67,6 +68,7 @@ class GetAllTasksResponseItem(BaseModel):
     completed_at: datetime.datetime | None
     workflow_instance: InlineWorkflowInstance
     error_stacktrace: str | None
+    is_readonly: bool = Field(default=False)
 
 
 GetAllTasksResponse = PaginatedDataSchema[GetAllTasksResponseItem]

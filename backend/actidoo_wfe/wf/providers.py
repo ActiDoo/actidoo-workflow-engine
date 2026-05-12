@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -76,6 +77,7 @@ class WorkflowProviderRegistry:
     def reload(self) -> None:
         """Reset provider set (re-evaluates settings)."""
         self.providers = []
+        _invalidate_availability_cache()
         self.__post_init__()
 
     def register(self, provider: WorkflowProvider, *, prepend: bool = False) -> None:
@@ -86,9 +88,11 @@ class WorkflowProviderRegistry:
         else:
             self.providers.append(provider)
         self.providers = self._sort_providers(self.providers)
+        _invalidate_availability_cache()
 
     def clear(self) -> None:
         self.providers = []
+        _invalidate_availability_cache()
 
     def iter_providers(self) -> Iterator[WorkflowProvider]:
         yield from self.providers
@@ -184,6 +188,30 @@ def get_workflow_directory(workflow_name: str) -> Path:
     return registry.get_workflow_directory(workflow_name)
 
 
+@functools.lru_cache(maxsize=512)
+def workflow_definition_available(workflow_name: str) -> bool:
+    """True if any registered provider currently serves this workflow.
+
+    Used to detect orphan WorkflowInstance rows whose definition has been
+    removed (e.g. when an extension drops a workflow but instances remain
+    in the database). Callers use this to skip reminder/notification work
+    and to mark BFF responses as read-only.
+
+    The result is cached and invalidated whenever the provider registry
+    mutates (register/clear/reload), so callers may invoke this in tight
+    loops without paying for repeated filesystem lookups.
+    """
+    try:
+        registry.get_workflow_directory(workflow_name)
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def _invalidate_availability_cache() -> None:
+    workflow_definition_available.cache_clear()
+
+
 def get_workflow_module_path(workflow_name: str) -> Optional[str]:
     provider = registry.get_provider_for(workflow_name)
     return provider.get_module_path(workflow_name)
@@ -217,4 +245,5 @@ __all__ = [
     "iter_workflow_entries",
     "iter_workflow_names",
     "registry",
+    "workflow_definition_available",
 ]

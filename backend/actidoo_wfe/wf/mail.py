@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from actidoo_wfe.helpers import mail
 from actidoo_wfe.i18n import make_translator
 from actidoo_wfe.settings import settings
+from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf import service_i18n
 from actidoo_wfe.wf.constants import MAIL_TEMPLATE_DIR
 from actidoo_wfe.wf.models import WorkflowInstanceTask, WorkflowUser
@@ -89,6 +90,9 @@ def send_personal_status_mail(db: Session):
 
     for user in users:
         wf_instances = get_workflows_with_usertasks(db=db, user=user)
+        # Skip instances whose workflow definition has been removed from any provider —
+        # they should not be advertised in reminder mails (treated like cancelled).
+        wf_instances = [w for w in wf_instances if workflow_providers.workflow_definition_available(w.name)]
 
         assigned_to_me = [x for x in wf_instances if any(t.assigned_user_id == user.id for t in x.active_tasks)]
         assigned_by_role = [x for x in wf_instances if not all(t.assigned_user_id is not None for t in x.active_tasks)]
@@ -151,6 +155,8 @@ def send_user_assigned_to_task_mail(db: Session, user_id: uuid.UUID, task_id: uu
     ).scalar_one()
 
     task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
+    if not workflow_providers.workflow_definition_available(task.workflow_instance.name):
+        return 0
     num_sent = 0
 
     if task.assigned_user_id != user_id:
@@ -193,6 +199,8 @@ def send_user_assigned_to_task_mail(db: Session, user_id: uuid.UUID, task_id: uu
 def send_task_ready_to_role_members_mail(db: Session, task_id: uuid.UUID):
     task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
     if not task.state_ready:
+        return 0
+    if not workflow_providers.workflow_definition_available(task.workflow_instance.name):
         return 0
 
     instance = task.workflow_instance
@@ -349,6 +357,8 @@ def send_role_notification_limit_exceeded_mail(
 
 def send_task_became_erroneous_mail(db: Session, task_id: uuid.UUID):
     task: WorkflowInstanceTask = get_single_task(db=db, task_id=task_id)
+    if not workflow_providers.workflow_definition_available(task.workflow_instance.name):
+        return 0
 
     recipients = _collect_admin_owner_recipients(db=db, task=task)
 
