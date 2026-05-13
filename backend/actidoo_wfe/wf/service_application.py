@@ -811,6 +811,17 @@ def search_property_options(
     if task_id not in [t.id for t in usertasks]:
         raise TaskIsNotInReadyUsertasksException()
 
+    # Workflow definition missing — we can't load remote options (the options/ folder and
+    # service functions are gone). Echo back only the already-selected values so the form
+    # can still render its read-only state without "unknown value" gaps.
+    if not workflow_providers.workflow_definition_available(workflow.spec.name):
+        echoed: list[tuple[str, str]] = []
+        if isinstance(include_value, list):
+            echoed = [(v, v) for v in include_value]
+        elif include_value:
+            echoed = [(include_value, include_value)]
+        return echoed
+
     options = service_workflow.get_options_for_property(
         workflow=workflow,
         task_id=task_id,

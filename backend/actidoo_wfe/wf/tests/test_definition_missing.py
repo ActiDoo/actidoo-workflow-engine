@@ -335,6 +335,37 @@ def test_orphan_instance_recovers_when_provider_returns(db_engine_ctx, restore_r
 # ---------------------------------------------------------------------------
 
 
+def test_search_property_options_does_not_crash_on_orphan(db_engine_ctx, restore_registry):
+    """When the workflow definition is gone we can't reach the workflow's options/ folder.
+    The endpoint must echo back already-selected values instead of crashing.
+    """
+    with db_engine_ctx():
+        workflow, db = _start_workflow_with_ready_task()
+        user_id = workflow.user("initiator").user.id
+        tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=user_id,
+            workflow_instance_id=workflow.workflow_instance_id,
+            state="ready",
+        )
+        assert len(tasks) >= 1
+        task_id = tasks[0].id
+
+        workflow_providers.registry.clear()
+
+        # Should not raise; should echo back include_value as the only option.
+        opts = service_application.search_property_options(
+            db=db,
+            user_id=user_id,
+            task_id=task_id,
+            property_path=["someField"],
+            search="",
+            include_value="already-selected-value",
+            form_data=None,
+        )
+        assert opts == [("already-selected-value", "already-selected-value")]
+
+
 def test_get_workflow_instance_name_returns_name(db_engine_ctx, restore_registry):
     with db_engine_ctx():
         workflow, db = _start_workflow_with_ready_task()
