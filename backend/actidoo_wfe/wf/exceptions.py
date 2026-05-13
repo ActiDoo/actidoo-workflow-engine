@@ -81,6 +81,19 @@ class TaskIsNotErroneousException(Exception):
     pass
 
 
+class WorkflowDefinitionMissingError(Exception):
+    """Raised when a workflow instance's definition is no longer served by any provider.
+
+    Used by write paths (submit, assign, admin actions) to surface a clear HTTP 410 to
+    clients that try to act on an orphan instance. Read paths do not raise — they mark
+    the response as read-only and let the frontend disable UI controls.
+    """
+
+    def __init__(self, workflow_name: str):
+        self.workflow_name = workflow_name
+        super().__init__(f"Workflow definition '{workflow_name}' is not available from any provider")
+
+
 class DataModelNotFoundError(KeyError):
     """Raised when a data model name is not in the registry."""
 

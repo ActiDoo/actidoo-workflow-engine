@@ -33,6 +33,7 @@ from actidoo_wfe.wf.exceptions import (
     UserMayNotCopyWorkflowException,
     UserMayNotStartWorkflowException,
     ValidationResultContainsErrors,
+    WorkflowDefinitionMissingError,
     WorkflowSpecNotFoundException,
 )
 from actidoo_wfe.wf.models import (
@@ -424,6 +425,19 @@ def handle_timeevents(db: Session, *, batch_size: int = 200):
                 repository.fail_and_release(db, wte, err=str(ex))
 
 
+def _require_definition_for_write(workflow_name: str) -> None:
+    """Guard for write operations on a workflow instance.
+
+    Read paths handle missing definitions by marking the response as read-only.
+    Write paths (submit, assign, replace data, execute erroneous, …) cannot succeed
+    without service-task modules or notification wiring, so we raise a specific exception
+    that the FastAPI handler turns into HTTP 410 Gone. Cancel/delete are explicitly *not*
+    guarded — admins must be able to clean up orphans.
+    """
+    if not workflow_providers.workflow_definition_available(workflow_name):
+        raise WorkflowDefinitionMissingError(workflow_name)
+
+
 def _mark_instance_readonly(instance: WorkflowInstanceRepresentation) -> None:
     """Mark an instance and all its tasks as read-only because its workflow definition is missing."""
     instance.is_readonly = True
@@ -645,6 +659,7 @@ def submit_task_data(
     delegate_comment: str | None = None,
 ):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    _require_definition_for_write(workflow.spec.name)
     user = repository.load_user(db=db, user_id=user_id)
     delegation_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
 
@@ -733,6 +748,7 @@ def get_allowed_workflows_to_start(db: Session, user_id: uuid.UUID):
 
 def assign_task_to_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    _require_definition_for_write(workflow.spec.name)
     user = repository.load_user(db=db, user_id=user_id)
     assigned_user_id = service_workflow.get_assigned_user(
         workflow=workflow,
@@ -763,6 +779,7 @@ def assign_task_to_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
 
 def unassign_task_from_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    _require_definition_for_write(workflow.spec.name)
     task = workflow.get_task_from_id(task_id=task_id)
 
     if service_workflow.is_task_completed(workflow=workflow, task_id=task_id):
@@ -1289,6 +1306,7 @@ def admin_replace_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID,
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
 
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    _require_definition_for_write(workflow.spec.name)
 
     service_workflow.replace_task_data(
         workflow=workflow,
@@ -1303,6 +1321,7 @@ def admin_execute_erroneous_task(db: Session, user_id: uuid.UUID, task_id: uuid.
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
 
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    _require_definition_for_write(workflow.spec.name)
     service_workflow.execute_erroneous_task(workflow=workflow, task_id=task_id)
     repository.store_workflow_instance(db=db, workflow=workflow)
     return workflow.task_tree.id
@@ -1328,6 +1347,7 @@ def admin_assign_task_to_user_without_checks(
     require_workflow_admin_by_task_id(db=db, user_id=admin_user_id, task_id=task_id)
 
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    _require_definition_for_write(workflow.spec.name)
     user = repository.load_user(db=db, user_id=assign_to_user_id)
     if remove_roles:
         service_workflow.set_manually_assigned_roles(
@@ -1347,6 +1367,7 @@ def admin_unassign_task_without_checks(db: Session, admin_user_id: uuid.UUID, ta
     require_workflow_admin_by_task_id(db=db, user_id=admin_user_id, task_id=task_id)
 
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    _require_definition_for_write(workflow.spec.name)
     service_workflow.unassign_task_without_checks(workflow=workflow, task_id=task_id)
     repository.store_workflow_instance(db=db, workflow=workflow)
 

@@ -335,6 +335,70 @@ def test_orphan_instance_recovers_when_provider_returns(db_engine_ctx, restore_r
 # ---------------------------------------------------------------------------
 
 
+def test_submit_task_data_raises_workflow_definition_missing(db_engine_ctx, restore_registry):
+    """Write paths on an orphan must raise WorkflowDefinitionMissingError so the FastAPI
+    handler can return HTTP 410.
+    """
+    import pytest as _pytest
+
+    from actidoo_wfe.wf.exceptions import WorkflowDefinitionMissingError
+
+    with db_engine_ctx():
+        workflow, db = _start_workflow_with_ready_task()
+        user_id = workflow.user("initiator").user.id
+        tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=user_id,
+            workflow_instance_id=workflow.workflow_instance_id,
+            state="ready",
+        )
+        task_id = tasks[0].id
+
+        workflow_providers.registry.clear()
+
+        with _pytest.raises(WorkflowDefinitionMissingError) as exc_info:
+            service_application.submit_task_data(
+                db=db,
+                user_id=user_id,
+                task_id=task_id,
+                task_data={},
+            )
+        assert exc_info.value.workflow_name == WF_NAME
+
+
+def test_orphan_submit_returns_410_via_http(db_engine_ctx, restore_registry):
+    """End-to-end: HTTP POST against submit_task_data on an orphan task → 410."""
+    from actidoo_wfe.fastapi import app as root_app
+    from actidoo_wfe.wf.tests.helpers.client import Client
+    from actidoo_wfe.wf.tests.helpers.overrides import disable_role_check, override_get_user
+
+    with db_engine_ctx():
+        workflow, db = _start_workflow_with_ready_task()
+        user = workflow.user("initiator").user
+        tasks = service_application.get_usertasks_for_user_id(
+            db=db,
+            user_id=user.id,
+            workflow_instance_id=workflow.workflow_instance_id,
+            state="ready",
+        )
+        task_id = tasks[0].id
+
+        workflow_providers.registry.clear()
+
+        client = Client()
+        with override_get_user(client=client, user=user), disable_role_check(client):
+            response = client.root_client.post(
+                root_app.url_path_for("submit_task_data"),
+                params={"task_id": str(task_id)},
+                json={},
+            )
+
+        assert response.status_code == 410
+        body = response.json()
+        assert body["code"] == "workflow_definition_missing"
+        assert body["workflow_name"] == WF_NAME
+
+
 def test_search_property_options_does_not_crash_on_orphan(db_engine_ctx, restore_registry):
     """When the workflow definition is gone we can't reach the workflow's options/ folder.
     The endpoint must echo back already-selected values instead of crashing.

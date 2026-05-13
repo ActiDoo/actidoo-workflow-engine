@@ -33,6 +33,7 @@ from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.session import SessionMiddleware
 from actidoo_wfe.settings import settings
 from actidoo_wfe.storage import setup_storage
+from actidoo_wfe.wf.exceptions import WorkflowDefinitionMissingError
 from actidoo_wfe.wf.fastapi import router as router_wf
 from actidoo_wfe.venusian_scan import discover_venusian_scan_targets
 
@@ -129,6 +130,20 @@ app: FastAPI = FastAPI(
 )
 
 app.router.route_class = ORJSONRoute
+
+
+@app.exception_handler(WorkflowDefinitionMissingError)
+async def _workflow_definition_missing_handler(_request: Request, exc: WorkflowDefinitionMissingError) -> JSONResponse:
+    # 410 Gone: the workflow definition the client tried to act on is no longer served by
+    # any provider. The instance can still be viewed (read-only) but no longer progressed.
+    return JSONResponse(
+        status_code=410,
+        content={
+            "detail": str(exc),
+            "workflow_name": exc.workflow_name,
+            "code": "workflow_definition_missing",
+        },
+    )
 
 # For local develoment, we need to support CORS. CORS settings can be made in the application settings.
 if settings.cors_origins is not None and len(settings.cors_origins) > 0:
