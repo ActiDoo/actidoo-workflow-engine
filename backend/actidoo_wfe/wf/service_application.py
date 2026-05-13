@@ -1276,7 +1276,12 @@ def admin_set_user_delegations(
 
 def admin_get_single_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
-    return views.admin_get_single_task(db=db, task_id=task_id)
+    task = views.admin_get_single_task(db=db, task_id=task_id)
+    if not workflow_providers.workflow_definition_available(task.workflow_instance.name):
+        task.is_readonly = True
+        task.workflow_instance.is_readonly = True
+        task.can_be_unassigned = False
+    return task
 
 
 def admin_replace_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, task_data: dict):
