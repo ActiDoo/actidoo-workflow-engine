@@ -1,0 +1,52 @@
+{
+  "components": [
+    {
+      "label": "Required text",
+      "type": "textfield",
+      "layout": {"row": "Row_1", "columns": null},
+      "id": "Field_required_text",
+      "key": "required_text",
+      "validate": {"required": true}
+    },
+    {
+      "values": [],
+      "label": "Category",
+      "type": "select",
+      "layout": {"row": "Row_2", "columns": null},
+      "id": "Field_category",
+      "key": "category",
+      "properties": {
+        "options_file": "categories.csv"
+      }
+    },
+    {
+      "label": "Attachment",
+      "type": "textfield",
+      "layout": {"row": "Row_3", "columns": null},
+      "id": "Field_attachment",
+      "key": "attachment",
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    },
+    {
+      "label": "Optional note",
+      "type": "textfield",
+      "layout": {"row": "Row_4", "columns": null},
+      "id": "Field_optional_note",
+      "key": "optional_note"
+    },
+    {
+      "label": "Trigger error",
+      "type": "checkbox",
+      "layout": {"row": "Row_5", "columns": null},
+      "id": "Field_trigger_error",
+      "key": "trigger_error"
+    }
+  ],
+  "type": "default",
+  "id": "BffForm1",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 16
+}

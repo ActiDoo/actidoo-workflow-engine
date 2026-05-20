@@ -1,0 +1,16 @@
+{
+  "components": [
+    {
+      "label": "Confirmation",
+      "type": "textfield",
+      "layout": {"row": "Row_1", "columns": null},
+      "id": "Field_confirmation",
+      "key": "confirmation"
+    }
+  ],
+  "type": "default",
+  "id": "BffForm2",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 16
+}

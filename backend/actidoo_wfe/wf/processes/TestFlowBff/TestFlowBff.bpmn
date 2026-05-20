@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_bff" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_bff">
+    <bpmn:participant id="Participant_bff" name="Test Flow BFF" processRef="TestFlowBff" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlowBff" name="Test Flow BFF" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_bff">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_bff</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_bff</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CrashTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_normal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_error</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_bff">
+      <bpmn:outgoing>Flow_start_to_form1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Form1" name="Form 1">
+      <bpmn:incoming>Flow_start_to_form1</bpmn:incoming>
+      <bpmn:outgoing>Flow_form1_to_gateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_bff" default="Flow_gateway_to_form2">
+      <bpmn:incoming>Flow_form1_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_gateway_to_crash</bpmn:outgoing>
+      <bpmn:outgoing>Flow_gateway_to_form2</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="CrashTask" name="Crash">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="bff_crash_task" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_gateway_to_crash</bpmn:incoming>
+      <bpmn:outgoing>Flow_crash_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Form2" name="Form 2">
+      <bpmn:incoming>Flow_gateway_to_form2</bpmn:incoming>
+      <bpmn:outgoing>Flow_form2_to_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_normal">
+      <bpmn:incoming>Flow_form2_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_error">
+      <bpmn:incoming>Flow_crash_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_form1" sourceRef="StartEvent_bff" targetRef="Form1" />
+    <bpmn:sequenceFlow id="Flow_form1_to_gateway" sourceRef="Form1" targetRef="Gateway_bff" />
+    <bpmn:sequenceFlow id="Flow_gateway_to_crash" sourceRef="Gateway_bff" targetRef="CrashTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=trigger_error=true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_gateway_to_form2" sourceRef="Gateway_bff" targetRef="Form2" />
+    <bpmn:sequenceFlow id="Flow_crash_to_end" sourceRef="CrashTask" targetRef="EndEvent_error" />
+    <bpmn:sequenceFlow id="Flow_form2_to_end" sourceRef="Form2" targetRef="EndEvent_normal" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_bff">
+      <bpmndi:BPMNShape id="Participant_bff_di" bpmnElement="Participant_bff" isHorizontal="true">
+        <dc:Bounds x="100" y="60" width="900" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InitLane_di" bpmnElement="InitLane" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="870" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_bff_di" bpmnElement="StartEvent_bff">
+        <dc:Bounds x="180" y="180" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form1_di" bpmnElement="Form1">
+        <dc:Bounds x="260" y="158" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_bff_di" bpmnElement="Gateway_bff" isMarkerVisible="true">
+        <dc:Bounds x="415" y="173" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CrashTask_di" bpmnElement="CrashTask">
+        <dc:Bounds x="510" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form2_di" bpmnElement="Form2">
+        <dc:Bounds x="510" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_error_di" bpmnElement="EndEvent_error">
+        <dc:Bounds x="670" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_normal_di" bpmnElement="EndEvent_normal">
+        <dc:Bounds x="670" y="262" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
