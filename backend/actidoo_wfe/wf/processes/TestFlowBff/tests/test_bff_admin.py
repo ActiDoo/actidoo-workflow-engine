@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+import base64
 import logging
 from datetime import timedelta
-
-import pytest
+from pathlib import Path
 
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.database import SessionLocal, setup_db
@@ -21,8 +21,8 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     GetUserDetailResponse,
     SearchUsersResponse,
 )
-from actidoo_wfe.wf.tests.helpers.overrides import override_get_user, disable_role_check
 from actidoo_wfe.wf.tests.helpers.client import Client
+from actidoo_wfe.wf.tests.helpers.overrides import disable_role_check, override_get_user
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 from actidoo_wfe.wf.types import ReducedWorkflowInstanceResponse, WorkflowStateResponse
 
@@ -30,35 +30,46 @@ log: logging.Logger = logging.getLogger(__name__)
 
 setup_db(settings=settings)
 
-WF_NAME = "TestFlowFormValidation"
-FORM_DATA = {"text1": "Value of text1"}
-BFF_WF_NAME = "TestFlowBff"
-BFF_FORM1_TRIGGER_ERROR = {"required_text": "x", "trigger_error": True}
+WF_NAME = "TestFlowBff"
+FORM1_DATA_MIN = {"required_text": "ok", "short_code": "abc", "trigger_error": False}
+FORM1_DATA_TRIGGER_ERROR = {"required_text": "ok", "short_code": "abc", "trigger_error": True}
+FORM2_DATA = {"confirmation": "done"}
 
 
-def _create_workflow_instance_and_complete_it(db):
+def _png_attachment():
+    png_path = Path(__file__).parent.parent.parent / "TestFlowFormUploads" / "tests" / "test.png"
+    encoded = base64.b64encode(png_path.read_bytes()).decode("utf-8")
+    return {"datauri": f"data:image/png;name=test.png;base64,{encoded}"}
+
+
+def _create_completed_workflow(db):
+    """Start TestFlowBff and submit both forms so the instance ends in the normal end state."""
     workflow = WorkflowDummy(
         db_session=db,
-        users_with_roles={
-            "admin": ["wf-admin"],
-            "initiator": ["wf-user"],
-        },
+        users_with_roles={"admin": ["wf-admin"], "initiator": ["wf-user"]},
         workflow_name=WF_NAME,
         start_user="initiator",
     )
-
     workflow.user("initiator").submit(
-        task_data=FORM_DATA,
+        task_data=FORM1_DATA_MIN,
         workflow_instance_id=workflow.workflow_instance_id,
     )
-
+    workflow.user("initiator").submit(
+        task_data=FORM2_DATA,
+        workflow_instance_id=workflow.workflow_instance_id,
+    )
     return workflow
+
+
+# ---------------------------------------------------------------------------
+# task / workflow listings
+# ---------------------------------------------------------------------------
 
 
 def test_admin_get_all_tasks(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
-        workflow = _create_workflow_instance_and_complete_it(db=db)
+        workflow = _create_completed_workflow(db=db)
         client = Client()
 
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
@@ -69,13 +80,13 @@ def test_admin_get_all_tasks(db_engine_ctx):
             )
 
         assert len(json_resp.ITEMS) > 0
-        assert json_resp.ITEMS[0].completed_at is not None
+        assert any(t.completed_at is not None for t in json_resp.ITEMS)
 
 
 def test_admin_get_all_workflow_instances(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
-        workflow = _create_workflow_instance_and_complete_it(db=db)
+        workflow = _create_completed_workflow(db=db)
         client = Client()
 
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
@@ -91,13 +102,9 @@ def test_admin_get_all_workflow_instances(db_engine_ctx):
 def test_cancel_workflow(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
-
         workflow = WorkflowDummy(
             db_session=db,
-            users_with_roles={
-                "initiator": ["wf-user"],
-                "admin": ["wf-admin"],
-            },
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
             workflow_name=WF_NAME,
             start_user="initiator",
         )
@@ -108,9 +115,7 @@ def test_cancel_workflow(db_engine_ctx):
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
                 name="bff_admin_cancel_workflow_instance",
-                json={
-                    "workflow_instance_id": str(workflow.workflow_instance_id),
-                },
+                json={"workflow_instance_id": str(workflow.workflow_instance_id)},
                 cls=CancelWorkflowInstanceResponse,
             )
 
@@ -142,18 +147,13 @@ def test_admin_assign(db_engine_ctx):
         )
 
         task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
-
-        workflow.user("initiator").assign_task(
-            task_id=task[0].id,
-        )
+        workflow.user("initiator").assign_task(task_id=task[0].id)
 
         client = Client()
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
                 name="bff_admin_unassign_task",
-                json={
-                    "task_id": str(task[0].id),
-                },
+                json={"task_id": str(task[0].id)},
                 cls=GetSingleTaskResponse,
             )
 
@@ -169,7 +169,8 @@ def test_admin_assign(db_engine_ctx):
                 cls=GetSingleTaskResponse,
             )
 
-        assert json_resp.task.assigned_user is not None and str(json_resp.task.assigned_user.id) == str(workflow.user("initiator").user.id)
+        assert json_resp.task.assigned_user is not None
+        assert str(json_resp.task.assigned_user.id) == str(workflow.user("initiator").user.id)
 
 
 def test_admin_user_listing_and_delegations(db_engine_ctx):
@@ -225,18 +226,18 @@ def test_admin_user_listing_and_delegations(db_engine_ctx):
 
 
 # ---------------------------------------------------------------------------
-# New endpoint-level tests
+# new endpoint-level tests
 # ---------------------------------------------------------------------------
 
 
 def test_admin_get_statistic_information(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
-        workflow = _create_workflow_instance_and_complete_it(db=db)
+        workflow = _create_completed_workflow(db=db)
         client = Client()
 
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
-            status, json_resp = client.post(
+            status, _ = client.post(
                 name="bff_admin_get_statistics_information",
                 json={},
                 cls=ReducedWorkflowInstanceResponse,
@@ -342,30 +343,28 @@ def test_admin_replace_task_data(db_engine_ctx):
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
                 name="bff_admin_replace_task_data",
-                json={"task_id": str(task.id), "data": {"text1": "replaced"}},
+                json={"task_id": str(task.id), "data": {"required_text": "replaced", "short_code": "xy"}},
                 cls=GetSingleTaskResponse,
             )
 
         assert status == 200
-        assert json_resp.task.data == {"text1": "replaced"}
+        assert json_resp.task.data == {"required_text": "replaced", "short_code": "xy"}
 
 
 def test_admin_execute_erroneous_task(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
-        # Use TestFlowBff with trigger_error=True to force the service task into state_error
         workflow = WorkflowDummy(
             db_session=db,
             users_with_roles={"admin": ["wf-admin"], "initiator": ["wf-user"]},
-            workflow_name=BFF_WF_NAME,
+            workflow_name=WF_NAME,
             start_user="initiator",
         )
         workflow.user("initiator").submit(
-            task_data=BFF_FORM1_TRIGGER_ERROR,
+            task_data=FORM1_DATA_TRIGGER_ERROR,
             workflow_instance_id=workflow.workflow_instance_id,
         )
 
-        # Find the erroneous task via admin tasks endpoint
         client = Client()
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, all_tasks = client.post(
@@ -377,7 +376,7 @@ def test_admin_execute_erroneous_task(db_engine_ctx):
             erroneous = [t for t in all_tasks.ITEMS if t.state_error]
             assert erroneous, "expected a task in state_error"
 
-            status, json_resp = client.post(
+            status, _ = client.post(
                 name="bff_admin_execute_erroneous_task",
                 json={"task_id": str(erroneous[0].id)},
                 cls=GetAllTasksResponse,
@@ -387,22 +386,16 @@ def test_admin_execute_erroneous_task(db_engine_ctx):
 
 
 def test_admin_download_attachment(db_engine_ctx):
-    import base64
-    from pathlib import Path
-
     with db_engine_ctx():
         db = SessionLocal()
         workflow = WorkflowDummy(
             db_session=db,
             users_with_roles={"admin": ["wf-admin"], "initiator": ["wf-user"]},
-            workflow_name=BFF_WF_NAME,
+            workflow_name=WF_NAME,
             start_user="initiator",
         )
-        png_path = Path(__file__).parent.parent / "processes" / "TestFlowFormUploads" / "tests" / "test.png"
-        encoded = base64.b64encode(png_path.read_bytes()).decode("utf-8")
-        attachment = {"datauri": f"data:image/png;name=test.png;base64,{encoded}"}
         workflow.user("initiator").submit(
-            task_data={"required_text": "x", "trigger_error": False, "attachment": attachment},
+            task_data={**FORM1_DATA_MIN, "attachment": _png_attachment()},
             workflow_instance_id=workflow.workflow_instance_id,
         )
 
@@ -410,7 +403,6 @@ def test_admin_download_attachment(db_engine_ctx):
             db=db, workflow_instance_id=workflow.workflow_instance_id,
         )
         assert attachments, "expected at least one attachment after upload"
-        # Find the task that owns the attachment
         tasks = service_application.get_usertasks_for_user_id(
             db=db, user_id=workflow.user("initiator").user.id,
             workflow_instance_id=workflow.workflow_instance_id, state="completed",
@@ -488,11 +480,11 @@ def test_admin_system_information(db_engine_ctx):
 def test_admin_get_task_states_per_workflow(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
-        workflow = _create_workflow_instance_and_complete_it(db=db)
+        workflow = _create_completed_workflow(db=db)
         client = Client()
 
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
-            status, json_resp = client.get(
+            status, _ = client.get(
                 name="bff_admin_get_task_states_per_workflow",
                 params={"wf_name": WF_NAME},
                 cls=WorkflowStateResponse,

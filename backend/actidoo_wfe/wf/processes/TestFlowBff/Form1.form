@@ -6,7 +6,15 @@
       "layout": {"row": "Row_1", "columns": null},
       "id": "Field_required_text",
       "key": "required_text",
-      "validate": {"required": true}
+      "validate": {"required": true, "minLength": 2}
+    },
+    {
+      "label": "Short code",
+      "type": "textfield",
+      "layout": {"row": "Row_1b", "columns": null},
+      "id": "Field_short_code",
+      "key": "short_code",
+      "validate": {"maxLength": 3}
     },
     {
       "values": [],

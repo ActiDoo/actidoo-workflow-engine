@@ -33,28 +33,13 @@ log: logging.Logger = logging.getLogger(__name__)
 setup_db(settings=settings)
 
 WF_NAME = "TestFlowBff"
-# trigger_error must be set so the FEEL gateway condition can evaluate it.
-FORM1_DATA_MIN = {"required_text": "x", "trigger_error": False}
-FORM1_DATA_WITH_CATEGORY = {"required_text": "x", "trigger_error": False, "category": "cat_alpha"}
-FORM1_DATA_TRIGGER_ERROR = {"required_text": "x", "trigger_error": True}
-
-
-def mock_user():
-    from actidoo_wfe.wf.service_user import upsert_user
-
-    return upsert_user(
-        db=SessionLocal(),
-        idp_user_id="321",
-        username="test_user_mock",
-        email="",
-        first_name="Mock",
-        last_name="User",
-        is_service_user=False,
-    )
+FORM1_DATA_MIN = {"required_text": "ok", "short_code": "abc", "trigger_error": False}
+FORM1_DATA_TRIGGER_ERROR = {"required_text": "ok", "short_code": "abc", "trigger_error": True}
+FORM2_DATA = {"confirmation": "done"}
 
 
 def _png_attachment():
-    png_path = Path(__file__).parent.parent / "processes" / "TestFlowFormUploads" / "tests" / "test.png"
+    png_path = Path(__file__).parent.parent.parent / "TestFlowFormUploads" / "tests" / "test.png"
     encoded = base64.b64encode(png_path.read_bytes()).decode("utf-8")
     return {"datauri": f"data:image/png;name=test.png;base64,{encoded}"}
 
@@ -72,29 +57,25 @@ def _start_bff_workflow(db, *, extra_users=None):
 
 
 # ---------------------------------------------------------------------------
-# existing test
+# user info / workflow listing
 # ---------------------------------------------------------------------------
 
 
 def test_refresh_get_workflow_spec(db_engine_ctx):
     with db_engine_ctx():
-        client = Client()
-        user = mock_user()
+        db = SessionLocal()
+        workflow = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
 
-        with override_get_user(client=client, user=user), disable_role_check(client):
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("u").user), disable_role_check(client):
             status, json_resp = client.post(
                 name="refresh_get_workflow_spec",
-                json={"name": "TestFlowBasicStart"},
+                json={"name": WF_NAME},
                 cls=WorkflowSpecResponse,
             )
 
         assert status == 200
         assert len(json_resp.files) > 0
-
-
-# ---------------------------------------------------------------------------
-# user info / workflow listing
-# ---------------------------------------------------------------------------
 
 
 def test_get_my_wfe_user(db_engine_ctx):
@@ -181,13 +162,12 @@ def test_get_workflow_copy_data(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
         workflow = _start_bff_workflow(db)
-        # Walk through to the end so a finished instance exists to copy from
         workflow.user("initiator").submit(
             task_data=FORM1_DATA_MIN,
             workflow_instance_id=workflow.workflow_instance_id,
         )
         workflow.user("initiator").submit(
-            task_data={"confirmation": "done"},
+            task_data=FORM2_DATA,
             workflow_instance_id=workflow.workflow_instance_id,
         )
 
@@ -250,7 +230,7 @@ def test_submit_task_data_happy(db_engine_ctx):
         assert parsed.usertasks[0].name == "Form2"
 
 
-def test_submit_task_data_validation_error_400(db_engine_ctx):
+def test_submit_400_required_missing(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
         workflow = _start_bff_workflow(db)
@@ -260,9 +240,43 @@ def test_submit_task_data_validation_error_400(db_engine_ctx):
         with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
             url = client.root_client.app.url_path_for("submit_task_data")
             response = client.root_client.post(
-                url,
-                params={"task_id": str(task.id)},
-                json={},  # missing required_text
+                url, params={"task_id": str(task.id)}, json={"trigger_error": False},
+            )
+
+        assert response.status_code == 400
+        assert "error_schema" in response.json()
+
+
+def test_submit_400_required_too_short(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            url = client.root_client.app.url_path_for("submit_task_data")
+            response = client.root_client.post(
+                url, params={"task_id": str(task.id)},
+                json={"required_text": "a", "trigger_error": False},
+            )
+
+        assert response.status_code == 400
+        assert "error_schema" in response.json()
+
+
+def test_submit_400_short_code_too_long(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            url = client.root_client.app.url_path_for("submit_task_data")
+            response = client.root_client.post(
+                url, params={"task_id": str(task.id)},
+                json={"required_text": "ok", "short_code": "ABCD", "trigger_error": False},
             )
 
         assert response.status_code == 400
@@ -385,7 +399,6 @@ def test_download_attachment(db_engine_ctx):
         workflow = _start_bff_workflow(db)
         task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
         workflow.user("initiator").assign_task(task_id=task.id)
-        # Submit form with an upload to seed an attachment
         attachment = _png_attachment()
         workflow.user("initiator").submit(
             task_data={**FORM1_DATA_MIN, "attachment": attachment},
