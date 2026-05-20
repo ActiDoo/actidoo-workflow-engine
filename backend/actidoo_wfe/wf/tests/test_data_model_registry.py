@@ -3,12 +3,14 @@
 
 """Tests for Data Model Persistence."""
 
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from sqlalchemy import String, inspect as sa_inspect
+import pytest
+from sqlalchemy import String
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Mapped, mapped_column
 
+from actidoo_wfe.database import Base
 from actidoo_wfe.wf.config_data_model import WorkflowDataApiConfig
 from actidoo_wfe.wf.exceptions import DataModelAccessDeniedError, DataModelNotFoundError
 from actidoo_wfe.wf.models import WorkflowManagedMixin, extension_model_base
@@ -17,8 +19,6 @@ from actidoo_wfe.wf.registry_data_model import (
     data_model_registry,
     register_data_model,
 )
-from actidoo_wfe.database import Base
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

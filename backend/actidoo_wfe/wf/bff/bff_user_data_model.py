@@ -8,7 +8,8 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import inspect as sa_inspect, select, func
+from sqlalchemy import func, select
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
 
 from actidoo_wfe.database import get_db
