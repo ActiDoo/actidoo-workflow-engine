@@ -147,7 +147,7 @@ pydantic-core==2.46.3
     # via pydantic
 pydantic-extra-types==2.11.1
     # via fastapi
-pydantic-settings==2.14.0
+pydantic-settings==2.14.1
     # via
     #   actidoo-wfe (pyproject.toml)
     #   fastapi
