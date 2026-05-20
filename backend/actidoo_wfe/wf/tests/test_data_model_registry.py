@@ -49,7 +49,7 @@ class TestExtensionModelBase:
         assert Fwa.__tablename__ == "ext_testns_fwa"
 
     def test_missing_ext_table_raises(self):
-        TestModel = extension_model_base("phoenix")
+        TestModel = extension_model_base("asdf")
 
         with pytest.raises(ValueError, match="must define '_ext_table'"):
 

@@ -7,7 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
@@ -100,10 +100,7 @@ def _serialize_row(row: Any, fields: list[str | VirtualField] | None = None) -> 
 
 
 def _attach_user(user, db: Session):
-    """Re-attach a (possibly detached) ``user`` to the current request-scoped
-    session. ``get_user`` closes its own session before returning, so without
-    this re-attach any lazy-load on ``user`` raises ``DetachedInstanceError``.
-    """
+    """Re-attach ``user`` to the current request-scoped session."""
     return db.merge(user, load=False)
 
 
@@ -129,15 +126,10 @@ def _require_read_access(user, descriptor: DataModelDescriptor, db: Session):
     return user
 
 
-def _require_wf_user(request: Request):
-    """FastAPI dependency: require wf-user role."""
-    require_realm_role("wf-user")(request)
-
-
 workflow_data_router = APIRouter(
     prefix="/workflow-data",
     tags=["workflow-data"],
-    dependencies=[Depends(_require_wf_user)],
+    dependencies=[Depends(require_realm_role("wf-user"))],
 )
 
 
