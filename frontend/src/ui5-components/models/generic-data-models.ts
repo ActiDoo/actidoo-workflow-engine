@@ -28,6 +28,7 @@ export enum GenericDataActionType {
   DELETE_DATA_REQUEST = 'GENERIC_DELETE_DATA_REQUEST',
   DELETE_DATA_RESPONSE = 'GENERIC_DELETE_DATA_RESPONSE',
   RESET_STATE_FOR_KEY = 'RESET_STATE_FOR_KEY',
+  CLEAR_RESPONSE_STATUS = 'CLEAR_RESPONSE_STATUS',
 }
 
 export interface GenericGetRequestAction<K> {
@@ -93,6 +94,18 @@ export interface GenericResetStateForKeyAction<K> {
   };
 }
 
+/**
+ * Clears only the transient response status fields (response/postResponse/...)
+ * while keeping `data`. Used to consume a response event (e.g. after showing a
+ * toast) without discarding the data the server just returned.
+ */
+export interface GenericClearResponseStatusAction<K> {
+  type: GenericDataActionType.CLEAR_RESPONSE_STATUS;
+  payload: {
+    key: K;
+  };
+}
+
 export type GenericDataAction<K, T> =
   | GenericGetRequestAction<K>
   | GenericGetResponseAction<K, T>
@@ -102,4 +115,5 @@ export type GenericDataAction<K, T> =
   | GenericDeleteResponseAction<K>
   | GenericPostRequestAction<K>
   | GenericPostResponseAction<K, T>
-  | GenericResetStateForKeyAction<K>;
+  | GenericResetStateForKeyAction<K>
+  | GenericClearResponseStatusAction<K>;

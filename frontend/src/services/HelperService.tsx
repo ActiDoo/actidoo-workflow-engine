@@ -4,7 +4,7 @@
 import axios from 'axios';
 import { StringDict } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
-import { resetStateForKey } from '@/store/generic-data/actions';
+import { clearResponseStatus } from '@/store/generic-data/actions';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
 import { WeDataKey } from '@/store/generic-data/setup';
@@ -77,5 +77,7 @@ export const handleResponse = (
     if (errorText) dispatch(addToast(<WeToastContent type="error" text={errorText} />));
     if (onError) onError();
   }
-  dispatch(resetStateForKey(key));
+  // Consume the response event (clear the status flags so the next request is
+  // detectable) but keep `data` — the server's response is the freshest state we have.
+  dispatch(clearResponseStatus(key));
 };

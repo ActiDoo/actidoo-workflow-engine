@@ -78,6 +78,19 @@ export default (state = initState, action: WeDataAction): WeDataState => {
           deleteResponse: undefined,
         },
       };
+    case GenericDataActionType.CLEAR_RESPONSE_STATUS:
+      // Unlike RESET_STATE_FOR_KEY this keeps `data` (and `queryParams`):
+      // it only consumes the transient response status fields.
+      return {
+        ...state,
+        [action.payload.key]: {
+          ...state[action.payload.key],
+          response: undefined,
+          postResponse: undefined,
+          putResponse: undefined,
+          deleteResponse: undefined,
+        },
+      };
     default:
       return state;
   }

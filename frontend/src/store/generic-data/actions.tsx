@@ -86,3 +86,15 @@ export const resetStateForKey = (key: WeDataKey): WeDataAction => {
     payload: { key },
   };
 };
+
+/**
+ * Clears the transient response status (response/postResponse/putResponse/deleteResponse)
+ * for a key while keeping its `data`. Use this to consume a response event without
+ * discarding the data the server just returned.
+ */
+export const clearResponseStatus = (key: WeDataKey): WeDataAction => {
+  return {
+    type: GenericDataActionType.CLEAR_RESPONSE_STATUS,
+    payload: { key },
+  };
+};
