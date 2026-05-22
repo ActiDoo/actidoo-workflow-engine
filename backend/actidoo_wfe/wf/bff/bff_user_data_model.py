@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -79,6 +80,8 @@ def _serialize_value(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, Decimal):
         return float(value)
+    if isinstance(value, uuid.UUID):
+        return str(value)
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return value
@@ -201,7 +204,7 @@ def list_rows(
 @workflow_data_router.get("/{model_name}/{workflow_instance_id}")
 def get_version_chain(
     model_name: str,
-    workflow_instance_id: str,
+    workflow_instance_id: uuid.UUID,
     user=Depends(get_user),
     db: Session = Depends(get_db),
 ):
@@ -215,7 +218,7 @@ def get_version_chain(
 
     model_class = descriptor.model_class
 
-    # Load the requested row
+    # Load the requested row (FastAPI already validated the path param as a UUID)
     row = db.get(model_class, workflow_instance_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Row not found")

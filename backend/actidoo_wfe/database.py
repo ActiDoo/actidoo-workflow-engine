@@ -5,15 +5,15 @@ import datetime
 import json
 import logging
 import uuid
+import zlib
 from contextlib import contextmanager
 from typing import Any, Generator
 from urllib import parse
-import zlib
 
 import alembic.config
 from asgi_correlation_id.context import correlation_id
-from sqlalchemy import TIMESTAMP, MetaData, NullPool, TypeDecorator, literal, text
-from sqlalchemy.dialects.mysql import LONGTEXT, LONGBLOB
+from sqlalchemy import TIMESTAMP, MetaData, NullPool, TypeDecorator, Uuid, literal, text
+from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, scoped_session
 from sqlalchemy.orm.session import sessionmaker
@@ -384,6 +384,24 @@ class UTCDateTime(TypeDecorator):
         if value is not None:
             # Treat as UTC and make it timezone-aware
             value = value.replace(tzinfo=datetime.timezone.utc)
+        return value
+
+
+class FlexibleUuid(TypeDecorator):
+    """A UUID column that also accepts plain UUID strings on input.
+
+    Stored and compared as a real ``Uuid`` (``CHAR(32)`` on MySQL), so it lines
+    up with ``WorkflowInstance.id`` without any string casting. Workflow code
+    and JSON ``task_data`` routinely carry the id as a string, so binding
+    coerces ``str`` to ``uuid.UUID``; result values are always ``uuid.UUID``.
+    """
+
+    impl = Uuid
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, str):
+            return uuid.UUID(value)
         return value
 
 

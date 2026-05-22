@@ -40,8 +40,8 @@ def add_workflow_participant_filter(query, wf_id_column, user: Any):
 
     Returns the filtered query.
     """
-    from sqlalchemy import cast, or_
-    from sqlalchemy import types as sa_types
+    from sqlalchemy import or_
+
     from actidoo_wfe.wf.models import (
         WorkflowInstance,
         WorkflowInstanceTask,
@@ -53,7 +53,7 @@ def add_workflow_participant_filter(query, wf_id_column, user: Any):
     user_role_names = select(WorkflowRole.name).join(WorkflowUserRole, WorkflowRole.id == WorkflowUserRole.role_id).where(WorkflowUserRole.user_id == user.id)
 
     participant_wf_ids = (
-        select(cast(WorkflowInstance.id, sa_types.String(100)))
+        select(WorkflowInstance.id)
         .distinct()
         .outerjoin(
             WorkflowInstanceTask,

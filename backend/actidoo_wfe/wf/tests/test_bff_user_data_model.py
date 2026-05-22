@@ -8,6 +8,8 @@ End-to-end via the FastAPI TestClient. Helper functions (`_user_has_read_access`
 endpoint responses.
 """
 
+import uuid
+
 import pytest
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,14 +17,30 @@ from sqlalchemy.orm import Mapped, mapped_column
 from actidoo_wfe.database import SessionLocal, SessionMaker, get_db_contextmanager, setup_db
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_user
-from actidoo_wfe.wf.config_data_model import VirtualField, WorkflowDataApiConfig
-from actidoo_wfe.wf.models import WorkflowManagedMixin, extension_model_base
+from actidoo_wfe.wf.config_data_model import (
+    VirtualField,
+    WorkflowDataApiConfig,
+    add_workflow_participant_filter,
+)
+from actidoo_wfe.wf.models import WorkflowInstance, WorkflowManagedMixin, extension_model_base
 from actidoo_wfe.wf.registry_data_model import DataModelDescriptor, data_model_registry
 from actidoo_wfe.wf.tests.helpers.client import Client
 from actidoo_wfe.wf.tests.helpers.overrides import disable_role_check, override_get_user
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
 setup_db(settings=settings)
+
+
+_WF_NS = uuid.UUID("00000000-0000-0000-0000-0000000000aa")
+
+
+def _wf_id(label: str) -> str:
+    """Deterministic UUID string for a human-readable label.
+
+    The workflow-instance id columns are real UUIDs, so test rows need valid
+    UUID values; this keeps them readable and stable across runs.
+    """
+    return str(uuid.uuid5(_WF_NS, label))
 
 
 _ApiTestBase = extension_model_base("apitest")
@@ -103,6 +121,17 @@ def _seed_row(workflow_instance_id, *, name="Row", value=1, parent=None, child=N
             value=value,
             parent_workflow_instance_id=parent,
             child_workflow_instance_id=child,
+        ))
+
+
+def _seed_wf_instance(instance_id, created_by_id=None):
+    with SessionMaker() as db, db.begin():
+        db.add(WorkflowInstance(
+            id=instance_id,
+            name="participant-test",
+            lane_mapping={},
+            data={},
+            created_by_id=created_by_id,
         ))
 
 
@@ -206,7 +235,7 @@ class TestListRowsEndpoint:
             dummy = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
             _register("Paginated")
             for i in range(5):
-                _seed_row(f"wf-{i}", name=f"Row{i}", value=i)
+                _seed_row(_wf_id(f"wf-{i}"), name=f"Row{i}", value=i)
 
             client = Client()
             with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
@@ -227,8 +256,9 @@ class TestListRowsEndpoint:
             db = SessionLocal()
             dummy = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
             _register("Chained")
-            _seed_row("parent", name="OldVersion", child="child")
-            _seed_row("child", name="LatestVersion", parent="parent")
+            parent_id, child_id = _wf_id("parent"), _wf_id("child")
+            _seed_row(parent_id, name="OldVersion", child=child_id)
+            _seed_row(child_id, name="LatestVersion", parent=parent_id)
 
             client = Client()
             with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
@@ -237,7 +267,7 @@ class TestListRowsEndpoint:
             assert response.status_code == 200
             data = response.json()
             assert data["total"] == 1
-            assert data["items"][0]["workflow_instance_id"] == "child"
+            assert data["items"][0]["workflow_instance_id"] == child_id
 
     def test_items_use_virtual_fields_and_exclude_system_columns(self, db_engine_ctx):
         with db_engine_ctx():
@@ -246,7 +276,7 @@ class TestListRowsEndpoint:
             dummy = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
             doubled = VirtualField("doubled", type="integer", value=lambda r: (r.value or 0) * 2)
             _register("Virt", fields=["name", "value", doubled])
-            _seed_row("wf-vf", name="Item", value=21)
+            _seed_row(_wf_id("wf-vf"), name="Item", value=21)
 
             client = Client()
             with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
@@ -314,16 +344,17 @@ class TestGetVersionChainEndpoint:
             db = SessionLocal()
             dummy = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
             _register("Chain")
-            _seed_row("a", name="v1", child="b")
-            _seed_row("b", name="v2", parent="a", child="c")
-            _seed_row("c", name="v3", parent="b")
+            a, b, c = _wf_id("a"), _wf_id("b"), _wf_id("c")
+            _seed_row(a, name="v1", child=b)
+            _seed_row(b, name="v2", parent=a, child=c)
+            _seed_row(c, name="v3", parent=b)
 
             client = Client()
             with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
-                response = _get_version_chain(client, "Chain", workflow_instance_id="b")
+                response = _get_version_chain(client, "Chain", workflow_instance_id=b)
 
             assert response.status_code == 200
-            assert [v["workflow_instance_id"] for v in response.json()["versions"]] == ["a", "b", "c"]
+            assert [v["workflow_instance_id"] for v in response.json()["versions"]] == [a, b, c]
 
     def test_returns_404_for_unknown_row(self, db_engine_ctx):
         with db_engine_ctx():
@@ -334,16 +365,20 @@ class TestGetVersionChainEndpoint:
 
             client = Client()
             with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
-                response = _get_version_chain(client, "Chain", workflow_instance_id="unknown")
+                absent = _get_version_chain(client, "Chain", workflow_instance_id=_wf_id("nope"))
+                malformed = _get_version_chain(client, "Chain", workflow_instance_id="not-a-uuid")
 
-            assert response.status_code == 404
+            # Absent but well-formed -> 404; malformed path param -> 422 (FastAPI validation)
+            assert absent.status_code == 404
+            assert malformed.status_code == 422
 
     def test_row_filter_receives_attached_user(self, db_engine_ctx):
         """Regression: row_filter used to receive a detached user."""
         with db_engine_ctx():
             _create_extension_table()
             user = _make_detached_user("gvc3", "gvc3@example.com", role_name="rf-role-2")
-            _seed_row("wf-xyz", name="Seed", value=1)
+            xyz = _wf_id("wf-xyz")
+            _seed_row(xyz, name="Seed", value=1)
 
             captured = []
 
@@ -355,8 +390,51 @@ class TestGetVersionChainEndpoint:
 
             client = Client()
             with override_get_user(client=client, user=user), disable_role_check(client):
-                response = _get_version_chain(client, "WithFilter", workflow_instance_id="wf-xyz")
+                response = _get_version_chain(client, "WithFilter", workflow_instance_id=xyz)
 
             assert response.status_code == 200
             assert captured == [{"rf-role-2"}]
             assert len(response.json()["versions"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# add_workflow_participant_filter
+# ---------------------------------------------------------------------------
+
+
+class TestParticipantRowFilter:
+    """Test the row filter"""
+
+    def test_creator_sees_row_non_participant_does_not(self, db_engine_ctx):
+        with db_engine_ctx():
+            _create_extension_table()
+            db = SessionLocal()
+            dummy = WorkflowDummy(
+                db_session=db,
+                users_with_roles={"creator": ["pf-role"], "outsider": ["pf-role"]},
+            )
+            creator = dummy.user("creator").user
+            outsider = dummy.user("outsider").user
+
+            wf_id = uuid.uuid4()
+            _seed_wf_instance(wf_id, created_by_id=creator.id)
+            _seed_row(str(wf_id), name="Owned", value=1)
+
+            def row_filter(query, db, user):
+                return add_workflow_participant_filter(
+                    query, ApiTestModel.workflow_instance_id, user,
+                )
+
+            _register("Owned", read_roles=["pf-role"], row_filter=row_filter)
+
+            client = Client()
+            with override_get_user(client=client, user=creator), disable_role_check(client):
+                creator_resp = _list_rows(client, "Owned")
+            with override_get_user(client=client, user=outsider), disable_role_check(client):
+                outsider_resp = _list_rows(client, "Owned")
+
+            assert creator_resp.status_code == 200
+            assert [r["workflow_instance_id"] for r in creator_resp.json()["items"]] == [str(wf_id)]
+
+            assert outsider_resp.status_code == 200
+            assert outsider_resp.json()["items"] == []

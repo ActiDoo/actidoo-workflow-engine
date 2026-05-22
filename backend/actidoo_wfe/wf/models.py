@@ -11,7 +11,7 @@ from sqlalchemy import CheckConstraint, Computed, ForeignKey, Index, UniqueConst
 from sqlalchemy.orm import Mapped, column_property, declared_attr, deferred, mapped_column, relationship, validates
 from sqlalchemy_file import File, FileField
 
-from actidoo_wfe.database import Base, JSONBlob, UTCDateTime, ZlibJSONBlob
+from actidoo_wfe.database import Base, FlexibleUuid, JSONBlob, UTCDateTime, ZlibJSONBlob
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.i18n import get_supported_locales
 from actidoo_wfe.settings import settings
@@ -663,16 +663,16 @@ class WorkflowManagedMixin:
     forming a version chain via parent/child workflow instance IDs.
     """
 
-    workflow_instance_id: Mapped[str] = mapped_column(
-        ty.String(100),
+    workflow_instance_id: Mapped[uuid.UUID] = mapped_column(
+        FlexibleUuid,
         primary_key=True,
     )
-    parent_workflow_instance_id: Mapped[str | None] = mapped_column(
-        ty.String(100),
+    parent_workflow_instance_id: Mapped[uuid.UUID | None] = mapped_column(
+        FlexibleUuid,
         nullable=True,
     )
-    child_workflow_instance_id: Mapped[str | None] = mapped_column(
-        ty.String(100),
+    child_workflow_instance_id: Mapped[uuid.UUID | None] = mapped_column(
+        FlexibleUuid,
         nullable=True,
     )
     action: Mapped[str | None] = mapped_column(
