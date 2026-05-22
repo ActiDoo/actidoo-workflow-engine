@@ -181,7 +181,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   };
 
   return (
-    <div className="bg-white mb-2 py-3 px-12">
+    <div className="bg-white mb-2 py-3 px-3 md:px-12">
       <div className="flex justify-between items-center gap-4">
         <div className="flex-1">
           <Text>{workflowInstance?.title}</Text>

@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { Suspense } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '@/pages/tasks/Tasks.scss';
 
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
@@ -12,7 +12,11 @@ import { useTranslation } from '@/i18n';
 const Tasks: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const selectedTab = window.location.pathname.includes('open') ? 'open' : 'completed';
+  const { pathname } = useLocation();
+  const selectedTab = pathname.includes('/completed') ? 'completed' : 'open';
+  // A task is open when the route carries a segment beyond /tasks/open|completed.
+  // Used to hide the page header + tab bar on mobile (see Tasks.scss).
+  const isDetail = /\/tasks\/(open|completed)\/.+/.test(pathname);
 
   return (
     <PcDetailsPage
@@ -21,7 +25,7 @@ const Tasks: React.FC = () => {
       header={{
         title: t('tasks.header'),
       }}
-      className={'!p-0'}
+      className={`!p-0 ${isDetail ? 'pc-tasks--detail' : ''}`}
       onSelectedSectionChange={event => {
         if (event.detail.selectedSectionId !== selectedTab) {
           navigate(event.detail.selectedSectionId);

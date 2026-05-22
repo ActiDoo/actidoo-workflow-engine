@@ -112,15 +112,21 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
     </div>
   );
 
+  // Mobile workaround until real responsiveness lands: below `md` the app keeps a
+  // minimum width of 1024px and the whole shell (header included) scrolls
+  // horizontally. The header is in normal flow inside the min-width column so it
+  // pans along instead of being pinned to the viewport.
   return (
-    <div className="bg-pc-gray-50 h-screen overflow-hidden">
-      <Bar
-        startContent={startHeaderContent}
-        endContent={endHeaderContent}
-        className="z-[100] fixed top-0 pc-px-header-responsive "
-      />
-      <div className="relative flex flex-col flex-1 overflow-auto mt-11 h-[calc(100vh-2.75rem)]">
-        <div className="flex flex-col flex-1">{props.children}</div>
+    <div className="bg-pc-gray-50 h-screen overflow-x-auto overflow-y-hidden">
+      <div className="flex flex-col h-full max-md:min-w-[1024px]">
+        <Bar
+          startContent={startHeaderContent}
+          endContent={endHeaderContent}
+          className="z-[100] relative shrink-0 pc-px-header-responsive "
+        />
+        <div className="relative flex flex-col flex-1 overflow-auto">
+          <div className="flex flex-col flex-1">{props.children}</div>
+        </div>
       </div>
     </div>
   );

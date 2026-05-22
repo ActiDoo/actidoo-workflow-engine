@@ -143,6 +143,7 @@ export const en = {
     },
     noTaskSelectedTitle: 'No task selected',
     noTaskSelectedText: 'Select task on the left side',
+    backToList: 'Back to list',
   },
   taskContent: {
     notFoundTitle: 'Task could not be found',

@@ -405,7 +405,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   if (task && jsonschema !== undefined && formData !== undefined) {
     return (
       <>
-        <div className="pl-2">
+        <div className="md:pl-2">
           <SingleTaskHeader
             task={task}
             reloadTask={() => {
@@ -422,7 +422,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               navigate('/tasks/open');
             }}
           />
-          <div className="bg-white pt-4 px-12 pc-form pb-20">
+          <div className="bg-white pt-4 px-3 md:px-12 pc-form pb-20">
             <TaskForm
               key={`form_${formRenderIndex}`}
               formData={formData}

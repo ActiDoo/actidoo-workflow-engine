@@ -14,3 +14,33 @@
   }
 
 }
+
+/* On mobile the task views become a drill-down: while a task is open the page
+ * header ("Aufgaben" title) and the Open/Completed tab bar are hidden so the
+ * task detail gets the full height. The tabs stay on the list view. */
+@media (max-width: 599px) {
+  /* The tab strip adds 16px on top of each tab's own 16px padding, pushing the
+   * tab labels to 32px. Drop it so "Offen"/"Abgeschlossen" line up at 16px. */
+  #pc-tasks ui5-tabcontainer::part(tabstrip) {
+    padding-left: 0;
+  }
+
+  /* Align the "Aufgaben" page title with the tab bar and the list (16px)
+   * instead of the default 32px ObjectPage gutter. */
+  #pc-tasks [data-component-name="ObjectPageTopHeader"] {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .pc-tasks--detail {
+    /* !important: ObjectPageTopHeader carries an inline `display: grid`. */
+    [data-component-name="ObjectPageTopHeader"],
+    div[data-component-name="ObjectPageTabContainer"] {
+      display: none !important;
+    }
+  }
+
+
+}

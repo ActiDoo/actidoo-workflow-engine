@@ -144,6 +144,7 @@ export const de = {
     },
     noTaskSelectedTitle: 'Keine Aufgabe ausgewählt',
     noTaskSelectedText: 'Wähle links eine Aufgabe aus',
+    backToList: 'Zurück zur Liste',
   },
   taskContent: {
     notFoundTitle: 'Aufgabe nicht gefunden',

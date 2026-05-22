@@ -25,6 +25,8 @@ interface WeSideBarListProps {
   state: WorkflowState;
   errorMessage?: string;
   emptyMessage?: string;
+  /** Extra classes for the root element, e.g. responsive width/visibility. */
+  className?: string;
 }
 
 export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
@@ -66,7 +68,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
   );
 
   return (
-    <div className="absolute top-0 bottom-0 overflow-y-auto bg-white w-[280px]">
+    <div className={`absolute top-0 bottom-0 overflow-y-auto bg-white ${props.className ?? ''}`}>
       {isLoading ? (
         loadingComponent
       ) : error ? (
