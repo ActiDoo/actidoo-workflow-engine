@@ -77,6 +77,10 @@ export interface GetWorkflowResponse {
   }>;
 }
 
+export interface PinnedWorkflowsResponse {
+  pinned_workflow_names: string[];
+}
+
 export interface TaskItemResponse {
   task: TaskItem;
 }

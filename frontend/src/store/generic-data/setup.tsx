@@ -24,6 +24,7 @@ import {
   GetWorkflowResponse,
   GetWorkflowStatisticsResponse,
   MyInitiatedWorkflowInstance,
+  PinnedWorkflowsResponse,
   RefreshGetWorkflowSpec,
   ReplaceTaskDataRequestData,
   SearchWfUsersResponse,
@@ -45,6 +46,8 @@ export enum WeDataKey {
   SUBMIT_TASK_DATA = 'submit-task-data',
   START_WORKFLOW = 'start-workflow',
   WORKFLOWS = 'workflows',
+  PINNED_WORKFLOWS = 'pinned-workflows',
+  TOGGLE_PINNED_WORKFLOW = 'toggle-pinned-workflow',
   WORKFLOW_INSTANCES_WITH_TASKS = 'workflow-instances-with-tasks',
   MY_OPEN_WORKFLOW_INSTANCES = 'my-open-workflow-instances',
   MY_COMPLETED_WORKFLOW_INSTANCES = 'my-completed-workflow-instances',
@@ -97,6 +100,8 @@ export interface WeDataState {
     | null;
   [WeDataKey.START_WORKFLOW]: GenericDataEntry<StartWorkflowResponse> | null;
   [WeDataKey.WORKFLOWS]: GenericDataEntry<GetWorkflowResponse> | null;
+  [WeDataKey.PINNED_WORKFLOWS]: GenericDataEntry<PinnedWorkflowsResponse> | null;
+  [WeDataKey.TOGGLE_PINNED_WORKFLOW]: GenericDataEntry<PinnedWorkflowsResponse> | null;
   [WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS]: GenericDataEntry<WorkflowInstanceTable> | null;
   [WeDataKey.MY_OPEN_WORKFLOW_INSTANCES]: GenericDataEntry<MyInitiatedWorkflowInstanceTable> | null;
   [WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES]: GenericDataEntry<MyInitiatedWorkflowInstanceTable> | null;
@@ -142,6 +147,10 @@ export const WeApiUrl = (
       return 'user/start_workflow';
     case WeDataKey.WORKFLOWS:
       return 'user/workflows';
+    case WeDataKey.PINNED_WORKFLOWS:
+      return 'user/pinned_workflows';
+    case WeDataKey.TOGGLE_PINNED_WORKFLOW:
+      return 'user/toggle_pinned_workflow';
     case WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS:
       return `user/workflow_instances_with_tasks/${params?.state}?limit=200`;
     case WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES:
@@ -206,6 +215,8 @@ export const initState: WeDataState = {
   [WeDataKey.START_WORKFLOW]: null,
   [WeDataKey.SUBMIT_TASK_DATA]: null,
   [WeDataKey.WORKFLOWS]: null,
+  [WeDataKey.PINNED_WORKFLOWS]: null,
+  [WeDataKey.TOGGLE_PINNED_WORKFLOW]: null,
   [WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS]: null,
   [WeDataKey.MY_OPEN_WORKFLOW_INSTANCES]: null,
   [WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES]: null,
@@ -244,6 +255,7 @@ export type WeDataGetResponseTypes =
   | CopyWorkflowDataResponse
   | StartWorkflowPreviewResponse
   | GetWorkflowResponse
+  | PinnedWorkflowsResponse
   | GetWorkflowStatisticsResponse
   | GetSystemInformationResponse
   | TaskItemResponse

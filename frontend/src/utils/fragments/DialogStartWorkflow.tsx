@@ -23,6 +23,9 @@ import { addToast } from '@/store/ui/actions';
 import { Link, useNavigate } from 'react-router-dom';
 import { WeToastContent } from '@/utils/components/WeToast';
 import '@ui5/webcomponents-icons/dist/org-chart';
+import '@ui5/webcomponents-icons/dist/pushpin-on';
+import '@ui5/webcomponents-icons/dist/pushpin-off';
+import '@ui5/webcomponents-icons/dist/course-book';
 import { WorkflowState } from '@/models/models';
 import { environment } from '@/environment';
 import { useTranslation } from '@/i18n';
@@ -48,7 +51,17 @@ export const DialogStartWorkflow: React.FC = () => {
 
   const workflowData = useSelector((state: State) => state.data[WeDataKey.WORKFLOWS]);
   const startData = useSelector((state: State) => state.data[WeDataKey.START_WORKFLOW]);
+  const pinnedData = useSelector((state: State) => state.data[WeDataKey.PINNED_WORKFLOWS]);
+  const togglePinData = useSelector((state: State) => state.data[WeDataKey.TOGGLE_PINNED_WORKFLOW]);
   const workflowOptions = workflowData?.data?.workflows;
+
+  const [pinned, setPinned] = useState<string[]>([]);
+  const pinnedSet = new Set(pinned);
+
+  const togglePin = (name: string): void => {
+    setPinned(prev => (prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]));
+    dispatch(postRequest(WeDataKey.TOGGLE_PINNED_WORKFLOW, { name }));
+  };
 
   const buildSearchRegExp = (query: string): RegExp | null => {
     if (!query) return null;
@@ -88,7 +101,12 @@ export const DialogStartWorkflow: React.FC = () => {
     return parts.length > 0 ? parts : title;
   };
 
-  const filteredWorkflows = workflowOptions?.filter(w => matchesSearch(w.title, search));
+  const filteredWorkflows = workflowOptions?.filter(w => matchesSearch(w.title, search)) ?? [];
+  const sortByTitle = (a: { title: string }, b: { title: string }): number =>
+    a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+  const pinnedGroup = filteredWorkflows.filter(w => pinnedSet.has(w.name)).sort(sortByTitle);
+  const restGroup = filteredWorkflows.filter(w => !pinnedSet.has(w.name)).sort(sortByTitle);
+  const hasResults = pinnedGroup.length + restGroup.length > 0;
 
   const closeDialog = (): void => {
     setDialogOpen(false);
@@ -102,7 +120,20 @@ export const DialogStartWorkflow: React.FC = () => {
 
   useEffect(() => {
     dispatch(getRequest(WeDataKey.WORKFLOWS));
+    dispatch(getRequest(WeDataKey.PINNED_WORKFLOWS));
   }, []);
+
+  useEffect(() => {
+    if (pinnedData?.data?.pinned_workflow_names) {
+      setPinned(pinnedData.data.pinned_workflow_names);
+    }
+  }, [pinnedData?.data]);
+
+  useEffect(() => {
+    if (togglePinData?.postResponse === 200 && togglePinData.data?.pinned_workflow_names) {
+      setPinned(togglePinData.data.pinned_workflow_names);
+    }
+  }, [togglePinData?.postResponse, togglePinData?.data]);
 
   useEffect(() => {
     if (startData?.postResponse === 200) {
@@ -123,6 +154,39 @@ export const DialogStartWorkflow: React.FC = () => {
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string is not a valid label, fallback intentional
     environment.environmentLabel ||
     (environment.apiUrl.includes('localhost') ? 'LOCALHOST - TESTING' : '');
+
+  const renderWorkflowRow = (w: { name: string; title: string }): React.ReactNode => {
+    const isPinned = pinnedSet.has(w.name);
+    return (
+      <div
+        key={`workflow_${w.name}`}
+        className="flex items-center justify-between py-2 pr-4 w-full">
+        <div className="flex items-center gap-2">
+          <Link to={`workflow-diagram/${w.name}`} onClick={closeDialog} className="inline-flex">
+            <Icon name="org-chart" className="!font-bold !text-brand-primary cursor-pointer" />
+          </Link>
+          <Text>{highlightMatch(w.title, search)}</Text>
+        </div>
+        <div className="flex items-center gap-3">
+          <Icon
+            name={isPinned ? 'pushpin-on' : 'pushpin-off'}
+            accessibleName={t(isPinned ? 'dialogStartWorkflow.unpin' : 'dialogStartWorkflow.pin')}
+            className={`cursor-pointer ${isPinned ? '!text-brand-primary' : ''}`}
+            onClick={() => {
+              togglePin(w.name);
+            }}
+          />
+          <Text
+            className="!font-bold !text-brand-primary cursor-pointer"
+            onClick={() => {
+              dispatch(postRequest(WeDataKey.START_WORKFLOW, { name: w.name }));
+            }}>
+            {t('dialogStartWorkflow.start')}
+          </Text>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -146,7 +210,7 @@ export const DialogStartWorkflow: React.FC = () => {
           style={
             lockedSize
               ? {
-                  minHeight: `min(${lockedSize.height}px, 94%)`,
+                  height: `min(${lockedSize.height}px, 94%)`,
                   width: `min(${lockedSize.width}px, 90%)`,
                 }
               : undefined
@@ -164,8 +228,8 @@ export const DialogStartWorkflow: React.FC = () => {
               active={isLoading}
               size="Medium"
               delay={0}
-              className="bg-white/80 w-full">
-              <div className="w-full">
+              className="bg-white/80 w-full h-full">
+              <div className="w-full h-full flex flex-col">
                 <Input
                   className="w-full mb-2"
                   icon={
@@ -188,34 +252,16 @@ export const DialogStartWorkflow: React.FC = () => {
                     handleSearchInput(e.target.value ?? '');
                   }}
                 />
-                {filteredWorkflows && filteredWorkflows.length > 0 ? (
-                  filteredWorkflows.map(w => (
-                    <div
-                      key={`workflow_${w.name}`}
-                      className="flex items-center justify-between py-2 pr-4 w-full">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`workflow-diagram/${w.name}`}
-                          onClick={closeDialog}
-                          className="inline-flex">
-                          <Icon
-                            name="org-chart"
-                            className="!font-bold !text-brand-primary cursor-pointer"
-                          />
-                        </Link>
-                        <Text>{highlightMatch(w.title, search)}</Text>
-                      </div>
-                      <Text
-                        className="!font-bold !text-brand-primary cursor-pointer"
-                        onClick={() => {
-                          dispatch(postRequest(WeDataKey.START_WORKFLOW, { name: w.name }));
-                        }}>
-                        {t('dialogStartWorkflow.start')}
-                      </Text>
-                    </div>
-                  ))
+                {hasResults ? (
+                  <>
+                    {pinnedGroup.map(renderWorkflowRow)}
+                    {restGroup.map(renderWorkflowRow)}
+                  </>
                 ) : (
-                  <Text>{t('dialogStartWorkflow.noneFound')}</Text>
+                  <div className="flex-1 flex items-center justify-center gap-2">
+                    <Icon name="course-book" className="!w-4 !h-4 !text-brand-primary" />
+                    <Text>{t('dialogStartWorkflow.noneFound')}</Text>
+                  </div>
                 )}
               </div>
             </BusyIndicator>

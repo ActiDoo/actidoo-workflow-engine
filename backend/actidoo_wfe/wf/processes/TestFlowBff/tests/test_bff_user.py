@@ -13,6 +13,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     CancelWorkflowResponse,
     DeleteWorkflowResponse,
     GetMyWfeUserResponse,
+    GetPinnedWorkflowsResponse,
     GetUserTasksResponse,
     GetWorkflowCopyDataResponse,
     GetWorkflowInstancesResponse,
@@ -103,6 +104,61 @@ def test_get_workflows(db_engine_ctx):
 
         assert status == 200
         assert any(w.name == WF_NAME for w in json_resp.workflows)
+
+
+def test_pinned_workflows_toggle(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(db_session=db, users_with_roles={"initiator": ["wf-user"]})
+        client = Client()
+
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            status, json_resp = client.get(name="get_pinned_workflows", cls=GetPinnedWorkflowsResponse)
+            assert status == 200
+            assert json_resp.pinned_workflow_names == []
+
+            status, json_resp = client.post(
+                name="toggle_pinned_workflow",
+                json={"name": WF_NAME},
+                cls=GetPinnedWorkflowsResponse,
+            )
+            assert status == 200
+            assert json_resp.pinned_workflow_names == [WF_NAME]
+
+            # persists across a fresh GET
+            status, json_resp = client.get(name="get_pinned_workflows", cls=GetPinnedWorkflowsResponse)
+            assert status == 200
+            assert json_resp.pinned_workflow_names == [WF_NAME]
+
+            # toggling again removes it
+            status, json_resp = client.post(
+                name="toggle_pinned_workflow",
+                json={"name": WF_NAME},
+                cls=GetPinnedWorkflowsResponse,
+            )
+            assert status == 200
+            assert json_resp.pinned_workflow_names == []
+
+
+def test_pinned_workflows_are_user_specific(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(db_session=db, users_with_roles={"alice": ["wf-user"], "bob": ["wf-user"]})
+        client = Client()
+
+        with override_get_user(client=client, user=workflow.user("alice").user), disable_role_check(client):
+            status, json_resp = client.post(
+                name="toggle_pinned_workflow",
+                json={"name": WF_NAME},
+                cls=GetPinnedWorkflowsResponse,
+            )
+            assert status == 200
+            assert json_resp.pinned_workflow_names == [WF_NAME]
+
+        with override_get_user(client=client, user=workflow.user("bob").user), disable_role_check(client):
+            status, json_resp = client.get(name="get_pinned_workflows", cls=GetPinnedWorkflowsResponse)
+            assert status == 200
+            assert json_resp.pinned_workflow_names == []
 
 
 def test_get_workflow_statistics(db_engine_ctx):

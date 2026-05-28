@@ -93,6 +93,7 @@ class WorkflowUser(Base):
         foreign_keys="WorkflowUserDelegate.delegate_user_id",
     )
     claims: Mapped[List["WorkflowUserClaim"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    pinned_workflows: Mapped[List["WorkflowUserPinnedWorkflow"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         UTCDateTime(),
@@ -118,6 +119,18 @@ class WorkflowUserClaim(Base):
     fetched_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
     user: Mapped[WorkflowUser] = relationship(back_populates="claims")
+
+
+class WorkflowUserPinnedWorkflow(Base):
+    __tablename__ = "workflow_user_pinned_workflows"
+    __table_args__ = (UniqueConstraint("user_id", "workflow_name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workflow_users.id", ondelete="CASCADE"), index=True, nullable=False)
+    workflow_name: Mapped[str] = mapped_column(ty.String(255), nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(UTCDateTime(), default=dt_now_naive, nullable=False)
+
+    user: Mapped[WorkflowUser] = relationship(back_populates="pinned_workflows")
 
 
 class WorkflowRole(Base):

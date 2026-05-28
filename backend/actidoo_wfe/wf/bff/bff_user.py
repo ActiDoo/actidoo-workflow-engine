@@ -23,6 +23,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     DeleteWorkflowResponse,
     DownloadAttachmentRequest,
     GetMyWfeUserResponse,
+    GetPinnedWorkflowsResponse,
     GetUserTasksResponse,
     GetUserTasksResponseUserTasks,
     GetWorkflowInstancesResponse,
@@ -43,6 +44,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     StartWorkflowWithDataRequest,
     StartWorkflowWithDataResponse,
     SubmitTaskDataErrorResponse,
+    TogglePinnedWorkflowRequest,
     UserDelegationResponse,
     UserSettingsResponse,
     WorkflowSpecResponse,
@@ -307,6 +309,27 @@ def get_workflows(db: Annotated[Session, Depends(get_db)], user: Annotated[Workf
 
     return GetWorkflowsResponse(
         workflows=[GetWorkflowsResponseItem(name=x.name, title=x.title) for x in workflows],
+    )
+
+
+@router.get("/pinned_workflows", name="get_pinned_workflows")
+def get_pinned_workflows(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> GetPinnedWorkflowsResponse:
+    return GetPinnedWorkflowsResponse(
+        pinned_workflow_names=service_user.get_pinned_workflow_names(db=db, user_id=user.id),
+    )
+
+
+@router.post("/toggle_pinned_workflow", name="toggle_pinned_workflow")
+def toggle_pinned_workflow(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    reqdata: TogglePinnedWorkflowRequest,
+) -> GetPinnedWorkflowsResponse:
+    return GetPinnedWorkflowsResponse(
+        pinned_workflow_names=service_user.toggle_pinned_workflow(db=db, user_id=user.id, name=reqdata.name),
     )
 
 

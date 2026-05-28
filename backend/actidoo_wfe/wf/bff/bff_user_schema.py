@@ -140,6 +140,18 @@ class GetWorkflowsResponseItem(BaseModel):
     title: str
 
 
+class GetPinnedWorkflowsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    pinned_workflow_names: list[str]
+
+
+class TogglePinnedWorkflowRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+
+
 class GetWorkflowStatisticsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
