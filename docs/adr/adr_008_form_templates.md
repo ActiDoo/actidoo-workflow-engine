@@ -65,6 +65,20 @@ After a template is applied, designated fields could become non-editable, to pre
 - *Pros:* Prevents inconsistent blocks in adversarial cases.
 - *Cons:* Significant complexity (per-field RJSF override, UX for the locked state) and conflicts with "apply, correct, save again".
 
+### Template management UI
+
+saving, listing, applying and deleting of templates inside the UI.
+
+**Modal inside the open form (chosen).** Two actions in the active form ("Save as template", "Apply template") which open modals that handle naming, the workflow-scoped list, the preview and deletion.
+
+- *Pros:* User stays in the context of the workflow they are working on. The list is naturally scoped to the current form.
+- *Cons:* Bulk operations across many workflows require opening a representative form first.
+
+**Separate management menu / page (rejected).** A dedicated user-level section shows all templates across all workflows; saving and applying still happen in the form.
+
+- *Pros:* Better for power users with many templates across workflows; bulk delete is straightforward.
+- *Cons:* Adds a new navigation surface and pulls the user out of the workflow. Save and apply still need to be in the form anyway.
+
 ### Storage location
 
 Where are the templates saved.
@@ -84,9 +98,9 @@ Where are the templates saved.
 1. **Activation: opt-in per form with a per-field whitelist.** `templates_enabled: true` on the form, `templatable: true` per field. The data-consistency concern from the ticket weighs heavier than the small configuration overhead, and new fields must not silently leak into templates.
 2. **Schema drift: lenient merging with a review step.** Existing templates survive normal schema evolution; the review keeps the user informed about skipped fields.
 3. **Field locking after apply: not implemented.** The added complexity is not justified given the "apply, correct, save again" workflow we want to support.
-4. **Storage: backend, in a dedicated per-user table** (`workflow_user_form_templates`), with a unique constraint on `(user_id, workflow_name, template_name)`. REST endpoints in `bff_user.py`. Backend persistence ensures templates work across browsers and devices and keeps the whitelist trust boundary on the server rather than on the client.
-5. **Server-side whitelist filtering on save.** The backend discards any field in the incoming `template_data` that is not `templatable: true`. A tampered frontend cannot smuggle additional fields.
-6. **In-context management.** Listing, applying and deleting happen inside the form's template dialog. No separate management page.
+4. **Template management surface: modal inside the open form.** Two actions in the form ("Save as template", "Apply template") open modals that handle naming, the workflow-scoped list, the read-only preview, and deletion. No separate management page. Edits to values always happen in the form itself.
+5. **Storage: backend, in a dedicated per-user table** (`workflow_user_form_templates`), with a unique constraint on `(user_id, workflow_name, template_name)`. REST endpoints in `bff_user.py`. Backend persistence ensures templates work across browsers and devices and keeps the whitelist trust boundary on the server rather than on the client.
+6. **Server-side whitelist filtering on save.** The backend discards any field in the incoming `template_data` that is not `templatable: true`. A tampered frontend cannot smuggle additional fields.
 
 ## Consequences
 
