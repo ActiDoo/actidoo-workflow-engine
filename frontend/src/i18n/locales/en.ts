@@ -361,8 +361,11 @@ export const en = {
   },
   sidebar: {
     loadingError: 'Something went wrong while loading the list. Please try again.',
+    loadMoreError: 'Could not load more items.',
     noItems: 'No items found.',
     taskCount: '{{count}} Task{{suffix}}:',
+    searchPlaceholder: 'Search …',
+    loadMore: 'Load more',
   },
   table: {
     loadingError:

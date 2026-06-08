@@ -49,6 +49,8 @@ export interface SimpleActionInput {
 export interface ItemsAndCountResponse<T> {
   ITEMS: T[];
   COUNT: number;
+  /** Keyset cursor for the next page; only set by cursor-paginated endpoints. */
+  NEXT_CURSOR?: string | null;
 }
 
 export interface HTTPValidationError {

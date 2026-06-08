@@ -22,6 +22,21 @@ log = logging.getLogger(__name__)
 _member_seperator: str = "___"
 
 
+def encode_cursor(id_: uuid.UUID) -> str:
+    """Encode a keyset cursor token from a row id."""
+    return id_.hex
+
+
+def decode_cursor(token: Optional[str]) -> Optional[uuid.UUID]:
+    """Parse a cursor token into a row id; None for a missing/malformed token."""
+    if not token:
+        return None
+    try:
+        return uuid.UUID(hex=token)
+    except (ValueError, TypeError):
+        return None
+
+
 def build_field_name(*parts):
     return _member_seperator.join(parts)
 
@@ -314,6 +329,9 @@ class BffTableQuerySchemaBase(pydantic.v1.BaseModel):
     def get_limit(self):
         return get_min_max(getattr(self, "limit", None), maxv=200, default=100, minv=1)
 
+    def get_cursor(self) -> Optional[uuid.UUID]:
+        return decode_cursor(getattr(self, "cursor", None))
+
     def get_filter_fields(self) -> List[FilterField]:
         raise NotImplementedError()
 
@@ -322,6 +340,11 @@ class BffTableQuerySchemaBase(pydantic.v1.BaseModel):
 class PaginatedData:
     items: list
     count: int
+
+
+@dataclasses.dataclass
+class CursorPaginatedData(PaginatedData):
+    next_cursor: Optional[str] = None
 
 
 class BFFTable:
@@ -372,7 +395,7 @@ class BFFTable:
                 query=self.query,
             )
 
-    def _prepare_query(self):
+    def _order_by_clauses(self):
         order_by_clauses = []
 
         sorts = getattr(self.request_params, "sort", [])
@@ -395,6 +418,9 @@ class BFFTable:
         for default_order in default_order_list:
             order_by_clauses.append(default_order)
 
+        return order_by_clauses
+
+    def _prepare_query(self):
         for field in self.filter_fields:
             self.query = field.add_database_query_parameters(
                 query=self.query,
@@ -414,20 +440,19 @@ class BFFTable:
                 clauses.append(clause)
             self.query = self.query.where(or_(*clauses))
 
-        self.query = self.query.order_by(*order_by_clauses)
+        self.query = self.query.order_by(*self._order_by_clauses())
+
+    def _paginate(self, query: Select) -> Select:
+        # Must not mutate self.query: _get_count reuses it without pagination.
+        query = query.limit(self.request_params.get_limit())
+        query = query.offset(self.request_params.get_offset())
+        return query
+
+    def _make_result(self, items: list, count: int) -> PaginatedData:
+        return PaginatedData(items=items, count=count)
 
     def _get_scalars(self) -> ScalarResult:
-        """Execute the current query with limit and offset parameters,
-        retrieving the scalar results from the database.
-
-        Returns:
-            ScalarResult: A result set containing scalar values,
-            which can be iterated over to fetch individual records.
-        """
-        self.query = self.query.limit(self.request_params.get_limit())
-        self.query = self.query.offset(self.request_params.get_offset())
-
-        return self.db.execute(self.query).scalars()
+        return self.db.execute(self._paginate(self.query)).scalars()
 
     def _get_count(self):
         """Retrieve the total count of records matching the current query without limit, offset, or order by clauses.
@@ -465,10 +490,73 @@ class BFFTable:
             PaginatedData: An object containing a list of items and the total
             count of matching records.
         """
-        return PaginatedData(
-            items=list(self._get_scalars().all()),
-            count=self._get_count() or 0,
+        items = list(self._get_scalars().all())
+        return self._make_result(items, self._get_count() or 0)
+
+
+class CursorBFFTable(BFFTable):
+    """Keyset (cursor) pagination variant of :class:`BFFTable`.
+
+    Slices by a stable cursor on ``(cursor_sort, cursor_id)`` ordered DESC.
+    Filtering, search and counting are inherited unchanged.
+    """
+
+    def __init__(
+        self,
+        db: Session,
+        request_params: BffTableQuerySchemaBase,
+        query: Select,
+        field_to_dbfield_map: dict,
+        cursor_sort,
+        cursor_id,
+    ):
+        # Must be set before super().__init__() runs _prepare_query().
+        self.cursor_sort = cursor_sort
+        self.cursor_id = cursor_id
+        super().__init__(
+            db=db,
+            request_params=request_params,
+            query=query,
+            field_to_dbfield_map=field_to_dbfield_map,
+            default_order_by=[],
         )
+
+    def _order_by_clauses(self):
+        return [self.cursor_sort.desc(), self.cursor_id.desc()]
+
+    def _resolve_cursor_position(self):
+        # Token carries only the id; look up its sort value. None if no cursor
+        # or the row is gone (then paging restarts from the beginning).
+        cursor_id_value = self.request_params.get_cursor()
+        if cursor_id_value is None:
+            return None
+        sort_value = self.db.execute(
+            select(self.cursor_sort).where(self.cursor_id == cursor_id_value),
+        ).scalar_one_or_none()
+        if sort_value is None:
+            return None
+        return (sort_value, cursor_id_value)
+
+    def _paginate(self, query: Select) -> Select:
+        position = self._resolve_cursor_position()
+        if position is not None:
+            sort_value, id_value = position
+            query = query.where(
+                or_(
+                    self.cursor_sort < sort_value,
+                    and_(self.cursor_sort == sort_value, self.cursor_id < id_value),
+                ),
+            )
+        return query.limit(self.request_params.get_limit())
+
+    def _make_result(self, items: list, count: int) -> CursorPaginatedData:
+        return CursorPaginatedData(items=items, count=count, next_cursor=self._next_cursor(items))
+
+    def _next_cursor(self, items: list) -> Optional[str]:
+        # No token on a non-full page: nothing left to fetch.
+        if not items or len(items) < self.request_params.get_limit():
+            return None
+        return encode_cursor(getattr(items[-1], self.cursor_id.key))
 
 
 def get_bff_table_query_schema(
@@ -480,6 +568,8 @@ def get_bff_table_query_schema(
     query_params_definition: dict[str, Any] = {
         "limit": (Optional[int], None),
         "offset": (Optional[int], None),
+        # Keyset cursor; only used by cursor-paginated endpoints.
+        "cursor": (Optional[str], None),
     }
 
     sorting_enum_values = dict()

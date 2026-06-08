@@ -3,9 +3,11 @@
 
 import base64
 import logging
+import uuid
 from pathlib import Path
 
 from actidoo_wfe.database import SessionLocal, setup_db
+from actidoo_wfe.helpers.bff_table import decode_cursor, encode_cursor
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff.bff_user_schema import (
@@ -419,6 +421,62 @@ def test_get_workflow_instances_with_tasks_ready(db_engine_ctx):
         assert response.status_code == 200
         parsed = GetWorkflowInstancesResponse.model_validate(response.json())
         assert any(i.id == workflow.workflow_instance_id for i in parsed.ITEMS)
+
+
+def test_cursor_encode_decode_roundtrip():
+    ident = uuid.uuid4()
+    assert encode_cursor(ident) == ident.hex
+    assert decode_cursor(encode_cursor(ident)) == ident
+
+    # missing / malformed tokens degrade to None instead of raising
+    assert decode_cursor(None) is None
+    assert decode_cursor("") is None
+    assert decode_cursor("garbage") is None
+
+
+def test_get_workflow_instances_with_tasks_cursor_pagination(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        user = workflow.user("initiator").user
+
+        # Start two more ready instances for the same user so we paginate across 3.
+        for _ in range(2):
+            service_application.start_workflow(db=db, name=WF_NAME, user_id=user.id)
+        db.commit()
+
+        client = Client()
+        seen_ids: list = []
+        counts: list = []
+        with override_get_user(client=client, user=user), disable_role_check(client):
+            url = client.root_client.app.url_path_for("get_workflow_instances_with_tasks", state="ready")
+
+            cursor = None
+            pages = 0
+            while True:
+                params = {"limit": "1"}
+                if cursor:
+                    params["cursor"] = cursor
+                response = client.root_client.post(url, params=params, json={})
+                assert response.status_code == 200
+
+                parsed = GetWorkflowInstancesResponse.model_validate(response.json())
+                counts.append(parsed.COUNT)
+                assert len(parsed.ITEMS) <= 1
+                seen_ids.extend(i.id for i in parsed.ITEMS)
+
+                cursor = parsed.NEXT_CURSOR
+                pages += 1
+                if cursor is None:
+                    break
+                assert pages <= 10  # guard against an unterminated cursor walk
+
+    # no overlap across pages, all three instances retrieved
+    assert len(seen_ids) == len(set(seen_ids))
+    assert len(set(seen_ids)) >= 3
+    # COUNT is the total match count, stable across pages (independent of cursor)
+    assert counts and all(c == counts[0] for c in counts)
+    assert counts[0] >= 3
 
 
 # ---------------------------------------------------------------------------

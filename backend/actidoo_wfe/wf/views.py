@@ -13,7 +13,7 @@ from sqlalchemy import and_, false, null, or_, select, true, func
 from sqlalchemy.orm import Session, aliased, contains_eager, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 
-from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase
+from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase, CursorBFFTable
 from actidoo_wfe.helpers.schema import PaginatedDataSchema
 from actidoo_wfe.helpers.time import dt_ago_naive, dt_now_naive
 from actidoo_wfe.wf.exceptions import TaskNotFoundException
@@ -159,12 +159,13 @@ def bff_get_workflows_with_usertasks(
         .where(WorkflowInstance.id.in_(sq))
     )
 
-    bff_table = BFFTable(
+    bff_table = CursorBFFTable(
         db=db,
         request_params=bff_table_request_params,
         query=q,
         field_to_dbfield_map=dict(),
-        default_order_by=WorkflowInstance.created_at.desc(),
+        cursor_sort=WorkflowInstance.created_at,
+        cursor_id=WorkflowInstance.id,
     )
 
     paginated_data = bff_table.get_paginated_data()
@@ -181,6 +182,7 @@ def bff_get_workflows_with_usertasks(
     res_representation = PaginatedDataSchema(
         ITEMS=[WorkflowInstanceRepresentation.model_validate(x) for x in paginated_data.items],
         COUNT=paginated_data.count,
+        NEXT_CURSOR=paginated_data.next_cursor,
     )
 
     return res_representation

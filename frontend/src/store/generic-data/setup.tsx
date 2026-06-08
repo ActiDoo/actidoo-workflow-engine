@@ -152,7 +152,8 @@ export const WeApiUrl = (
     case WeDataKey.TOGGLE_PINNED_WORKFLOW:
       return 'user/toggle_pinned_workflow';
     case WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS:
-      return `user/workflow_instances_with_tasks/${params?.state}?limit=200`;
+      // Loaded directly via useInfiniteWorkflowInstances, not the generic store.
+      return `user/workflow_instances_with_tasks/${params?.state}`;
     case WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES:
     case WeDataKey.MY_OPEN_WORKFLOW_INSTANCES:
       return 'user/my_initiated_workflow_instances';

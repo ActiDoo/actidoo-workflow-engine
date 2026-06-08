@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
-from typing import Generic, List, TypeVar
+from typing import Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
@@ -13,5 +13,7 @@ class PaginatedDataSchema(BaseModel, Generic[PaginatedDataItemType]):
 
     ITEMS: List[PaginatedDataItemType]
     COUNT: int
+    # Keyset cursor for the next page; null when none / in offset mode.
+    NEXT_CURSOR: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
