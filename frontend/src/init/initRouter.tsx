@@ -73,6 +73,8 @@ const Wrapper: React.FC = () => {
   const loginState = useSelector((state: State) => state.auth.loginState.data);
   const user = useSelector((state: State) => state.data['wfe-user']?.data);
   const brandLogoUrl = `${import.meta.env.BASE_URL}branding/logo.svg`;
+  // Deployment-configurable app title (APP_TITLE); falls back to the i18n default.
+  const appTitle = environment.appTitle ?? t('layout.appTitle');
 
   const navigation: PcNavigationLink[] = [
     {
@@ -116,7 +118,7 @@ const Wrapper: React.FC = () => {
   return (
     <PcPageWrapper
       navigation={navigation}
-      // appTitle={appTitle}
+      appTitle={appTitle}
       brandLogoUrl={brandLogoUrl}
       onLogout={() => {
         logout();
