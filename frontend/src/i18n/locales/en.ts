@@ -4,7 +4,7 @@
 export const en = {
   languageName: 'English',
   layout: {
-    appTitle: 'Engine',
+    appTitle: 'Workflow Engine',
     signOut: 'Sign out',
     settings: 'Settings',
     about: 'About',
