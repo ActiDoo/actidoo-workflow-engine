@@ -196,7 +196,12 @@ const UserSettings: React.FC = () => {
     return (
       <WeAlertDialog
         isDialogOpen={dialogOpen}
-        setDialogOpen={setDialogOpen}
+        // Dismissal (ESC/X) must act like "stay": without reset the blocker stays
+        // 'blocked' and silently swallows every further navigation attempt.
+        setDialogOpen={open => {
+          if (!open) blocker.reset?.();
+          setDialogOpen(open);
+        }}
         title={t('common.unsavedChanges.title')}
         buttons={
           <>

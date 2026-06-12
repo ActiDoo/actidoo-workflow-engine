@@ -207,6 +207,8 @@ export const DialogStartWorkflow: React.FC = () => {
         <Dialog
           ref={dialogRef}
           open={open}
+          // UI5 closes itself on ESC; sync the React state or reopening is a no-op.
+          onAfterClose={closeDialog}
           style={
             lockedSize
               ? {
