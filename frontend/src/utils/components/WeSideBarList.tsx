@@ -55,30 +55,44 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
     };
   }, [searchInput]);
 
-  const { items, loadingInitial, loadingMore, error, hasMore, loadMore } =
-    useInfiniteWorkflowInstances(props.state, debouncedSearch);
+  const { items, loadingInitial, loadingMore, error, hasMore, loadMore, reload } =
+    useInfiniteWorkflowInstances(props.dataKey, props.state, debouncedSearch);
 
-  // Load the next page when the sentinel scrolls into view.
+  // Load the next page when the sentinel scrolls into view. The observer root is
+  // the sidebar's own scroll container — with the viewport as root the 200px
+  // prefetch margin would never apply inside the overflow container.
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node || !hasMore) return;
+    // On error the observer detaches: retries happen only via the buttons —
+    // otherwise a persistent backend error becomes an unthrottled request loop.
+    if (!node || !hasMore || error || loadingMore || loadingInitial) return;
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0]?.isIntersecting) loadMore();
       },
-      { root: null, rootMargin: '200px' }
+      { root: containerRef.current, rootMargin: '200px' }
     );
     observer.observe(node);
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, loadMore, loadingMore, items.length]);
+  }, [hasMore, error, loadMore, loadingMore, loadingInitial, items.length]);
 
   const errorComponent = (
-    <MessageStrip className="p-12" design={MessageStripDesign.Negative} hideCloseButton={true}>
-      {props.errorMessage ?? t('sidebar.loadingError')}
-    </MessageStrip>
+    <div className="p-12 flex flex-col items-center gap-3">
+      <MessageStrip design={MessageStripDesign.Negative} hideCloseButton={true}>
+        {props.errorMessage ?? t('sidebar.loadingError')}
+      </MessageStrip>
+      <Button
+        design={ButtonDesign.Transparent}
+        onClick={() => {
+          reload();
+        }}>
+        {t('sidebar.retry')}
+      </Button>
+    </div>
   );
 
   const searchBar = (
@@ -135,7 +149,9 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
   };
 
   return (
-    <div className={`absolute top-0 bottom-0 overflow-y-auto bg-white ${props.className ?? ''}`}>
+    <div
+      ref={containerRef}
+      className={`absolute top-0 bottom-0 overflow-y-auto bg-white ${props.className ?? ''}`}>
       {searchBar}
       {loadingInitial ? (
         <BusyIndicator

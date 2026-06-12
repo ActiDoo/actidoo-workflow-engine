@@ -40,8 +40,18 @@ export interface UserTask {
   is_readonly?: boolean;
 }
 
+export interface WorkflowInstanceMeta {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  is_completed: boolean;
+  is_readonly?: boolean;
+}
+
 export interface GetUserTasksResponse {
   usertasks: UserTask[];
+  /** The instance the tasks belong to — null when the user may not see it. */
+  workflow_instance?: WorkflowInstanceMeta | null;
 }
 
 export interface SubmitTaskDataErrorResponse {

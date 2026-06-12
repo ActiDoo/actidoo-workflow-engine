@@ -370,6 +370,7 @@ export const de = {
     taskCount: '{{count}} Aufgabe{{suffix}}:',
     searchPlaceholder: 'Suchen …',
     loadMore: 'Mehr laden',
+    retry: 'Erneut versuchen',
   },
   table: {
     loadingError:

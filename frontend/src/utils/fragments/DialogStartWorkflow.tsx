@@ -29,6 +29,7 @@ import '@ui5/webcomponents-icons/dist/course-book';
 import { WorkflowState } from '@/models/models';
 import { environment } from '@/environment';
 import { useTranslation } from '@/i18n';
+import { refreshWorkflowInstancesWithTasks } from '@/utils/hooks/useInfiniteWorkflowInstances';
 
 export const DialogStartWorkflow: React.FC = () => {
   const { t } = useTranslation();
@@ -137,9 +138,7 @@ export const DialogStartWorkflow: React.FC = () => {
 
   useEffect(() => {
     if (startData?.postResponse === 200) {
-      dispatch(
-        postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY })
-      );
+      dispatch(refreshWorkflowInstancesWithTasks(WorkflowState.READY));
       dispatch(addToast(<WeToastContent type="success" text={t('dialogStartWorkflow.success')} />));
       closeDialog();
       if (startData.data?.workflow_instance_id)

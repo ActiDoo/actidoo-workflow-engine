@@ -368,6 +368,7 @@ export const en = {
     taskCount: '{{count}} Task{{suffix}}:',
     searchPlaceholder: 'Search …',
     loadMore: 'Load more',
+    retry: 'Try again',
   },
   table: {
     loadingError:

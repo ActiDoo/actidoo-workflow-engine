@@ -23,6 +23,7 @@ import { TaskActions } from '@/pages/tasks/content/TaskActions';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { useTranslation } from '@/i18n';
+import { refreshWorkflowInstancesWithTasks } from '@/utils/hooks/useInfiniteWorkflowInstances';
 import { StringDict } from '@/ui5-components';
 
 import {
@@ -210,9 +211,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       t('taskContent.submitSuccess'),
       t('taskContent.submitError'),
       () => {
-        dispatch(
-          postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY })
-        );
+        dispatch(refreshWorkflowInstancesWithTasks(WorkflowState.READY));
         navigate('/tasks/open');
 
         // Delete the draft for the task that was actually submitted (prevents deleting the wrong one on fast navigation)
@@ -412,13 +411,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               loadTasks();
             }}
             backToList={() => {
-              dispatch(
-                postRequest(
-                  WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS,
-                  {},
-                  { state: WorkflowState.READY }
-                )
-              );
+              dispatch(refreshWorkflowInstancesWithTasks(WorkflowState.READY));
               navigate('/tasks/open');
             }}
           />

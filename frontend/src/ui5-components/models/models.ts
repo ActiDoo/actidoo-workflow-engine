@@ -49,7 +49,12 @@ export interface SimpleActionInput {
 export interface ItemsAndCountResponse<T> {
   ITEMS: T[];
   COUNT: number;
-  /** Keyset cursor for the next page; only set by cursor-paginated endpoints. */
+}
+
+/** Keyset/cursor-paginated list shape: a next-page token, no total count. */
+export interface CursorItemsResponse<T> {
+  ITEMS: T[];
+  /** Token for the next page; null/absent on the last page. */
   NEXT_CURSOR?: string | null;
 }
 

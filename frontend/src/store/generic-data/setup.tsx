@@ -10,6 +10,7 @@ import {
   FetchMethods,
   GenericDataAction,
   GenericDataEntry,
+  CursorItemsResponse,
   ItemsAndCountResponse,
   StringDict,
 } from '@/ui5-components';
@@ -89,7 +90,7 @@ export enum WeDataKey {
   START_WORKFLOW_FOR_DATA = 'start_workflow_for_existing_data_model',
 }
 
-interface WorkflowInstanceTable extends ItemsAndCountResponse<WorkflowInstance> {}
+interface WorkflowInstanceTable extends CursorItemsResponse<WorkflowInstance> {}
 
 interface MyInitiatedWorkflowInstanceTable
   extends ItemsAndCountResponse<MyInitiatedWorkflowInstance> {}
@@ -168,7 +169,8 @@ export const WeApiUrl = (
     case WeDataKey.TOGGLE_PINNED_WORKFLOW:
       return 'user/toggle_pinned_workflow';
     case WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS:
-      // Loaded directly via useInfiniteWorkflowInstances, not the generic store.
+      // Cursor-paginated; "load more" appends via postRequest(..., { append: true })
+      // — see useInfiniteWorkflowInstances.
       return `user/workflow_instances_with_tasks/${params?.state}`;
     case WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES:
     case WeDataKey.MY_OPEN_WORKFLOW_INSTANCES:

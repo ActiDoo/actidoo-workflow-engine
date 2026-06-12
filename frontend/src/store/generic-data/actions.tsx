@@ -4,7 +4,9 @@
 import {
   FetchUploadProgressFunc,
   GenericDataActionType,
+  GenericRequestSignature,
   GetRequestAdditionalData,
+  PostRequestAdditionalData,
   StringDict,
 } from '@/ui5-components';
 import { WeDataAction, WeDataKey } from '@/store/generic-data/setup';
@@ -51,18 +53,24 @@ export const postRequest = (
   params?: StringDict,
   queryParams?: StringDict,
   responseType?: XMLHttpRequestResponseType,
-  onUploadProgress?: FetchUploadProgressFunc
+  onUploadProgress?: FetchUploadProgressFunc,
+  additionalData?: PostRequestAdditionalData
 ): WeDataAction => {
   return {
     type: GenericDataActionType.POST_DATA_REQUEST,
-    payload: { key, body, params, queryParams, onUploadProgress },
+    payload: { key, body, params, queryParams, onUploadProgress, append: additionalData?.append },
   };
 };
 
-export const postResponse = (key: WeDataKey, response: number, data?: any): WeDataAction => {
+export const postResponse = (
+  key: WeDataKey,
+  response: number,
+  data?: any,
+  signature?: GenericRequestSignature
+): WeDataAction => {
   return {
     type: GenericDataActionType.POST_DATA_RESPONSE,
-    payload: { key, response, data },
+    payload: { key, response, data, signature },
   };
 };
 
