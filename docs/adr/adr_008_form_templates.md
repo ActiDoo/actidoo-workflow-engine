@@ -22,12 +22,12 @@ In one of our workflows, an earlier uncontrolled template feature led to inconsi
 
 Who decides whether a form participates in templates and which fields are eligible.
 
-**Opt-in per form with a per-field whitelist (chosen).** `templates_enabled: true` on the form, `templatable: true` per field.
+**Opt-in per form with a per-field whitelist.** `templates_enabled: true` on the form, `templatable: true` per field.
 
 - *Pros:* Safe defaults. New forms and new fields stay out of templates until consciously approved. Visible and traceable in the `.form` file. Fields that require explicit user attention on each run can be deliberately excluded from templates.
 - *Cons:* Slightly more configuration effort for forms with many eligible fields.
 
-**Opt-out per form with a per-field blacklist (rejected).** Templates are on by default; owners disable individual forms or fields.
+**Opt-out per form with a per-field blacklist.** Templates are on by default; owners disable individual forms or fields.
 
 - *Pros:* Less configuration when almost every field should be templatable.
 - *Cons:* New fields silently leak into templates until someone notices. This already caused problems in a previous implementation of this feature.
@@ -41,7 +41,7 @@ Who decides whether a form participates in templates and which fields are eligib
 
 What happens on apply when the form schema has changed since the template was saved.
 
-**Lenient merging with review (chosen).** Only still-existing, still-eligible fields are merged. Skipped fields are surfaced in the review step.
+**Lenient merging.** Only still-existing, still-eligible fields are merged. Skipped fields are either surfaced in the review step or dropped silently — see Open Questions.
 
 - *Pros:* Templates survive normal schema evolution; users stay informed.
 - *Cons:* Users must read the review to see what actually gets applied.
@@ -95,12 +95,17 @@ Where are the templates saved.
 
 ## Decision
 
-1. **Activation: opt-in per form with a per-field whitelist.** `templates_enabled: true` on the form, `templatable: true` per field. The data-consistency concern from the ticket weighs heavier than the small configuration overhead, and new fields must not silently leak into templates.
-2. **Schema drift: lenient merging with a review step.** Existing templates survive normal schema evolution; the review keeps the user informed about skipped fields.
+1. **Activation: per-form, with per-field control — mode still open.** The leaning is opt-in with a per-field whitelist (`templatable: true`), so new fields do not silently leak into templates. Whether to expose this as a switchable `template_mode` (e.g. whitelist/blacklist) so owners can also allow all fields at once is still open — see Open Questions.
+2. **Schema drift: lenient merging — surfacing still open.** Only still-existing, still-eligible fields are merged, so existing templates survive normal schema evolution. Whether skipped fields are surfaced in a review step or dropped silently is still open — see Open Questions.
 3. **Field locking after apply: not implemented.** The added complexity is not justified given the "apply, correct, save again" workflow we want to support.
 4. **Template management surface: modal inside the open form.** Two actions in the form ("Save as template", "Apply template") open modals that handle naming, the workflow-scoped list, the read-only preview, and deletion. No separate management page. Edits to values always happen in the form itself.
 5. **Storage: backend, in a dedicated per-user table** (`workflow_user_form_templates`), with a unique constraint on `(user_id, workflow_name, template_name)`. REST endpoints in `bff_user.py`. Backend persistence ensures templates work across browsers and devices and keeps the whitelist trust boundary on the server rather than on the client.
 6. **Server-side whitelist filtering on save.** The backend discards any field in the incoming `template_data` that is not `templatable: true`. A tampered frontend cannot smuggle additional fields.
+
+## Open Questions
+
+- **Skipped fields on apply: surface them or drop them silently?** When the schema has changed since the template was saved, fields that no longer exist or are no longer eligible can either be shown in the review step or dropped without comment. Surfacing is more transparent about what the template actually applied; dropping silently means less noise for the user.
+- **An "allow all fields" activation mode.** A per-field whitelist means marking each field `templatable: true`, which is friction when an owner deliberately wants every field eligible. Activation could instead be a switchable mode — e.g. `template_mode: deactivated (default) | whitelist | blacklist` — letting owners pick an all-fields (blacklist) mode where appropriate, weighed against the data-consistency risk a blacklist carries.
 
 ## Consequences
 
@@ -108,3 +113,4 @@ Where are the templates saved.
 - Reviewer risk is reduced because the owner explicitly controls which fields can be filled via templates.
 - Schema changes produce visible but non-blocking hints in the template review step.
 - Templates are strictly user-private. Sharing and read-only locks are not part of this design.
+
