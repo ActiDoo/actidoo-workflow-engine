@@ -154,7 +154,7 @@ export const en = {
     delegatedBadge: 'Acting as delegate',
     unassigned: 'Unassigned',
     resetDialogTitle: 'Reset to Initial State',
-    resetDialogText: 'This will reset all form data to the initial state. Do you want to continue?',
+    resetDialogText: 'This will reset all form data to the initial state.',
     uploadForm: 'Form is being uploaded',
     uploadDraft: 'Draft is being uploaded',
     processForm: 'Form is being processed',

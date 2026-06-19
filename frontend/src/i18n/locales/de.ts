@@ -155,8 +155,7 @@ export const de = {
     delegatedBadge: 'Als Vertretung tätig',
     unassigned: 'Nicht zugewiesen',
     resetDialogTitle: 'Auf Anfangszustand zurücksetzen',
-    resetDialogText:
-      'Dadurch werden alle Formulardaten auf den Anfangszustand zurückgesetzt. Möchtest du fortfahren?',
+    resetDialogText: 'Dadurch werden alle Formulardaten auf den Anfangszustand zurückgesetzt.',
     uploadForm: 'Formular wird hochgeladen',
     uploadDraft: 'Entwurf wird hochgeladen',
     processForm: 'Formular wird verarbeitet',
