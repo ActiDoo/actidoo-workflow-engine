@@ -241,6 +241,7 @@ export const de = {
     cancelWorkflowConfirm: 'Möchtest du diesen Workflow wirklich abbrechen?',
     cancelWorkflowSuccess: 'Workflow erfolgreich abgebrochen',
     cancelWorkflowError: 'Aufgabe konnte nicht ausgeführt werden. Bitte versuche es erneut.',
+    keepWorkflowTitle: 'Workflow behalten',
     tasksHeadline: 'Aufgaben',
     noSelectedTaskTitle: 'Keine Aufgabe ausgewählt',
     noSelectedTaskText: 'Bitte links eine Aufgabe auswählen',
