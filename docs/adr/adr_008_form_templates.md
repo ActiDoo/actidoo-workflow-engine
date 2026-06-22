@@ -1,7 +1,7 @@
 # ADR 008: Form Templates (User-Scoped Reusable Form Inputs)
 
-**Status:** Proposed
-**Date:** 2026-06-08
+**Status:** Accepted
+**Date:** 2026-06-08 (accepted 2026-06-17)
 
 ## Context
 
@@ -95,22 +95,25 @@ Where are the templates saved.
 
 ## Decision
 
-1. **Activation: per-form, with per-field control — mode still open.** The leaning is opt-in with a per-field whitelist (`templatable: true`), so new fields do not silently leak into templates. Whether to expose this as a switchable `template_mode` (e.g. whitelist/blacklist) so owners can also allow all fields at once is still open — see Open Questions.
-2. **Schema drift: lenient merging — surfacing still open.** Only still-existing, still-eligible fields are merged, so existing templates survive normal schema evolution. Whether skipped fields are surfaced in a review step or dropped silently is still open — see Open Questions.
+1. **Activation: per-form, switchable `template_mode`.** A top-level `.form` key `template_mode: off | blacklist | whitelist` controls the form, with **`blacklist` as the default** (an omitted key means blacklist). Per-field eligibility is marked with `template_field: true|false` (renamed from the earlier `templatable`). In `blacklist` every field is eligible unless `template_field: false`; in `whitelist` only `template_field: true` fields are eligible; `off` disables templates for the form. This **diverges from the originally proposed opt-in/whitelist leaning**: templates are now on by default. We accept the data-consistency risk that the rejected opt-out option warned about, because owners can switch any sensitive form to `whitelist` or `off`, the per-field `template_field: false` excludes individual fields, and the server-side trust boundary (see 6) is enforced on both save and apply.
+2. **Schema drift: lenient merging, skipped fields surfaced.** Only still-existing, still-eligible fields are merged. Fields that no longer exist or are no longer eligible are returned to the client as `skipped_fields` and shown in the apply preview, so the user sees exactly what a template will and will not fill.
 3. **Field locking after apply: not implemented.** The added complexity is not justified given the "apply, correct, save again" workflow we want to support.
-4. **Template management surface: modal inside the open form.** Two actions in the form ("Save as template", "Apply template") open modals that handle naming, the workflow-scoped list, the read-only preview, and deletion. No separate management page. Edits to values always happen in the form itself.
-5. **Storage: backend, in a dedicated per-user table** (`workflow_user_form_templates`), with a unique constraint on `(user_id, workflow_name, template_name)`. REST endpoints in `bff_user.py`. Backend persistence ensures templates work across browsers and devices and keeps the whitelist trust boundary on the server rather than on the client.
-6. **Server-side whitelist filtering on save.** The backend discards any field in the incoming `template_data` that is not `templatable: true`. A tampered frontend cannot smuggle additional fields.
+4. **Template management surface: modal inside the open form.** Two actions in the form ("Save as template", "Apply template") open modals that handle naming, the form-scoped list, the read-only preview, and deletion. No separate management page. Edits to values always happen in the form itself.
+5. **Storage: backend, in a dedicated per-user table** (`workflow_user_form_templates`), with a unique constraint on `(user_id, workflow_name, task_name, template_name)`, where `task_name` is the **stable BPMN element id** of the form (`task.task_spec.name`), not the per-instance runtime task UUID. This mirrors the existing `(workflow_name, task_name)` pairing used elsewhere (e.g. the copy-data response). The table carries `created_at`/`updated_at`; saving a template whose name already exists for that scope **overwrites** it (matching the "apply, correct, save again" flow). REST endpoints (POST) live in `bff_user.py` under `/form_templates/{list,save,resolve,delete}`. The backend derives the scope (workflow name + stable task key) and the live schema from the runtime task id the client passes, so the client cannot misdeclare which form a template belongs to.
+6. **Server-side eligibility filtering on save and apply.** The backend discards any field in the incoming `template_data` that is not eligible under the form's `template_mode`/`template_field`, and re-checks eligibility against the current schema on apply. A tampered frontend cannot smuggle additional fields into storage or onto a form.
 
-## Open Questions
+### Value rule (save)
 
-- **Skipped fields on apply: surface them or drop them silently?** When the schema has changed since the template was saved, fields that no longer exist or are no longer eligible can either be shown in the review step or dropped without comment. Surfacing is more transparent about what the template actually applied; dropping silently means less noise for the user.
-- **An "allow all fields" activation mode.** A per-field whitelist means marking each field `templatable: true`, which is friction when an owner deliberately wants every field eligible. Activation could instead be a switchable mode — e.g. `template_mode: deactivated (default) | whitelist | blacklist` — letting owners pick an all-fields (blacklist) mode where appropriate, weighed against the data-consistency risk a blacklist carries.
+Only fields whose value is meaningful are stored: a field is dropped when its value is `null` or the empty string `""`. **Booleans are always stored** (including `false`), and `0`, empty arrays `[]`, and empty objects `{}` are kept. Within nested objects the rule is applied per scalar; empty containers are preserved, and array elements are never removed solely for being empty.
+
+### Attachments
+
+Attachment fields (single or multi) are **never templatable**, regardless of `template_field`. A stored data-uri is large and a stored attachment `hash`/`id` references a file bound to a specific workflow instance, which would be invalid or cross-instance on apply.
 
 ## Consequences
 
-- Owners have to edit their `.form` files to enable templates. This is intentional and makes activation visible and traceable.
-- Reviewer risk is reduced because the owner explicitly controls which fields can be filled via templates.
-- Schema changes produce visible but non-blocking hints in the template review step.
+- Templates are on by default (`blacklist`). Owners edit their `.form` files only to restrict: `template_field: false` to exclude a field, `template_mode: whitelist` for opt-in per field, or `template_mode: off` to disable the form.
+- Reviewer risk is mitigated — not eliminated — by the per-field exclusions, the `whitelist`/`off` modes, and the server-side trust boundary; owners of sensitive forms should choose `whitelist` or `off`.
+- Schema changes produce visible but non-blocking hints (`skipped_fields`) in the apply preview.
 - Templates are strictly user-private. Sharing and read-only locks are not part of this design.
 

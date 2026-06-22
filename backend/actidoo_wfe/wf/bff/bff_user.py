@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 import actidoo_wfe.helpers.bff_table as bff_table
 import actidoo_wfe.wf.service_application as service_application
 from actidoo_wfe import i18n as global_i18n
+import actidoo_wfe.wf.service_form_templates as service_form_templates
 import actidoo_wfe.wf.service_user as service_user
 from actidoo_wfe.database import get_db
 from actidoo_wfe.helpers.http import HTTPException, streaming_response_with_filecontent
@@ -21,7 +22,10 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     CancelWorkflowResponse,
     DeleteWorkflowRequest,
     DeleteWorkflowResponse,
+    DeleteFormTemplateRequest,
+    DeleteFormTemplateResponse,
     DownloadAttachmentRequest,
+    FormTemplateListItem,
     GetMyWfeUserResponse,
     GetUserTasksResponse,
     GetUserTasksResponseUserTasks,
@@ -32,8 +36,15 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     GetWorkflowStatisticsResponseItem,
     InlineUserResponse,
     GetWorkflowCopyDataResponse,
+    ListFormTemplatesRequest,
+    ListFormTemplatesResponse,
     LocaleItem,
+    PreviewFormTemplateRequest,
     RefreshGetWorkflowSpecRequest,
+    ResolveFormTemplateRequest,
+    ResolveFormTemplateResponse,
+    SaveFormTemplateRequest,
+    SaveFormTemplateResponse,
     SaveUserSettingsRequest,
     SearchPropertyOptionsRequest,
     SearchPropertyOptionsResponse,
@@ -42,6 +53,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     StartWorkflowResponse,
     StartWorkflowWithDataRequest,
     StartWorkflowWithDataResponse,
+    SkippedFieldItem,
     SubmitTaskDataErrorResponse,
     UserDelegationResponse,
     UserSettingsResponse,
@@ -49,7 +61,16 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
 )
 from actidoo_wfe.wf.bff.deps import get_user
 from actidoo_wfe.wf.cross_context.imports import require_realm_role
-from actidoo_wfe.wf.exceptions import InvalidWorkflowSpecException, UserMayNotCopyWorkflowException, UserMayNotStartWorkflowException, ValidationResultContainsErrors
+from actidoo_wfe.wf.exceptions import (
+    FormTemplatesDisabledException,
+    FormTemplatesNotAvailableException,
+    InvalidWorkflowSpecException,
+    TaskNotAccessibleException,
+    TemplateNotFoundException,
+    UserMayNotCopyWorkflowException,
+    UserMayNotStartWorkflowException,
+    ValidationResultContainsErrors,
+)
 from actidoo_wfe.wf.models import WorkflowUser
 from actidoo_wfe.wf.types import (
     Attachment,
@@ -230,6 +251,127 @@ def submit_task_data(
         return SubmitTaskDataErrorResponse(
             error_schema=ex.error_schema,
         )
+
+
+@router.post("/form_templates/list", name="list_form_templates")
+def list_form_templates(
+    reqdata: ListFormTemplatesRequest,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> ListFormTemplatesResponse:
+    try:
+        rows, template_mode = service_form_templates.list_templates(
+            db=db,
+            user_id=user.id,
+            task_id=reqdata.task_id,
+        )
+    except FormTemplatesNotAvailableException:
+        # Task has no form -> nothing to list; report as disabled so the UI hides the actions.
+        return ListFormTemplatesResponse(templates=[], template_mode="off")
+    except TaskNotAccessibleException:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return ListFormTemplatesResponse(
+        templates=[
+            FormTemplateListItem(id=row.id, name=row.template_name, created_at=row.created_at, updated_at=row.updated_at)
+            for row in rows
+        ],
+        template_mode=template_mode,
+    )
+
+
+@router.post("/form_templates/save", name="save_form_template")
+def save_form_template(
+    reqdata: SaveFormTemplateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> SaveFormTemplateResponse:
+    try:
+        row = service_form_templates.save_template(
+            db=db,
+            user_id=user.id,
+            task_id=reqdata.task_id,
+            template_name=reqdata.template_name,
+            template_data=reqdata.template_data,
+        )
+    except FormTemplatesDisabledException:
+        raise HTTPException(status_code=409, detail="Form templates are disabled for this form")
+    except FormTemplatesNotAvailableException:
+        raise HTTPException(status_code=409, detail="This task has no form")
+    except TaskNotAccessibleException:
+        raise HTTPException(status_code=404, detail="Task not found")
+    except ValueError as ex:
+        raise HTTPException(status_code=400, detail=str(ex))
+
+    return SaveFormTemplateResponse(id=row.id, name=row.template_name, created_at=row.created_at, updated_at=row.updated_at)
+
+
+@router.post("/form_templates/preview", name="preview_form_template")
+def preview_form_template(
+    reqdata: PreviewFormTemplateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> ResolveFormTemplateResponse:
+    try:
+        result = service_form_templates.preview_template(
+            db=db,
+            user_id=user.id,
+            task_id=reqdata.task_id,
+            template_data=reqdata.template_data,
+        )
+    except FormTemplatesDisabledException:
+        raise HTTPException(status_code=409, detail="Form templates are disabled for this form")
+    except FormTemplatesNotAvailableException:
+        raise HTTPException(status_code=409, detail="This task has no form")
+    except TaskNotAccessibleException:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return ResolveFormTemplateResponse(
+        applicable_data=result.applicable_data,
+        skipped_fields=[SkippedFieldItem(key=item["key"], label=item["label"], value=item.get("value")) for item in result.skipped_fields],
+    )
+
+
+@router.post("/form_templates/resolve", name="resolve_form_template")
+def resolve_form_template(
+    reqdata: ResolveFormTemplateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> ResolveFormTemplateResponse:
+    try:
+        result = service_form_templates.resolve_template_for_apply(
+            db=db,
+            user_id=user.id,
+            task_id=reqdata.task_id,
+            template_id=reqdata.template_id,
+        )
+    except TemplateNotFoundException:
+        raise HTTPException(status_code=404, detail="Template not found")
+    except FormTemplatesDisabledException:
+        raise HTTPException(status_code=409, detail="Form templates are disabled for this form")
+    except FormTemplatesNotAvailableException:
+        raise HTTPException(status_code=409, detail="This task has no form")
+    except TaskNotAccessibleException:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return ResolveFormTemplateResponse(
+        applicable_data=result.applicable_data,
+        skipped_fields=[SkippedFieldItem(key=item["key"], label=item["label"], value=item.get("value")) for item in result.skipped_fields],
+    )
+
+
+@router.post("/form_templates/delete", name="delete_form_template")
+def delete_form_template(
+    reqdata: DeleteFormTemplateRequest,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> DeleteFormTemplateResponse:
+    try:
+        service_form_templates.delete_template(db=db, user_id=user.id, template_id=reqdata.template_id)
+    except TemplateNotFoundException:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return DeleteFormTemplateResponse()
 
 
 WorkflowInstancesBffTableQuerySchema = bff_table.get_bff_table_query_schema(

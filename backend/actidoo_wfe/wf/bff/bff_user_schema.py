@@ -3,11 +3,12 @@
 
 import datetime
 import uuid
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from actidoo_wfe.helpers.schema import PaginatedDataSchema
+from actidoo_wfe.wf.constants import TemplateMode
 
 
 class ErrorResponse(BaseModel):
@@ -293,6 +294,84 @@ class UserDelegationRequest(BaseModel):
 
 class UserDelegationResponse(UserDelegationRequest):
     delegate: "InlineUserResponse"
+
+
+class FormTemplateListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class ListFormTemplatesRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: uuid.UUID
+
+
+class ListFormTemplatesResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    templates: List[FormTemplateListItem]
+    template_mode: TemplateMode
+
+
+class SaveFormTemplateRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: uuid.UUID
+    template_name: str
+    template_data: dict
+
+
+class SaveFormTemplateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class PreviewFormTemplateRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: uuid.UUID
+    template_data: dict
+
+
+class ResolveFormTemplateRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: uuid.UUID
+    template_id: uuid.UUID
+
+
+class SkippedFieldItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    key: str
+    label: str
+    value: Any | None = None
+
+
+class ResolveFormTemplateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    applicable_data: dict
+    skipped_fields: List[SkippedFieldItem]
+
+
+class DeleteFormTemplateRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    template_id: uuid.UUID
+
+
+class DeleteFormTemplateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
 
 for x in list(globals().values()):

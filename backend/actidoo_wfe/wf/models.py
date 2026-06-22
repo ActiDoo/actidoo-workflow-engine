@@ -182,6 +182,47 @@ class WorkflowUserDelegate(Base):
     )
 
 
+class WorkflowUserFormTemplate(Base):
+    __tablename__ = "workflow_user_form_templates"
+    # Unique per (user, form, template name). Prefix lengths keep the composite index within
+    # MySQL's utf8mb4 index byte limit; the indexed values are far shorter than the prefix in practice.
+    __table_args__ = (
+        Index(
+            "uq_workflow_user_form_templates_scope",
+            "user_id",
+            "workflow_name",
+            "task_name",
+            "template_name",
+            unique=True,
+            mysql_length={"workflow_name": 191, "task_name": 191, "template_name": 191},
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(WorkflowUser.id, ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    workflow_name: Mapped[str] = mapped_column(ty.String(255), nullable=False, index=True)
+    # Stable BPMN element id of the form (task.task_spec.name), not the runtime task UUID.
+    task_name: Mapped[str] = mapped_column(ty.String(255), nullable=False, index=True)
+    template_name: Mapped[str] = mapped_column(ty.String(255), nullable=False)
+    template_data: Mapped[dict] = mapped_column(JSONBlob(), nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        UTCDateTime(),
+        default=dt_now_naive,
+        nullable=False,
+        index=True,
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        UTCDateTime(),
+        default=dt_now_naive,
+        onupdate=dt_now_naive,
+        nullable=False,
+    )
+
+
 class WorkflowInstanceTask(Base):
     __tablename__ = "workflow_instance_tasks"
 
