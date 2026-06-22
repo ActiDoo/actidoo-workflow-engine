@@ -355,12 +355,13 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
           <>
             <Button
               disabled={false}
+              className="transparent-button-gray"
               design={ButtonDesign.Transparent}
-              tooltip={t('common.actions.abort')}
+              tooltip={t('common.actions.cancel')}
               onClick={() => {
                 setResetToInitialStateDialogOpen(false);
               }}>
-              {t('common.actions.abort')}
+              {t('common.actions.cancel')}
             </Button>
             <Button
               disabled={false}
