@@ -81,6 +81,7 @@ const AdminWorkflowDetails: React.FC = () => {
           <>
             <Button
               disabled={isLoading}
+              className="transparent-button-gray"
               design={ButtonDesign.Transparent}
               tooltip={t('admin.keepWorkflowTitle')}
               onClick={() => {
