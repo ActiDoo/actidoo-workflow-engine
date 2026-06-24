@@ -145,5 +145,6 @@
         ],
         "ui:disabled": true,
         "ui:field": "AttachmentSingle"
-    }
+    },
+    "ui:templateMode": "blacklist"
 }

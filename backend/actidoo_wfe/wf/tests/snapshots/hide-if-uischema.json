@@ -22,5 +22,6 @@
             "textfield_with_condition"
         ],
         "ui:hideif": "=textfield1 = \"A\" or textfield1 = \"B\""
-    }
+    },
+    "ui:templateMode": "blacklist"
 }

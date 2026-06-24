@@ -45,5 +45,6 @@
             "select_dynamic"
         ],
         "ui:widget": "SelectDynamic"
-    }
+    },
+    "ui:templateMode": "blacklist"
 }
