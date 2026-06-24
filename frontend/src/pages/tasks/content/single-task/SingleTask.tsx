@@ -212,6 +212,10 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       t('taskContent.submitError'),
       () => {
         dispatch(refreshWorkflowInstancesWithTasks(WorkflowState.READY));
+        // A task submit may have created/removed data-model rows (workflow-managed
+        // models), which flips the "Daten" nav entry on/off — that catalog is
+        // otherwise fetched only once on shell mount, so refresh it here.
+        dispatch(getRequest(WeDataKey.WORKFLOW_DATA_MODELS));
         navigate('/tasks/open');
 
         // Delete the draft for the task that was actually submitted (prevents deleting the wrong one on fast navigation)
