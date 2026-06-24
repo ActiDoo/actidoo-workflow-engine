@@ -29,6 +29,13 @@ class FieldDef:
     against the model's catalog (``i18n/locales/<locale>/LC_MESSAGES/<Model>.mo``
     next to the model module — same toolchain as the workflow catalogs) and falls
     back to the msgid itself when no catalog/translation exists.
+
+    ``include_in_table``/``include_in_detail``/``include_in_csv`` gate the field per
+    presentation context (all default on). They are orthogonal: a verbose field can be
+    shown only on the detail page (``include_in_table=False``) so it never bloats the
+    table list payload, while a noisy field can be kept out of the export, etc. Filtered
+    server-side in ``field_metadata``/``serialize_row``, so they stay authoring-only and
+    are never part of the wire schema.
     """
 
     name: str
@@ -38,6 +45,10 @@ class FieldDef:
     format: str | None = None
     # (row) -> Any; if set, this is a computed/virtual field with no DB column
     compute: Callable | None = None
+    # Per-context visibility (all default on); see class docstring.
+    include_in_table: bool = True
+    include_in_detail: bool = True
+    include_in_csv: bool = True
 
     @property
     def is_computed(self) -> bool:

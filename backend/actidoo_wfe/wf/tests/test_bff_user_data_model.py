@@ -762,6 +762,87 @@ class TestGetVersionChainEndpoint:
 
 
 # ---------------------------------------------------------------------------
+# Per-context field visibility (include_in_table / include_in_detail / include_in_csv)
+# ---------------------------------------------------------------------------
+
+
+class TestPerContextFieldVisibility:
+    """The three include_in_* flags gate a field per presentation context (default
+    on), filtered server-side so the schema and the row data agree for each context."""
+
+    def _register_mixed(self):
+        _register(
+            "Visible",
+            fields=[
+                FieldDef("name"),  # default: shown everywhere
+                FieldDef("value", include_in_table=False),  # verbose detail-only column
+                FieldDef("tbl", type="string", compute=lambda r: "T", include_in_detail=False),
+                FieldDef("nocsv", type="string", compute=lambda r: "X", include_in_csv=False),
+            ],
+        )
+
+    def test_detail_only_field_absent_from_table_present_in_detail(self, db_engine_ctx):
+        with db_engine_ctx():
+            _create_extension_table()
+            db = SessionLocal()
+            dummy = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
+            self._register_mixed()
+            rec = _wf_id("v1")
+            _seed_row(rec, name="Row", value=42)
+
+            client = Client()
+            with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
+                listed = _list_rows(client, "Visible").json()
+                chain = _get_version_chain(client, "Visible", record_id=rec).json()
+
+            # Table: ``value`` is dropped from both the schema and the row payload, so a
+            # verbose field never bloats the list response...
+            assert "value" not in {f["name"] for f in listed["model"]["fields"]}
+            assert "value" not in listed["ITEMS"][0]["data"]
+            # ...but the detail page (schema + data) carries it in full.
+            assert "value" in {f["name"] for f in chain["model"]["fields"]}
+            assert chain["versions"][0]["data"]["value"] == 42
+
+    def test_table_only_field_absent_from_detail(self, db_engine_ctx):
+        with db_engine_ctx():
+            _create_extension_table()
+            db = SessionLocal()
+            dummy = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
+            self._register_mixed()
+            rec = _wf_id("v2")
+            _seed_row(rec, name="Row", value=1)
+
+            client = Client()
+            with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
+                listed = _list_rows(client, "Visible").json()
+                chain = _get_version_chain(client, "Visible", record_id=rec).json()
+
+            assert "tbl" in {f["name"] for f in listed["model"]["fields"]}
+            assert listed["ITEMS"][0]["data"]["tbl"] == "T"
+            assert "tbl" not in {f["name"] for f in chain["model"]["fields"]}
+            assert "tbl" not in chain["versions"][0]["data"]
+
+    def test_csv_excludes_opted_out_field_keeps_detail_only(self, db_engine_ctx):
+        with db_engine_ctx():
+            _create_extension_table()
+            db = SessionLocal()
+            dummy = WorkflowDummy(db_session=db, users_with_roles={"u": ["wf-user"]})
+            self._register_mixed()
+            _seed_row(_wf_id("v3"), name="Row", value=42)
+
+            client = Client()
+            with override_get_user(client=client, user=dummy.user("u").user), disable_role_check(client):
+                body = client.root_client.get(f"{_models_base(client)}/Visible/export.csv").text
+
+            header = body.splitlines()[0]
+            # include_in_csv=False keeps ``nocsv`` out of the export entirely...
+            assert "nocsv" not in header
+            # ...while a detail-only field (default include_in_csv=True) is still exported.
+            assert "value" in header
+            assert "42" in body
+
+
+# ---------------------------------------------------------------------------
 # start_workflow_for_existing_data_model
 # ---------------------------------------------------------------------------
 
