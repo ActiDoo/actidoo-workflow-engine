@@ -127,9 +127,9 @@ export const de = {
       message: 'Möchtest du die Seite wirklich verlassen? Deine Änderungen gehen verloren.',
       stay: 'Bleiben',
       leave: 'Verlassen',
+      hint: 'Du hast ungespeicherte Änderungen. Vergiss nicht zu speichern!',
     },
     delegations: {
-      addedNotice: 'Vertretung hinzugefügt. Vergiss nicht, die Änderungen zu speichern!',
       addHint: '(nur bekannte Nutzer können hinzugefügt werden)',
     },
   },

@@ -126,9 +126,9 @@ export const en = {
       message: 'Are you sure you want to leave? Your changes will be lost.',
       stay: 'Stay',
       leave: 'Leave',
+      hint: "You have unsaved changes. Don't forget to save!",
     },
     delegations: {
-      addedNotice: "Delegate added. Don't forget to save your changes!",
       addHint: '(only known users can be added)',
     },
   },
