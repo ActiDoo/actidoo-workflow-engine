@@ -394,7 +394,6 @@ export const de = {
       clearDeadline: 'Frist entfernen',
       remove: 'Entfernen',
       add: 'Vertretung hinzufügen',
-      resetSelection: 'Auswahl zurücksetzen',
       duplicateWarning: 'Diese Person ist bereits als Vertretung eingetragen.',
     },
   },

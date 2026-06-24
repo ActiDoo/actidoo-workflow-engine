@@ -392,7 +392,6 @@ export const en = {
       clearDeadline: 'Clear deadline',
       remove: 'Remove',
       add: 'Add delegate',
-      resetSelection: 'Reset selection',
       duplicateWarning: 'This user is already configured as your delegate.',
     },
   },

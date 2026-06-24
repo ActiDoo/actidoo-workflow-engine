@@ -79,6 +79,7 @@ const UserSettings: React.FC = () => {
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
   const [showDelegateAddedNotice, setShowDelegateAddedNotice] = useState(false);
+  const [delegateInputResetKey, setDelegateInputResetKey] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const saving = useSelectUiLoading(key, 'POST');
 
@@ -182,6 +183,8 @@ const UserSettings: React.FC = () => {
     setPendingDelegate({});
     setPendingValidUntil('');
     setShowDelegateAddedNotice(true);
+    // Autocomplete via key-Wechsel neu mounten, damit das Eingabefeld geleert wird
+    setDelegateInputResetKey(prev => prev + 1);
   };
 
   const blocker = useBlocker(isDirty);
@@ -328,6 +331,7 @@ const UserSettings: React.FC = () => {
             {t('userSettings.delegations.add')} {t('common.delegations.addHint')}
           </Label>
           <WeUserAutocomplete
+            key={delegateInputResetKey}
             excludeUserIds={currentUserId ? [currentUserId] : undefined}
             onSelectUser={(userId, label) => {
               setPendingDelegate({ id: userId, label });
@@ -358,14 +362,6 @@ const UserSettings: React.FC = () => {
               disabled={!pendingDelegate.id || isDuplicatePendingDelegate}
               onClick={handleAddDelegation}>
               {t('userSettings.delegations.add')}
-            </Button>
-            <Button
-              design={ButtonDesign.Transparent}
-              onClick={() => {
-                setPendingDelegate({});
-                setPendingValidUntil('');
-              }}>
-              {t('userSettings.delegations.resetSelection')}
             </Button>
           </div>
           {isDuplicatePendingDelegate ? (
