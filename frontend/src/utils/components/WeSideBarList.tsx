@@ -190,6 +190,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                   : `${t('common.labels.task')}:`;
               return (
                 <StandardListItem
+                  data-task-selected={isSelected ? 'true' : undefined}
                   className={` h-auto pc-pl-responsive ${
                     isDelegationHighlight ? 'bg-orange-50' : ''
                   }`}
