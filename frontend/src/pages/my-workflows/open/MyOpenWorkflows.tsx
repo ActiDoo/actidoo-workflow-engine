@@ -29,6 +29,7 @@ import {
   BusyIndicator,
   BusyIndicatorSize,
   Button,
+  CheckBox,
   Dialog,
   Icon,
   Text,
@@ -62,6 +63,7 @@ const MyOpenWorkflows: React.FC = () => {
     finalFilter,
     sort
   );
+  const [showInstanceID, setShowInstanceID] = useState(false);
 
   useEffect(() => {
     dispatch(
@@ -71,6 +73,16 @@ const MyOpenWorkflows: React.FC = () => {
       })
     );
   }, [tableData.loadData]);
+
+  const columns = () => {
+    if (showInstanceID) {
+      return myOpenWorkflowsColumns(tableData, user?.id, t);
+    } else {
+      return myOpenWorkflowsColumns(tableData, user?.id, t).filter(
+        column => column.accessor !== 'id'
+      );
+    }
+  };
 
   const openSubmittedForm = (workflowId: string, taskId?: string): void => {
     if (!taskId) return;
@@ -167,7 +179,7 @@ const MyOpenWorkflows: React.FC = () => {
       </div>
       <div className="my-workflows-table">
         <PcAnalyticalTable
-          columns={myOpenWorkflowsColumns(tableData, user?.id, t)}
+          columns={columns()}
           initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
           data={data?.data?.ITEMS ?? []}
           loading={loadingState}
@@ -183,6 +195,12 @@ const MyOpenWorkflows: React.FC = () => {
           renderRowSubComponent={renderRowSubComponent}
         />
       </div>
+      <CheckBox
+        text="show instance id"
+        checked={showInstanceID}
+        onChange={event => {
+          setShowInstanceID(event.currentTarget?.checked ?? false);
+        }}></CheckBox>
       {createPortal(
         <Dialog
           open={submittedFormDialogOpen}
