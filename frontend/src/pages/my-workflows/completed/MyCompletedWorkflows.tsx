@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
@@ -16,6 +16,7 @@ import {
   useAdditionalTableFunctions,
   PcSearch,
 } from '@/ui5-components';
+import { CheckBox } from '@ui5/webcomponents-react';
 import { environment } from '@/environment';
 import { myCompletedWorkflowsColumns } from '@/pages/my-workflows/completed/MyCompletedWorkflowsSettings';
 import { useSelectUiLoading } from '@/store/ui/selectors';
@@ -40,6 +41,7 @@ const MyCompletedWorkflows: React.FC = () => {
     finalFilter,
     sort
   );
+  const [showInstanceID, setShowInstanceID] = useState(false);
 
   const renderRowSubComponent = (row: any): React.ReactElement | null => {
     const completedTasks: ActiveTaskInstance[] | undefined = row.original.completed_tasks;
@@ -65,6 +67,16 @@ const MyCompletedWorkflows: React.FC = () => {
     );
   }, [tableData.loadData]);
 
+  const columns = () => {
+    if (showInstanceID) {
+      return myCompletedWorkflowsColumns(tableData, user?.id, t);
+    } else {
+      return myCompletedWorkflowsColumns(tableData, user?.id, t).filter(
+        column => column.accessor !== 'id'
+      );
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-end w-100 mb-4 gap-2 -mt-4">
@@ -73,7 +85,7 @@ const MyCompletedWorkflows: React.FC = () => {
 
       <div className="my-workflows-table">
         <PcAnalyticalTable
-          columns={myCompletedWorkflowsColumns(tableData, user?.id, t)}
+          columns={columns()}
           initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
           data={data?.data?.ITEMS ?? []}
           loading={loadingState}
@@ -89,6 +101,12 @@ const MyCompletedWorkflows: React.FC = () => {
           renderRowSubComponent={renderRowSubComponent}
         />
       </div>
+      <CheckBox
+        text="show instance id"
+        checked={showInstanceID}
+        onChange={event => {
+          setShowInstanceID(event.currentTarget?.checked ?? false);
+        }}></CheckBox>
     </>
   );
 };
