@@ -432,7 +432,7 @@ export const en = {
     processes: 'Processes',
     processesHeader: 'Involved processes',
     processesInfo:
-      'These processes work with the data shown here — they create or change records. This list is purely informational: actions are triggered directly in the table rows. Clicking an entry opens its process diagram.',
+      'These processes work with the data shown here - they create or change records. This list is purely informational: actions are triggered directly in the table rows. Clicking an entry opens its process diagram.',
     processesEmpty: 'No processes you may start use this data model.',
     startSuccess: 'Workflow started.',
     startError: 'Could not start the workflow.',

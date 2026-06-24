@@ -434,7 +434,7 @@ export const de = {
     processes: 'Prozesse',
     processesHeader: 'Beteiligte Prozesse',
     processesInfo:
-      'Diese Prozesse arbeiten mit den hier angezeigten Daten — sie legen Datensätze an oder ändern sie. Diese Liste ist rein informativ: Aktionen löst du direkt in den Tabellenzeilen aus. Ein Klick auf einen Eintrag öffnet das zugehörige Prozessdiagramm.',
+      'Diese Prozesse arbeiten mit den hier angezeigten Daten - sie legen Datensätze an oder ändern sie. Diese Liste ist rein informativ: Aktionen löst du direkt in den Tabellenzeilen aus. Ein Klick auf einen Eintrag öffnet das zugehörige Prozessdiagramm.',
     processesEmpty: 'Kein von dir startbarer Prozess nutzt dieses Datenmodell.',
     startSuccess: 'Workflow gestartet.',
     startError: 'Workflow konnte nicht gestartet werden.',
