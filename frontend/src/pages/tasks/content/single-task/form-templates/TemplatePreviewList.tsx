@@ -40,7 +40,7 @@ const TemplatePreviewList: React.FC<TemplatePreviewListProps> = ({
   const formatScalar = (value: unknown): string => {
     if (typeof value === 'boolean') return value ? t('common.labels.yes') : t('common.labels.no');
     if (value === null || value === undefined || value === '') {
-      return t('formTemplates.preview.emptyValue');
+      return '';
     }
     return String(value);
   };
@@ -98,18 +98,53 @@ const TemplatePreviewList: React.FC<TemplatePreviewListProps> = ({
       return renderTable(node.properties, value as Record<string, unknown>);
     }
     if (node.type === 'array' && node.items?.properties && Array.isArray(value)) {
-      return (
-        <div className="flex flex-col gap-2">
-          {(value as Array<Record<string, unknown>>).map((item, index) => (
-            <div key={index}>
-              <div className="text-xs text-neutral-400">#{index + 1}</div>
-              {renderTable(node.items.properties, item)}
-            </div>
-          ))}
-        </div>
-      );
+      return renderObjectArrayTable(node.items.properties, value as Array<Record<string, unknown>>);
     }
     return formatFieldValue(node, value);
+  };
+
+  const renderObjectArrayTable = (
+    itemProps: Record<string, any>,
+    items: Array<Record<string, unknown>>
+  ): React.ReactNode => {
+    const present = new Set<string>();
+    items.forEach(item => {
+      if (item && typeof item === 'object') Object.keys(item).forEach(key => present.add(key));
+    });
+    const columns = Object.keys(itemProps).filter(key => present.has(key));
+    if (items.length === 0 || columns.length === 0) {
+      return <span className="text-neutral-400">{t('formTemplates.preview.emptyValue')}</span>;
+    }
+    return (
+      <div className="overflow-x-auto">
+        <table className="text-sm border-collapse">
+          <thead>
+            <tr className="text-left">
+              <th className="!pr-2 py-0.5 font-medium text-neutral-400">#</th>
+              {columns.map(col => (
+                <th
+                  key={col}
+                  className="!pr-2 py-0.5 font-medium text-neutral-500 whitespace-nowrap">
+                  {itemProps[col]?.title ?? col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr key={index} className="border-t border-neutral-100 align-top">
+                <td className="!pr-2 py-0.5 text-neutral-400">{index + 1}</td>
+                {columns.map(col => (
+                  <td key={col} className="!pr-2 py-0.5">
+                    {renderContent(itemProps[col] ?? {}, item?.[col])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   const renderTable = (
