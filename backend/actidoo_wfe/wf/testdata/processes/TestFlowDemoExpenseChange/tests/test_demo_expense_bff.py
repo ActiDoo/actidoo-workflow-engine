@@ -95,6 +95,10 @@ def _download(client, record_id, version, file_hash):
     )
 
 
+def _export_csv(client):
+    return client.root_client.get(f"{_base(client)}/DemoExpense/export.csv")
+
+
 def _start_edit(client, record_id):
     url = client.root_client.app.url_path_for("start_workflow_for_existing_data_model")
     return client.root_client.post(url, json={"model_name": "DemoExpense", "id": record_id, "action": "edit"})
@@ -173,6 +177,45 @@ def test_labels_resolve_via_committed_catalog(db_engine_ctx):
         by_name = {f["name"]: f for f in rows["model"]["fields"]}
         assert by_name["title"]["label"] == "Titel"
         assert by_name["amount"]["label"] == "Betrag"
+
+
+def test_description_detail_only_and_receipt_excluded_from_csv(db_engine_ctx):
+    """Reference for per-context field visibility (FieldDef include_in_* flags):
+
+    - ``description`` is verbose, so it is declared detail-only
+      (``include_in_table=False``): absent from the table schema + row payload,
+      present in full on the detail (version-chain) page.
+    - ``receipt`` is a file field with no meaningful CSV cell, so it is excluded
+      from the export (``include_in_csv=False``), while ``description`` (default on)
+      is exported.
+    """
+    with db_engine_ctx():
+        db = SessionLocal()
+        wf = _setup(db)
+        notes = "Client dinner with the whole team; itemised receipt attached."
+        wf.user("editor").submit(
+            task_data={"title": "Dinner", "amount": 80.0, "category": "Food",
+                       "description": notes, "receipt": _RECEIPT},
+            workflow_instance_id=wf.workflow_instance_id,
+        )
+
+        client = Client()
+        with override_get_user(client=client, user=wf.user("editor").user), disable_role_check(client):
+            rows = _list_rows(client).json()
+            record_id = rows["ITEMS"][0]["data"]["id"]
+            chain = _version_chain(client, record_id).json()
+            csv_body = _export_csv(client).text
+
+        # Table: the verbose field is gone from both the schema and the row payload.
+        assert "description" not in {f["name"] for f in rows["model"]["fields"]}
+        assert "description" not in rows["ITEMS"][0]["data"]
+        # Detail page: the full description is present.
+        assert "description" in {f["name"] for f in chain["model"]["fields"]}
+        assert chain["versions"][0]["data"]["description"] == notes
+        # CSV: no receipt column (include_in_csv=False), but description is exported.
+        header = csv_body.splitlines()[0]
+        assert "Receipt" not in header and "Beleg" not in header
+        assert notes in csv_body
 
 
 def test_read_permission(db_engine_ctx):

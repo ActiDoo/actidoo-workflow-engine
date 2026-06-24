@@ -42,6 +42,10 @@ msgctxt "field:status"
 msgid "Status"
 msgstr "Status"
 
+msgctxt "field:description"
+msgid "Description"
+msgstr "Beschreibung"
+
 msgctxt "field:created_at"
 msgid "Created"
 msgstr "Erstellt"
