@@ -1,0 +1,111 @@
+{
+  "components": [
+    {
+      "label": "Required text",
+      "type": "textfield",
+      "layout": {"row": "Row_1", "columns": null},
+      "id": "Field_required_text",
+      "key": "required_text",
+      "validate": {"required": true}
+    },
+    {
+      "label": "Short code (excluded from templates)",
+      "type": "textfield",
+      "layout": {"row": "Row_2", "columns": null},
+      "id": "Field_short_code",
+      "key": "short_code",
+      "properties": {"template_field": "false"}
+    },
+    {
+      "label": "Category",
+      "values": [
+        {"label": "Alpha Category", "value": "cat_alpha"},
+        {"label": "Beta Category", "value": "cat_beta"},
+        {"label": "Gamma Category", "value": "cat_gamma"}
+      ],
+      "type": "select",
+      "layout": {"row": "Row_3", "columns": null},
+      "id": "Field_category",
+      "key": "category"
+    },
+    {
+      "label": "Tags",
+      "values": [
+        {"label": "Urgent", "value": "tag_urgent"},
+        {"label": "Internal", "value": "tag_internal"},
+        {"label": "Customer", "value": "tag_customer"}
+      ],
+      "type": "select",
+      "layout": {"row": "Row_4", "columns": null},
+      "id": "Field_tags",
+      "key": "tags",
+      "properties": {"custom_type": "select_multi"}
+    },
+    {
+      "label": "Amount",
+      "type": "number",
+      "layout": {"row": "Row_5", "columns": null},
+      "id": "Field_amount",
+      "key": "amount"
+    },
+    {
+      "label": "Confirmed",
+      "type": "checkbox",
+      "layout": {"row": "Row_6", "columns": null},
+      "id": "Field_confirmed",
+      "key": "confirmed"
+    },
+    {
+      "label": "Optional note",
+      "type": "textfield",
+      "layout": {"row": "Row_7", "columns": null},
+      "id": "Field_optional_note",
+      "key": "optional_note"
+    },
+    {
+      "label": "Attachment (excluded from templates)",
+      "type": "textfield",
+      "layout": {"row": "Row_8", "columns": null},
+      "id": "Field_attachment",
+      "key": "attachment",
+      "properties": {"custom_type": "attachment_single"}
+    },
+    {
+      "label": "Positions",
+      "components": [
+        {
+          "label": "Position name",
+          "type": "textfield",
+          "layout": {"row": "Row_pos_1", "columns": null},
+          "id": "Field_pos_name",
+          "key": "pos_name"
+        },
+        {
+          "label": "Position category",
+          "values": [
+            {"label": "Hardware", "value": "pos_hw"},
+            {"label": "Software", "value": "pos_sw"}
+          ],
+          "type": "select",
+          "layout": {"row": "Row_pos_2", "columns": null},
+          "id": "Field_pos_category",
+          "key": "pos_category"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {"row": "Row_9", "columns": null},
+      "id": "Field_positions",
+      "path": "positions"
+    }
+  ],
+  "type": "default",
+  "id": "BlacklistFormDef",
+  "template_mode": "blacklist",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 16
+}
