@@ -68,6 +68,8 @@ const StartWorkflowPreview = React.lazy(
   async () => await import('@/pages/start-workflow-preview/StartWorkflowPreview')
 );
 const About = React.lazy(async () => await import('@/pages/about/About'));
+const AboutHelp = React.lazy(async () => await import('@/pages/about/AboutHelp'));
+const AboutNotices = React.lazy(async () => await import('@/pages/about/AboutNotices'));
 const Wrapper: React.FC = () => {
   const { t } = useTranslation();
   const loginState = useSelector((state: State) => state.auth.loginState.data);
@@ -278,7 +280,11 @@ const router = createBrowserRouter(
           element={<StartWorkflowPreview />}
           errorElement={<PcErrorView />}
         />
-        <Route path="/about" element={<About />} errorElement={<PcErrorView />} />
+        <Route path="/about" element={<About />} errorElement={<PcErrorView />}>
+          <Route index element={<Navigate to="help" replace />} />
+          <Route path="help" element={<AboutHelp />} errorElement={<PcErrorView />} />
+          <Route path="notices" element={<AboutNotices />} errorElement={<PcErrorView />} />
+        </Route>
       </Route>
     </Route>
   ),
