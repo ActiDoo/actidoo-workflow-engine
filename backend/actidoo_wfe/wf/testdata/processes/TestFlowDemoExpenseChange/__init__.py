@@ -36,6 +36,7 @@ def service_demo_persist_update(sth: ServiceTaskHelper):
             title=sth.task_data.get("title"),
             amount=sth.task_data.get("amount"),
             category=sth.task_data.get("category"),
+            description=sth.task_data.get("description"),
             status="open",
         )
     )

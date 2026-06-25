@@ -22,9 +22,16 @@
       "key": "category"
     },
     {
+      "label": "Description",
+      "type": "textarea",
+      "layout": {"row": "Row_4", "columns": null},
+      "id": "Field_description",
+      "key": "description"
+    },
+    {
       "label": "Receipt",
       "type": "textfield",
-      "layout": {"row": "Row_4", "columns": null},
+      "layout": {"row": "Row_5", "columns": null},
       "id": "Field_receipt",
       "key": "receipt",
       "properties": {

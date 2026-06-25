@@ -131,13 +131,15 @@
                 "ui:arrayAllowAddRemove": "True",
                 "ui:arrayOverviewButtonText": "Overview",
                 "ui:defaultRepetitions": 1,
-                "ui:label": "Inner Dynamic List"
+                "ui:label": "Inner Dynamic List",
+                "ui:copyable": true
             }
         },
         "ui:arrayAddButtonText": "Add",
         "ui:arrayAllowAddRemove": "True",
         "ui:arrayOverviewButtonText": "Overview",
         "ui:defaultRepetitions": 1,
-        "ui:label": "Outer Dynamic list"
+        "ui:label": "Outer Dynamic list",
+        "ui:copyable": true
     }
 }

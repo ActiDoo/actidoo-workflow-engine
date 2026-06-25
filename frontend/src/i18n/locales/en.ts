@@ -126,9 +126,9 @@ export const en = {
       message: 'Are you sure you want to leave? Your changes will be lost.',
       stay: 'Stay',
       leave: 'Leave',
+      hint: "You have unsaved changes. Don't forget to save!",
     },
     delegations: {
-      addedNotice: "Delegate added. Don't forget to save your changes!",
       addHint: '(only known users can be added)',
     },
   },
@@ -392,7 +392,6 @@ export const en = {
       clearDeadline: 'Clear deadline',
       remove: 'Remove',
       add: 'Add delegate',
-      resetSelection: 'Reset selection',
       duplicateWarning: 'This user is already configured as your delegate.',
     },
   },
@@ -432,7 +431,7 @@ export const en = {
     processes: 'Processes',
     processesHeader: 'Involved processes',
     processesInfo:
-      'These processes work with the data shown here — they create or change records. This list is purely informational: actions are triggered directly in the table rows. Clicking an entry opens its process diagram.',
+      'These processes work with the data shown here - they create or change records. This list is purely informational: actions are triggered directly in the table rows. Clicking an entry opens its process diagram.',
     processesEmpty: 'No processes you may start use this data model.',
     startSuccess: 'Workflow started.',
     startError: 'Could not start the workflow.',

@@ -51,6 +51,7 @@ class RuntimeContext:
     # Visuals
     brand_primary_color: Optional[str]  # e.g., "ff6600"
     environment_label: Optional[str]  # e.g., "QAS" or "Staging"
+    app_title: Optional[str]  # e.g., "Workflow Engine"; shown next to the brand logo
 
     @property
     def frontend_env_js_path(self) -> Path:
@@ -159,15 +160,17 @@ def write_frontend_env_js(
     frontend_base_url: str,
     api_base_url: str,
     environment_label: Optional[str],
+    app_title: Optional[str],
 ) -> None:
     """Generates the window.__ACTIDOO_RUNTIME_CONFIG__ object for the SPA."""
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     config_payload = json.dumps(
         {
             "FRONTEND_BASE_URL": frontend_base_url,
             "API_BASE_URL": api_base_url,
             "ENVIRONMENT_LABEL": environment_label or "",
+            "APP_TITLE": app_title or "",
         },
         separators=(",", ":"),
     )
@@ -334,6 +337,7 @@ def main() -> int:
         api_base_path=get_config("API_BASE_PATH", required=True),
         brand_primary_color=get_config("BRAND_PRIMARY_COLOR"),
         environment_label=get_config("ENVIRONMENT_LABEL"),
+        app_title=get_config("APP_TITLE"),
     )
 
     real_ip_raw = os.environ.get("NGINX_REAL_IP_FROM")
@@ -361,6 +365,7 @@ def main() -> int:
         ctx.frontend_base_url,
         ctx.api_base_url,
         ctx.environment_label,
+        ctx.app_title,
     )
 
     replacements = {

@@ -20,6 +20,13 @@
       "layout": {"row": "Row_3", "columns": null},
       "id": "Field_category",
       "key": "category"
+    },
+    {
+      "label": "Description",
+      "type": "textarea",
+      "layout": {"row": "Row_4", "columns": null},
+      "id": "Field_description",
+      "key": "description"
     }
   ],
   "type": "default",

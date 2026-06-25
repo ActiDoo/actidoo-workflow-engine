@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
-import re
-
 import typer
 
 from actidoo_wfe.wf import providers as workflow_providers
@@ -18,14 +16,9 @@ def _scan_extensions() -> None:
     ``register_data_model`` decorator); needed because the CLI runs without the
     FastAPI lifespan.
     """
-    import venusian
+    from actidoo_wfe.venusian_scan import run_venusian_scan
 
-    import actidoo_wfe as pyapp
-    from actidoo_wfe.venusian_scan import discover_venusian_scan_targets
-
-    scanner = venusian.Scanner()
-    for target in discover_venusian_scan_targets(default_modules=[pyapp]):
-        scanner.scan(target, ignore=[re.compile("test_").search])
+    run_venusian_scan()
 
 
 @app.command("extract")

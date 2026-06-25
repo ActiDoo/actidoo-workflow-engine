@@ -18,7 +18,7 @@ import json
 import logging
 import uuid
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 import sqlalchemy as sa
 from sqlalchemy import func, select
@@ -160,6 +160,8 @@ def serialize_row(
     row: Any,
     data_model: DataModelDescriptor,
     file_refs_by_field: dict[str, list[dict]] | None = None,
+    *,
+    context: FieldContext | None = None,
 ) -> dict:
     """Serialize a model instance to a JSON-safe dict, respecting the field config.
 
@@ -167,6 +169,10 @@ def serialize_row(
     ``data_model_files`` side table. Callers pass the row's already-batch-loaded
     refs as ``file_refs_by_field`` (see ``files_by_row``); without it, file fields
     serialize as empty (used only off the hot path, e.g. callers with no files).
+
+    With *context* set, fields hidden in that presentation context are dropped, so
+    the row data matches the schema ``field_metadata`` builds for the same context
+    (and verbose detail-only fields never ride along in the table list payload).
     """
     file_refs_by_field = file_refs_by_field or {}
     fields = data_model.api.fields if data_model.api else None
@@ -182,6 +188,8 @@ def serialize_row(
     col_map = _column_map(type(row))
     result = {}
     for field in fields:
+        if context is not None and not _field_visible(field, context):
+            continue
         if field.type == "file":
             result[field.name] = file_refs_by_field.get(field.name, [])
             continue
@@ -281,8 +289,28 @@ def _field_schema_from_column(
     )
 
 
-def field_metadata(data_model: DataModelDescriptor, *, locale: str | None = None) -> list[FieldSchema]:
-    """Build the field schema for a model, merging FieldDef bits with inspection."""
+# Presentation context a field list is projected for. ``None`` means "no filtering"
+# (every declared field), preserving the behaviour of callers that don't pass one.
+FieldContext = Literal["table", "detail", "csv"]
+
+
+def _field_visible(field: FieldDef, context: FieldContext) -> bool:
+    """Whether *field* is shown in *context*, per its include_in_* flags."""
+    if context == "table":
+        return field.include_in_table
+    if context == "detail":
+        return field.include_in_detail
+    return field.include_in_csv  # csv
+
+
+def field_metadata(
+    data_model: DataModelDescriptor, *, context: FieldContext | None = None, locale: str | None = None
+) -> list[FieldSchema]:
+    """Build the field schema for a model, merging FieldDef bits with inspection.
+
+    With *context* set, fields hidden in that presentation context are dropped, so
+    the schema matches what ``serialize_row`` emits for the same context.
+    """
     model_class = data_model.model_class
     fields = data_model.api.fields if data_model.api else None
     if fields is None:
@@ -295,6 +323,8 @@ def field_metadata(data_model: DataModelDescriptor, *, locale: str | None = None
     col_map = _column_map(model_class)
     result: list[FieldSchema] = []
     for field in fields:
+        if context is not None and not _field_visible(field, context):
+            continue
         if field.is_computed or field.type == "file":
             # Computed and file fields are framework-managed virtual fields with no
             # backing column (file refs live in the data_model_files side table).
@@ -319,12 +349,16 @@ def field_metadata(data_model: DataModelDescriptor, *, locale: str | None = None
 
 
 def data_model_schema(
-    data_model: DataModelDescriptor, row_count: int | None = None, *, locale: str | None = None
+    data_model: DataModelDescriptor,
+    row_count: int | None = None,
+    *,
+    context: FieldContext | None = None,
+    locale: str | None = None,
 ) -> DataModelSchema:
     return DataModelSchema(
         name=data_model.name,
         label=resolve_label(data_model, data_model.api.label if data_model.api else None, locale, data_model.name),
-        fields=field_metadata(data_model, locale=locale),
+        fields=field_metadata(data_model, context=context, locale=locale),
         row_count=row_count,
         has_actions=bool(data_model.api.actions) if data_model.api else False,
     )
@@ -488,12 +522,16 @@ def list_rows(
     files_map = files_by_row(data_model, paginated.items, db)
     items = [
         RowResponse(
-            data=serialize_row(row, data_model, _file_refs_for(files_map, row)),
+            data=serialize_row(row, data_model, _file_refs_for(files_map, row), context="table"),
             actions=actions_map.get(row.id, []),
         )
         for row in paginated.items
     ]
-    return ListRowsResponse(ITEMS=items, COUNT=paginated.count, model=data_model_schema(data_model, locale=user.locale))
+    return ListRowsResponse(
+        ITEMS=items,
+        COUNT=paginated.count,
+        model=data_model_schema(data_model, context="table", locale=user.locale),
+    )
 
 
 def walk_version_chain(data_model: DataModelDescriptor, db: Session, record_id: uuid.UUID) -> list | None:
@@ -522,13 +560,13 @@ def version_chain_response(
     return VersionChainResponse(
         versions=[
             VersionEntry(
-                data=serialize_row(row, data_model, _file_refs_for(files_map, row)),
+                data=serialize_row(row, data_model, _file_refs_for(files_map, row), context="detail"),
                 created_at=getattr(row, "created_at", None),
                 action=getattr(row, "action", None),
             )
             for row in chain
         ],
-        model=data_model_schema(data_model, locale=locale),
+        model=data_model_schema(data_model, context="detail", locale=locale),
         actions=actions or [],
     )
 
@@ -610,12 +648,12 @@ def rows_to_csv(data_model: DataModelDescriptor, rows: list, *, db: Session, loc
     The header carries the labels resolved to *locale* — consumers parsing the
     header must match by position or request a fixed locale.
     """
-    fields = field_metadata(data_model, locale=locale)
+    fields = field_metadata(data_model, context="csv", locale=locale)
     files_map = files_by_row(data_model, rows, db)
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";")
     writer.writerow([field.label for field in fields])
     for row in rows:
-        data = serialize_row(row, data_model, _file_refs_for(files_map, row))
+        data = serialize_row(row, data_model, _file_refs_for(files_map, row), context="csv")
         writer.writerow([_csv_cell(data.get(field.name)) for field in fields])
     return output.getvalue()

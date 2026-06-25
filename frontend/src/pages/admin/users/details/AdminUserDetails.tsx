@@ -8,6 +8,8 @@ import {
   ButtonDesign,
   DateTimePicker,
   Label,
+  MessageStrip,
+  MessageStripDesign,
   Text,
 } from '@ui5/webcomponents-react';
 import moment from 'moment';
@@ -102,7 +104,6 @@ const AdminUserDetails: React.FC = () => {
   const [initialDelegations, setInitialDelegations] = useState<UserDelegation[]>([]);
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
-  const [showDelegateAddedNotice, setShowDelegateAddedNotice] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const targetUserId = userDetail?.user?.id ?? userId;
@@ -123,7 +124,6 @@ const AdminUserDetails: React.FC = () => {
     const mapped = mapDelegationsFromResponse(detail.delegations);
     setDelegations(mapped);
     setInitialDelegations(mapped);
-    setShowDelegateAddedNotice(false);
   };
 
   useEffect(() => {
@@ -167,7 +167,6 @@ const AdminUserDetails: React.FC = () => {
 
   const handleRemoveDelegation = (delegateId: string) => {
     setDelegations(prev => prev.filter(entry => entry.delegate_user_id !== delegateId));
-    setShowDelegateAddedNotice(false);
   };
 
   const handleAddDelegation = () => {
@@ -188,7 +187,6 @@ const AdminUserDetails: React.FC = () => {
     ]);
     setPendingDelegate({});
     setPendingValidUntil('');
-    setShowDelegateAddedNotice(true);
   };
 
   const handleSaveDelegations = () => {
@@ -360,9 +358,11 @@ const AdminUserDetails: React.FC = () => {
             ))
           )}
 
-          {showDelegateAddedNotice && (
-            <Text className="text-xs text-amber-700">{t('common.delegations.addedNotice')}</Text>
-          )}
+          {isDirty ? (
+            <MessageStrip design={MessageStripDesign.Warning} hideCloseButton className="block">
+              {t('common.unsavedChanges.hint')}
+            </MessageStrip>
+          ) : null}
         </div>
 
         <div className="border-t border-neutral-200 pt-4 space-y-3">

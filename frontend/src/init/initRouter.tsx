@@ -82,6 +82,8 @@ const Wrapper: React.FC = () => {
     (state: State) => state.data[WeDataKey.WORKFLOW_DATA_MODELS]?.data
   );
   const brandLogoUrl = `${import.meta.env.BASE_URL}branding/logo.svg`;
+  // Deployment-configurable app title (APP_TITLE); falls back to the i18n default.
+  const appTitle = environment.appTitle ?? t('layout.appTitle');
 
   // The data viewer only makes sense when the user actually sees content; fetch
   // the visible models once (Wrapper renders authenticated only) and gate the
@@ -140,7 +142,7 @@ const Wrapper: React.FC = () => {
   return (
     <PcPageWrapper
       navigation={navigation}
-      // appTitle={appTitle}
+      appTitle={appTitle}
       brandLogoUrl={brandLogoUrl}
       onLogout={() => {
         logout();

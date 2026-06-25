@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from sqlalchemy import Numeric, String
+from sqlalchemy import Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from actidoo_wfe.settings import settings
@@ -38,6 +38,9 @@ class DemoExpense(DemoBase, WorkflowManagedMixin):
     amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # ``description`` is a verbose free-text field: it would crowd the table list, so
+    # it is declared detail-only (FieldDef include_in_table=False below).
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # ``receipt`` is a framework-managed file field (FieldDef type="file" below):
     # its references live in the data_model_files side table, not in a column.
 
@@ -71,8 +74,15 @@ def register_demo_expense() -> None:
                 FieldDef("amount", type="decimal", format="currency:EUR", label="Amount"),
                 FieldDef("category", label="Category"),
                 FieldDef("status", label="Status"),
+                # Per-context field visibility (all three flags default on):
+                # - ``description`` is verbose, so it is shown only on the detail page
+                #   (``include_in_table=False``) and never bloats the table list payload.
+                # - ``receipt`` is a file field with no meaningful CSV cell, so it is
+                #   left out of the export (``include_in_csv=False``).
+                # The third flag, ``include_in_detail=False``, is the inverse (table-only).
+                FieldDef("description", label="Description", include_in_table=False),
                 FieldDef("created_at", label="Created"),
-                FieldDef("receipt", type="file", label="Receipt"),
+                FieldDef("receipt", type="file", label="Receipt", include_in_csv=False),
             ],
             actions=[
                 ActionDef(
@@ -86,7 +96,9 @@ def register_demo_expense() -> None:
                         "source_id": str(row.id),
                         "title": row.title,
                         "amount": float(row.amount) if row.amount is not None else None,
-                        "category": row.category,
+                        # Seed a string (never None): the edit form's textarea schema
+                        # rejects a null prefill.
+                        "description": row.description or "",
                     },
                 ),
             ],

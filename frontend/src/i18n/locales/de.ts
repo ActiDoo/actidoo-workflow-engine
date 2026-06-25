@@ -127,9 +127,9 @@ export const de = {
       message: 'Möchtest du die Seite wirklich verlassen? Deine Änderungen gehen verloren.',
       stay: 'Bleiben',
       leave: 'Verlassen',
+      hint: 'Du hast ungespeicherte Änderungen. Vergiss nicht zu speichern!',
     },
     delegations: {
-      addedNotice: 'Vertretung hinzugefügt. Vergiss nicht, die Änderungen zu speichern!',
       addHint: '(nur bekannte Nutzer können hinzugefügt werden)',
     },
   },
@@ -394,7 +394,6 @@ export const de = {
       clearDeadline: 'Frist entfernen',
       remove: 'Entfernen',
       add: 'Vertretung hinzufügen',
-      resetSelection: 'Auswahl zurücksetzen',
       duplicateWarning: 'Diese Person ist bereits als Vertretung eingetragen.',
     },
   },
@@ -434,7 +433,7 @@ export const de = {
     processes: 'Prozesse',
     processesHeader: 'Beteiligte Prozesse',
     processesInfo:
-      'Diese Prozesse arbeiten mit den hier angezeigten Daten — sie legen Datensätze an oder ändern sie. Diese Liste ist rein informativ: Aktionen löst du direkt in den Tabellenzeilen aus. Ein Klick auf einen Eintrag öffnet das zugehörige Prozessdiagramm.',
+      'Diese Prozesse arbeiten mit den hier angezeigten Daten - sie legen Datensätze an oder ändern sie. Diese Liste ist rein informativ: Aktionen löst du direkt in den Tabellenzeilen aus. Ein Klick auf einen Eintrag öffnet das zugehörige Prozessdiagramm.',
     processesEmpty: 'Kein von dir startbarer Prozess nutzt dieses Datenmodell.',
     startSuccess: 'Workflow gestartet.',
     startError: 'Workflow konnte nicht gestartet werden.',

@@ -46,7 +46,11 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
         className="flex no-underline items-center"
         onClick={props.onNavigate}>
         <img src={logoSrc} className="h-9 my-1 w-auto" onError={handleLogoError} />
-        <Text>{props.appTitle}</Text>
+        {props.appTitle ? (
+          <Text className="ml-3 self-center !text-sm !text-pc-gray-700 whitespace-nowrap">
+            {props.appTitle}
+          </Text>
+        ) : null}
       </NavLink>
       {props.navigation ? (
         <div className="mx-8 border-r border-pc-gray-200 border-r-solid h-11" />

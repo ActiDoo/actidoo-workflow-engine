@@ -7,7 +7,6 @@ FastAPI Entrypoint
 
 import asyncio
 import logging
-import re
 import sys
 from contextlib import asynccontextmanager
 from ipaddress import ip_network
@@ -15,7 +14,6 @@ from typing import Any, Callable
 
 import orjson
 import sentry_sdk
-import venusian
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +30,7 @@ from actidoo_wfe.session import SessionMiddleware
 from actidoo_wfe.settings import settings
 from actidoo_wfe.storage import setup_storage
 from actidoo_wfe.testing.utils import in_test
-from actidoo_wfe.venusian_scan import discover_venusian_scan_targets
+from actidoo_wfe.venusian_scan import run_venusian_scan
 from actidoo_wfe.wf.exceptions import WorkflowDefinitionMissingError
 from actidoo_wfe.wf.fastapi import router as router_wf
 
@@ -65,13 +63,9 @@ async def lifespan(app: FastAPI):
     engine = setup_db(settings=settings)
     setup_storage(settings)
 
-    import actidoo_wfe as pyapp
-
     clear_task_registry()
 
-    scanner = venusian.Scanner()
-    for target in discover_venusian_scan_targets(default_modules=[pyapp]):
-        scanner.scan(target, ignore=[re.compile("test_").search])
+    run_venusian_scan()
 
     # Validate connector configurations (non-blocking)
     from actidoo_wfe.connectors import validate_configured_connectors
