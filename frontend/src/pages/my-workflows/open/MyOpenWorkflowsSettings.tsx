@@ -63,7 +63,7 @@ export const myOpenWorkflowsColumns = (
         <Link
           to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
           className="w-full text-center">
-          <Button icon={isReadonly ? 'show' : 'edit'} />
+          <Button className="bg-[#007c84]" icon={isReadonly ? 'show' : 'edit'} />
         </Link>
       );
     },
