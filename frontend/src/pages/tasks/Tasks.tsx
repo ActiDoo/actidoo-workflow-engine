@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '@/pages/tasks/Tasks.scss';
-import '@/pages/tasks/TasksTabStyles';
 
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
-import { PcDetailsPage } from '@/ui5-components';
+import { PcDetailsPage, useEmphasizedObjectPageTabs } from '@/ui5-components';
 import { useTranslation } from '@/i18n';
 
 const Tasks: React.FC = () => {
@@ -19,26 +18,7 @@ const Tasks: React.FC = () => {
   // Used to hide the page header + tab bar on mobile (see Tasks.scss).
   const isDetail = /\/tasks\/(open|completed)\/.+/.test(pathname);
 
-  useEffect(() => {
-    const tasksPage = document.getElementById('pc-tasks');
-
-    const markTasksTabContainer = () => {
-      tasksPage?.querySelector('ui5-tabcontainer')?.setAttribute('data-tasks-tab-container', '');
-    };
-
-    markTasksTabContainer();
-    const animationFrameId = window.requestAnimationFrame(markTasksTabContainer);
-    const observer = new MutationObserver(markTasksTabContainer);
-
-    if (tasksPage) {
-      observer.observe(tasksPage, { childList: true, subtree: true });
-    }
-
-    return () => {
-      window.cancelAnimationFrame(animationFrameId);
-      observer.disconnect();
-    };
-  }, [selectedTab]);
+  useEmphasizedObjectPageTabs('pc-tasks', selectedTab);
 
   return (
     <PcDetailsPage
