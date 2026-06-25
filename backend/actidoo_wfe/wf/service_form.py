@@ -206,6 +206,13 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
                 pointer["if"] = {"not": if_not_schema}
 
+                # Condition lives on a shallower (parent) level than the hidden field: the else-branch
+                # at that level must reach down the remaining path and null the field, otherwise the
+                # field stays visible when the condition is met.
+                if 0 < len(if_path) < len(path):
+                    remaining_path = path[len(if_path):]
+                    pointer["else"] = _build_nested_schema_for_path(remaining_path, inner_ifthenschema["else"])
+
         except Exception as error:
             log.exception(f"{type(error).__name__}: {error.args}. Raised in convert_hide_if_props_to_declarative_jsonschema for key={key}")
             raise error
@@ -1033,16 +1040,14 @@ def validate_task_data(
     removed = []
     while run_again:
         run_again = False
-        try:
-            # log.info(f"validate {tracked_task_data}")
-            validator_instance.validate(instance=tracked_task_data)
-        except jsonschema.ValidationError as ex:
-            if ex.validator == "type" and ex.validator_value == "null":  # null fields are not allowed, we will remove them here
+        # Remove hidden (type: null) fields via iter_errors, not validate(): an unrelated error
+        # (e.g. a missing required field) must not short-circuit removal of deeper null fields.
+        for ex in validator_instance.iter_errors(tracked_task_data):
+            if ex.validator == "type" and ex.validator_value == "null":
                 tracked_task_data = remove_item(tracked_task_data, ex.absolute_path)
                 removed.append(list(ex.absolute_path))
                 run_again = True
-            elif log_validation_errors:
-                log.debug(f"Validation error: {ex.message}; path={ex.json_path}; instance={ex.instance}")
+                break  # re-validate after each removal to keep the remaining paths valid
 
     error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data)
     # log.debug("removed = %s", removed)

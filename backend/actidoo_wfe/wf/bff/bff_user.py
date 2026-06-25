@@ -49,6 +49,8 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     SearchPropertyOptionsRequest,
     SearchPropertyOptionsResponse,
     SearchPropertyOptionsResponseItem,
+    StripHiddenFieldsRequest,
+    StripHiddenFieldsResponse,
     StartWorkflowRequest,
     StartWorkflowResponse,
     StartWorkflowWithDataRequest,
@@ -501,6 +503,21 @@ def search_property_options(
     return SearchPropertyOptionsResponse(
         options=[SearchPropertyOptionsResponseItem(value=option[0], label=option[1]) for option in options],
     )
+
+
+@router.post("/strip_hidden_fields", name="strip_hidden_fields")
+def strip_hidden_fields(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    reqdata: StripHiddenFieldsRequest,
+) -> StripHiddenFieldsResponse:
+    form_data = service_application.strip_hidden_form_fields(
+        db=db,
+        user_id=user.id,
+        task_id=reqdata.task_id,
+        form_data=reqdata.form_data,
+    )
+    return StripHiddenFieldsResponse(form_data=form_data)
 
 
 @router.post("/download_attachment", name="download_attachment")

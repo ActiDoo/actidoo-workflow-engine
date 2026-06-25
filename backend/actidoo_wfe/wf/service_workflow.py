@@ -857,11 +857,7 @@ def strip_hidden_field_values(
     form_spec: ReactJsonSchemaFormData,
     data: dict,
 ) -> dict:
-    """Remove values of fields that are currently hidden (conditional hide) given ``data``.
-
-    Reuses the submit-time hide-if handling (validate_task_data) so hidden values cannot leak
-    into stored data. Unknown and disabled fields are preserved; only currently hidden fields
-    are dropped. Used by ready-task cleanup and by form templates."""
+    """Remove values of currently hidden (conditional-hide) fields, preserving everything else."""
     options_folder = workflow_providers.get_workflow_directory(workflow_name) / "options"
     functions_env = _get_workflow_functions_env(workflow_name)
     return validate_task_data(

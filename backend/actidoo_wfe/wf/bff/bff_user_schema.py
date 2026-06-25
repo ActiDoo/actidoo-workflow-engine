@@ -205,6 +205,19 @@ class SearchPropertyOptionsResponseItem(BaseModel):
     label: str
 
 
+class StripHiddenFieldsRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: uuid.UUID
+    form_data: dict = Field(default_factory=lambda: {})
+
+
+class StripHiddenFieldsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    form_data: dict
+
+
 class DownloadAttachmentRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     task_id: uuid.UUID

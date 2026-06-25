@@ -80,8 +80,7 @@ def _resolve_task_for_user(db: Session, user_id: uuid.UUID, task_id: uuid.UUID) 
 
 
 def _drop_hidden_fields(resolved: ResolvedTask, data: dict) -> dict:
-    """Drop values of conditionally hidden fields, mirroring submit-time behavior, so hidden
-    values never enter a template (preview and save)."""
+    """Drop values of currently hidden fields so they never enter a template."""
     form_spec = ReactJsonSchemaFormData(jsonschema=resolved.jsonschema, uischema=resolved.uischema)
     return service_workflow.strip_hidden_field_values(resolved.workflow_name, form_spec, data)
 
@@ -178,8 +177,7 @@ def preview_template(
         mode=resolved.template_mode,
         apply_value_rule=True,
     )
-    # Only surface excluded fields the user actually filled in (no empty noise). Hidden fields are
-    # already dropped from visible_data, so they are neither stored nor shown as excluded.
+    # Only surface excluded fields the user actually filled in (hidden ones are already dropped).
     filled_paths = [path for path in skipped_paths if _is_filled_value(_value_at_path(visible_data, path))]
     skipped = [
         _describe_skipped(resolved.jsonschema, path, _value_at_path(visible_data, path)) for path in filled_paths
