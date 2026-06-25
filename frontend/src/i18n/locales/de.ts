@@ -182,6 +182,7 @@ export const de = {
       next: 'Weiter',
       back: 'Zurück',
       save: 'Speichern',
+      overwrite: 'Überschreiben',
       success: 'Vorlage gespeichert',
       error: 'Vorlage konnte nicht gespeichert werden. Bitte versuche es erneut.',
     },

@@ -180,6 +180,7 @@ export const en = {
       next: 'Next',
       back: 'Back',
       save: 'Save',
+      overwrite: 'Overwrite',
       success: 'Template saved',
       error: 'Template could not be saved. Please try again.',
     },

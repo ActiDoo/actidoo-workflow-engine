@@ -106,7 +106,7 @@ const SaveTemplateModal: React.FC<SaveTemplateModalProps> = props => {
                   close();
                   saveTemplate(trimmed, props.formData);
                 }}>
-                {t('formTemplates.save.save')}
+                {t('formTemplates.save.overwrite')}
               </Button>
             </div>
           }
@@ -143,7 +143,7 @@ const SaveTemplateModal: React.FC<SaveTemplateModalProps> = props => {
           design={ButtonDesign.Emphasized}
           disabled={!trimmed || saveLoading}
           onClick={handleSaveClick}>
-          {t('formTemplates.save.save')}
+          {isDuplicate ? t('formTemplates.save.overwrite') : t('formTemplates.save.save')}
         </Button>
       </>
     );
