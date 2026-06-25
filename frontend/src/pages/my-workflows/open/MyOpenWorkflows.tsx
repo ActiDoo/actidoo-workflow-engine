@@ -29,12 +29,12 @@ import {
   BusyIndicator,
   BusyIndicatorSize,
   Button,
-  CheckBox,
   Dialog,
   Icon,
   Text,
   Title,
   TitleLevel,
+  CheckBox,
 } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/decline';
 import { createPortal } from 'react-dom';
@@ -174,8 +174,16 @@ const MyOpenWorkflows: React.FC = () => {
 
   return (
     <>
-      <div className="flex items-center justify-end w-100 mb-4 gap-2 -mt-4">
-        <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
+      <div className="flex items-center justify-between w-100 mb-4 gap-2 -mt-4">
+        <CheckBox
+          text="show instance id"
+          checked={showInstanceID}
+          onChange={event => {
+            setShowInstanceID(event.currentTarget?.checked ?? false);
+          }}></CheckBox>
+        <div className="flex items-center gap-2">
+          <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
+        </div>
       </div>
       <div className="my-workflows-table">
         <PcAnalyticalTable
@@ -195,12 +203,6 @@ const MyOpenWorkflows: React.FC = () => {
           renderRowSubComponent={renderRowSubComponent}
         />
       </div>
-      <CheckBox
-        text="show instance id"
-        checked={showInstanceID}
-        onChange={event => {
-          setShowInstanceID(event.currentTarget?.checked ?? false);
-        }}></CheckBox>
       {createPortal(
         <Dialog
           open={submittedFormDialogOpen}
