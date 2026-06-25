@@ -123,6 +123,8 @@ def _insert_array_component(
         "type": "array",
         "items": {"type": "object", "properties": {}},
     }
+    if label:
+        jsonschema["properties"][itemgroup]["title"] = label
     if min_items > 0:
         jsonschema["properties"][itemgroup]["minItems"] = min_items
 
