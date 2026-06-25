@@ -25,6 +25,7 @@ from actidoo_wfe.wf.exceptions import (
 )
 from actidoo_wfe.wf.constants import TEMPLATE_MODE_UISCHEMA_KEY, TemplateMode
 from actidoo_wfe.wf.models import WorkflowUserFormTemplate
+from actidoo_wfe.wf.types import ReactJsonSchemaFormData
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class ResolvedTask:
     workflow_name: str
     stable_task_key: str
     jsonschema: dict
+    uischema: dict
     template_mode: str
 
 
@@ -72,8 +74,16 @@ def _resolve_task_for_user(db: Session, user_id: uuid.UUID, task_id: uuid.UUID) 
         workflow_name=workflow.spec.name,
         stable_task_key=task.name,
         jsonschema=task.jsonschema,
+        uischema=task.uischema or {},
         template_mode=template_mode,
     )
+
+
+def _drop_hidden_fields(resolved: ResolvedTask, data: dict) -> dict:
+    """Drop values of conditionally hidden fields, mirroring submit-time behavior, so hidden
+    values never enter a template (preview and save)."""
+    form_spec = ReactJsonSchemaFormData(jsonschema=resolved.jsonschema, uischema=resolved.uischema)
+    return service_workflow.strip_hidden_field_values(resolved.workflow_name, form_spec, data)
 
 
 def list_templates(db: Session, user_id: uuid.UUID, task_id: uuid.UUID) -> tuple[list[WorkflowUserFormTemplate], str]:
@@ -114,9 +124,10 @@ def save_template(
     if not name:
         raise ValueError("template_name must not be empty")
 
+    visible_data = _drop_hidden_fields(resolved, template_data)
     kept, _skipped = service_form.filter_template_data(
         jsonschema=resolved.jsonschema,
-        data=template_data,
+        data=visible_data,
         mode=resolved.template_mode,
         apply_value_rule=True,
     )
@@ -160,16 +171,18 @@ def preview_template(
     if resolved.template_mode == TemplateMode.OFF:
         raise FormTemplatesDisabledException()
 
+    visible_data = _drop_hidden_fields(resolved, template_data)
     applicable, skipped_paths = service_form.filter_template_data(
         jsonschema=resolved.jsonschema,
-        data=template_data,
+        data=visible_data,
         mode=resolved.template_mode,
         apply_value_rule=True,
     )
-    # Only surface excluded fields the user actually filled in (no empty noise).
-    filled_paths = [path for path in skipped_paths if _is_filled_value(_value_at_path(template_data, path))]
+    # Only surface excluded fields the user actually filled in (no empty noise). Hidden fields are
+    # already dropped from visible_data, so they are neither stored nor shown as excluded.
+    filled_paths = [path for path in skipped_paths if _is_filled_value(_value_at_path(visible_data, path))]
     skipped = [
-        _describe_skipped(resolved.jsonschema, path, _value_at_path(template_data, path)) for path in filled_paths
+        _describe_skipped(resolved.jsonschema, path, _value_at_path(visible_data, path)) for path in filled_paths
     ]
     return ResolveResult(applicable_data=applicable, skipped_fields=skipped)
 

@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.wf import repository, service_application
+from actidoo_wfe.wf import repository, service_application, service_form_templates
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
 WF_NAME = "FeelWorkflow"
@@ -203,3 +203,36 @@ def test_hideif_backwards_compat_hidden_field_values_filtered(db_engine_ctx, moc
 
         assert "globalB" not in cleaned_task_data, "Hidden field should be removed even with user value"
         workflow.user("initiator").submit(task_data=task_data, workflow_instance_id=workflow.workflow_instance_id)
+
+
+def test_template_save_and_preview_drop_hidden_fields(db_engine_ctx, mock_send_text_mail):
+    """Conditionally hidden fields must not enter a form template (save and preview).
+
+    globalB is hidden when globalA == 1, so a template built from such data must not contain it.
+    """
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        user_id = workflow.user("initiator").user.id
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+        template_data = {"globalA": 1, "globalB": 99}
+
+        preview = service_form_templates.preview_template(
+            db=workflow.db,
+            user_id=user_id,
+            task_id=task.id,
+            template_data=template_data,
+        )
+        assert preview.applicable_data.get("globalA") == 1
+        assert "globalB" not in preview.applicable_data
+        # Hidden (not "excluded by template rules"), so it is not surfaced as a skipped field either.
+        assert "globalB" not in {item["key"] for item in preview.skipped_fields}
+
+        row = service_form_templates.save_template(
+            db=workflow.db,
+            user_id=user_id,
+            task_id=task.id,
+            template_name="A",
+            template_data=template_data,
+        )
+        assert row.template_data.get("globalA") == 1
+        assert "globalB" not in row.template_data
