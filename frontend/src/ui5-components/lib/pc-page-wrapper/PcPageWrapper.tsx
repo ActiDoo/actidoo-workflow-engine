@@ -5,7 +5,7 @@ import React, { PropsWithChildren, ReactElement } from 'react';
 import { NavLink, Link as RouterLink } from 'react-router-dom';
 
 import { Bar, Icon, Button, ButtonDesign, Text } from '@ui5/webcomponents-react';
-import '@ui5/webcomponents-icons/dist/log';
+import '@ui5/webcomponents-icons/dist/journey-depart';
 import '@ui5/webcomponents-icons/dist/action-settings';
 import '@ui5/webcomponents-icons/dist/question-mark';
 
@@ -72,23 +72,6 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
       {props.endHeaderActions}
       <div className="mx-4 border-r border-pc-gray-200 border-r-solid h-11" />
 
-      {props.settingsRoute && (
-        <RouterLink to={props.settingsRoute} className="mr-2">
-          <Icon
-            name="action-settings"
-            interactive={true} // makes it hover/focusable like a button
-            title={t('layout.settings')}
-            className="cursor-pointer align-middle text-4xl"
-            style={{
-              fontSize: '1.3rem', // bump size up (24px)
-              width: '1.3rem',
-              height: '1.3rem',
-              cursor: 'pointer',
-            }}
-          />
-        </RouterLink>
-      )}
-
       {props.helpRoute && (
         <RouterLink to={props.helpRoute} className="mr-4">
           <Icon
@@ -107,8 +90,18 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
       )}
 
       {props.user ? <Text className="mr-2">{props.user}</Text> : null}
+      {props.settingsRoute && (
+        <RouterLink to={props.settingsRoute} className="mr-2">
+          <Button
+            icon="action-settings"
+            title={t('layout.settings')}
+            design={ButtonDesign.Transparent}
+            className="cursor-pointer align-middle text-4xl"
+          />
+        </RouterLink>
+      )}
       <Button
-        icon="log"
+        icon="sap-icon://journey-depart"
         title={t('layout.signOut')}
         design={ButtonDesign.Transparent}
         onClick={props.onLogout ? props.onLogout : undefined}
