@@ -217,6 +217,7 @@ const UserSettings: React.FC = () => {
         buttons={
           <>
             <Button
+              className="transparent-button-gray"
               design={ButtonDesign.Transparent}
               onClick={() => {
                 blocker.reset?.();

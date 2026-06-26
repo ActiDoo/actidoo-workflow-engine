@@ -103,3 +103,13 @@ html,body, body > #root  {
 .border-b-solid {
   border-bottom-style: solid;
 }
+
+.transparent-button-gray {
+  --sapButton_Lite_TextColor: var(--color-neutral-700); 
+  --sapButton_Lite_BorderColor: var(--color-neutral-700);
+  --sapButton_Lite_Hover_TextColor: var(--color-neutral-700);
+  --sapButton_Lite_Hover_BorderColor: var(--color-neutral-700);
+  --sapButton_Lite_Active_Background: var(--color-neutral-700);
+  --sapButton_Lite_Active_BorderColor: var(--color-neutral-700);
+}
+
