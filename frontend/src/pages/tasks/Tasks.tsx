@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '@/pages/tasks/Tasks.scss';
+import '@/pages/tasks/TasksTabStyles';
 
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
 import { PcDetailsPage } from '@/ui5-components';
@@ -18,13 +19,32 @@ const Tasks: React.FC = () => {
   // Used to hide the page header + tab bar on mobile (see Tasks.scss).
   const isDetail = /\/tasks\/(open|completed)\/.+/.test(pathname);
 
+  useEffect(() => {
+    const tasksPage = document.getElementById('pc-tasks');
+
+    const markTasksTabContainer = () => {
+      tasksPage?.querySelector('ui5-tabcontainer')?.setAttribute('data-tasks-tab-container', '');
+    };
+
+    markTasksTabContainer();
+    const animationFrameId = window.requestAnimationFrame(markTasksTabContainer);
+    const observer = new MutationObserver(markTasksTabContainer);
+
+    if (tasksPage) {
+      observer.observe(tasksPage, { childList: true, subtree: true });
+    }
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      observer.disconnect();
+    };
+  }, [selectedTab]);
+
   return (
     <PcDetailsPage
       id="pc-tasks"
       mode={ObjectPageMode.IconTabBar}
-      header={{
-        title: t('tasks.header'),
-      }}
+      headerTitle={undefined}
       className={`!p-0 ${isDetail ? 'pc-tasks--detail' : ''}`}
       onSelectedSectionChange={event => {
         if (event.detail.selectedSectionId !== selectedTab) {
