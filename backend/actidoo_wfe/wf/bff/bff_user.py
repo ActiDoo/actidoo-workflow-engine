@@ -259,7 +259,7 @@ _WORKFLOW_INSTANCE_FILTER_FIELDS = [
 
 WorkflowInstancesBffTableQuerySchema = bff_table.get_bff_table_query_schema(
     schema_name="WorkflowInstancesBffTableQuerySchema",
-    sorting_fields=["id", "name", "title", "subtitle", "created_at", "completed_at"],
+    sorting_fields=["id", "name", "title", "subtitle", "created_at", "completed_at", "is_completed"],
     filter_fields=_WORKFLOW_INSTANCE_FILTER_FIELDS,
     add_global_search_filter=True,
 )
