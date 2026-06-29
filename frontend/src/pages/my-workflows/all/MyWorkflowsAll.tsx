@@ -42,7 +42,7 @@ import { myWorkflowsAllColumns } from '@/pages/my-workflows/all/MyWorkflowsAllSe
 
 const AllWorkflows: React.FC = () => {
   const { t } = useTranslation();
-  const key = WeDataKey.MY_OPEN_WORKFLOW_INSTANCES;
+  const key = WeDataKey.MY_WORKFLOW_INSTANCES_ALL;
   const dispatch = useDispatch();
   const [submittedFormDialogOpen, setSubmittedFormDialogOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
