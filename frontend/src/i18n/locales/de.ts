@@ -206,6 +206,7 @@ export const de = {
     title: 'Meine Workflows',
     inProgress: 'In Bearbeitung',
     completed: 'Abgeschlossen',
+    all: 'Alle',
     activeTasksOfWorkflow: 'Aktive Aufgaben des Workflows',
     tasksOfWorkflow: 'Aufgaben des Workflows',
     completedTasksOfWorkflow: 'Abgeschlossene Aufgaben des Workflows',
