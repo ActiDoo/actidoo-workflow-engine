@@ -12,7 +12,11 @@ const MyWorkflows: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const path = window.location.pathname;
-  const selectedTab = path.includes('completed') ? 'completed' : 'progress';
+  const selectedTab = path.includes('completed')
+    ? 'completed'
+    : path.includes('progress')
+    ? 'progress'
+    : 'all';
 
   return (
     <PcDetailsPage
@@ -38,6 +42,15 @@ const MyWorkflows: React.FC = () => {
         aria-label={t('myWorkflows.completed')}
         id="completed"
         titleText={t('myWorkflows.completed')}>
+        <Suspense>
+          <Outlet />
+        </Suspense>
+      </ObjectPageSection>
+      <ObjectPageSection
+        className=" mt-8"
+        aria-label={t('myWorkflows.all')}
+        id="all"
+        titleText={t('myWorkflows.all')}>
         <Suspense>
           <Outlet />
         </Suspense>
