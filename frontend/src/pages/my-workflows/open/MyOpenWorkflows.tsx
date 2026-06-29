@@ -12,6 +12,7 @@ import {
   getQueryParamsFromTableData,
   getTableDataFromQueryParams,
   PcAnalyticalTable,
+  StringDict,
   useAdditionalTableFunctions,
   PcSearch,
 } from '@/ui5-components';
@@ -53,12 +54,12 @@ const MyOpenWorkflows: React.FC = () => {
   const submittedFormLoading = useSelectUiLoading(WeDataKey.MY_USER_TASKS);
   const submittedTask = useSelectCurrentTask(selectedTaskId ?? undefined);
   const [offset, search, filter, sort] = getTableDataFromQueryParams(data?.queryParams);
-
+  const finalFilter: StringDict = { ...filter, is_completed: false };
   const [tableData] = useAdditionalTableFunctions(
     environment.tableCount,
     offset,
     search,
-    filter,
+    finalFilter,
     sort
   );
 
