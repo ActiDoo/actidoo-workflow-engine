@@ -102,6 +102,7 @@ export interface WorkflowInstance {
   subtitle?: string;
   is_completed?: boolean;
   created_at?: string;
+  priority_date?: string | null;
   active_tasks?: ActiveTaskInstance[];
   completed_tasks?: ActiveTaskInstance[];
   is_readonly?: boolean;
@@ -146,6 +147,7 @@ export interface ActiveTaskInstance {
   completed_by_delegate_user?: User | null;
   delegate_submit_comment?: string | null;
   can_be_assigned_as_delegate?: boolean;
+  created_at?: string | Date;
   is_readonly?: boolean;
 }
 

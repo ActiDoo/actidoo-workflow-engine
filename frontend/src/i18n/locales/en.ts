@@ -385,6 +385,18 @@ export const en = {
     save: 'Save Settings',
     saveSuccess: 'Settings saved',
     saveError: 'Could not save settings. Please try again.',
+    taskPriority: {
+      title: 'Task prioritization',
+      hint: 'Define when open tasks are marked as urgent or critical in the list and sorted accordingly.',
+      enabled: 'Enable prioritization',
+      urgentAfter: 'Urgent after',
+      criticalAfter: 'Critical after',
+      unitDays: 'days',
+      urgentHint: 'Tasks receive the yellow urgency marker from this age onward.',
+      criticalHint:
+        'Tasks receive the red critical marker from this age onward and move to the top.',
+      invalid: 'The critical value must be greater than the urgent value.',
+    },
     delegations: {
       title: 'Delegations',
       hint: 'Select colleagues who may work on tasks as your delegate. You can optionally limit the delegation to a deadline.',

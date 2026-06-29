@@ -21,6 +21,7 @@ import {
   ButtonDesign,
   MessageStrip,
   MessageStripDesign,
+  Switch,
 } from '@ui5/webcomponents-react';
 import moment from 'moment';
 import WeUserAutocomplete from '@/utils/components/WeUserAutocomplete';
@@ -29,9 +30,24 @@ import { handleResponse } from '@/services/HelperService';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import { useTranslation } from '@/i18n';
+import {
+  getTaskPrioritySettings,
+  saveTaskPrioritySettings,
+  type TaskPrioritySettings,
+} from '@/utils/taskPrioritySettings';
+import {
+  TASK_PRIORITY_CRITICAL_COLOR,
+  TASK_PRIORITY_URGENT_COLOR,
+  WePriorityClock,
+} from '@/utils/components/WePriorityClock';
 
 const DATE_TIME_PATTERN = 'yyyy-MM-dd HH:mm';
 const DISPLAY_DATE_TIME_PATTERN = 'YYYY-MM-DD HH:mm';
+const HOURS_PER_DAY = 24;
+const TASK_PRIORITY_DAY_OPTIONS = Array.from({ length: 365 * 2 + 1 }, (_, index) => index);
+
+const hoursToDays = (hours: number): number => Math.max(0, Math.round(hours / HOURS_PER_DAY));
+const daysToHours = (days: number): number => Math.max(0, Math.round(days)) * HOURS_PER_DAY;
 
 const toPickerValue = (iso?: string | null): string => {
   if (!iso) return '';
@@ -64,6 +80,13 @@ const serializeDelegations = (items: UserDelegation[]): string =>
       .sort((a, b) => a.delegate_user_id.localeCompare(b.delegate_user_id))
   );
 
+const serializeTaskPrioritySettings = (settings: TaskPrioritySettings): string =>
+  JSON.stringify({
+    enabled: settings.enabled,
+    urgentHours: settings.urgentHours,
+    criticalHours: settings.criticalHours,
+  });
+
 const UserSettings: React.FC = () => {
   const { t, changeLanguage, availableLanguages } = useTranslation();
   const key = WeDataKey.USER_SETTINGS;
@@ -78,11 +101,30 @@ const UserSettings: React.FC = () => {
   const [initialLocale, setInitialLocale] = useState<string>('');
   const [delegations, setDelegations] = useState<UserDelegation[]>([]);
   const [initialDelegations, setInitialDelegations] = useState<UserDelegation[]>([]);
+  const [taskPrioritySettings, setTaskPrioritySettings] = useState<TaskPrioritySettings>(() =>
+    getTaskPrioritySettings()
+  );
+  const [initialTaskPrioritySettings, setInitialTaskPrioritySettings] =
+    useState<TaskPrioritySettings>(() => getTaskPrioritySettings());
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
   const [delegateInputResetKey, setDelegateInputResetKey] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const saving = useSelectUiLoading(key, 'POST');
+
+  const urgentDays = hoursToDays(taskPrioritySettings.urgentHours);
+  const criticalDays = hoursToDays(taskPrioritySettings.criticalHours);
+  const taskPriorityDayOptions = useMemo(
+    () =>
+      Array.from(new Set([...TASK_PRIORITY_DAY_OPTIONS, urgentDays, criticalDays])).sort(
+        (a, b) => a - b
+      ),
+    [criticalDays, urgentDays]
+  );
+  const criticalDayOptions = useMemo(
+    () => taskPriorityDayOptions.filter(days => days >= urgentDays),
+    [taskPriorityDayOptions, urgentDays]
+  );
 
   const isDuplicatePendingDelegate = useMemo(() => {
     return pendingDelegate.id
@@ -100,12 +142,25 @@ const UserSettings: React.FC = () => {
     [currentUserId, delegations]
   );
 
-  const isDirty = useMemo(() => {
+  const userSettingsDirty = useMemo(() => {
     return (
       locale !== initialLocale ||
       serializeDelegations(delegations) !== serializeDelegations(initialDelegations)
     );
   }, [delegations, initialDelegations, initialLocale, locale]);
+
+  const taskPrioritySettingsDirty = useMemo(() => {
+    return (
+      serializeTaskPrioritySettings(taskPrioritySettings) !==
+      serializeTaskPrioritySettings(initialTaskPrioritySettings)
+    );
+  }, [initialTaskPrioritySettings, taskPrioritySettings]);
+
+  const taskPrioritySettingsValid =
+    !taskPrioritySettings.enabled ||
+    taskPrioritySettings.criticalHours >= taskPrioritySettings.urgentHours;
+
+  const isDirty = userSettingsDirty || taskPrioritySettingsDirty;
 
   useEffect(() => {
     dispatch(getRequest(key));
@@ -148,7 +203,15 @@ const UserSettings: React.FC = () => {
   }, [data?.postResponse, data?.data, dispatch, key, t]);
 
   const handleSave = () => {
-    if (!isDirty || saving) return;
+    if (!isDirty || saving || !taskPrioritySettingsValid) return;
+
+    if (taskPrioritySettingsDirty) {
+      const savedSettings = saveTaskPrioritySettings(taskPrioritySettings);
+      setTaskPrioritySettings(savedSettings);
+      setInitialTaskPrioritySettings(savedSettings);
+    }
+
+    if (!userSettingsDirty) return;
 
     changeLanguage(locale);
     const payload = {
@@ -265,6 +328,90 @@ const UserSettings: React.FC = () => {
         <div>
           <Text className="mr-2 text-sm text-neutral-700">{t('userSettings.localeHint')}</Text>
         </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+        {/* HEADER */}
+        <div className="border-b pb-3">
+          <Label className="font-semibold block">{t('userSettings.taskPriority.title')}</Label>
+          <div className="flex items-center gap-2 mt-2">
+            <Text className="text-sm font-semibold text-neutral-700">
+              {t('userSettings.taskPriority.enabled')}
+            </Text>
+            <Switch
+              checked={taskPrioritySettings.enabled}
+              onChange={event => {
+                setTaskPrioritySettings(prev => ({
+                  ...prev,
+                  enabled: event.target.checked,
+                }));
+              }}
+            />
+          </div>
+          <Text className="text-sm text-neutral-700 block mt-2">
+            {t('userSettings.taskPriority.hint')}
+          </Text>
+        </div>
+
+        {/* SETTINGS */}
+        <div
+          className={`mt-4 grid grid-cols-[max-content_1rem_6rem_max-content] items-center gap-x-2 gap-y-4 ${
+            taskPrioritySettings.enabled ? '' : 'opacity-50'
+          }`}>
+          {/* URGENT */}
+          <Text>{t('userSettings.taskPriority.urgentAfter')}</Text>
+          <WePriorityClock hour={16} color={TASK_PRIORITY_URGENT_COLOR} />
+          <Select
+            className="w-24"
+            disabled={!taskPrioritySettings.enabled}
+            onChange={event => {
+              const selectedDays = Number(
+                event.detail.selectedOption.getAttribute('data-value') ?? urgentDays
+              );
+              const urgentHours = daysToHours(selectedDays);
+              setTaskPrioritySettings(prev => ({
+                ...prev,
+                urgentHours,
+                criticalHours: prev.criticalHours >= urgentHours ? prev.criticalHours : urgentHours,
+              }));
+            }}>
+            {taskPriorityDayOptions.map(days => (
+              <Option key={days} data-value={days} selected={days === urgentDays}>
+                {days}
+              </Option>
+            ))}
+          </Select>
+          <Text>{t('userSettings.taskPriority.unitDays')}</Text>
+
+          {/* CRITICAL */}
+          <Text>{t('userSettings.taskPriority.criticalAfter')}</Text>
+          <WePriorityClock hour={20} color={TASK_PRIORITY_CRITICAL_COLOR} />
+          <Select
+            className="w-24"
+            disabled={!taskPrioritySettings.enabled}
+            onChange={event => {
+              const selectedDays = Number(
+                event.detail.selectedOption.getAttribute('data-value') ?? criticalDays
+              );
+              setTaskPrioritySettings(prev => ({
+                ...prev,
+                criticalHours: daysToHours(selectedDays),
+              }));
+            }}>
+            {criticalDayOptions.map(days => (
+              <Option key={days} data-value={days} selected={days === criticalDays}>
+                {days}
+              </Option>
+            ))}
+          </Select>
+          <Text>{t('userSettings.taskPriority.unitDays')}</Text>
+        </div>
+
+        {!taskPrioritySettingsValid ? (
+          <MessageStrip design={MessageStripDesign.Negative} hideCloseButton className="mt-4">
+            {t('userSettings.taskPriority.invalid')}
+          </MessageStrip>
+        ) : null}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
@@ -385,7 +532,7 @@ const UserSettings: React.FC = () => {
       <Button
         className="mt-6"
         design={ButtonDesign.Emphasized}
-        disabled={!isDirty || !!saving}
+        disabled={!isDirty || !!saving || !taskPrioritySettingsValid}
         onClick={handleSave}>
         {t('userSettings.save')}
       </Button>

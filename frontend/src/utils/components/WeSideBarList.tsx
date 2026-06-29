@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BusyIndicator,
   Button,
@@ -22,10 +22,21 @@ import { WeDataKey } from '@/store/generic-data/setup';
 import { useNavigate, useParams } from 'react-router-dom';
 import '@ui5/webcomponents-icons/dist/activity-2.js';
 import '@ui5/webcomponents-icons/dist/message-information.js';
+import '@ui5/webcomponents-icons/dist/accept.js';
 import '@ui5/webcomponents-icons/dist/search.js';
 import { WorkflowState } from '@/models/models';
 import { useTranslation } from '@/i18n';
 import { useInfiniteWorkflowInstances } from '@/utils/hooks/useInfiniteWorkflowInstances';
+import {
+  getTaskPrioritySettings,
+  TASK_PRIORITY_SETTINGS_CHANGED_EVENT,
+  type TaskPrioritySettings,
+} from '@/utils/taskPrioritySettings';
+import {
+  TASK_PRIORITY_CRITICAL_COLOR,
+  TASK_PRIORITY_URGENT_COLOR,
+  WePriorityClock,
+} from '@/utils/components/WePriorityClock';
 
 interface WeSideBarListProps {
   dataKey: WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS;
@@ -35,8 +46,33 @@ interface WeSideBarListProps {
   /** Extra classes for the root element, e.g. responsive width/visibility. */
   className?: string;
 }
+type SidebarPriority = 0 | 1 | 2;
 
 const SEARCH_DEBOUNCE_MS = 300;
+const COMPLETED_COLOR = '#09AE3B';
+
+const getDateTimeValue = (value?: string | Date | null): number | undefined => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  const time = date.getTime();
+  return Number.isNaN(time) ? undefined : time;
+};
+
+const getPriorityMeta = (
+  createdAt: string | Date | null | undefined,
+  settings: TaskPrioritySettings
+): { priority: SidebarPriority; createdAtTime: number } => {
+  const createdAtTime = getDateTimeValue(createdAt) ?? 0;
+  const ageInHours = createdAtTime > 0 ? (Date.now() - createdAtTime) / 36e5 : 0;
+
+  if (ageInHours >= settings.criticalHours) {
+    return { priority: 2, createdAtTime };
+  }
+  if (ageInHours >= settings.urgentHours) {
+    return { priority: 1, createdAtTime };
+  }
+  return { priority: 0, createdAtTime };
+};
 
 export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
   const { t, language } = useTranslation();
@@ -55,6 +91,34 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
 
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [prioritySettings, setPrioritySettings] = useState<TaskPrioritySettings>(() =>
+    getTaskPrioritySettings()
+  );
+
+  const CompletedIcon = () => (
+    <Icon
+      name="accept"
+      className="inline-block !h-[1em] !w-[1em] shrink-0 align-[-0.12em]"
+      style={{ color: COMPLETED_COLOR }}
+    />
+  );
+
+  useEffect(() => {
+    const handlePrioritySettingsChanged = () => {
+      setPrioritySettings(getTaskPrioritySettings());
+    };
+
+    window.addEventListener(TASK_PRIORITY_SETTINGS_CHANGED_EVENT, handlePrioritySettingsChanged);
+    window.addEventListener('storage', handlePrioritySettingsChanged);
+
+    return () => {
+      window.removeEventListener(
+        TASK_PRIORITY_SETTINGS_CHANGED_EVENT,
+        handlePrioritySettingsChanged
+      );
+      window.removeEventListener('storage', handlePrioritySettingsChanged);
+    };
+  }, []);
 
   // Debounce the search before hitting the backend.
   useEffect(() => {
@@ -68,6 +132,26 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
 
   const { items, loadingInitial, loadingMore, error, hasMore, loadMore, reload } =
     useInfiniteWorkflowInstances(props.dataKey, props.state, debouncedSearch);
+
+  const sortedItems = useMemo(() => {
+    if (props.state === WorkflowState.COMPLETED || !prioritySettings.enabled) return items;
+
+    return [...items].sort((first, second) => {
+      const firstMeta = getPriorityMeta(first.priority_date ?? first.created_at, prioritySettings);
+      const secondMeta = getPriorityMeta(
+        second.priority_date ?? second.created_at,
+        prioritySettings
+      );
+
+      if (firstMeta.priority !== secondMeta.priority) {
+        return secondMeta.priority - firstMeta.priority;
+      }
+      if (firstMeta.priority > 0 && firstMeta.createdAtTime !== secondMeta.createdAtTime) {
+        return firstMeta.createdAtTime - secondMeta.createdAtTime;
+      }
+      return 0;
+    });
+  }, [items, prioritySettings, props.state]);
 
   // Load the next page when the sentinel scrolls into view. The observer root is
   // the sidebar's own scroll container — with the viewport as root the 200px
@@ -89,7 +173,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, error, loadMore, loadingMore, loadingInitial, items.length]);
+  }, [hasMore, error, loadMore, loadingMore, loadingInitial, sortedItems.length]);
 
   const errorComponent = (
     <div className="p-12 flex flex-col items-center gap-3">
@@ -205,12 +289,12 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
           delay={0}
           className="w-full h-full flex items-center justify-center"
         />
-      ) : error && items.length === 0 ? (
+      ) : error && sortedItems.length === 0 ? (
         errorComponent
-      ) : items.length > 0 ? (
+      ) : sortedItems.length > 0 ? (
         <>
           <List>
-            {items.map(instance => {
+            {sortedItems.map(instance => {
               const isSelected = workflowId === instance.id.toString();
               const tasks =
                 props.state === WorkflowState.COMPLETED
@@ -228,6 +312,10 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                     })
                   : undefined;
               const isDelegationHighlight = !!delegationTask;
+              const priorityMeta = getPriorityMeta(
+                instance.priority_date ?? instance.created_at,
+                prioritySettings
+              );
               const taskCount = tasks?.length ?? 0;
               const suffix = taskCount > 1 ? (language === 'de' ? 'n' : 's') : '';
               const taskLabel =
@@ -246,9 +334,19 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                   <div className="py-3 w-full">
                     <div className="flex items-start justify-between gap-2 ml-1 pr-5">
                       <div className="min-w-0">
-                        <Text className={`${isSelected ? '!font-bold' : ''} !block`}>
-                          {instance.title}
-                        </Text>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <Text className={`${isSelected ? '!font-bold' : ''} !mb-0`}>
+                            {instance.title}
+                          </Text>
+                          {props.state === WorkflowState.COMPLETED ? (
+                            <CompletedIcon />
+                          ) : !prioritySettings.enabled ? null : priorityMeta.priority === 2 ? (
+                            <WePriorityClock hour={20} color={TASK_PRIORITY_CRITICAL_COLOR} />
+                          ) : priorityMeta.priority === 1 ? (
+                            <WePriorityClock hour={16} color={TASK_PRIORITY_URGENT_COLOR} />
+                          ) : null}
+                        </div>
+
                         {instance.subtitle && (
                           <Text className="!text-xs !text-neutral-700 !block ml-1">
                             {instance.subtitle}
