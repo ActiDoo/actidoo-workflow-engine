@@ -15,7 +15,6 @@ export const useEmphasizedObjectPageTabs = (pageId: string, updateKey?: string) 
 
       if (tabContainer && !tabContainer.hasAttribute(EMPHASIZED_OBJECT_PAGE_TABS_ATTRIBUTE)) {
         tabContainer.setAttribute(EMPHASIZED_OBJECT_PAGE_TABS_ATTRIBUTE, '');
-        console.log('im Tabcointainer');
         observer.disconnect();
       }
     });
@@ -23,7 +22,6 @@ export const useEmphasizedObjectPageTabs = (pageId: string, updateKey?: string) 
     const existing = page.querySelector('ui5-tabcontainer');
     if (existing && !existing.hasAttribute(EMPHASIZED_OBJECT_PAGE_TABS_ATTRIBUTE)) {
       existing.setAttribute(EMPHASIZED_OBJECT_PAGE_TABS_ATTRIBUTE, '');
-      console.log('im existing');
       return;
     }
 
