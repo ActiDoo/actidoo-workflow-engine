@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { PropsWithChildren, ReactElement } from 'react';
-import { NavLink, Link as RouterLink } from 'react-router-dom';
+import { NavLink, Link as RouterLink, useNavigate } from 'react-router-dom';
 
 import { Bar, Icon, Button, ButtonDesign, Text } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/journey-depart';
@@ -34,6 +34,7 @@ export interface PcNavigationLink {
 
 export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const logoSrc = props.brandLogoUrl ?? '';
   const handleLogoError = (event: React.SyntheticEvent<HTMLImageElement>) => {
     event.currentTarget.onerror = null;
@@ -91,15 +92,18 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
 
       {props.user ? <Text className="mr-2">{props.user}</Text> : null}
       {props.settingsRoute && (
-        <RouterLink to={props.settingsRoute} className="mr-2">
-          <Button
-            icon="action-settings"
-            title={t('layout.settings')}
-            design={ButtonDesign.Transparent}
-            className="cursor-pointer align-middle text-4xl"
-          />
-        </RouterLink>
+        <Button
+          icon="action-settings"
+          title={t('layout.settings')}
+          design={ButtonDesign.Transparent}
+          onClick={() => {
+            if (props.settingsRoute) {
+              navigate(props.settingsRoute);
+            }
+          }}
+        />
       )}
+
       <Button
         icon="sap-icon://journey-depart"
         title={t('layout.signOut')}
