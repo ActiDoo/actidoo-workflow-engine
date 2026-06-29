@@ -202,7 +202,7 @@ export const en = {
   },
   myWorkflows: {
     title: 'My Workflows',
-    inProgress: 'Workflows In progress',
+    inProgress: 'Workflows in progress',
     completed: 'Completed Workflows',
     activeTasksOfWorkflow: 'Active tasks of workflow',
     tasksOfWorkflow: 'Tasks of workflow',
