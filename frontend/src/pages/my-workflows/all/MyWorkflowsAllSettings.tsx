@@ -16,7 +16,7 @@ import '@ui5/webcomponents-icons/dist/status-positive';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-export const myOpenWorkflowsColumns = (
+export const myWorkflowsAllColumns = (
   tableData: PcTableData,
   userId: string | undefined,
   t: Translate

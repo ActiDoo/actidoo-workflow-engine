@@ -17,7 +17,6 @@ import {
 } from '@/ui5-components';
 import { environment } from '@/environment';
 import { ActiveTaskInstance, WorkflowState } from '@/models/models';
-import { myOpenWorkflowsColumns } from '@/pages/my-workflows/open/MyOpenWorkflowsSettings';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import { WeTaskSubRow } from '@/utils/components/WeTaskSubRow';
 import { useTranslation } from '@/i18n';
@@ -39,6 +38,7 @@ import { createPortal } from 'react-dom';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import _ from 'lodash';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
+import { myWorkflowsAllColumns } from '@/pages/my-workflows/all/MyWorkflowsAllSettings';
 
 const AllWorkflows: React.FC = () => {
   const { t } = useTranslation();
@@ -161,18 +161,12 @@ const AllWorkflows: React.FC = () => {
 
   return (
     <>
-      <Button
-        onClick={() => {
-          console.log(data);
-        }}>
-        test
-      </Button>
       <div className="flex items-center justify-end w-100 mb-4 gap-2 -mt-4">
         <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
       </div>
       <div className="my-workflows-table">
         <PcAnalyticalTable
-          columns={myOpenWorkflowsColumns(tableData, user?.id, t)}
+          columns={myWorkflowsAllColumns(tableData, user?.id, t)}
           initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
           data={data?.data?.ITEMS ?? []}
           loading={loadingState}
