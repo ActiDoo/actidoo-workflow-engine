@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { type useTranslation } from '@/i18n';
 import '@ui5/webcomponents-icons/dist/status-negative';
 import '@ui5/webcomponents-icons/dist/status-positive';
+import '@ui5/webcomponents-icons/dist/document-text';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
@@ -75,7 +76,7 @@ export const myWorkflowsAllColumns = (
             <Link
               to={`/tasks/completed/${data.id}/${data.completed_tasks[0].id}`}
               className="w-full text-center">
-              <Button icon="edit" />
+              <Button icon="document-text" className="bg-[#009ba4] border-[#009ba4]" />
             </Link>
           );
         }
@@ -91,7 +92,7 @@ export const myWorkflowsAllColumns = (
         <Link
           to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
           className="w-full text-center">
-          <Button icon={isReadonly ? 'show' : 'edit'} />
+          <Button icon={isReadonly ? 'show' : 'edit'} className="bg-[#009ba4] border-[#009ba4]" />
         </Link>
       );
     },
