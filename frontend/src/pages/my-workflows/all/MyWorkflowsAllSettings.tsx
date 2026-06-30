@@ -49,7 +49,6 @@ export const myWorkflowsAllColumns = (
     },
   },
   PcDateColumn('created_at', t('myWorkflowsTable.createdAt'), tableData),
-  PcDateColumn('completed_at', t('myWorkflowsTable.completedAt'), tableData),
   {
     ...PcInputColumn('is_completed', t('adminTables.isCompleted'), tableData),
     disableFilters: true,
@@ -60,6 +59,7 @@ export const myWorkflowsAllColumns = (
         <Icon name="status-positive" design={IconDesign.Positive} />
       ) : null,
   },
+  PcDateColumn('completed_at', t('myWorkflowsTable.completedAt'), tableData),
   PcInputColumn('id', t('myWorkflowsTable.instanceId'), tableData),
   {
     accessor: '.',
