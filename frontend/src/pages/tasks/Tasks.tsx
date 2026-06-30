@@ -4,7 +4,6 @@
 import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '@/pages/tasks/Tasks.scss';
-import '@/pages/tasks/TasksTabStyles';
 
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
 import { PcDetailsPage } from '@/ui5-components';
