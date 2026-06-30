@@ -44,10 +44,10 @@ import {
 const DATE_TIME_PATTERN = 'yyyy-MM-dd HH:mm';
 const DISPLAY_DATE_TIME_PATTERN = 'YYYY-MM-DD HH:mm';
 const HOURS_PER_DAY = 24;
-const TASK_PRIORITY_DAY_OPTIONS = Array.from({ length: 365 * 2 + 1 }, (_, index) => index);
+const TASK_PRIORITY_DAY_OPTIONS = Array.from({ length: 365 * 2 }, (_, index) => index + 1);
 
-const hoursToDays = (hours: number): number => Math.max(0, Math.round(hours / HOURS_PER_DAY));
-const daysToHours = (days: number): number => Math.max(0, Math.round(days)) * HOURS_PER_DAY;
+const hoursToDays = (hours: number): number => Math.max(1, Math.ceil(hours / HOURS_PER_DAY));
+const daysToHours = (days: number): number => Math.max(1, Math.round(days)) * HOURS_PER_DAY;
 
 const toPickerValue = (iso?: string | null): string => {
   if (!iso) return '';
@@ -122,7 +122,7 @@ const UserSettings: React.FC = () => {
     [criticalDays, urgentDays]
   );
   const criticalDayOptions = useMemo(
-    () => taskPriorityDayOptions.filter(days => days >= urgentDays),
+    () => taskPriorityDayOptions.filter(days => days > urgentDays),
     [taskPriorityDayOptions, urgentDays]
   );
 
@@ -158,7 +158,8 @@ const UserSettings: React.FC = () => {
 
   const taskPrioritySettingsValid =
     !taskPrioritySettings.enabled ||
-    taskPrioritySettings.criticalHours >= taskPrioritySettings.urgentHours;
+    (taskPrioritySettings.urgentHours > 0 &&
+      taskPrioritySettings.criticalHours > taskPrioritySettings.urgentHours);
 
   const isDirty = userSettingsDirty || taskPrioritySettingsDirty;
 
@@ -355,7 +356,7 @@ const UserSettings: React.FC = () => {
 
         {/* SETTINGS */}
         <div
-          className={`mt-4 grid grid-cols-[max-content_1rem_6rem_max-content] items-center gap-x-2 gap-y-4 ${
+          className={`mt-4 grid grid-cols-[max-content_1rem_6rem_max-content] items-center gap-x-3 gap-y-4 ${
             taskPrioritySettings.enabled ? '' : 'opacity-50'
           }`}>
           {/* URGENT */}
@@ -372,7 +373,10 @@ const UserSettings: React.FC = () => {
               setTaskPrioritySettings(prev => ({
                 ...prev,
                 urgentHours,
-                criticalHours: prev.criticalHours >= urgentHours ? prev.criticalHours : urgentHours,
+                criticalHours:
+                  prev.criticalHours > urgentHours
+                    ? prev.criticalHours
+                    : urgentHours + HOURS_PER_DAY,
               }));
             }}>
             {taskPriorityDayOptions.map(days => (

@@ -16,20 +16,20 @@ export const DEFAULT_TASK_PRIORITY_SETTINGS: TaskPrioritySettings = {
 export const TASK_PRIORITY_SETTINGS_STORAGE_KEY = 'wfe.taskPrioritySettings';
 export const TASK_PRIORITY_SETTINGS_CHANGED_EVENT = 'wfe-task-priority-settings-changed';
 
-const toNonNegativeInteger = (value: unknown, fallback: number): number => {
+const toPositiveInteger = (value: unknown, fallback: number): number => {
   const parsed = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
-  return Math.round(parsed);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.max(1, Math.round(parsed));
 };
 
 export const normalizeTaskPrioritySettings = (
   value: Partial<TaskPrioritySettings> = {}
 ): TaskPrioritySettings => {
-  const urgentHours = toNonNegativeInteger(
+  const urgentHours = toPositiveInteger(
     value.urgentHours,
     DEFAULT_TASK_PRIORITY_SETTINGS.urgentHours
   );
-  const criticalHours = toNonNegativeInteger(
+  const criticalHours = toPositiveInteger(
     value.criticalHours,
     DEFAULT_TASK_PRIORITY_SETTINGS.criticalHours
   );
@@ -37,7 +37,7 @@ export const normalizeTaskPrioritySettings = (
   return {
     enabled: value.enabled ?? DEFAULT_TASK_PRIORITY_SETTINGS.enabled,
     urgentHours,
-    criticalHours: criticalHours >= urgentHours ? criticalHours : urgentHours,
+    criticalHours: criticalHours > urgentHours ? criticalHours : urgentHours + 1,
   };
 };
 
