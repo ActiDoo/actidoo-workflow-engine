@@ -40,14 +40,8 @@ const SingleTask = React.lazy(
   async () => await import('@/pages/tasks/content/single-task/SingleTask')
 );
 const MyWorkflows = React.lazy(async () => await import('@/pages/my-workflows/MyWorkflows'));
-const MyOpenWorkflows = React.lazy(
-  async () => await import('@/pages/my-workflows/open/MyOpenWorkflows')
-);
 const MyWorkflowsAll = React.lazy(
   async () => await import('@/pages/my-workflows/all/MyWorkflowsAll')
-);
-const MyCompletedWorkflows = React.lazy(
-  async () => await import('@/pages/my-workflows/completed/MyCompletedWorkflows')
 );
 const AdminWorkflows = React.lazy(
   async () => await import('@/pages/admin/workflows/AdminWorkflows')
@@ -229,12 +223,6 @@ const router = createBrowserRouter(
         <Route path="/my-workflows" element={<MyWorkflows />} errorElement={<PcErrorView />}>
           <Route index element={<Navigate to="all" replace />} />
           <Route path="all" element={<MyWorkflowsAll />} errorElement={<PcErrorView />} />
-          <Route path="open" element={<MyOpenWorkflows />} errorElement={<PcErrorView />} />
-          <Route
-            path="completed"
-            element={<MyCompletedWorkflows />}
-            errorElement={<PcErrorView />}
-          />
         </Route>
 
         <Route path="/statistics" element={<Statistics />} errorElement={<PcErrorView />} />
