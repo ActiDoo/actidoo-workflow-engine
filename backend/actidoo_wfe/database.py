@@ -250,20 +250,19 @@ def _run_with_advisory_lock(engine, lock_name: str, fn):
             conn.execute(text("SELECT RELEASE_LOCK(:name)"), {"name": lock_name})
 
 
-def _run_main_migrations(engine, fresh_db: bool):
-    """Run the main-project Alembic migrations.
+def _run_main_migrations(engine):
+    """Run the main-project Alembic migrations."""
+    with engine.connect() as conn:
+        initialized = conn.execute(
+            text("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'alembic_version'"),
+        ).scalar()
 
-    ``fresh_db`` is captured once in ``run_migrations`` before any migration runs
-    (an empty schema has no ``alembic_version`` table yet). On a fresh database the
-    schema is materialised directly via ``metadata.create_all`` and Alembic is only
-    stamped at head; migrations are replayed solely when upgrading an existing DB.
-    """
     alembic_cfg = alembic.config.Config(attributes={"engine": engine})
 
     if ALEMBIC_PATH.exists():
         alembic_cfg.set_main_option("script_location", str(ALEMBIC_PATH))
 
-        if fresh_db:
+        if not initialized:
             load_all_models()
             metadata.create_all(engine)
             from alembic.command import stamp
@@ -277,19 +276,19 @@ def _run_main_migrations(engine, fresh_db: bool):
         raise Exception("Alembic Path not existing")
 
 
-def _run_extension_migrations(engine, ext_alembic_path, entry_point_name: str, fresh_db: bool):
-    """Run Alembic migrations for a single extension project.
+def _run_extension_migrations(engine, ext_alembic_module, entry_point_name: str):
+    """Run migrations for one extension project, mirroring the main set's pattern.
 
-    Extension models share the main ``metadata``, so a fresh-database run already
-    materialised the extension tables via ``metadata.create_all`` in
-    ``_run_main_migrations``. Mirror the main behaviour: stamp the extension head
-    instead of replaying its migrations against an already-current schema (each
-    extension keeps its own ``version_table``, so the stamp does not collide with
-    the main one). Existing databases still upgrade normally.
+    On a *fresh* DB (the extension's own Alembic version table does not exist yet)
+    the project's data-model tables are created directly from the ORM models
+    (``metadata.create_all``) and the Alembic history is stamped — the create-table
+    migrations are not replayed, so a fresh install always matches the current
+    models. On an *existing* DB the normal ``upgrade(head)`` applies the deltas;
+    new tables and schema changes are then introduced through ordinary migrations.
     """
     from pathlib import Path
 
-    ext_alembic_path = Path(ext_alembic_path)
+    ext_alembic_path = Path(ext_alembic_module.__file__).parent
     if not ext_alembic_path.exists():
         log.warning("Extension alembic path '%s' for '%s' does not exist, skipping.", ext_alembic_path, entry_point_name)
         return
@@ -297,16 +296,54 @@ def _run_extension_migrations(engine, ext_alembic_path, entry_point_name: str, f
     alembic_cfg = alembic.config.Config(attributes={"engine": engine})
     alembic_cfg.set_main_option("script_location", str(ext_alembic_path))
 
-    if fresh_db:
-        from alembic.command import stamp
+    from alembic.command import stamp, upgrade
 
-        stamp(config=alembic_cfg, revision="head")
-        log.info("Extension '%s' stamped at head (fresh database).", entry_point_name)
-    else:
-        from alembic.command import upgrade
+    # The extension's env.py declares its own VERSION_TABLE and imports its models
+    # on import. The module is import-safe (its bottom guard skips migrations when
+    # imported outside Alembic), so importing it both loads the project's models
+    # into the shared metadata/registry and tells us the version-table name.
+    version_table = None
+    try:
+        import importlib
 
-        upgrade(config=alembic_cfg, revision="head")
-        log.info("Extension migrations '%s' applied successfully.", entry_point_name)
+        env = importlib.import_module(f"{ext_alembic_module.__name__}.env")
+        version_table = getattr(env, "VERSION_TABLE", None)
+    except Exception as error:  # pragma: no cover - defensive
+        log.warning("Could not import env for extension '%s' (%s); falling back to upgrade.", entry_point_name, error)
+
+    if version_table:
+        with engine.connect() as conn:
+            stamped = conn.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_schema = DATABASE() AND table_name = :version_table",
+                ),
+                {"version_table": version_table},
+            ).scalar()
+
+        if not stamped:
+            # Fresh DB: build this project's data-model tables from the models and
+            # stamp the history instead of replaying the create-table migrations.
+            from actidoo_wfe.wf.registry_data_model import data_model_registry
+
+            package = ext_alembic_module.__name__.split(".")[0]
+            project_tables = [
+                descriptor.model_class.__table__
+                for descriptor in data_model_registry.list_models()
+                if descriptor.model_class.__module__ == package
+                or descriptor.model_class.__module__.startswith(package + ".")
+            ]
+            metadata.create_all(engine, tables=project_tables)
+            stamp(config=alembic_cfg, revision="head")
+            log.info(
+                "Extension '%s' fresh DB: created %d table(s) from models and stamped head.",
+                entry_point_name,
+                len(project_tables),
+            )
+            return
+
+    upgrade(config=alembic_cfg, revision="head")
+    log.info("Extension migrations '%s' applied successfully.", entry_point_name)
 
 
 EXTENSION_ALEMBIC_ENTRY_POINT_GROUP = "actidoo_wfe.alembic"
@@ -315,7 +352,6 @@ EXTENSION_ALEMBIC_ENTRY_POINT_GROUP = "actidoo_wfe.alembic"
 def run_migrations(settings: Settings):
     """Run main-project and extension-project migrations with advisory locks."""
     from importlib import metadata as importlib_metadata
-    from pathlib import Path
 
     engine = create_engine(
         get_uri(settings),
@@ -323,21 +359,8 @@ def run_migrations(settings: Settings):
         connect_args=get_mysql_options(settings),
     )
 
-    # Determine fresh-vs-existing ONCE, before the main run creates alembic_version.
-    # A fresh database has its whole schema (main + extension tables, which share the
-    # same metadata) materialised by metadata.create_all, so both the main project and
-    # every extension stamp their head instead of replaying migrations against
-    # already-current tables.
-    with engine.connect() as conn:
-        fresh_db = not conn.execute(
-            text(
-                "SELECT COUNT(*) FROM information_schema.tables "
-                "WHERE table_schema = DATABASE() AND table_name = 'alembic_version'"
-            ),
-        ).scalar()
-
     # 1. Main-project migrations
-    _run_with_advisory_lock(engine, "alembic_main", lambda eng: _run_main_migrations(eng, fresh_db))
+    _run_with_advisory_lock(engine, "alembic_main", _run_main_migrations)
 
     # 2. Extension-project migrations (discovered via entry points)
     try:
@@ -349,12 +372,11 @@ def run_migrations(settings: Settings):
     for entry_point in entries:
         try:
             ext_alembic_module = entry_point.load()
-            ext_alembic_path = Path(ext_alembic_module.__file__).parent
             lock_name = f"alembic_ext_{entry_point.name}"
             _run_with_advisory_lock(
                 engine,
                 lock_name,
-                lambda eng, p=ext_alembic_path, n=entry_point.name: _run_extension_migrations(eng, p, n, fresh_db),
+                lambda eng, m=ext_alembic_module, n=entry_point.name: _run_extension_migrations(eng, m, n),
             )
         except Exception as error:
             log.error("Failed to run extension migrations for '%s': %s", entry_point.name, error)
