@@ -165,7 +165,7 @@ export const de = {
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
   },
   taskActions: {
-    reset: 'Auf Anfangszustand zurücksetzen',
+    reset: 'Zurücksetzen',
     submit: 'Absenden',
   },
   singleTaskHeader: {

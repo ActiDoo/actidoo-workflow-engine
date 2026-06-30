@@ -163,7 +163,7 @@ export const en = {
     submitError: 'An error occurred while submitting the form',
   },
   taskActions: {
-    reset: 'Reset To Initial State',
+    reset: 'Reset',
     submit: 'Submit',
   },
   singleTaskHeader: {
