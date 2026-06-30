@@ -227,14 +227,14 @@ const router = createBrowserRouter(
         </Route>
 
         <Route path="/my-workflows" element={<MyWorkflows />} errorElement={<PcErrorView />}>
-          <Route index element={<Navigate to="progress" replace />} />
-          <Route path="progress" element={<MyOpenWorkflows />} errorElement={<PcErrorView />} />
+          <Route index element={<Navigate to="all" replace />} />
+          <Route path="all" element={<MyWorkflowsAll />} errorElement={<PcErrorView />} />
+          <Route path="open" element={<MyOpenWorkflows />} errorElement={<PcErrorView />} />
           <Route
             path="completed"
             element={<MyCompletedWorkflows />}
             errorElement={<PcErrorView />}
           />
-          <Route path="all" element={<MyWorkflowsAll />} errorElement={<PcErrorView />} />
         </Route>
 
         <Route path="/statistics" element={<Statistics />} errorElement={<PcErrorView />} />

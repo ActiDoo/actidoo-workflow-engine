@@ -32,6 +32,7 @@ import {
   Text,
   Title,
   TitleLevel,
+  CheckBox,
 } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/decline';
 import { createPortal } from 'react-dom';
@@ -40,7 +41,7 @@ import _ from 'lodash';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { myWorkflowsAllColumns } from '@/pages/my-workflows/all/MyWorkflowsAllSettings';
 
-const AllWorkflows: React.FC = () => {
+const MyWorkflowsAll: React.FC = () => {
   const { t } = useTranslation();
   const key = WeDataKey.MY_WORKFLOW_INSTANCES_ALL;
   const dispatch = useDispatch();
@@ -61,6 +62,7 @@ const AllWorkflows: React.FC = () => {
     filter,
     sort
   );
+  const [showInstanceID, setShowInstanceID] = useState(false);
 
   useEffect(() => {
     dispatch(
@@ -70,6 +72,16 @@ const AllWorkflows: React.FC = () => {
       })
     );
   }, [tableData.loadData]);
+
+  const columns = () => {
+    if (showInstanceID) {
+      return myWorkflowsAllColumns(tableData, user?.id, t);
+    } else {
+      return myWorkflowsAllColumns(tableData, user?.id, t).filter(
+        column => column.accessor !== 'id'
+      );
+    }
+  };
 
   const openSubmittedForm = (workflowId: string, taskId?: string): void => {
     if (!taskId) return;
@@ -161,12 +173,20 @@ const AllWorkflows: React.FC = () => {
 
   return (
     <>
-      <div className="flex items-center justify-end w-100 mb-4 gap-2 -mt-4">
-        <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
+      <div className="flex items-center justify-between w-100 mb-4 gap-2 -mt-4">
+        <CheckBox
+          text="show instance id"
+          checked={showInstanceID}
+          onChange={event => {
+            setShowInstanceID(event.currentTarget?.checked ?? false);
+          }}></CheckBox>
+        <div className="flex items-center gap-2">
+          <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
+        </div>
       </div>
       <div className="my-workflows-table">
         <PcAnalyticalTable
-          columns={myWorkflowsAllColumns(tableData, user?.id, t)}
+          columns={columns()}
           initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
           data={data?.data?.ITEMS ?? []}
           loading={loadingState}
@@ -217,4 +237,4 @@ const AllWorkflows: React.FC = () => {
   );
 };
 
-export default AllWorkflows;
+export default MyWorkflowsAll;
