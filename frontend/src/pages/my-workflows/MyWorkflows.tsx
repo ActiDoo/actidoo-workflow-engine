@@ -11,12 +11,7 @@ import { useTranslation } from '@/i18n';
 const MyWorkflows: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const path = window.location.pathname;
-  const selectedTab = path.includes('completed')
-    ? 'completed'
-    : path.includes('progress')
-    ? 'progress'
-    : 'all';
+  const selectedTab = 'all';
 
   return (
     <PcDetailsPage
@@ -28,24 +23,6 @@ const MyWorkflows: React.FC = () => {
       onSelectedSectionChange={event => {
         navigate(`${event.detail.selectedSectionId}`);
       }}>
-      <ObjectPageSection
-        className=" mt-8"
-        aria-label={t('myWorkflows.inProgress')}
-        id="progress"
-        titleText={t('myWorkflows.inProgress')}>
-        <Suspense>
-          <Outlet />
-        </Suspense>
-      </ObjectPageSection>
-      <ObjectPageSection
-        className=" mt-8"
-        aria-label={t('myWorkflows.completed')}
-        id="completed"
-        titleText={t('myWorkflows.completed')}>
-        <Suspense>
-          <Outlet />
-        </Suspense>
-      </ObjectPageSection>
       <ObjectPageSection
         className=" mt-8"
         aria-label={t('myWorkflows.all')}
