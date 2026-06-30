@@ -446,18 +446,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
                 formData,
                 schema: task.jsonschema,
                 uiSchema: task.uischema,
-              }}>
-              {canSubmitTask && props.state !== WorkflowState.COMPLETED ? (
-                <TaskActions
-                  disabled={isLoading}
-                  onReset={() => {
-                    setResetToInitialStateDialogOpen(true);
-                  }}
-                />
-              ) : (
-                <div></div>
-              )}
-            </TaskForm>
+              }}></TaskForm>
 
             <WeUploadDialog
               isOpen={isUploadLoadingDialogOpen}
@@ -469,6 +458,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
                 isSubmitLoading ? t('taskContent.processForm') : t('taskContent.processDraft')
               }
             />
+          </div>
+          <div className="sticky bottom-0 bg-white px-3 pb-2.5 pt-2 mb-1">
+            <div className="mb-3 h-px w-full bg-gray-200" />
+            {canSubmitTask && props.state !== WorkflowState.COMPLETED ? (
+              <TaskActions
+                disabled={isLoading}
+                onReset={() => {
+                  setResetToInitialStateDialogOpen(true);
+                }}
+              />
+            ) : (
+              <div></div>
+            )}
           </div>
         </div>
 
