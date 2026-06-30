@@ -49,6 +49,7 @@ export const myWorkflowsAllColumns = (
     },
   },
   PcDateColumn('created_at', t('myWorkflowsTable.createdAt'), tableData),
+  PcDateColumn('completed_at', t('myWorkflowsTable.completedAt'), tableData),
   {
     ...PcInputColumn('is_completed', t('adminTables.isCompleted'), tableData),
     disableFilters: true,
