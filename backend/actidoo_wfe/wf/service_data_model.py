@@ -347,8 +347,9 @@ def start_workflow_for_existing_data_model(
         name=action.target,
         user_id=user_id,
         initial_task_data=payload,
-        # The payload is server-built and trusted, so its technical fields (e.g. a
-        # source row id) are preserved through the target's first form even though
-        # that form has no field for them. The client supplies no free-form data.
-        preserve_initial_unknown_fields=True,
+        # The payload is server-built and trusted, so it is applied to the target's
+        # first form as-is: its technical fields (e.g. a source row id) survive even
+        # though the form has no field for them, and it is not subjected to form
+        # validation. The client supplies no free-form data.
+        trusted_seed=True,
     )

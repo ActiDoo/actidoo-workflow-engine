@@ -77,13 +77,14 @@ def start_workflow(
     name: str,
     user_id: uuid.UUID,
     initial_task_data: dict | None = None,
-    preserve_initial_unknown_fields: bool = False,
+    trusted_seed: bool = False,
 ) -> uuid.UUID:
     """Starts a workflow with the given name, and the given user as creator. Returns the workflow ID.
 
-    ``preserve_initial_unknown_fields`` keeps technical fields of ``initial_task_data``
-    that are not part of the first user task's form. Only pass ``True`` for a trusted,
-    server-built seed — never for client-supplied data.
+    ``trusted_seed`` marks ``initial_task_data`` as a server-built engine seed: it is
+    applied to the first user task as-is (technical fields kept, no form validation).
+    Only pass ``True`` for server-built data — never for client-supplied form data,
+    which must go through form validation.
     """
     user_rep = repository.load_user(db=db, user_id=user_id)
     repository.persist_workflow_spec(db=db, name=name)
@@ -96,12 +97,12 @@ def start_workflow(
 
     workflow = service_workflow.start_process(name=name, created_by=user_rep)
 
-    # A trusted, server-built seed (preserve_initial_unknown_fields) is the workflow's
-    # engine start data: seed it into the root task BEFORE run_workflow, so service tasks
-    # that run before the first user task already see it in task_data (Spiff propagates
-    # parent->child). Untrusted client start-form data (preserve=False) is NOT seeded here;
-    # it stays scoped to the first user task and is cleaned against that task's form below.
-    if initial_task_data is not None and preserve_initial_unknown_fields:
+    # A trusted seed is the workflow's engine start data: seed it into the root task
+    # BEFORE run_workflow, so service tasks that run before the first user task already
+    # see it in task_data (Spiff propagates parent->child). Untrusted client start-form
+    # data (trusted_seed=False) is NOT seeded here; it stays scoped to the first user
+    # task and is cleaned against that task's form below.
+    if initial_task_data is not None and trusted_seed:
         workflow.task_tree.set_data(**deepcopy(initial_task_data))
 
     service_workflow.run_workflow(workflow=workflow)
@@ -119,18 +120,25 @@ def start_workflow(
             log.warning("No ready user tasks available to apply initial data for workflow %s", name)
         else:
             first_task = ready_tasks_in_new_workflow[0]
-            cleaned_task_data = _clean_submitted_task_data(
-                workflow=workflow,
-                task=first_task,
-                submitted_data=initial_task_data,
-                preserve_unknown_fields=preserve_initial_unknown_fields,
-            )
-            service_workflow.update_task_data(
-                workflow=workflow,
-                task_id=first_task.id,
-                cleaned_task_data=cleaned_task_data,
-            )
-            attachments = get_attachments(cleaned_task_data)
+            if trusted_seed:
+                # A trusted, server-built seed is not a form submission: it was already
+                # seeded into the task tree before run_workflow (and enriched by the
+                # service tasks that run before the first user task), so it is applied
+                # as-is. It must not go through form validation — a prefill may legitimately
+                # leave required fields empty for the user to fill in the form.
+                first_task_data = first_task.data
+            else:
+                first_task_data = _clean_submitted_task_data(
+                    workflow=workflow,
+                    task=first_task,
+                    submitted_data=initial_task_data,
+                )
+                service_workflow.update_task_data(
+                    workflow=workflow,
+                    task_id=first_task.id,
+                    cleaned_task_data=first_task_data,
+                )
+            attachments = get_attachments(first_task_data)
             if attachments:
                 copied_task_attachments.append((first_task.id, attachments))
 
@@ -637,17 +645,12 @@ def get_usertasks_for_user_id(
     return usertasks
 
 
-def _clean_submitted_task_data(workflow, task, submitted_data, preserve_unknown_fields: bool = False):
+def _clean_submitted_task_data(workflow, task, submitted_data):
     """Validate and clean a payload from a user form submission.
 
     The payload typically only contains the fields the frontend knows about.
     Unknown / technical properties are removed deliberately and hidden fields
-    are stripped.
-
-    ``preserve_unknown_fields`` keeps technical fields that are not part of the
-    form. It must stay ``False`` for untrusted user submissions; only a trusted,
-    server-built seed (e.g. a data-model action payload) may set it to carry a
-    technical variable through a user task that has no field for it."""
+    are stripped."""
 
     assert task.uischema and task.jsonschema
     form = ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema)
@@ -667,7 +670,6 @@ def _clean_submitted_task_data(workflow, task, submitted_data, preserve_unknown_
         task_data=submitted_data,
         options_folder=options_folder,
         functions_env=functions_env,
-        preserve_unknown_fields=preserve_unknown_fields,
         preserve_disabled_fields=False,
     )
 

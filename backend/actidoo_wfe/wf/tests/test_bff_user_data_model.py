@@ -915,10 +915,10 @@ class TestStartWorkflowForExistingDataModel:
             started = uuid.uuid4()
             captured = {}
 
-            def fake_start_workflow(db, name, user_id, initial_task_data=None, preserve_initial_unknown_fields=False):
+            def fake_start_workflow(db, name, user_id, initial_task_data=None, trusted_seed=False):
                 captured["name"] = name
                 captured["data"] = initial_task_data
-                captured["preserve"] = preserve_initial_unknown_fields
+                captured["trusted_seed"] = trusted_seed
                 return started
 
             import actidoo_wfe.wf.service_application as service_application
@@ -935,7 +935,7 @@ class TestStartWorkflowForExistingDataModel:
             # Only the server-built payload is seeded; the injected ``data`` is ignored.
             assert captured["data"] == {"source_id": row_id}
             # The trusted seed preserves technical fields through the target's first form.
-            assert captured["preserve"] is True
+            assert captured["trusted_seed"] is True
 
 
 # ---------------------------------------------------------------------------
