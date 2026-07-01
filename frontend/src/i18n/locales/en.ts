@@ -155,6 +155,9 @@ export const en = {
     unassigned: 'Unassigned',
     resetDialogTitle: 'Reset to Initial State',
     resetDialogText: 'This will reset all form data to the initial state. Do you want to continue?',
+    deleteDialogTitle: 'Delete workflow',
+    deleteDialogText:
+      'This will PERMANENTLY DELETE the workflow.<br/><br/>If you have started this workflow by mistake, you can delete it without any problems.',
     uploadForm: 'Form is being uploaded',
     uploadDraft: 'Draft is being uploaded',
     processForm: 'Form is being processed',
@@ -165,6 +168,7 @@ export const en = {
   taskActions: {
     reset: 'Reset',
     submit: 'Submit',
+    delete: 'Delete',
   },
   singleTaskHeader: {
     readonlyDefinitionMissing:
@@ -176,11 +180,8 @@ export const en = {
     assignedDelegate: 'Assigned delegate',
     unassignFromMe: 'Unassign from me',
     cancelWorkflow: 'Cancel workflow',
-    deleteWorkflow: 'Delete workflow',
     cancelWorkflowDialogText:
       'This will cancel the workflow.<br/><br/>All entered data up to this point will remain visible in the My Workflows overview.',
-    deleteWorkflowDialogText:
-      'This will PERMANENTLY DELETE the workflow.<br/><br/>If you have started this workflow by mistake, you can delete it without any problems.',
     closeDialog: 'Close Dialog',
     cancelWorkflowAction: 'Cancel Workflow',
     deleteWorkflowAction: 'Delete Workflow',
