@@ -118,6 +118,16 @@ class WorkflowInstanceTaskInlineRepresentation(BaseModel):
     is_readonly: bool = Field(default=False)
 
 
+class WorkflowDeadlineRepresentation(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    urgency_days: int | None = Field(default=None)
+    critical_days: int | None = Field(default=None)
+    urgency_at: datetime.datetime | None = Field(default=None)
+    critical_at: datetime.datetime | None = Field(default=None)
+    level: Literal["normal", "urgency", "critical"] = Field(default="normal")
+
+
 class WorkflowInstanceRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -137,6 +147,7 @@ class WorkflowInstanceRepresentation(BaseModel):
     created_by: InlineUserRepresentation
     has_task_in_error_state: bool
     is_readonly: bool = Field(default=False)
+    deadline: WorkflowDeadlineRepresentation | None = Field(default=None)
 
 
 class WorkflowInstanceWithoutTasksRepresentation(BaseModel):
@@ -152,6 +163,7 @@ class WorkflowInstanceWithoutTasksRepresentation(BaseModel):
     created_by: InlineUserRepresentation
     has_task_in_error_state: bool
     is_readonly: bool = Field(default=False)
+    deadline: WorkflowDeadlineRepresentation | None = Field(default=None)
 
 
 class WorkflowRepresentation(BaseModel):

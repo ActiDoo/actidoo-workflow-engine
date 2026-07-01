@@ -9,12 +9,12 @@ This module works on domain objects. There must not be any database involved her
 """
 
 import collections
-from dataclasses import dataclass
 import datetime
 import logging
 import traceback
 import uuid
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import cache
 from typing import Any, Generator, List, Literal
 
@@ -23,16 +23,17 @@ from SpiffWorkflow.bpmn import BpmnEvent, BpmnWorkflow
 from SpiffWorkflow.bpmn.parser.ProcessParser import ProcessParser
 from SpiffWorkflow.bpmn.parser.ValidationException import ValidationException
 from SpiffWorkflow.bpmn.specs.bpmn_task_spec import BpmnTaskSpec
+from SpiffWorkflow.bpmn.specs.event_definitions.timer import CycleTimerEventDefinition, DurationTimerEventDefinition, TimeDateEventDefinition, TimerEventDefinition
 from SpiffWorkflow.bpmn.util.event import PendingBpmnEvent
 from SpiffWorkflow.camunda.specs.event_definitions import MessageEventDefinition
 from SpiffWorkflow.exceptions import TaskNotFoundException, WorkflowException
 from SpiffWorkflow.task import Task, TaskFilter, TaskState
-from SpiffWorkflow.bpmn.specs.event_definitions.timer import TimerEventDefinition, TimeDateEventDefinition, CycleTimerEventDefinition, DurationTimerEventDefinition
 
 from actidoo_wfe.helpers.modules import env_from_module
 from actidoo_wfe.helpers.string import boolean_or_string_list
-from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.settings import settings
+from actidoo_wfe.testing.utils import in_test
+from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf.constants import (
     DATA_KEY_CREATED_BY,
     DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE,
@@ -45,13 +46,11 @@ from actidoo_wfe.wf.constants import (
     INTERNAL_DATA_KEY_DELEGATE_COMMENT,
     INTERNAL_DATA_KEY_STACKTRACE,
 )
-from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf.exceptions import (
     FormNotFoundException,
     TaskAlreadyAssignedToDifferentUserException,
     TaskCannotBeUnassignedException,
     TaskIsNotErroneousException,
-    UserMayNotCopyWorkflowException,
 )
 from actidoo_wfe.wf.service_form import (
     get_options,
@@ -66,9 +65,10 @@ from actidoo_wfe.wf.spiff_customized import (
 from actidoo_wfe.wf.types import (
     MessageEventDefinitionRepresentation,
     ReactJsonSchemaFormData,
+    TimeEvent,
     UserRepresentation,
     UserTaskWithoutNestedAssignedUserRepresentation,
-    TimeEvent,
+    WorkflowDeadlineRepresentation,
 )
 
 log = logging.getLogger(__name__)
@@ -511,6 +511,72 @@ def get_workflow_saved_minutes_per_instance_cached(name: str) -> int:
     except Exception:
         log.exception(f"Cannot get workflow custom property statistics_saved_minutes (statistics_saved_minutes) for workflow {name}")
         return 10
+
+
+def _parse_optional_non_negative_int(raw: object, *, property_name: str, workflow_name: str) -> int | None:
+    if raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        log.warning("Workflow '%s' has invalid custom property '%s': %r", workflow_name, property_name, raw)
+        return None
+    if value < 0:
+        log.warning("Workflow '%s' has negative custom property '%s': %r", workflow_name, property_name, raw)
+        return None
+    return value
+
+
+@cache
+def get_workflow_deadline_thresholds_cached(name: str) -> tuple[int | None, int | None]:
+    """Return workflow-level warning thresholds from BPMN custom properties.
+
+    In Camunda Modeler add Zeebe custom properties to the BPMN process:
+    ``urgency`` and/or ``critical``. Values are interpreted as days after the
+    workflow instance ``created_at`` timestamp.
+    """
+    assert name is not None and name != ""
+
+    try:
+        process = load_process_from_file(name=name)
+        custom_props = getattr(process.spec, "custom_props", {}) or {}
+    except Exception:
+        log.exception("Cannot get workflow deadline custom properties for workflow %s", name)
+        return None, None
+
+    return (
+        _parse_optional_non_negative_int(custom_props.get("urgency"), property_name="urgency", workflow_name=name),
+        _parse_optional_non_negative_int(custom_props.get("critical"), property_name="critical", workflow_name=name),
+    )
+
+
+def build_workflow_deadline(
+    workflow_name: str,
+    created_at: datetime.datetime,
+    now: datetime.datetime | None = None,
+) -> WorkflowDeadlineRepresentation | None:
+    urgency_days, critical_days = get_workflow_deadline_thresholds_cached(workflow_name)
+    if urgency_days is None and critical_days is None:
+        return None
+
+    urgency_at = created_at + datetime.timedelta(days=urgency_days) if urgency_days is not None else None
+    critical_at = created_at + datetime.timedelta(days=critical_days) if critical_days is not None else None
+
+    if now is None:
+        now = datetime.datetime.now(tz=created_at.tzinfo) if created_at.tzinfo else datetime.datetime.now()
+    level: Literal["normal", "urgency", "critical"] = "normal"
+    if critical_at is not None and now >= critical_at:
+        level = "critical"
+    elif urgency_at is not None and now >= urgency_at:
+        level = "urgency"
+
+    return WorkflowDeadlineRepresentation(
+        urgency_days=urgency_days,
+        critical_days=critical_days,
+        urgency_at=urgency_at,
+        critical_at=critical_at,
+        level=level,
+    )
 
 
 @cache

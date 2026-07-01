@@ -27,6 +27,16 @@ class InlineUserAdminResponse(InlineUserResponse):
     roles: list[str] = Field(default_factory=list)
 
 
+class WorkflowDeadlineResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    urgency_days: int | None = None
+    critical_days: int | None = None
+    urgency_at: datetime.datetime | None = None
+    critical_at: datetime.datetime | None = None
+    level: str = "normal"
+
+
 class InlineWorkflowInstance(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,6 +49,7 @@ class InlineWorkflowInstance(BaseModel):
     completed_at: datetime.datetime | None
     created_by: InlineUserResponse
     is_readonly: bool = Field(default=False)
+    deadline: WorkflowDeadlineResponse | None = None
 
 
 class GetAllTasksResponseItem(BaseModel):
@@ -91,6 +102,7 @@ class GetAllWorkflowInstancesResponseItem(BaseModel):
     has_task_in_error_state: bool
     created_by: InlineUserResponse
     created_at: datetime.datetime
+    deadline: WorkflowDeadlineResponse | None = None
 
 
 GetAllWorkflowInstancesResponse = PaginatedDataSchema[GetAllWorkflowInstancesResponseItem]

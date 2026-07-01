@@ -480,6 +480,14 @@ def _mark_instance_readonly(instance: WorkflowInstanceRepresentation) -> None:
         task.can_be_assigned_as_delegate = False
 
 
+def _attach_instance_deadline(instance: WorkflowInstanceRepresentation | WorkflowInstanceWithoutTasksRepresentation) -> None:
+    """Attach urgency/critical threshold state for frontend warning badges."""
+    instance.deadline = service_workflow.build_workflow_deadline(
+        workflow_name=instance.name,
+        created_at=instance.created_at,
+    )
+
+
 def bff_user_get_initiated_workflows(
     db: Session,
     bff_table_request_params: BffTableQuerySchemaBase,
@@ -489,6 +497,7 @@ def bff_user_get_initiated_workflows(
     instances: PaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_user_get_initiated_workflows(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id)
 
     for instance in instances.ITEMS:
+        _attach_instance_deadline(instance)
         if not workflow_providers.workflow_definition_available(instance.name):
             _mark_instance_readonly(instance)
             continue
@@ -521,6 +530,7 @@ def get_visible_workflow_instance(
         return None
     user = get_user(db=db, user_id=user_id)
     instance = WorkflowInstanceWithoutTasksRepresentation.model_validate(instance_row)
+    _attach_instance_deadline(instance)
     if not workflow_providers.workflow_definition_available(instance.name):
         instance.is_readonly = True
     else:
@@ -539,6 +549,7 @@ def bff_get_workflows_with_usertasks(
     instances: CursorPaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_get_workflows_with_usertasks(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id, state=state)
 
     for instance in instances.ITEMS:
+        _attach_instance_deadline(instance)
         if not workflow_providers.workflow_definition_available(instance.name):
             _mark_instance_readonly(instance)
             continue
@@ -1296,6 +1307,7 @@ def bff_admin_get_all_tasks(db: Session, user_id: uuid.UUID, bff_table_request_p
     )
 
     for task in tasks.ITEMS:
+        _attach_instance_deadline(task.workflow_instance)
         if not workflow_providers.workflow_definition_available(task.workflow_instance.name):
             task.is_readonly = True
             task.workflow_instance.is_readonly = True
@@ -1314,6 +1326,7 @@ def bff_admin_get_all_workflow_instances(db: Session, user_id: uuid.UUID, bff_ta
     )
 
     for instance in instances.ITEMS:
+        _attach_instance_deadline(instance)
         if not workflow_providers.workflow_definition_available(instance.name):
             _mark_instance_readonly(instance)
             continue
@@ -1359,6 +1372,7 @@ def admin_set_user_delegations(
 def admin_get_single_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
     task = views.admin_get_single_task(db=db, task_id=task_id)
+    _attach_instance_deadline(task.workflow_instance)
     if not workflow_providers.workflow_definition_available(task.workflow_instance.name):
         task.is_readonly = True
         task.workflow_instance.is_readonly = True

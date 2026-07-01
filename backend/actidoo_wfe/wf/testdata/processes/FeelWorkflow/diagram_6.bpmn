@@ -8,6 +8,7 @@
       <bpmn:lane id="InitLaneID" name="Init Lane">
         <bpmn:extensionElements>
           <zeebe:properties>
+            <zeebe:property name="urgency" value="1" />
             <zeebe:property name="initiator" value="true" />
           </zeebe:properties>
         </bpmn:extensionElements>

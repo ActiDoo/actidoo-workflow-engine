@@ -46,6 +46,7 @@ export interface WorkflowInstanceMeta {
   subtitle?: string | null;
   is_completed: boolean;
   is_readonly?: boolean;
+  deadline?: WorkflowDeadline | null;
 }
 
 export interface GetUserTasksResponse {
@@ -91,6 +92,16 @@ export interface PinnedWorkflowsResponse {
   pinned_workflow_names: string[];
 }
 
+export type WorkflowDeadlineLevel = 'normal' | 'urgency' | 'critical';
+
+export interface WorkflowDeadline {
+  urgency_days?: number | null;
+  critical_days?: number | null;
+  urgency_at?: string | null;
+  critical_at?: string | null;
+  level?: WorkflowDeadlineLevel;
+}
+
 export interface TaskItemResponse {
   task: TaskItem;
 }
@@ -101,9 +112,12 @@ export interface WorkflowInstance {
   title?: string;
   subtitle?: string;
   is_completed?: boolean;
+  created_at?: string;
+  priority_date?: string | null;
   active_tasks?: ActiveTaskInstance[];
   completed_tasks?: ActiveTaskInstance[];
   is_readonly?: boolean;
+  deadline?: WorkflowDeadline | null;
 }
 export interface AdminGraphInstance {
   id: string;
@@ -122,6 +136,7 @@ export interface AdminWorkflowInstance {
   has_task_in_error_state?: boolean;
   created_by?: User;
   is_readonly?: boolean;
+  deadline?: WorkflowDeadline | null;
 }
 
 export interface MyInitiatedWorkflowInstance {
@@ -133,6 +148,7 @@ export interface MyInitiatedWorkflowInstance {
   created_at?: Date;
   completed_at?: Date;
   is_readonly?: boolean;
+  deadline?: WorkflowDeadline | null;
 }
 
 export interface ActiveTaskInstance {
@@ -145,6 +161,7 @@ export interface ActiveTaskInstance {
   completed_by_delegate_user?: User | null;
   delegate_submit_comment?: string | null;
   can_be_assigned_as_delegate?: boolean;
+  created_at?: string | Date;
   is_readonly?: boolean;
 }
 
