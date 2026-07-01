@@ -6,7 +6,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '@/pages/tasks/Tasks.scss';
 
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
-import { PcDetailsPage } from '@/ui5-components';
+import { PcDetailsPage, useEmphasizedObjectPageTabs } from '@/ui5-components';
 import { useTranslation } from '@/i18n';
 
 const Tasks: React.FC = () => {
@@ -18,13 +18,13 @@ const Tasks: React.FC = () => {
   // Used to hide the page header + tab bar on mobile (see Tasks.scss).
   const isDetail = /\/tasks\/(open|completed)\/.+/.test(pathname);
 
+  useEmphasizedObjectPageTabs('pc-tasks', selectedTab);
+
   return (
     <PcDetailsPage
       id="pc-tasks"
       mode={ObjectPageMode.IconTabBar}
-      header={{
-        title: t('tasks.header'),
-      }}
+      headerTitle={undefined}
       className={`!p-0 ${isDetail ? 'pc-tasks--detail' : ''}`}
       onSelectedSectionChange={event => {
         if (event.detail.selectedSectionId !== selectedTab) {

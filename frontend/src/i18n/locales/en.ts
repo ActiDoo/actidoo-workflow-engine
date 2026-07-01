@@ -135,8 +135,8 @@ export const en = {
   tasks: {
     header: 'Tasks',
     tabs: {
-      open: 'Open',
-      completed: 'Completed',
+      open: 'Open Tasks',
+      completed: 'Completed Tasks',
     },
     empty: {
       open: "You don't have any open tasks",
@@ -202,8 +202,8 @@ export const en = {
   },
   myWorkflows: {
     title: 'My Workflows',
-    inProgress: 'In progress',
-    completed: 'Completed',
+    inProgress: 'Workflows in progress',
+    completed: 'Completed Workflows',
     activeTasksOfWorkflow: 'Active tasks of workflow',
     tasksOfWorkflow: 'Tasks of workflow',
     completedTasksOfWorkflow: 'Completed tasks of workflow',

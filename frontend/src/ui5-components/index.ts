@@ -31,3 +31,4 @@ export * from '@/ui5-components/services/FetchService';
 export * from '@/ui5-components/services/GernericDataService';
 
 export * from '@/ui5-components/hooks/useAdditionalTableFunctions';
+export * from '@/ui5-components/hooks/useEmphasizedObjectPageTabs';
