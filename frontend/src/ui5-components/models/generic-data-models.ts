@@ -8,6 +8,22 @@ import {
   StringDict,
 } from '@/ui5-components/models/models';
 
+/** Identity of a request: which query produced (or is producing) an entry's data. */
+export interface GenericRequestSignature {
+  params?: StringDict;
+  queryParams?: StringDict;
+  append?: boolean;
+}
+
+export interface PostRequestAdditionalData {
+  /**
+   * Merge the response's ITEMS (id-deduplicated) into the existing data instead
+   * of replacing it; COUNT/NEXT_CURSOR are taken from the new page. For
+   * cursor-paginated "load more" requests.
+   */
+  append?: boolean;
+}
+
 export interface GenericDataEntry<T> {
   data?: T;
   response?: number;
@@ -16,6 +32,10 @@ export interface GenericDataEntry<T> {
   postResponse?: number;
   deleteResponse?: number;
   validationError?: HTTPValidationError;
+  /** Signature of the latest POST request issued for this key. */
+  requestSignature?: GenericRequestSignature;
+  /** Signature of the request `data` belongs to (stale responses never apply). */
+  dataSignature?: GenericRequestSignature;
 }
 
 export enum GenericDataActionType {
@@ -69,12 +89,20 @@ export interface GenericPostRequestAction<K> {
     queryParams?: StringDict;
     responseType?: XMLHttpRequestResponseType;
     onUploadProgress?: FetchUploadProgressFunc;
+    append?: boolean;
   };
 }
 
 export interface GenericPostResponseAction<K, T> {
   type: GenericDataActionType.POST_DATA_RESPONSE;
-  payload: { key: K; response: number; validationError?: HTTPValidationError; data?: T | null };
+  payload: {
+    key: K;
+    response: number;
+    validationError?: HTTPValidationError;
+    data?: T | null;
+    /** Echo of the request signature — the reducer drops superseded responses. */
+    signature?: GenericRequestSignature;
+  };
 }
 
 export interface GenericDeleteRequestAction<K> {

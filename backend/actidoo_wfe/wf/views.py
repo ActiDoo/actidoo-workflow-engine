@@ -9,49 +9,51 @@ import datetime
 import uuid
 from typing import Literal
 
-from sqlalchemy import and_, false, null, or_, select, true, func
+from sqlalchemy import and_, false, func, null, or_, select, true
 from sqlalchemy.orm import Session, aliased, contains_eager, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 
-from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase
-from actidoo_wfe.helpers.schema import PaginatedDataSchema
-from actidoo_wfe.helpers.time import dt_ago_naive, dt_now_naive
+from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase, CursorBFFTable
+from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataSchema
+from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.wf.exceptions import TaskNotFoundException
 from actidoo_wfe.wf.models import (
     WorkflowInstance,
     WorkflowInstanceTask,
     WorkflowInstanceTaskRole,
     WorkflowMessageSubscription,
+    WorkflowRole,
     WorkflowSpec,
     WorkflowUser,
     WorkflowUserDelegate,
     WorkflowUserRole,
-    WorkflowRole,
 )
 from actidoo_wfe.wf.types import (
-    InlineUserRepresentation,
-    ReducedWorkflowState,
     MessageSubscriptionRepresentation,
     ReducedWorkflowInstanceResponse,
+    ReducedWorkflowState,
+    TaskState,
     UserRepresentation,
     WorkflowInstanceRepresentation,
     WorkflowInstanceTaskAdminRepresentation,
     WorkflowInstanceWithoutTasksRepresentation,
     WorkflowStateResponse,
-    TaskState,
 )
 
 
-def bff_get_workflows_with_usertasks(
+def _usertask_visibility_conditions(
     db: Session,
-    bff_table_request_params: BffTableQuerySchemaBase,
-    user_id: uuid.UUID,
+    user: WorkflowUser,
     state: Literal["ready", "completed"],
-):
-    user: WorkflowUser = db.execute(
-        select(WorkflowUser).where(WorkflowUser.id == user_id),
-    ).scalar_one()
+) -> list:
+    """WHERE conditions on ``WorkflowInstanceTask`` deciding which tasks (and via
+    them which instances) *user* may see in the given state.
 
+    Single source of truth for the task-list visibility: the single-instance
+    lookup reuses exactly these conditions, so a deep link can never reveal more
+    than the list would.
+    """
+    user_id = user.id
     role_names = set([r.role.name for r in user.roles])
     now = dt_now_naive()
     delegate_principals_subquery = (
@@ -101,6 +103,57 @@ def bff_get_workflows_with_usertasks(
                 WorkflowInstanceTask.completed_by_delegate_user_id == user_id,
             ),
         )
+
+    return sq_where
+
+
+def get_visible_workflow_instance(
+    db: Session,
+    user_id: uuid.UUID,
+    workflow_instance_id: uuid.UUID,
+) -> WorkflowInstance | None:
+    """The single instance, iff the user may see it — as task participant (ready
+    or completed scope of the task list) or as its initiator. ``None`` otherwise,
+    identical for "does not exist": the caller must not become an existence
+    oracle for foreign instance ids.
+    """
+    user: WorkflowUser = db.execute(
+        select(WorkflowUser).where(WorkflowUser.id == user_id),
+    ).scalar_one()
+
+    def _participates(state: Literal["ready", "completed"]):
+        return (
+            select(WorkflowInstanceTask.id)
+            .where(
+                WorkflowInstanceTask.workflow_instance_id == WorkflowInstance.id,
+                and_(*_usertask_visibility_conditions(db, user, state)),
+            )
+            .exists()
+        )
+
+    return db.execute(
+        select(WorkflowInstance).where(
+            WorkflowInstance.id == workflow_instance_id,
+            or_(
+                WorkflowInstance.created_by_id == user_id,
+                _participates("ready"),
+                _participates("completed"),
+            ),
+        ),
+    ).scalar_one_or_none()
+
+
+def bff_get_workflows_with_usertasks(
+    db: Session,
+    bff_table_request_params: BffTableQuerySchemaBase,
+    user_id: uuid.UUID,
+    state: Literal["ready", "completed"],
+):
+    user: WorkflowUser = db.execute(
+        select(WorkflowUser).where(WorkflowUser.id == user_id),
+    ).scalar_one()
+
+    sq_where = _usertask_visibility_conditions(db, user, state)
 
     q1 = (
         select(WorkflowInstanceTask.id.label("task_id"))
@@ -159,12 +212,13 @@ def bff_get_workflows_with_usertasks(
         .where(WorkflowInstance.id.in_(sq))
     )
 
-    bff_table = BFFTable(
+    bff_table = CursorBFFTable(
         db=db,
         request_params=bff_table_request_params,
         query=q,
         field_to_dbfield_map=dict(),
-        default_order_by=WorkflowInstance.created_at.desc(),
+        cursor_sort=WorkflowInstance.created_at,
+        cursor_id=WorkflowInstance.id,
     )
 
     paginated_data = bff_table.get_paginated_data()
@@ -178,9 +232,9 @@ def bff_get_workflows_with_usertasks(
 
         db.expunge(row)
 
-    res_representation = PaginatedDataSchema(
+    res_representation = CursorPaginatedDataSchema(
         ITEMS=[WorkflowInstanceRepresentation.model_validate(x) for x in paginated_data.items],
-        COUNT=paginated_data.count,
+        NEXT_CURSOR=paginated_data.next_cursor,
     )
 
     return res_representation

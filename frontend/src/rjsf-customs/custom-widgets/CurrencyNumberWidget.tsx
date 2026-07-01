@@ -13,11 +13,7 @@
 import { WidgetProps } from '@rjsf/utils';
 import { ChangeEvent, FocusEvent, ReactElement, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n';
-
-const formatForDisplay = (value: unknown, formatter: Intl.NumberFormat): string => {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '';
-  return formatter.format(value);
-};
+import { formatForDisplay } from '@/utils/format/formatNumber';
 
 // Detect the locale's decimal separator. Falls back to "." if Intl gives us
 // something exotic we don't understand.

@@ -29,7 +29,7 @@ def test_builtin_provider_exposes_default_workflows():
 
 def test_get_workflow_module_path_for_builtin_workflow():
     module_path = workflow_providers.get_workflow_module_path("TestFlowBasicStart")
-    assert module_path == "actidoo_wfe.wf.processes.TestFlowBasicStart"
+    assert module_path == "actidoo_wfe.wf.testdata.processes.TestFlowBasicStart"
 
 
 @dataclass

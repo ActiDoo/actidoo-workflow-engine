@@ -3,9 +3,12 @@
 
 import importlib
 import logging
+import re
 from importlib import metadata
 from types import ModuleType
 from typing import Any, Iterable, List
+
+import venusian
 
 log = logging.getLogger(__name__)
 
@@ -68,3 +71,22 @@ def discover_venusian_scan_targets(default_modules: Iterable[ModuleType]) -> Lis
             targets.append(module)
 
     return targets
+
+
+def run_venusian_scan(default_modules: Iterable[ModuleType] | None = None) -> None:
+    """Import and fire every Venusian decorator registration.
+
+    Scans ``actidoo_wfe`` (plus any entry-point-advertised modules) so decorator
+    side effects — workflow / data-model / cron / login-hook registrations —
+    populate the in-memory registries. ``test_*`` modules are skipped. Used at app
+    startup and by CLI commands that need the registries populated without a running
+    server (e.g. creating bundled data-model tables after a DB reset).
+    """
+    if default_modules is None:
+        import actidoo_wfe as pyapp
+
+        default_modules = [pyapp]
+
+    scanner = venusian.Scanner()
+    for target in discover_venusian_scan_targets(default_modules=default_modules):
+        scanner.scan(target, ignore=[re.compile("test_").search])

@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 
 import actidoo_wfe.helpers.bff_table as bff_table
 import actidoo_wfe.wf.service_application as service_application
-from actidoo_wfe import i18n as global_i18n
 import actidoo_wfe.wf.service_form_templates as service_form_templates
 import actidoo_wfe.wf.service_user as service_user
+from actidoo_wfe import i18n as global_i18n
 from actidoo_wfe.database import get_db
 from actidoo_wfe.helpers.http import HTTPException, streaming_response_with_filecontent
 from actidoo_wfe.wf.bff.bff_user_schema import (
@@ -27,15 +27,17 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     DownloadAttachmentRequest,
     FormTemplateListItem,
     GetMyWfeUserResponse,
+    GetPinnedWorkflowsResponse,
     GetUserTasksResponse,
     GetUserTasksResponseUserTasks,
+    GetWorkflowCopyDataResponse,
     GetWorkflowInstancesResponse,
+    GetWorkflowInstancesWithTasksResponse,
     GetWorkflowsResponse,
     GetWorkflowsResponseItem,
     GetWorkflowStatisticsResponse,
     GetWorkflowStatisticsResponseItem,
     InlineUserResponse,
-    GetWorkflowCopyDataResponse,
     ListFormTemplatesRequest,
     ListFormTemplatesResponse,
     LocaleItem,
@@ -57,6 +59,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     StartWorkflowWithDataResponse,
     SkippedFieldItem,
     SubmitTaskDataErrorResponse,
+    TogglePinnedWorkflowRequest,
     UserDelegationResponse,
     UserSettingsResponse,
     WorkflowSpecResponse,
@@ -217,6 +220,11 @@ def get_my_usertasks(
 
     return GetUserTasksResponse(
         usertasks=[GetUserTasksResponseUserTasks.model_validate(t) for t in tasks],
+        workflow_instance=service_application.get_visible_workflow_instance(
+            db=db,
+            user_id=user.id,
+            workflow_instance_id=workflow_instance_id,
+        ),
     )
 
 
@@ -247,6 +255,13 @@ def submit_task_data(
 
         return GetUserTasksResponse(
             usertasks=[GetUserTasksResponseUserTasks.model_validate(t) for t in tasks],
+            # Same shape as get_my_usertasks: the task page must not lose the
+            # instance title when this response replaces its store data.
+            workflow_instance=service_application.get_visible_workflow_instance(
+                db=db,
+                user_id=user.id,
+                workflow_instance_id=workflow_instance_id,
+            ),
         )
     except ValidationResultContainsErrors as ex:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -376,18 +391,29 @@ def delete_form_template(
     return DeleteFormTemplateResponse()
 
 
+_WORKFLOW_INSTANCE_FILTER_FIELDS = [
+    bff_table.UUidSearchFilterField(name="id"),
+    bff_table.TextSearchFilterField(name="name"),
+    bff_table.TextSearchFilterField(name="title"),
+    bff_table.TextSearchFilterField(name="subtitle"),
+    bff_table.DatetimeSearchFilterField(name="created_at"),
+    bff_table.DatetimeSearchFilterField(name="completed_at"),
+    bff_table.BooleanFilterField(name="is_completed"),
+]
+
 WorkflowInstancesBffTableQuerySchema = bff_table.get_bff_table_query_schema(
     schema_name="WorkflowInstancesBffTableQuerySchema",
     sorting_fields=["id", "name", "title", "subtitle", "created_at", "completed_at"],
-    filter_fields=[
-        bff_table.UUidSearchFilterField(name="id"),
-        bff_table.TextSearchFilterField(name="name"),
-        bff_table.TextSearchFilterField(name="title"),
-        bff_table.TextSearchFilterField(name="subtitle"),
-        bff_table.DatetimeSearchFilterField(name="created_at"),
-        bff_table.DatetimeSearchFilterField(name="completed_at"),
-        bff_table.BooleanFilterField(name="is_completed"),
-    ],
+    filter_fields=_WORKFLOW_INSTANCE_FILTER_FIELDS,
+    add_global_search_filter=True,
+)
+
+# The cursor route advertises only what it honors: limit + cursor + search.
+# The filter fields feed the global-search clause; per-field filters and column
+# sorting stay exclusive to the offset-paginated route above.
+WorkflowInstancesCursorQuerySchema = bff_table.get_cursor_bff_table_query_schema(
+    schema_name="WorkflowInstancesCursorQuerySchema",
+    filter_fields=_WORKFLOW_INSTANCE_FILTER_FIELDS,
     add_global_search_filter=True,
 )
 
@@ -426,13 +452,13 @@ def get_workflow_instances_with_tasks(
     user: Annotated[WorkflowUser, Depends(get_user)],
     bff_table_request_params: Annotated[
         bff_table.BffTableQuerySchemaBase,
-        Depends(WorkflowInstancesBffTableQuerySchema),
+        Depends(WorkflowInstancesCursorQuerySchema),
     ],  # type: ignore
     state: Annotated[Literal["ready", "completed"], Path()],
-) -> GetWorkflowInstancesResponse:
-    ppp = WorkflowInstancesBffTableQuerySchema.parse_obj(bff_table_request_params)
+) -> GetWorkflowInstancesWithTasksResponse:
+    ppp = WorkflowInstancesCursorQuerySchema.parse_obj(bff_table_request_params)
 
-    workflows: GetWorkflowInstancesResponse = GetWorkflowInstancesResponse.model_validate(
+    workflows: GetWorkflowInstancesWithTasksResponse = GetWorkflowInstancesWithTasksResponse.model_validate(
         service_application.bff_get_workflows_with_usertasks(
             db=db,
             bff_table_request_params=ppp,
@@ -451,6 +477,27 @@ def get_workflows(db: Annotated[Session, Depends(get_db)], user: Annotated[Workf
 
     return GetWorkflowsResponse(
         workflows=[GetWorkflowsResponseItem(name=x.name, title=x.title) for x in workflows],
+    )
+
+
+@router.get("/pinned_workflows", name="get_pinned_workflows")
+def get_pinned_workflows(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> GetPinnedWorkflowsResponse:
+    return GetPinnedWorkflowsResponse(
+        pinned_workflow_names=service_user.get_pinned_workflow_names(db=db, user_id=user.id),
+    )
+
+
+@router.post("/toggle_pinned_workflow", name="toggle_pinned_workflow")
+def toggle_pinned_workflow(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    reqdata: TogglePinnedWorkflowRequest,
+) -> GetPinnedWorkflowsResponse:
+    return GetPinnedWorkflowsResponse(
+        pinned_workflow_names=service_user.toggle_pinned_workflow(db=db, user_id=user.id, name=reqdata.name),
     )
 
 

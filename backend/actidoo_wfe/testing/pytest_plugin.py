@@ -3,8 +3,6 @@
 
 import contextlib
 import logging
-import pathlib
-import tempfile
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import Any, TypeAlias
@@ -26,6 +24,14 @@ def setup_test_db() -> None:
     """Import demo data and schema into a clean test database."""
     teardown_test_db()
     run_migrations(settings)
+
+    # Dev/test only: create tables for bundled demo data models (wf/testdata),
+    # which have no Alembic migration. Mirrors the app lifespan; no-op in prod.
+    if settings.show_test_workflows:
+        from actidoo_wfe.database import SessionMaker
+        from actidoo_wfe.wf.registry_data_model import create_registered_data_model_tables
+
+        create_registered_data_model_tables(SessionMaker.kw["bind"])
 
 
 def teardown_test_db() -> None:

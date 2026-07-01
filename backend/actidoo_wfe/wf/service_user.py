@@ -13,7 +13,7 @@ from actidoo_wfe.database import eilike, search_uuid_by_prefix
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import repository
-from actidoo_wfe.wf.models import WorkflowRole, WorkflowUser, WorkflowUserDelegate, WorkflowUserRole
+from actidoo_wfe.wf.models import WorkflowRole, WorkflowUser, WorkflowUserDelegate, WorkflowUserPinnedWorkflow, WorkflowUserRole
 from actidoo_wfe.wf.types import UserRepresentation
 
 log = logging.getLogger(__name__)
@@ -325,3 +325,38 @@ def get_user_settings(
     return db.execute(
         select(WorkflowUser).where(WorkflowUser.id == user_id),
     ).scalar_one()
+
+
+def get_pinned_workflow_names(
+    db: Session,
+    user_id: uuid.UUID,
+) -> list[str]:
+    return list(
+        db.execute(
+            select(WorkflowUserPinnedWorkflow.workflow_name)
+            .where(WorkflowUserPinnedWorkflow.user_id == user_id)
+            .order_by(WorkflowUserPinnedWorkflow.workflow_name),
+        ).scalars(),
+    )
+
+
+def toggle_pinned_workflow(
+    db: Session,
+    user_id: uuid.UUID,
+    name: str,
+) -> list[str]:
+    existing = db.execute(
+        select(WorkflowUserPinnedWorkflow).where(
+            WorkflowUserPinnedWorkflow.user_id == user_id,
+            WorkflowUserPinnedWorkflow.workflow_name == name,
+        ),
+    ).scalar_one_or_none()
+
+    if existing is not None:
+        db.delete(existing)
+    else:
+        db.add(WorkflowUserPinnedWorkflow(user_id=user_id, workflow_name=name))
+
+    db.flush()
+
+    return get_pinned_workflow_names(db=db, user_id=user_id)

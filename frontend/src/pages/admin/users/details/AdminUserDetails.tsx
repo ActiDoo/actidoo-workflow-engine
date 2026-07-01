@@ -8,12 +8,14 @@ import {
   ButtonDesign,
   DateTimePicker,
   Label,
+  MessageStrip,
+  MessageStripDesign,
   Text,
 } from '@ui5/webcomponents-react';
 import moment from 'moment';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useBlocker } from 'react-router-dom';
-import { PcPage } from '@/ui5-components';
+import { PcDynamicPage } from '@/ui5-components';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest } from '@/store/generic-data/actions';
 import { State } from '@/store';
@@ -102,7 +104,6 @@ const AdminUserDetails: React.FC = () => {
   const [initialDelegations, setInitialDelegations] = useState<UserDelegation[]>([]);
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
-  const [showDelegateAddedNotice, setShowDelegateAddedNotice] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const targetUserId = userDetail?.user?.id ?? userId;
@@ -123,7 +124,6 @@ const AdminUserDetails: React.FC = () => {
     const mapped = mapDelegationsFromResponse(detail.delegations);
     setDelegations(mapped);
     setInitialDelegations(mapped);
-    setShowDelegateAddedNotice(false);
   };
 
   useEffect(() => {
@@ -167,7 +167,6 @@ const AdminUserDetails: React.FC = () => {
 
   const handleRemoveDelegation = (delegateId: string) => {
     setDelegations(prev => prev.filter(entry => entry.delegate_user_id !== delegateId));
-    setShowDelegateAddedNotice(false);
   };
 
   const handleAddDelegation = () => {
@@ -188,7 +187,6 @@ const AdminUserDetails: React.FC = () => {
     ]);
     setPendingDelegate({});
     setPendingValidUntil('');
-    setShowDelegateAddedNotice(true);
   };
 
   const handleSaveDelegations = () => {
@@ -215,7 +213,12 @@ const AdminUserDetails: React.FC = () => {
     return (
       <WeAlertDialog
         isDialogOpen={dialogOpen}
-        setDialogOpen={setDialogOpen}
+        // Dismissal (ESC/X) must act like "stay": without reset the blocker stays
+        // 'blocked' and silently swallows every further navigation attempt.
+        setDialogOpen={open => {
+          if (!open) blocker.reset?.();
+          setDialogOpen(open);
+        }}
         title={t('common.unsavedChanges.title')}
         buttons={
           <>
@@ -355,9 +358,11 @@ const AdminUserDetails: React.FC = () => {
             ))
           )}
 
-          {showDelegateAddedNotice && (
-            <Text className="text-xs text-amber-700">{t('common.delegations.addedNotice')}</Text>
-          )}
+          {isDirty ? (
+            <MessageStrip design={MessageStripDesign.Warning} hideCloseButton className="block">
+              {t('common.unsavedChanges.hint')}
+            </MessageStrip>
+          ) : null}
         </div>
 
         <div className="border-t border-neutral-200 pt-4 space-y-3">
@@ -413,8 +418,10 @@ const AdminUserDetails: React.FC = () => {
   const isLoading = loadingDetail && !userDetail;
 
   return (
-    <PcPage
-      header={{ title: t('adminUserDetails.pageTitle', { name: pageTitle }), showBack: true }}>
+    <PcDynamicPage
+      header={{ title: t('adminUserDetails.pageTitle', { name: pageTitle }), showBack: true }}
+      showHideHeaderButton={false}
+      headerContentPinnable={false}>
       {isLoading ? (
         <div className="flex justify-center py-12">
           <BusyIndicator active size="Large" />
@@ -431,7 +438,7 @@ const AdminUserDetails: React.FC = () => {
         </div>
       )}
       {renderUnsavedChangesDialog()}
-    </PcPage>
+    </PcDynamicPage>
   );
 };
 

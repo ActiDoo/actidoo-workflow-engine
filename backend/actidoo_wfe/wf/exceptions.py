@@ -114,6 +114,15 @@ class DataModelNotFoundError(KeyError):
     """Raised when a data model name is not in the registry."""
 
 
+class DataModelRowNotFoundError(Exception):
+    """Raised when a row, version, action or row attachment does not exist (or is
+    invisible to the user — deliberately indistinguishable, mapped to 404)."""
+
+
+class DataModelForbiddenError(Exception):
+    """Raised when the user may not read a data model or run an action on a row (403)."""
+
+
 class DataModelAccessDeniedError(Exception):
     """Raised when a workflow accesses a data model it did not declare."""
 

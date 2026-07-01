@@ -85,7 +85,7 @@ export const PcInputColumn = (
       return link ? (
         <Link
           to={`${link.pre ? link.pre : ''}${finalLink(instance)?.join('/')}`}
-          className="text-pc-blue-primary ">
+          className="text-brand-primary underline">
           {val}
         </Link>
       ) : (

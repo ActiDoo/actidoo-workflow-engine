@@ -10,6 +10,7 @@ interface ImportMetaEnv {
   readonly VITE_TABLE_COUNT: number;
   readonly VITE_BUILD_NUMBER: string;
   readonly VITE_ENVIRONMENT_LABEL?: string;
+  readonly VITE_APP_TITLE?: string;
 }
 
 interface ImportMeta {

@@ -6,5 +6,6 @@ window.__ACTIDOO_RUNTIME_CONFIG__ = {
   FRONTEND_BASE_URL: '',
   API_BASE_URL: '',
   ENVIRONMENT_LABEL: '',
+  APP_TITLE: '',
 };
 window.dispatchEvent(new Event('actidoo:runtime-config-ready'));

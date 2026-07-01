@@ -3,20 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = { find = { include = ["actidoo_wfe", "actidoo_wfe.*"] } }
+# wf/testdata holds dev/test-only workflows + demo data models; exclude it from
+# the production wheel (it stays importable in editable/dev installs from source).
+packages = { find = { include = ["actidoo_wfe", "actidoo_wfe.*"], exclude = ["actidoo_wfe.wf.testdata", "actidoo_wfe.wf.testdata.*"] } }
 include-package-data = true
 
 [tool.setuptools.package-data]
 actidoo_wfe = [
     "wf/templates/mails/*.mako",
-    "wf/processes/**/*.bpmn",
-    "wf/processes/**/*.form",
-    "wf/processes/**/*.json",
-    "wf/processes/**/*.csv",
-    "wf/processes/**/*.po",
-    "wf/processes/**/*.mo",
-    "wf/processes/**/*.png",
-    "wf/processes/**/*.pot",
     "alembic/script.py.mako",
 ]
 

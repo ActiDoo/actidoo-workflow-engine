@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_demo_create" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_demo_create">
+    <bpmn:participant id="Participant_demo_create" name="Demo Expense Create" processRef="TestFlowDemoExpenseCreate" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlowDemoExpenseCreate" name="Demo Expense Create" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_demo_create">
+      <bpmn:lane id="EditorLane" name="Editor">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="demo-editor" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_create</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EnterExpense</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>PersistCreate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_create</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_create">
+      <bpmn:outgoing>Flow_start_enter</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="EnterExpense" name="Enter Expense">
+      <bpmn:incoming>Flow_start_enter</bpmn:incoming>
+      <bpmn:outgoing>Flow_enter_persist</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="PersistCreate" name="Persist record">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="demo_persist_create" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_enter_persist</bpmn:incoming>
+      <bpmn:outgoing>Flow_persist_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_create">
+      <bpmn:incoming>Flow_persist_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_enter" sourceRef="StartEvent_create" targetRef="EnterExpense" />
+    <bpmn:sequenceFlow id="Flow_enter_persist" sourceRef="EnterExpense" targetRef="PersistCreate" />
+    <bpmn:sequenceFlow id="Flow_persist_end" sourceRef="PersistCreate" targetRef="EndEvent_create" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_demo_create">
+      <bpmndi:BPMNShape id="Participant_demo_create_di" bpmnElement="Participant_demo_create" isHorizontal="true">
+        <dc:Bounds x="129" y="79" width="681" height="251" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EditorLane_di" bpmnElement="EditorLane" isHorizontal="true">
+        <dc:Bounds x="159" y="79" width="651" height="251" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_create_di" bpmnElement="StartEvent_create">
+        <dc:Bounds x="212" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EnterExpense_di" bpmnElement="EnterExpense">
+        <dc:Bounds x="300" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PersistCreate_di" bpmnElement="PersistCreate">
+        <dc:Bounds x="460" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_create_di" bpmnElement="EndEvent_create">
+        <dc:Bounds x="622" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_enter_di" bpmnElement="Flow_start_enter">
+        <di:waypoint x="248" y="190" />
+        <di:waypoint x="300" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_enter_persist_di" bpmnElement="Flow_enter_persist">
+        <di:waypoint x="400" y="190" />
+        <di:waypoint x="460" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_persist_end_di" bpmnElement="Flow_persist_end">
+        <di:waypoint x="560" y="190" />
+        <di:waypoint x="622" y="190" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

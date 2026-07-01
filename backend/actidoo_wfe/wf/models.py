@@ -7,8 +7,8 @@ from typing import Any, List, Literal
 
 import sqlalchemy.dialects.mysql as myty
 import sqlalchemy.types as ty
-from sqlalchemy import CheckConstraint, Computed, ForeignKey, Index, UniqueConstraint, and_, null, or_, select, true
-from sqlalchemy.orm import Mapped, column_property, declared_attr, deferred, mapped_column, relationship, validates
+from sqlalchemy import CheckConstraint, Computed, ForeignKey, Index, UniqueConstraint, and_, event, func, null, or_, select, true
+from sqlalchemy.orm import Mapped, Session, column_property, declared_attr, deferred, mapped_column, relationship, validates
 from sqlalchemy_file import File, FileField
 
 from actidoo_wfe.database import Base, FlexibleUuid, JSONBlob, UTCDateTime, ZlibJSONBlob
@@ -68,7 +68,7 @@ class WorkflowUser(Base):
         if value is None:
             return None
 
-        keys = {l["key"] for l in get_supported_locales()}
+        keys = {loc["key"] for loc in get_supported_locales()}
 
         if value not in keys:
             raise ValueError(f"Unsupported locale: {value}")
@@ -93,6 +93,7 @@ class WorkflowUser(Base):
         foreign_keys="WorkflowUserDelegate.delegate_user_id",
     )
     claims: Mapped[List["WorkflowUserClaim"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    pinned_workflows: Mapped[List["WorkflowUserPinnedWorkflow"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         UTCDateTime(),
@@ -118,6 +119,18 @@ class WorkflowUserClaim(Base):
     fetched_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
     user: Mapped[WorkflowUser] = relationship(back_populates="claims")
+
+
+class WorkflowUserPinnedWorkflow(Base):
+    __tablename__ = "workflow_user_pinned_workflows"
+    __table_args__ = (UniqueConstraint("user_id", "workflow_name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workflow_users.id", ondelete="CASCADE"), index=True, nullable=False)
+    workflow_name: Mapped[str] = mapped_column(ty.String(255), nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(UTCDateTime(), default=dt_now_naive, nullable=False)
+
+    user: Mapped[WorkflowUser] = relationship(back_populates="pinned_workflows")
 
 
 class WorkflowRole(Base):
@@ -545,6 +558,61 @@ class WorkflowInstanceTaskAttachment(Base):
     )
 
 
+class DataModelFile(Base):
+    """A file referenced by a data-model row version through a ``file`` field.
+
+    The sole storage of data-model file references (there is no JSON column) and
+    the single source ``repository.delete_dangling_attachment`` counts as the
+    third reference table. Mirrors ``WorkflowInstanceTaskAttachment``: a link row
+    to a hash-deduped ``WorkflowAttachment`` carrying the per-reference display
+    filename, so a download names the file in *this* row's context. The row side
+    is a logical key ``(model_name, row_id, row_version)`` — data-model rows live
+    in dynamic ``ext_`` tables with no shared parent to FK against.
+    """
+
+    __tablename__ = "data_model_files"
+
+    id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
+    model_name: Mapped[str] = mapped_column(ty.String(255), nullable=False)
+    row_id: Mapped[uuid.UUID] = mapped_column(FlexibleUuid, nullable=False)
+    # 0 for non-versioned models (single row per id); the row's version otherwise.
+    row_version: Mapped[int] = mapped_column(ty.Integer, nullable=False, default=0)
+    field_name: Mapped[str] = mapped_column(ty.String(255), nullable=False)
+    workflow_attachment_id: Mapped[uuid.UUID] = mapped_column(
+        # Explicit FK name so create_all (fresh/test DBs) and the migration
+        # (prod upgrades) agree; the convention-derived name would also differ
+        # per path.
+        ForeignKey("workflow_attachments.id", ondelete="CASCADE", name="fk_dmf_attachment"),
+        nullable=False,
+        index=True,
+    )
+    filename: Mapped[str] = mapped_column(ty.String(255), nullable=False)
+    mimetype: Mapped[str | None] = mapped_column(ty.String(255), nullable=True)
+    # Ordering for multi-file fields, stable within (row version, field).
+    position: Mapped[int] = mapped_column(ty.Integer, nullable=False, default=0)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        UTCDateTime(),
+        default=dt_now_naive,
+        nullable=False,
+    )
+    attachment: Mapped[WorkflowAttachment] = relationship()
+
+    __table_args__ = (
+        # Read path: fetch all files for a page of (model, row, version) in one query.
+        Index("ix_dmf_lookup", "model_name", "row_id", "row_version"),
+        # Idempotent-upsert key (mirrors store_attachment_for_task's select-by-key).
+        # Short explicit name: the convention-expanded name exceeds MySQL's 64-char limit.
+        UniqueConstraint(
+            "model_name",
+            "row_id",
+            "row_version",
+            "field_name",
+            "workflow_attachment_id",
+            name="uq_dmf_ref",
+        ),
+    )
+
+
 class WorkflowMessage(Base):
     __tablename__ = "workflow_messages"
     id: Mapped[uuid.UUID] = mapped_column(ty.Uuid, primary_key=True, default=uuid.uuid4)
@@ -656,7 +724,7 @@ class WorkflowTimeEvent(Base):
     )
 
 
-#### Extension model base + WorkflowManagedMixin (for data models) ####
+#### Extension model base + data-model mixins (DataModelMixin / VersionedMixin) ####
 
 
 def extension_model_base(namespace: str) -> type:
@@ -688,39 +756,140 @@ def extension_model_base(namespace: str) -> type:
     return _ExtBase
 
 
+# System columns hidden from the default (inferred) field projection — pure
+# plumbing, not display fields. The stable ``id`` and the record ``title`` stay
+# out of this set so they are projectable and searchable; ``serialize_row``
+# always carries them (and ``version``) for the client.
 _MIXIN_SYSTEM_COLUMNS = frozenset(
     {
-        "parent_workflow_instance_id",
-        "child_workflow_instance_id",
+        "version",
+        "is_current",
+        "workflow_instance_id",
         "action",
+        "created_at",
     }
 )
 
 
-class WorkflowManagedMixin:
-    """Mixin for data managed exclusively by workflows.
+class DataModelMixin:
+    """Base mixin: a stable surrogate ``id`` for any registry-tracked model.
 
-    Each modification creates a new row linked to the previous one,
-    forming a version chain via parent/child workflow instance IDs.
+    The model's own identity, independent of any workflow — the sole primary key
+    for a plain (non-versioned, non-displayed) model such as a config / lookup
+    table. Carries no ``title``: a human-readable record name is part of the
+    workflow-managed contract (``WorkflowManagedMixin``), not every model.
     """
 
-    workflow_instance_id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
         FlexibleUuid,
         primary_key=True,
+        default=uuid.uuid4,
+        sort_order=-100,  # keep id first; composite-PK order across mixins needs explicit sort_order
     )
-    parent_workflow_instance_id: Mapped[uuid.UUID | None] = mapped_column(
-        FlexibleUuid,
-        nullable=True,
+
+
+class VersionedMixin(DataModelMixin):
+    """Opt-in versioning on top of ``DataModelMixin``.
+
+    Each modification appends a new row that shares the record's stable ``id`` and
+    bumps ``version`` (counted per ``id``); the current row carries ``is_current``.
+    The primary key is the composite ``(id, version)``. Pure versioning mechanism —
+    workflow provenance and the display title live in ``WorkflowManagedMixin``.
+    """
+
+    version: Mapped[int] = mapped_column(
+        ty.Integer,
+        primary_key=True,
+        default=1,
+        sort_order=-99,
     )
-    child_workflow_instance_id: Mapped[uuid.UUID | None] = mapped_column(
-        FlexibleUuid,
-        nullable=True,
-    )
-    action: Mapped[str | None] = mapped_column(
-        ty.String(100),
-        nullable=True,
+    is_current: Mapped[bool] = mapped_column(
+        ty.Boolean,
+        nullable=False,
+        default=True,
+        index=True,
+        sort_order=-98,
     )
     created_at: Mapped[datetime.datetime | None] = mapped_column(
         ty.DateTime,
         nullable=True,
+        default=dt_now_naive,
+        sort_order=-95,
     )
+
+    @classmethod
+    def get_current_by_id(cls, db: Session, record_id: uuid.UUID | str):
+        """Return the current (head) version for ``record_id``, or ``None`` if absent.
+
+        Selects the row carrying ``is_current`` — the head of the version chain for the
+        stable id. ``record_id`` may be a ``uuid.UUID`` or its string form (e.g. a
+        ``source_id`` seed carried through the engine as task data).
+        """
+        if isinstance(record_id, str):
+            record_id = uuid.UUID(record_id)
+        return db.scalars(select(cls).where(cls.id == record_id, cls.is_current.is_(True))).one_or_none()
+
+
+class WorkflowManagedMixin(VersionedMixin):
+    """Versioned data produced by a workflow and exposed via the BFF data API.
+
+    The precondition for ``register_data_model(api=...)``: such a record carries
+    its workflow provenance (``workflow_instance_id``, mandatory — which workflow
+    instance produced this version), an optional ``action`` label, and a reserved,
+    human-readable ``title`` the API projects and the global search uses. A model
+    declaring its own ``title`` column would silently shadow the reserved one, so
+    registration rejects that (the registry gate keys on the ``info`` marker).
+    """
+
+    # Provenance: which workflow instance produced THIS version (not the identity).
+    workflow_instance_id: Mapped[uuid.UUID] = mapped_column(
+        FlexibleUuid,
+        nullable=False,
+        sort_order=-97,
+    )
+    action: Mapped[str | None] = mapped_column(
+        ty.String(100),
+        nullable=True,
+        sort_order=-96,
+    )
+    title: Mapped[str | None] = mapped_column(
+        ty.String(200),
+        nullable=True,
+        sort_order=-94,  # behind the versioning columns; PK order (id, version) stays untouched
+        info={"wfe_reserved_title": True},
+    )
+
+
+@event.listens_for(Session, "before_flush")
+def _assign_versions(session: Session, flush_context, instances) -> None:
+    """Maintain ``version``/``is_current`` for newly added versioned rows.
+
+    A service task writes plain ORM — ``db.add(Model(**fields))`` for a new record
+    (a fresh ``id`` is defaulted) or ``db.add(Model(id=record_id, **fields))`` to
+    append a version. This hook then assigns ``version`` (1, or ``max+1`` for an
+    existing id) and ``is_current=True``, demoting the previous head. It only acts
+    when ``version`` is left unset, so tests that seed explicit version rows are
+    untouched. ``created_at`` comes from a column default; provenance
+    (``workflow_instance_id``) and ``action`` stay caller-set. ``id`` is
+    front-loaded here when unset (instead of relying on the column default firing
+    at INSERT) so a later before_flush listener — the data-model file
+    materializer — sees the final ``(id, version)`` for this row.
+    """
+    for obj in list(session.new):
+        if not isinstance(obj, VersionedMixin) or obj.version is not None:
+            continue
+        # Front-load the id so it is final for downstream before_flush listeners.
+        # A fresh uuid matches no existing row, so version assignment is unchanged.
+        if obj.id is None:
+            obj.id = uuid.uuid4()
+        model_class = type(obj)
+        with session.no_autoflush:
+            existing_max = session.scalar(select(func.max(model_class.version)).where(model_class.id == obj.id))
+            if existing_max is not None:
+                current_head = session.scalar(
+                    select(model_class).where(model_class.id == obj.id, model_class.is_current.is_(True))
+                )
+                if current_head is not None and current_head is not obj:
+                    current_head.is_current = False
+        obj.version = existing_max + 1 if existing_max is not None else 1
+        obj.is_current = True

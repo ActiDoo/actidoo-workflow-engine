@@ -2,7 +2,6 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 import pytest
-from jsonschema.exceptions import ValidationError
 
 from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.wf.exceptions import ValidationResultContainsErrors

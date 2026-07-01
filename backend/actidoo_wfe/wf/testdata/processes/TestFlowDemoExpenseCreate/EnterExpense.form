@@ -1,0 +1,47 @@
+{
+  "components": [
+    {
+      "label": "Title",
+      "type": "textfield",
+      "layout": {"row": "Row_1", "columns": null},
+      "id": "Field_title",
+      "key": "title"
+    },
+    {
+      "label": "Amount",
+      "type": "number",
+      "layout": {"row": "Row_2", "columns": null},
+      "id": "Field_amount",
+      "key": "amount"
+    },
+    {
+      "label": "Category",
+      "type": "textfield",
+      "layout": {"row": "Row_3", "columns": null},
+      "id": "Field_category",
+      "key": "category"
+    },
+    {
+      "label": "Description",
+      "type": "textarea",
+      "layout": {"row": "Row_4", "columns": null},
+      "id": "Field_description",
+      "key": "description"
+    },
+    {
+      "label": "Receipt",
+      "type": "textfield",
+      "layout": {"row": "Row_5", "columns": null},
+      "id": "Field_receipt",
+      "key": "receipt",
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "DemoEnterExpense",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 16
+}

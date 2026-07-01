@@ -24,6 +24,7 @@ import FormTemplateActions from '@/pages/tasks/content/single-task/form-template
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { useTranslation } from '@/i18n';
+import { refreshWorkflowInstancesWithTasks } from '@/utils/hooks/useInfiniteWorkflowInstances';
 import { StringDict } from '@/ui5-components';
 
 import {
@@ -216,9 +217,11 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       t('taskContent.submitSuccess'),
       t('taskContent.submitError'),
       () => {
-        dispatch(
-          postRequest(WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS, {}, { state: WorkflowState.READY })
-        );
+        dispatch(refreshWorkflowInstancesWithTasks(WorkflowState.READY));
+        // A task submit may have created/removed data-model rows (workflow-managed
+        // models), which flips the "Daten" nav entry on/off — that catalog is
+        // otherwise fetched only once on shell mount, so refresh it here.
+        dispatch(getRequest(WeDataKey.WORKFLOW_DATA_MODELS));
         navigate('/tasks/open');
 
         // Delete the draft for the task that was actually submitted (prevents deleting the wrong one on fast navigation)
@@ -431,13 +434,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               loadTasks();
             }}
             backToList={() => {
-              dispatch(
-                postRequest(
-                  WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS,
-                  {},
-                  { state: WorkflowState.READY }
-                )
-              );
+              dispatch(refreshWorkflowInstancesWithTasks(WorkflowState.READY));
               navigate('/tasks/open');
             }}
           />

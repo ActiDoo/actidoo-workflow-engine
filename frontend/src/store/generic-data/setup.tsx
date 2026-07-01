@@ -10,6 +10,7 @@ import {
   FetchMethods,
   GenericDataAction,
   GenericDataEntry,
+  CursorItemsResponse,
   ItemsAndCountResponse,
   StringDict,
 } from '@/ui5-components';
@@ -24,6 +25,7 @@ import {
   GetWorkflowResponse,
   GetWorkflowStatisticsResponse,
   MyInitiatedWorkflowInstance,
+  PinnedWorkflowsResponse,
   RefreshGetWorkflowSpec,
   ReplaceTaskDataRequestData,
   SearchWfUsersResponse,
@@ -41,6 +43,12 @@ import {
   FormTemplateSummary,
   ResolveTemplateResponse,
 } from '@/models/models';
+import {
+  DataModelSchema,
+  DataProcessRef,
+  DataRowsResponse,
+  DataVersionChainResponse,
+} from '@/models/dataViewer';
 
 // KEY DEFINITION
 export enum WeDataKey {
@@ -48,6 +56,8 @@ export enum WeDataKey {
   SUBMIT_TASK_DATA = 'submit-task-data',
   START_WORKFLOW = 'start-workflow',
   WORKFLOWS = 'workflows',
+  PINNED_WORKFLOWS = 'pinned-workflows',
+  TOGGLE_PINNED_WORKFLOW = 'toggle-pinned-workflow',
   WORKFLOW_INSTANCES_WITH_TASKS = 'workflow-instances-with-tasks',
   MY_OPEN_WORKFLOW_INSTANCES = 'my-open-workflow-instances',
   MY_COMPLETED_WORKFLOW_INSTANCES = 'my-completed-workflow-instances',
@@ -81,9 +91,14 @@ export enum WeDataKey {
   FORM_TEMPLATE_PREVIEW = 'form_template_preview',
   FORM_TEMPLATE_RESOLVE = 'form_template_resolve',
   FORM_TEMPLATE_DELETE = 'form_template_delete',
+  WORKFLOW_DATA_MODELS = 'workflow_data_models',
+  WORKFLOW_DATA_ROWS = 'workflow_data_rows',
+  WORKFLOW_DATA_PROCESSES = 'workflow_data_processes',
+  WORKFLOW_DATA_VERSION_CHAIN = 'workflow_data_version_chain',
+  START_WORKFLOW_FOR_DATA = 'start_workflow_for_existing_data_model',
 }
 
-interface WorkflowInstanceTable extends ItemsAndCountResponse<WorkflowInstance> {}
+interface WorkflowInstanceTable extends CursorItemsResponse<WorkflowInstance> {}
 
 interface MyInitiatedWorkflowInstanceTable
   extends ItemsAndCountResponse<MyInitiatedWorkflowInstance> {}
@@ -105,6 +120,8 @@ export interface WeDataState {
     | null;
   [WeDataKey.START_WORKFLOW]: GenericDataEntry<StartWorkflowResponse> | null;
   [WeDataKey.WORKFLOWS]: GenericDataEntry<GetWorkflowResponse> | null;
+  [WeDataKey.PINNED_WORKFLOWS]: GenericDataEntry<PinnedWorkflowsResponse> | null;
+  [WeDataKey.TOGGLE_PINNED_WORKFLOW]: GenericDataEntry<PinnedWorkflowsResponse> | null;
   [WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS]: GenericDataEntry<WorkflowInstanceTable> | null;
   [WeDataKey.MY_OPEN_WORKFLOW_INSTANCES]: GenericDataEntry<MyInitiatedWorkflowInstanceTable> | null;
   [WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES]: GenericDataEntry<MyInitiatedWorkflowInstanceTable> | null;
@@ -138,6 +155,11 @@ export interface WeDataState {
   [WeDataKey.FORM_TEMPLATE_PREVIEW]: GenericDataEntry<ResolveTemplateResponse> | null;
   [WeDataKey.FORM_TEMPLATE_RESOLVE]: GenericDataEntry<ResolveTemplateResponse> | null;
   [WeDataKey.FORM_TEMPLATE_DELETE]: GenericDataEntry<object> | null;
+  [WeDataKey.WORKFLOW_DATA_MODELS]: GenericDataEntry<DataModelSchema[]> | null;
+  [WeDataKey.WORKFLOW_DATA_ROWS]: GenericDataEntry<DataRowsResponse> | null;
+  [WeDataKey.WORKFLOW_DATA_PROCESSES]: GenericDataEntry<DataProcessRef[]> | null;
+  [WeDataKey.WORKFLOW_DATA_VERSION_CHAIN]: GenericDataEntry<DataVersionChainResponse> | null;
+  [WeDataKey.START_WORKFLOW_FOR_DATA]: GenericDataEntry<StartWorkflowResponse> | null;
 }
 
 // API DEFINITION
@@ -155,8 +177,14 @@ export const WeApiUrl = (
       return 'user/start_workflow';
     case WeDataKey.WORKFLOWS:
       return 'user/workflows';
+    case WeDataKey.PINNED_WORKFLOWS:
+      return 'user/pinned_workflows';
+    case WeDataKey.TOGGLE_PINNED_WORKFLOW:
+      return 'user/toggle_pinned_workflow';
     case WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS:
-      return `user/workflow_instances_with_tasks/${params?.state}?limit=200`;
+      // Cursor-paginated; "load more" appends via postRequest(..., { append: true })
+      // — see useInfiniteWorkflowInstances.
+      return `user/workflow_instances_with_tasks/${params?.state}`;
     case WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES:
     case WeDataKey.MY_OPEN_WORKFLOW_INSTANCES:
       return 'user/my_initiated_workflow_instances';
@@ -219,6 +247,16 @@ export const WeApiUrl = (
       return 'user/form_templates/resolve';
     case WeDataKey.FORM_TEMPLATE_DELETE:
       return 'user/form_templates/delete';
+    case WeDataKey.WORKFLOW_DATA_MODELS:
+      return 'user/workflow-data';
+    case WeDataKey.WORKFLOW_DATA_ROWS:
+      return `user/workflow-data/${params?.modelName}`;
+    case WeDataKey.WORKFLOW_DATA_PROCESSES:
+      return `user/workflow-data/${params?.modelName}/processes`;
+    case WeDataKey.WORKFLOW_DATA_VERSION_CHAIN:
+      return `user/workflow-data/${params?.modelName}/${params?.recordId}`;
+    case WeDataKey.START_WORKFLOW_FOR_DATA:
+      return 'user/workflow-data/start_workflow';
     default:
       return undefined;
   }
@@ -229,6 +267,8 @@ export const initState: WeDataState = {
   [WeDataKey.START_WORKFLOW]: null,
   [WeDataKey.SUBMIT_TASK_DATA]: null,
   [WeDataKey.WORKFLOWS]: null,
+  [WeDataKey.PINNED_WORKFLOWS]: null,
+  [WeDataKey.TOGGLE_PINNED_WORKFLOW]: null,
   [WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS]: null,
   [WeDataKey.MY_OPEN_WORKFLOW_INSTANCES]: null,
   [WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES]: null,
@@ -262,6 +302,11 @@ export const initState: WeDataState = {
   [WeDataKey.FORM_TEMPLATE_PREVIEW]: null,
   [WeDataKey.FORM_TEMPLATE_RESOLVE]: null,
   [WeDataKey.FORM_TEMPLATE_DELETE]: null,
+  [WeDataKey.WORKFLOW_DATA_MODELS]: null,
+  [WeDataKey.WORKFLOW_DATA_ROWS]: null,
+  [WeDataKey.WORKFLOW_DATA_PROCESSES]: null,
+  [WeDataKey.WORKFLOW_DATA_VERSION_CHAIN]: null,
+  [WeDataKey.START_WORKFLOW_FOR_DATA]: null,
 };
 
 // ACTION DEFINITION
@@ -272,6 +317,7 @@ export type WeDataGetResponseTypes =
   | CopyWorkflowDataResponse
   | StartWorkflowPreviewResponse
   | GetWorkflowResponse
+  | PinnedWorkflowsResponse
   | GetWorkflowStatisticsResponse
   | GetSystemInformationResponse
   | TaskItemResponse

@@ -237,10 +237,30 @@ class ServiceTaskHelper:
         return Attachment(
             id=att.id,
             hash=att.attachment.hash,
-            filename=att.attachment.first_filename,
+            filename=att.filename,
             mimetype=att.attachment.mimetype,
             data=get_file_content(att.attachment.file.file_id),
         )
+
+    def attach_files(self, row, field_name: str, files) -> None:
+        """Attach uploaded files to a ``file`` field of a data-model row.
+
+        ``row`` is the ORM instance you just ``db.add(...)``-ed; its id/version are
+        assigned by the framework at flush, so call this after ``db.add`` and let
+        the flush persist the references. ``files`` is one upload ref or a list of
+        them — exactly the value(s) the upload field carries in ``task_data``
+        (dicts with ``id``/``hash``/``filename``/``mimetype``). The referenced
+        attachments must have been uploaded in this same submit.
+        """
+        from actidoo_wfe.wf.data_model_files import record_file_intent
+
+        record_file_intent(self.db, row, field_name, files)
+
+    def clear_files(self, row, field_name: str) -> None:
+        """Mark a ``file`` field empty for this version, suppressing copy-forward."""
+        from actidoo_wfe.wf.data_model_files import record_file_intent
+
+        record_file_intent(self.db, row, field_name, [])
 
     def set_workflow_instance_subtitle(self, subtitle):
         if subtitle and len(subtitle) > 50:

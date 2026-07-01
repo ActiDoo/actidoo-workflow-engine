@@ -1,0 +1,65 @@
+/* SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2025 ActiDoo GmbH
+ *
+ * Bootstrap → brand bridge. Bootstrap themes at compile time (SCSS math on $primary /
+ * $component-active-bg), but we brand at runtime via the --color-* palette in
+ * branding.css. This file assigns that runtime palette to every brand-colored Bootstrap
+ * control the app actually renders (rjsf forms) — the Bootstrap counterpart of
+ * ui5-components/styles/ui5webcomponents.scss. @use'd after `@use 'bootstrap'` so it wins.
+ *
+ * Two kinds of properties:
+ *   - var-based: Bootstrap exposes a per-component --bs-* var → override it (.btn-*).
+ *   - baked:     Bootstrap compiles a fixed hex (form-check checked, form-range thumb,
+ *                focus borders) with no CSS var → set the property explicitly.
+ * Only rendered controls are covered (no nav/pagination/dropdown/accordion/switch/links;
+ * btn-secondary/light/danger are not brand-primary). The white checkmark/radio-dot glyph
+ * SVGs stay white — correct on a brand-colored background.
+ */
+
+// Buttons — Bootstrap 5.3 emits per-component --bs-btn-* vars on .btn-primary.
+.btn-primary {
+  --bs-btn-bg: var(--color-brand-primary);
+  --bs-btn-border-color: var(--color-brand-primary);
+  --bs-btn-hover-bg: var(--color-brand-primary-strong);
+  --bs-btn-hover-border-color: var(--color-brand-primary-strong);
+  --bs-btn-active-bg: var(--color-brand-primary-strong);
+  --bs-btn-active-border-color: var(--color-brand-primary-strong);
+  --bs-btn-disabled-bg: var(--color-brand-primary);
+  --bs-btn-disabled-border-color: var(--color-brand-primary);
+}
+
+// Checkbox / radio "checked" — baked from $primary (forms/_form-check.scss).
+.form-check-input:checked {
+  background-color: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
+}
+
+// Focus border on form controls — baked tint of $component-active-bg.
+.form-check-input:focus,
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--color-brand-primary);
+}
+
+// Range slider thumb — baked $component-active-bg; pseudo-elements can't read parent vars,
+// so set each explicitly (active = strong shade).
+.form-range::-webkit-slider-thumb {
+  background-color: var(--color-brand-primary);
+}
+.form-range::-moz-range-thumb {
+  background-color: var(--color-brand-primary);
+}
+.form-range::-webkit-slider-thumb:active {
+  background-color: var(--color-brand-primary-strong);
+}
+.form-range::-moz-range-thumb:active {
+  background-color: var(--color-brand-primary-strong);
+}
+
+// Generic focus ring (.focus-ring / :focus-visible utilities). color-mix gives the 25%
+// alpha without needing a separate --color-*-rgb token. Note: form-control/-check focus
+// box-shadows are baked from the $primary seed (faint keyboard-only outline) and are not
+// re-themed here — the visible focus border above is what carries the brand color.
+body {
+  --bs-focus-ring-color: color-mix(in srgb, var(--color-brand-primary) 25%, transparent);
+}

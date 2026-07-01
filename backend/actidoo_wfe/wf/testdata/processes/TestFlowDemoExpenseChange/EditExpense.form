@@ -1,0 +1,59 @@
+{
+  "components": [
+    {
+      "label": "Title",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1",
+        "columns": null
+      },
+      "id": "Field_title",
+      "key": "title",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Amount",
+      "type": "number",
+      "layout": {
+        "row": "Row_2",
+        "columns": null
+      },
+      "id": "Field_amount",
+      "key": "amount"
+    },
+    {
+      "label": "Category",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_3",
+        "columns": null
+      },
+      "id": "Field_category",
+      "key": "category",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Description",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_4",
+        "columns": null
+      },
+      "id": "Field_description",
+      "key": "description"
+    }
+  ],
+  "type": "default",
+  "id": "DemoEditExpense",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 19,
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.39.0"
+  }
+}

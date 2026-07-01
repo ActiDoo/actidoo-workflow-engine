@@ -7,8 +7,6 @@ FastAPI Entrypoint
 
 import asyncio
 import logging
-import pathlib
-import re
 import sys
 from contextlib import asynccontextmanager
 from ipaddress import ip_network
@@ -16,7 +14,6 @@ from typing import Any, Callable
 
 import orjson
 import sentry_sdk
-import venusian
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,13 +26,13 @@ from actidoo_wfe.auth.fastapi import router as router_auth
 from actidoo_wfe.database import run_migrations, setup_db
 from actidoo_wfe.helpers.logging import HTTPAccessLogMiddleware
 from actidoo_wfe.helpers.proxy_middleware import ProxyHeadersNetworkMiddleware
-from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.session import SessionMiddleware
 from actidoo_wfe.settings import settings
 from actidoo_wfe.storage import setup_storage
+from actidoo_wfe.testing.utils import in_test
+from actidoo_wfe.venusian_scan import run_venusian_scan
 from actidoo_wfe.wf.exceptions import WorkflowDefinitionMissingError
 from actidoo_wfe.wf.fastapi import router as router_wf
-from actidoo_wfe.venusian_scan import discover_venusian_scan_targets
 
 print(f"Setting Log-Level to {settings.log_level}")
 logging.basicConfig(
@@ -66,19 +63,32 @@ async def lifespan(app: FastAPI):
     engine = setup_db(settings=settings)
     setup_storage(settings)
 
-    import actidoo_wfe as pyapp
-
     clear_task_registry()
 
-    scanner = venusian.Scanner()
-    for target in discover_venusian_scan_targets(default_modules=[pyapp]):
-        scanner.scan(target, ignore=[re.compile("test_").search])
+    run_venusian_scan()
 
     # Validate connector configurations (non-blocking)
     from actidoo_wfe.connectors import validate_configured_connectors
 
     for warning in validate_configured_connectors():
         log.warning("Connector config: %s", warning)
+
+    # Fail fast on data-model actions whose target workflow cannot be loaded — the
+    # target can only be checked once every workflow has been scanned. Symmetric to
+    # the field-schema validation that already fails at registration time.
+    from actidoo_wfe.wf.registry_data_model import data_model_registry
+    from actidoo_wfe.wf.service_workflow import can_load_workflow
+
+    action_target_errors = data_model_registry.validate_action_targets(workflow_exists=can_load_workflow)
+    if action_target_errors:
+        raise ValueError("Invalid data-model action targets:\n  " + "\n  ".join(action_target_errors))
+
+    # Dev/test only: bundled demo data models (wf/testdata) have no migration, so
+    # create their tables now that the scan has registered them. Never in prod.
+    if settings.show_test_workflows:
+        from actidoo_wfe.wf.registry_data_model import create_registered_data_model_tables
+
+        create_registered_data_model_tables(engine)
 
     task_future = None
     if not in_test():

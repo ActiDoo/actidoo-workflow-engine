@@ -14,7 +14,8 @@
             "realmRoles": [
                 "wf-user",
                 "wf-admin",
-                "wf-tfmultiinstancetime-keyuser"
+                "wf-tfmultiinstancetime-keyuser",
+                "demo-editor"
             ],
             "email" : "wf-user@example.com",
             "firstName": "WF-User",
@@ -38,6 +39,23 @@
             "lastName": "Smith"
         },
         {
+            "username": "wf-user-demo-viewer",
+            "enabled": true,
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "__KEYCLOAK_DEFAULT_USER_PASSWORD__"
+                }
+            ],
+            "realmRoles": [
+                "wf-user",
+                "demo-viewer"
+            ],
+            "email" : "wf-user-demo-viewer@example.com",
+            "firstName": "WF-DemoViewer",
+            "lastName": "Smith"
+        },
+        {
             "username": "service-account-otherapp",
             "enabled": true,
             "serviceAccountClientId": "otherapp",
@@ -57,6 +75,14 @@
             {
                 "name": "wf-tfmultiinstancetime-keyuser",
                 "description": "Artikelbeschreibung Key User"
+            },
+            {
+                "name": "demo-editor",
+                "description": "DemoExpense reference example: may create, read and edit rows"
+            },
+            {
+                "name": "demo-viewer",
+                "description": "DemoExpense reference example: may read rows only"
             }
         ],
         "client": {

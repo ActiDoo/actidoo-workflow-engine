@@ -9,13 +9,15 @@ import {
   Route,
 } from 'react-router-dom';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { PcErrorView, type PcNavigationLink, PcPageWrapper } from '@/ui5-components';
 import { BusyIndicator } from '@ui5/webcomponents-react';
 import { logout } from '@/services/AuthService';
 import { environment } from '@/environment';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { type State } from '@/store';
+import { WeDataKey } from '@/store/generic-data/setup';
+import { getRequest } from '@/store/generic-data/actions';
 import { AuthWrapper } from '@/auth/AuthWrapper';
 import { DialogStartWorkflow } from '@/utils/fragments/DialogStartWorkflow';
 import { WorkflowState } from '@/models/models';
@@ -68,11 +70,27 @@ const StartWorkflowPreview = React.lazy(
   async () => await import('@/pages/start-workflow-preview/StartWorkflowPreview')
 );
 const About = React.lazy(async () => await import('@/pages/about/About'));
+const DataModels = React.lazy(async () => await import('@/pages/data/DataModels'));
+const DataModelTable = React.lazy(async () => await import('@/pages/data/DataModelTable'));
+const DataModelDetail = React.lazy(async () => await import('@/pages/data/DataModelDetail'));
 const Wrapper: React.FC = () => {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const loginState = useSelector((state: State) => state.auth.loginState.data);
   const user = useSelector((state: State) => state.data['wfe-user']?.data);
+  const dataModels = useSelector(
+    (state: State) => state.data[WeDataKey.WORKFLOW_DATA_MODELS]?.data
+  );
   const brandLogoUrl = `${import.meta.env.BASE_URL}branding/logo.svg`;
+  // Deployment-configurable app title (APP_TITLE); falls back to the i18n default.
+  const appTitle = environment.appTitle ?? t('layout.appTitle');
+
+  // The data viewer only makes sense when the user actually sees content; fetch
+  // the visible models once (Wrapper renders authenticated only) and gate the
+  // nav entry on the result. The /data route itself stays reachable via URL.
+  useEffect(() => {
+    dispatch(getRequest(WeDataKey.WORKFLOW_DATA_MODELS));
+  }, [dispatch]);
 
   const navigation: PcNavigationLink[] = [
     {
@@ -86,6 +104,14 @@ const Wrapper: React.FC = () => {
       activeRoute: '/my-workflows',
     },
   ];
+
+  if ((dataModels?.length ?? 0) > 0) {
+    navigation.push({
+      title: t('navigation.data'),
+      to: '/data',
+      activeRoute: '/data',
+    });
+  }
 
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR: false should fall through to second condition
   if (loginState?.can_access_wf_admin || (user?.workflows_the_user_is_admin_for?.length ?? 0) > 0) {
@@ -116,7 +142,7 @@ const Wrapper: React.FC = () => {
   return (
     <PcPageWrapper
       navigation={navigation}
-      // appTitle={appTitle}
+      appTitle={appTitle}
       brandLogoUrl={brandLogoUrl}
       onLogout={() => {
         logout();
@@ -279,6 +305,17 @@ const router = createBrowserRouter(
           errorElement={<PcErrorView />}
         />
         <Route path="/about" element={<About />} errorElement={<PcErrorView />} />
+        <Route path="/data" element={<DataModels />} errorElement={<PcErrorView />} />
+        <Route
+          path="/data/:modelName"
+          element={<DataModelTable />}
+          errorElement={<PcErrorView />}
+        />
+        <Route
+          path="/data/:modelName/:recordId"
+          element={<DataModelDetail />}
+          errorElement={<PcErrorView />}
+        />
       </Route>
     </Route>
   ),

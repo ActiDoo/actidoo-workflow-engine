@@ -23,7 +23,6 @@ import { postRequest, resetStateForKey } from '@/store/generic-data/actions';
 import '@ui5/webcomponents-icons/dist/navigation-left-arrow';
 import '@ui5/webcomponents-icons/dist/employee-rejections';
 import { useSelectUiLoading } from '@/store/ui/selectors';
-import { useSelectCurrentWorkflow } from '@/store/generic-data/selectors';
 import { handleResponse } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
 import { useTranslation } from '@/i18n';
@@ -41,7 +40,11 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const workflowInstance = useSelectCurrentWorkflow(workflowId);
+  // The task-view response (BFF) ships the instance block alongside the tasks —
+  // works for deep links too, unlike searching the sidebar's loaded pages.
+  const workflowInstance = useSelector(
+    (state: State) => state.data[WeDataKey.MY_USER_TASKS]?.data?.workflow_instance
+  );
   const assignToMeState = useSelector((state: State) => state.data[WeDataKey.ASSIGN_TASK_TO_ME]);
   const assignTaskToMeLoadState = useSelectUiLoading(WeDataKey.ASSIGN_TASK_TO_ME, 'POST');
 
@@ -171,13 +174,12 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   };
 
   const handleCopyInstance = (): void => {
-    if (!workflowInstance?.id) {
+    // The route param IS the instance id — no need for the instance block here.
+    if (!workflowId) {
       dispatch(addToast(<>{t('singleTaskHeader.missingWorkflowId')}</>));
       return;
     }
-    dispatch(
-      postRequest(WeDataKey.COPY_INSTANCE, {}, { workflow_instance_id: workflowInstance.id })
-    );
+    dispatch(postRequest(WeDataKey.COPY_INSTANCE, {}, { workflow_instance_id: workflowId }));
   };
 
   return (

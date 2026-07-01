@@ -276,11 +276,36 @@ def _run_main_migrations(engine):
         raise Exception("Alembic Path not existing")
 
 
-def _run_extension_migrations(engine, ext_alembic_path, entry_point_name: str):
-    """Run Alembic migrations for a single extension project."""
+def _extension_current_revision(alembic_cfg):
+    """Return the extension's current Alembic revision, or None if not yet stamped."""
+    from alembic.runtime.environment import EnvironmentContext
+    from alembic.script import ScriptDirectory
+
+    script = ScriptDirectory.from_config(alembic_cfg)
+    captured: dict = {}
+
+    def _capture(rev, context):
+        captured["revision"] = context.get_current_revision()
+        return []
+
+    with EnvironmentContext(alembic_cfg, script, fn=_capture):
+        script.run_env()
+    return captured.get("revision")
+
+
+def _run_extension_migrations(engine, ext_alembic_module, entry_point_name: str):
+    """Run migrations for one extension project, mirroring the main set's pattern.
+
+    On a *fresh* DB (the extension's Alembic history is not yet stamped) the
+    project's data-model tables are created directly from the ORM models
+    (``metadata.create_all``) and the history is stamped - the create-table
+    migrations are not replayed, so a fresh install always matches the current
+    models. On an *existing* DB the normal ``upgrade(head)`` applies the deltas;
+    new tables and schema changes are then introduced through ordinary migrations.
+    """
     from pathlib import Path
 
-    ext_alembic_path = Path(ext_alembic_path)
+    ext_alembic_path = Path(ext_alembic_module.__file__).parent
     if not ext_alembic_path.exists():
         log.warning("Extension alembic path '%s' for '%s' does not exist, skipping.", ext_alembic_path, entry_point_name)
         return
@@ -288,7 +313,38 @@ def _run_extension_migrations(engine, ext_alembic_path, entry_point_name: str):
     alembic_cfg = alembic.config.Config(attributes={"engine": engine})
     alembic_cfg.set_main_option("script_location", str(ext_alembic_path))
 
-    from alembic.command import upgrade
+    from alembic.command import stamp, upgrade
+
+    # Ask Alembic - through the extension's own env/version_table — whether this
+    # extension has been initialized yet. Running the env also imports the
+    # project's models into the shared metadata and the data-model registry.
+    try:
+        already_stamped = _extension_current_revision(alembic_cfg) is not None
+    except Exception as error:  # pragma: no cover - defensive
+        log.warning("Could not read revision for extension '%s' (%s); running upgrade.", entry_point_name, error)
+        upgrade(config=alembic_cfg, revision="head")
+        return
+
+    if not already_stamped:
+        # Fresh DB: build this project's data-model tables from the models and
+        # stamp the history instead of replaying the create-table migrations.
+        from actidoo_wfe.wf.registry_data_model import data_model_registry
+
+        package = ext_alembic_module.__name__.split(".")[0]
+        project_tables = [
+            descriptor.model_class.__table__
+            for descriptor in data_model_registry.list_models()
+            if descriptor.model_class.__module__ == package
+            or descriptor.model_class.__module__.startswith(package + ".")
+        ]
+        metadata.create_all(engine, tables=project_tables)
+        stamp(config=alembic_cfg, revision="head")
+        log.info(
+            "Extension '%s' fresh DB: created %d table(s) from models and stamped head.",
+            entry_point_name,
+            len(project_tables),
+        )
+        return
 
     upgrade(config=alembic_cfg, revision="head")
     log.info("Extension migrations '%s' applied successfully.", entry_point_name)
@@ -300,7 +356,6 @@ EXTENSION_ALEMBIC_ENTRY_POINT_GROUP = "actidoo_wfe.alembic"
 def run_migrations(settings: Settings):
     """Run main-project and extension-project migrations with advisory locks."""
     from importlib import metadata as importlib_metadata
-    from pathlib import Path
 
     engine = create_engine(
         get_uri(settings),
@@ -321,12 +376,11 @@ def run_migrations(settings: Settings):
     for entry_point in entries:
         try:
             ext_alembic_module = entry_point.load()
-            ext_alembic_path = Path(ext_alembic_module.__file__).parent
             lock_name = f"alembic_ext_{entry_point.name}"
             _run_with_advisory_lock(
                 engine,
                 lock_name,
-                lambda eng, p=ext_alembic_path, n=entry_point.name: _run_extension_migrations(eng, p, n),
+                lambda eng, m=ext_alembic_module, n=entry_point.name: _run_extension_migrations(eng, m, n),
             )
         except Exception as error:
             log.error("Failed to run extension migrations for '%s': %s", entry_point.name, error)

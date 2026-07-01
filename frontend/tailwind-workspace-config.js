@@ -7,9 +7,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'brand-primary': 'var(--color-brand-primary, #007C84)',
-        'brand-primary-strong': 'var(--color-brand-primary-strong, #006066)',
-        'brand-primary-soft': 'var(--color-brand-primary-soft, #5bbac1)',
+        'brand-primary': 'var(--color-brand-primary, #2e8400)',
+        'brand-primary-strong': 'var(--color-brand-primary-strong, #2a7900)',
+        'brand-primary-soft': 'var(--color-brand-primary-soft, #43901a)',
         'accent-positive': 'var(--color-accent-positive, #09AE3B)',
         'accent-positive-weak': 'var(--color-accent-positive-weak, #96BE0D)',
         'accent-warning': 'var(--color-accent-warning, #FFA800)',

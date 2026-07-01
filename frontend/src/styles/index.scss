@@ -3,10 +3,17 @@
  */
 
 @use '../ui5-components/styles/ui5webcomponents.scss';
+// $primary/$warning are only build-time seeds (Bootstrap does SCSS color math on them,
+// so they can't be CSS vars). The actual brand colors are assigned at runtime in
+// bootstrap-brand.scss (the Bootstrap counterpart of ui5webcomponents.scss); $primary
+// just needs to be a dark color so Bootstrap's compile-time text-contrast picks white.
 @use 'bootstrap/scss/bootstrap' with (
-  $primary: #007C84,
-  $warning: #E00A18
+  $primary: #2e8400,
+  $warning: #ffa800
 );
+// Assign the runtime brand palette (--color-*) to Bootstrap controls. Must come after the
+// bootstrap @use so its CSS overrides Bootstrap's.
+@use './bootstrap-brand.scss';
 
 @tailwind components;
 @tailwind utilities;
@@ -16,7 +23,6 @@ body {
   --bs-secondary-bg: var(--color-surface-base);
   font-family: var(--sapFontFamily);
 }
-
 
 .pc-px-responsive {
   @apply px-3 sm:px-8 xl:px-12 #{!important}
