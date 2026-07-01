@@ -141,5 +141,6 @@
         "ui:defaultRepetitions": 1,
         "ui:label": "Outer Dynamic list",
         "ui:copyable": true
-    }
+    },
+    "ui:templateMode": "blacklist"
 }

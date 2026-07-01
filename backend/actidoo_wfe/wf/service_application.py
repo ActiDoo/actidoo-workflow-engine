@@ -871,6 +871,25 @@ def unassign_task_from_me(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
 
 
+def _resolve_accessible_usertask(
+    db: Session, user_id: uuid.UUID, task_id: uuid.UUID
+) -> tuple[Any, UserTaskWithoutNestedAssignedUserRepresentation]:
+    """Load the workflow and the ready/completed user task the user may access, or raise."""
+    workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    user = repository.load_user(db=db, user_id=user_id)
+    delegation_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
+    usertasks = service_workflow.get_usertasks_for_user(
+        workflow=workflow,
+        user=user,
+        state=["ready", "completed"],
+        delegation_targets=delegation_targets,
+    )
+    task = next((t for t in usertasks if t.id == task_id), None)
+    if task is None:
+        raise TaskIsNotInReadyUsertasksException()
+    return workflow, task
+
+
 def search_property_options(
     db: Session,
     user_id: uuid.UUID,
@@ -880,18 +899,7 @@ def search_property_options(
     include_value: str | list[str] | None,
     form_data: dict | None,
 ) -> list[tuple[str, str]]:
-    workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
-    user = repository.load_user(db=db, user_id=user_id)
-    delegation_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
-
-    usertasks: list[UserTaskWithoutNestedAssignedUserRepresentation] = service_workflow.get_usertasks_for_user(
-        workflow=workflow,
-        user=user,
-        state=["ready", "completed"],
-        delegation_targets=delegation_targets,
-    )
-    if task_id not in [t.id for t in usertasks]:
-        raise TaskIsNotInReadyUsertasksException()
+    workflow, _usertask = _resolve_accessible_usertask(db=db, user_id=user_id, task_id=task_id)
 
     # Workflow definition missing — we can't load remote options (the options/ folder and
     # service functions are gone). Echo back only the already-selected values so the form
@@ -955,6 +963,23 @@ def search_property_options(
             options.append(val)
 
     return options
+
+
+def strip_hidden_form_fields(
+    db: Session,
+    user_id: uuid.UUID,
+    task_id: uuid.UUID,
+    form_data: dict,
+) -> dict:
+    """Return ``form_data`` without values of currently hidden fields (for read-only views)."""
+    workflow, task = _resolve_accessible_usertask(db=db, user_id=user_id, task_id=task_id)
+
+    # No definition -> hide-if cannot be evaluated; return unchanged (mirrors search_property_options).
+    if not workflow_providers.workflow_definition_available(workflow.spec.name):
+        return form_data
+
+    form_spec = ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema)
+    return service_workflow.strip_hidden_field_values(workflow.spec.name, form_spec, form_data)
 
 
 def _upload_attachment(

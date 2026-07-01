@@ -33,6 +33,7 @@ from actidoo_wfe.wf.exceptions import (
     OptionsFileCouldNotBeReadException,
     OptionsFileNotExistsException,
 )
+from actidoo_wfe.wf.constants import TemplateMode
 from actidoo_wfe.wf.form_transformation import _get_subschema
 from actidoo_wfe.wf.option_task_helper import OptionTaskHelper
 from actidoo_wfe.wf.types import (
@@ -204,6 +205,13 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                     pointer = pointer["then"]["properties"][p]["items"]  # ["anyOf"][0]
 
                 pointer["if"] = {"not": if_not_schema}
+
+                # Condition lives on a shallower (parent) level than the hidden field: the else-branch
+                # at that level must reach down the remaining path and null the field, otherwise the
+                # field stays visible when the condition is met.
+                if 0 < len(if_path) < len(path):
+                    remaining_path = path[len(if_path):]
+                    pointer["else"] = _build_nested_schema_for_path(remaining_path, inner_ifthenschema["else"])
 
         except Exception as error:
             log.exception(f"{type(error).__name__}: {error.args}. Raised in convert_hide_if_props_to_declarative_jsonschema for key={key}")
@@ -589,6 +597,126 @@ def get_custom_properties(jsonschema, path: list[str]):
     return node.get("custom_properties", {})
 
 
+def _template_field_flag(node: dict) -> bool | None:
+    """Returns the per-field template_field flag (None when unset). Camunda stores it as a string."""
+    raw = node.get("custom_properties", {}).get("template_field", None)
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.strip().lower() in ("true", "1", "yes")
+    return bool(raw)
+
+
+def _is_template_eligible(node: dict, mode: str) -> bool:
+    flag = _template_field_flag(node)
+    if mode == TemplateMode.WHITELIST:
+        return flag is True
+    # blacklist: eligible unless explicitly disabled
+    return flag is not False
+
+
+def _is_attachment_node(node: dict) -> bool:
+    """Attachment fields carry a datauri/data-url property and are never templatable."""
+
+    def _has_datauri(obj: Any) -> bool:
+        props = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        datauri = props.get("datauri")
+        return isinstance(datauri, dict) and datauri.get("format") == "data-url"
+
+    if node.get("type") == "array":
+        return _has_datauri(node.get("items", {}))
+    return _has_datauri(node)
+
+
+def _is_object_group(node: dict) -> bool:
+    return node.get("type") == "object" and isinstance(node.get("properties"), dict)
+
+
+def _is_array_of_objects(node: dict) -> bool:
+    items = node.get("items", {})
+    return node.get("type") == "array" and isinstance(items, dict) and isinstance(items.get("properties"), dict)
+
+
+def _drop_template_value(value: Any) -> bool:
+    """Save-time value rule: drop only None and empty string; booleans (and 0/[]/{}) are kept."""
+    if isinstance(value, bool):
+        return False
+    if value is None:
+        return True
+    if isinstance(value, str) and value == "":
+        return True
+    return False
+
+
+def _filter_template_object(
+    properties: dict,
+    data: dict,
+    mode: str,
+    apply_value_rule: bool,
+    path: list,
+) -> tuple[dict, list[list]]:
+    kept: dict = {}
+    skipped: list[list] = []
+    for key, value in data.items():
+        field_path = path + [key]
+        node = properties.get(key)
+        if node is None or not _is_template_eligible(node, mode) or _is_attachment_node(node):
+            skipped.append(field_path)
+            continue
+
+        if _is_object_group(node):
+            if isinstance(value, dict):
+                sub_kept, sub_skipped = _filter_template_object(
+                    node.get("properties", {}), value, mode, apply_value_rule, field_path
+                )
+                kept[key] = sub_kept
+                skipped.extend(sub_skipped)
+            else:
+                skipped.append(field_path)
+        elif _is_array_of_objects(node):
+            if isinstance(value, list):
+                item_props = node.get("items", {}).get("properties", {})
+                new_list = []
+                for index, element in enumerate(value):
+                    if isinstance(element, dict):
+                        elem_kept, elem_skipped = _filter_template_object(
+                            item_props, element, mode, apply_value_rule, field_path + [index]
+                        )
+                        new_list.append(elem_kept)
+                        skipped.extend(elem_skipped)
+                    else:
+                        # Non-object array elements have no schema to vet against; do not pass them through.
+                        skipped.append(field_path + [index])
+                kept[key] = new_list
+            else:
+                skipped.append(field_path)
+        else:
+            if apply_value_rule and _drop_template_value(value):
+                continue
+            kept[key] = value
+    return kept, skipped
+
+
+def filter_template_data(*, jsonschema: dict, data: dict, mode: str, apply_value_rule: bool) -> tuple[dict, list[list]]:
+    """Filters form data for templates against the live schema.
+
+    Keeps only fields eligible under the given template mode and, when apply_value_rule is set
+    (save path), drops empty values. Returns (kept_data, skipped_paths); skipped_paths surfaces
+    schema drift on the apply path.
+    """
+    if mode == TemplateMode.OFF:
+        return {}, []
+    return _filter_template_object(
+        properties=jsonschema.get("properties", {}),
+        data=data if isinstance(data, dict) else {},
+        mode=mode,
+        apply_value_rule=apply_value_rule,
+        path=[],
+    )
+
+
 def get_options_limit(jsonschema, path: list[str], default_limit: int = 15) -> int | None:
     """
     Read optional options_limit from field custom_properties.
@@ -912,16 +1040,14 @@ def validate_task_data(
     removed = []
     while run_again:
         run_again = False
-        try:
-            # log.info(f"validate {tracked_task_data}")
-            validator_instance.validate(instance=tracked_task_data)
-        except jsonschema.ValidationError as ex:
-            if ex.validator == "type" and ex.validator_value == "null":  # null fields are not allowed, we will remove them here
+        # Remove hidden (type: null) fields via iter_errors, not validate(): an unrelated error
+        # (e.g. a missing required field) must not short-circuit removal of deeper null fields.
+        for ex in validator_instance.iter_errors(tracked_task_data):
+            if ex.validator == "type" and ex.validator_value == "null":
                 tracked_task_data = remove_item(tracked_task_data, ex.absolute_path)
                 removed.append(list(ex.absolute_path))
                 run_again = True
-            elif log_validation_errors:
-                log.debug(f"Validation error: {ex.message}; path={ex.json_path}; instance={ex.instance}")
+                break  # re-validate after each removal to keep the remaining paths valid
 
     error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data)
     # log.debug("removed = %s", removed)

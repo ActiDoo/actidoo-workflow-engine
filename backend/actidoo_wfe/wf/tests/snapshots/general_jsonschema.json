@@ -67,6 +67,7 @@
         },
         "dynamiclist_outer": {
             "type": "array",
+            "title": "Outer Dynamic list",
             "items": {
                 "type": "object",
                 "properties": {
@@ -76,6 +77,7 @@
                     },
                     "dynamiclist_inner": {
                         "type": "array",
+                        "title": "Inner Dynamic List",
                         "items": {
                             "type": "object",
                             "properties": {

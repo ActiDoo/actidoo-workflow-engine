@@ -39,6 +39,9 @@ import {
   UserSettings,
   WorkflowInstance,
   GetTaskStatesPerWorkflowResponse,
+  FormTemplateListResponse,
+  FormTemplateSummary,
+  ResolveTemplateResponse,
 } from '@/models/models';
 import {
   DataModelSchema,
@@ -83,6 +86,11 @@ export enum WeDataKey {
   ADMIN_CANCEL_WORKFLOW_INSTANCE = 'admin_cancel_workflow_instance',
   ADMIN_GET_SYSTEM_INFORMATION = 'admin_get_system_information',
   ADMIN_GET_TASK_STATES_PER_WORKFLOW = 'admin_get_task_states_per_workflow',
+  FORM_TEMPLATES_LIST = 'form_templates_list',
+  FORM_TEMPLATE_SAVE = 'form_template_save',
+  FORM_TEMPLATE_PREVIEW = 'form_template_preview',
+  FORM_TEMPLATE_RESOLVE = 'form_template_resolve',
+  FORM_TEMPLATE_DELETE = 'form_template_delete',
   WORKFLOW_DATA_MODELS = 'workflow_data_models',
   WORKFLOW_DATA_ROWS = 'workflow_data_rows',
   WORKFLOW_DATA_PROCESSES = 'workflow_data_processes',
@@ -142,6 +150,11 @@ export interface WeDataState {
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: GenericDataEntry<object> | null;
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: GenericDataEntry<GetSystemInformationResponse> | null;
   [WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW]: GenericDataEntry<GetTaskStatesPerWorkflowResponse> | null;
+  [WeDataKey.FORM_TEMPLATES_LIST]: GenericDataEntry<FormTemplateListResponse> | null;
+  [WeDataKey.FORM_TEMPLATE_SAVE]: GenericDataEntry<FormTemplateSummary> | null;
+  [WeDataKey.FORM_TEMPLATE_PREVIEW]: GenericDataEntry<ResolveTemplateResponse> | null;
+  [WeDataKey.FORM_TEMPLATE_RESOLVE]: GenericDataEntry<ResolveTemplateResponse> | null;
+  [WeDataKey.FORM_TEMPLATE_DELETE]: GenericDataEntry<object> | null;
   [WeDataKey.WORKFLOW_DATA_MODELS]: GenericDataEntry<DataModelSchema[]> | null;
   [WeDataKey.WORKFLOW_DATA_ROWS]: GenericDataEntry<DataRowsResponse> | null;
   [WeDataKey.WORKFLOW_DATA_PROCESSES]: GenericDataEntry<DataProcessRef[]> | null;
@@ -224,6 +237,16 @@ export const WeApiUrl = (
       return 'admin/system_information';
     case WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW:
       return `admin/get_task_states_per_workflow?wf_name=${params?.wf_name}`;
+    case WeDataKey.FORM_TEMPLATES_LIST:
+      return 'user/form_templates/list';
+    case WeDataKey.FORM_TEMPLATE_SAVE:
+      return 'user/form_templates/save';
+    case WeDataKey.FORM_TEMPLATE_PREVIEW:
+      return 'user/form_templates/preview';
+    case WeDataKey.FORM_TEMPLATE_RESOLVE:
+      return 'user/form_templates/resolve';
+    case WeDataKey.FORM_TEMPLATE_DELETE:
+      return 'user/form_templates/delete';
     case WeDataKey.WORKFLOW_DATA_MODELS:
       return 'user/workflow-data';
     case WeDataKey.WORKFLOW_DATA_ROWS:
@@ -274,6 +297,11 @@ export const initState: WeDataState = {
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: null,
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: null,
   [WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW]: null,
+  [WeDataKey.FORM_TEMPLATES_LIST]: null,
+  [WeDataKey.FORM_TEMPLATE_SAVE]: null,
+  [WeDataKey.FORM_TEMPLATE_PREVIEW]: null,
+  [WeDataKey.FORM_TEMPLATE_RESOLVE]: null,
+  [WeDataKey.FORM_TEMPLATE_DELETE]: null,
   [WeDataKey.WORKFLOW_DATA_MODELS]: null,
   [WeDataKey.WORKFLOW_DATA_ROWS]: null,
   [WeDataKey.WORKFLOW_DATA_PROCESSES]: null,
@@ -295,6 +323,9 @@ export type WeDataGetResponseTypes =
   | TaskItemResponse
   | GetUserDetailResponse
   | ItemsAndCountResponse<AdminUser>
+  | FormTemplateListResponse
+  | FormTemplateSummary
+  | ResolveTemplateResponse
   | string;
 
 export type WeDataAction = GenericDataAction<WeDataKey, WeDataGetResponseTypes>;

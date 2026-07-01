@@ -17,9 +17,10 @@ import { useScrollTop } from '@/utils/hooks/useScrollTop';
 import { WeUploadDialog } from '@/utils/components/WeUploadDialog';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { SingleTaskHeader } from '@/pages/tasks/content/single-task/SingleTaskHeader';
-import { WorkflowState } from '@/models/models';
+import { FormTemplateMode, WorkflowState } from '@/models/models';
 import { handleResponse } from '@/services/HelperService';
 import { TaskActions } from '@/pages/tasks/content/TaskActions';
+import FormTemplateActions from '@/pages/tasks/content/single-task/form-templates/FormTemplateActions';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { useTranslation } from '@/i18n';
@@ -52,7 +53,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const [errorSchema, setErrorSchema] = useState<ErrorSchema | undefined>(undefined);
 
   const [resetToInitialStateDialogOpen, setResetToInitialStateDialogOpen] = useState(false);
-  const [formRenderIndex] = useState(0);
+  const [formRenderIndex, setFormRenderIndex] = useState(0);
 
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
   const [delegateComment, setDelegateComment] = useState('');
@@ -73,6 +74,11 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const uiSchema = task?.uischema
     ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>)
     : undefined;
+
+  // Form-level template mode lives in the uischema root (see form_transformation).
+  const templateMode = (task?.uischema as { 'ui:templateMode'?: FormTemplateMode } | undefined)?.[
+    'ui:templateMode'
+  ];
 
   const isBlockedByDelegateAssignment = !!(
     task?.assigned_to_me &&
@@ -397,6 +403,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     [isDraftLoaded, taskId, debouncedSaveDraft]
   );
 
+  // Apply a template: replace the controlled formData and remount RJSF so it picks up the new values.
+  const handleApplyTemplate = useCallback(
+    (data: object) => {
+      const next = _.cloneDeep(data);
+      setFormData(next);
+      setFormRenderIndex(index => index + 1);
+      if (isDraftLoaded && taskId) {
+        void debouncedSaveDraft(taskId, next);
+      }
+    },
+    [isDraftLoaded, taskId, debouncedSaveDraft]
+  );
+
   if (loadingState[WeDataKey.MY_USER_TASKS] || !isDraftLoaded || (task && formData === undefined)) {
     return (
       <div className="flex flex-col w-full h-full items-center justify-center pb-32 gap-2">
@@ -420,6 +439,18 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
             }}
           />
           <div className="bg-white pt-4 px-3 md:px-12 pc-form pb-20">
+            {taskId &&
+            canSubmitTask &&
+            props.state !== WorkflowState.COMPLETED &&
+            templateMode &&
+            templateMode !== 'off' ? (
+              <FormTemplateActions
+                taskId={taskId}
+                jsonschema={jsonschema}
+                formData={formData}
+                onApply={handleApplyTemplate}
+              />
+            ) : null}
             <TaskForm
               key={`form_${formRenderIndex}`}
               formData={formData}

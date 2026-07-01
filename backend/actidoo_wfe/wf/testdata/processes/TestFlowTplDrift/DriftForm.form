@@ -1,0 +1,37 @@
+{
+  "components": [
+    {
+      "label": "Required text",
+      "type": "textfield",
+      "layout": {"row": "Row_1", "columns": null},
+      "id": "Field_required_text",
+      "key": "required_text",
+      "validate": {"required": true}
+    },
+    {
+      "label": "Category",
+      "values": [
+        {"label": "Alpha Category", "value": "cat_alpha"},
+        {"label": "Beta Category", "value": "cat_beta"},
+        {"label": "Gamma Category", "value": "cat_gamma"}
+      ],
+      "type": "select",
+      "layout": {"row": "Row_2", "columns": null},
+      "id": "Field_category",
+      "key": "category"
+    },
+    {
+      "label": "Confirmed",
+      "type": "checkbox",
+      "layout": {"row": "Row_3", "columns": null},
+      "id": "Field_confirmed",
+      "key": "confirmed"
+    }
+  ],
+  "type": "default",
+  "id": "DriftFormDef",
+  "template_mode": "blacklist",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 16
+}
