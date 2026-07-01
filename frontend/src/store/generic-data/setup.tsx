@@ -10,6 +10,7 @@ import {
   FetchMethods,
   GenericDataAction,
   GenericDataEntry,
+  CursorItemsResponse,
   ItemsAndCountResponse,
   StringDict,
 } from '@/ui5-components';
@@ -39,6 +40,12 @@ import {
   WorkflowInstance,
   GetTaskStatesPerWorkflowResponse,
 } from '@/models/models';
+import {
+  DataModelSchema,
+  DataProcessRef,
+  DataRowsResponse,
+  DataVersionChainResponse,
+} from '@/models/dataViewer';
 
 // KEY DEFINITION
 export enum WeDataKey {
@@ -76,9 +83,14 @@ export enum WeDataKey {
   ADMIN_CANCEL_WORKFLOW_INSTANCE = 'admin_cancel_workflow_instance',
   ADMIN_GET_SYSTEM_INFORMATION = 'admin_get_system_information',
   ADMIN_GET_TASK_STATES_PER_WORKFLOW = 'admin_get_task_states_per_workflow',
+  WORKFLOW_DATA_MODELS = 'workflow_data_models',
+  WORKFLOW_DATA_ROWS = 'workflow_data_rows',
+  WORKFLOW_DATA_PROCESSES = 'workflow_data_processes',
+  WORKFLOW_DATA_VERSION_CHAIN = 'workflow_data_version_chain',
+  START_WORKFLOW_FOR_DATA = 'start_workflow_for_existing_data_model',
 }
 
-interface WorkflowInstanceTable extends ItemsAndCountResponse<WorkflowInstance> {}
+interface WorkflowInstanceTable extends CursorItemsResponse<WorkflowInstance> {}
 
 interface MyInitiatedWorkflowInstanceTable
   extends ItemsAndCountResponse<MyInitiatedWorkflowInstance> {}
@@ -130,6 +142,11 @@ export interface WeDataState {
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: GenericDataEntry<object> | null;
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: GenericDataEntry<GetSystemInformationResponse> | null;
   [WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW]: GenericDataEntry<GetTaskStatesPerWorkflowResponse> | null;
+  [WeDataKey.WORKFLOW_DATA_MODELS]: GenericDataEntry<DataModelSchema[]> | null;
+  [WeDataKey.WORKFLOW_DATA_ROWS]: GenericDataEntry<DataRowsResponse> | null;
+  [WeDataKey.WORKFLOW_DATA_PROCESSES]: GenericDataEntry<DataProcessRef[]> | null;
+  [WeDataKey.WORKFLOW_DATA_VERSION_CHAIN]: GenericDataEntry<DataVersionChainResponse> | null;
+  [WeDataKey.START_WORKFLOW_FOR_DATA]: GenericDataEntry<StartWorkflowResponse> | null;
 }
 
 // API DEFINITION
@@ -152,7 +169,9 @@ export const WeApiUrl = (
     case WeDataKey.TOGGLE_PINNED_WORKFLOW:
       return 'user/toggle_pinned_workflow';
     case WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS:
-      return `user/workflow_instances_with_tasks/${params?.state}?limit=200`;
+      // Cursor-paginated; "load more" appends via postRequest(..., { append: true })
+      // — see useInfiniteWorkflowInstances.
+      return `user/workflow_instances_with_tasks/${params?.state}`;
     case WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES:
     case WeDataKey.MY_OPEN_WORKFLOW_INSTANCES:
       return 'user/my_initiated_workflow_instances';
@@ -205,6 +224,16 @@ export const WeApiUrl = (
       return 'admin/system_information';
     case WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW:
       return `admin/get_task_states_per_workflow?wf_name=${params?.wf_name}`;
+    case WeDataKey.WORKFLOW_DATA_MODELS:
+      return 'user/workflow-data';
+    case WeDataKey.WORKFLOW_DATA_ROWS:
+      return `user/workflow-data/${params?.modelName}`;
+    case WeDataKey.WORKFLOW_DATA_PROCESSES:
+      return `user/workflow-data/${params?.modelName}/processes`;
+    case WeDataKey.WORKFLOW_DATA_VERSION_CHAIN:
+      return `user/workflow-data/${params?.modelName}/${params?.recordId}`;
+    case WeDataKey.START_WORKFLOW_FOR_DATA:
+      return 'user/workflow-data/start_workflow';
     default:
       return undefined;
   }
@@ -245,6 +274,11 @@ export const initState: WeDataState = {
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: null,
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: null,
   [WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW]: null,
+  [WeDataKey.WORKFLOW_DATA_MODELS]: null,
+  [WeDataKey.WORKFLOW_DATA_ROWS]: null,
+  [WeDataKey.WORKFLOW_DATA_PROCESSES]: null,
+  [WeDataKey.WORKFLOW_DATA_VERSION_CHAIN]: null,
+  [WeDataKey.START_WORKFLOW_FOR_DATA]: null,
 };
 
 // ACTION DEFINITION

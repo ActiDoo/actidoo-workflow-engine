@@ -64,8 +64,13 @@ rm -rf "${WORKSPACE_DIR}/.venv"
 ln -sfn "${VENV_PATH}" "${WORKSPACE_DIR}/.venv"
 source "${VENV_PATH}/bin/activate"
 
-# Supply-chain defense: only allow packages uploaded ≥7 days ago
-export PIP_UPLOADED_PRIOR_TO="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+# Supply-chain cooldown: default to ≥7 days unless the caller set PIP_UPLOADED_PRIOR_TO
+# (empty = opt out, e.g. mirrors without PEP-700 upload-time metadata).
+if [[ -z "${PIP_UPLOADED_PRIOR_TO+x}" ]]; then
+    export PIP_UPLOADED_PRIOR_TO="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+elif [[ -z "${PIP_UPLOADED_PRIOR_TO}" ]]; then
+    unset PIP_UPLOADED_PRIOR_TO
+fi
 
 "${PIP_BIN}" install ${PIP_PROXY_ARGS[@]+"${PIP_PROXY_ARGS[@]}"} --upgrade pip setuptools wheel
 
@@ -80,8 +85,8 @@ if ! grep -Fq "${VENV_PATH}/bin/activate" "${HOME}/.bashrc"; then
     echo "source ${VENV_PATH}/bin/activate" >> "${HOME}/.bashrc"
 fi
 
-# Persist pip cooldown for every new interactive shell
-if ! grep -Fq 'PIP_UPLOADED_PRIOR_TO' "${HOME}/.bashrc"; then
+# Persist the rolling cooldown for new interactive shells — only when it is active.
+if [[ -n "${PIP_UPLOADED_PRIOR_TO:-}" ]] && ! grep -Fq 'PIP_UPLOADED_PRIOR_TO' "${HOME}/.bashrc" 2>/dev/null; then
     echo 'export PIP_UPLOADED_PRIOR_TO="$(date -u -d '\''7 days ago'\'' +%Y-%m-%dT%H:%M:%SZ)"' >> "${HOME}/.bashrc"
 fi
 

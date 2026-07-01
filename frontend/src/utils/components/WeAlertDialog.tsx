@@ -25,6 +25,8 @@ const WeAlertDialog: React.FC<AlertDialogProps> = props => {
   return createPortal(
     <Dialog
       open={props.isDialogOpen}
+      // UI5 closes itself on ESC; sync the React state or reopening is a no-op.
+      onAfterClose={() => props.setDialogOpen(false)}
       header={
         <div className="w-full flex items-center gap-2">
           <Title level={TitleLevel.H5} className="w-full py-2">

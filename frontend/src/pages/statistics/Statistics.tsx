@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import '@/pages/tasks/Tasks.scss';
-import { PcArrowLink, PcPage } from '@/ui5-components';
+import { PcArrowLink, PcDynamicPage } from '@/ui5-components';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { getRequest } from '@/store/generic-data/actions';
 import { useDispatch, useSelector } from 'react-redux';
@@ -39,10 +39,10 @@ const Statistics: React.FC = () => {
   }, []);
 
   return (
-    <PcPage
-      header={{
-        title: t('statistics.title'),
-      }}>
+    <PcDynamicPage
+      header={{ title: t('statistics.title') }}
+      showHideHeaderButton={false}
+      headerContentPinnable={false}>
       <Graph
         workflows={graphData}
         startSetter={setStartDate}
@@ -140,7 +140,7 @@ const Statistics: React.FC = () => {
         data={data?.data?.workflows ?? []}
         visibleRowCountMode="Auto"
       />
-    </PcPage>
+    </PcDynamicPage>
   );
 };
 

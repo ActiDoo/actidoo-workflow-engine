@@ -46,10 +46,10 @@ div[class*='TableColumnHeader'] > ui5-icon[name='sort-descending']
          padding: 10px 15px;
       }
       a:hover {
-         box-shadow: inset 0 0 0 2px var(--pc-color-blue-primary);
+         box-shadow: inset 0 0 0 2px var(--color-brand-primary, #2e8400);
       }
       &.selected a {
-         background: var(--pc-color-blue-primary);
+         background: var(--color-brand-primary, #2e8400);
          color: #fff
       }
    }

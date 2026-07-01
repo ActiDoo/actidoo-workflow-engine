@@ -13,7 +13,7 @@ from SpiffWorkflow.bpmn.specs.event_definitions.timer import TimerEventDefinitio
 from SpiffWorkflow.bpmn.specs.mixins.events.event_types import CatchingEvent
 from SpiffWorkflow.bpmn.workflow import BpmnWorkflow
 from SpiffWorkflow.task import Task, TaskState
-from sqlalchemy import and_, delete, func, null, select
+from sqlalchemy import and_, delete, func, null, select, tuple_
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy_file import File
 
@@ -21,6 +21,7 @@ from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.wf import events, providers as workflow_providers
 from actidoo_wfe.wf.exceptions import InvalidWorkflowSpecException
 from actidoo_wfe.wf.models import (
+    DataModelFile,
     WorkflowAttachment,
     WorkflowInstance,
     WorkflowInstanceAttachment,
@@ -424,10 +425,17 @@ def persist_workflow_spec(db: Session, name: str):
             db.add(db_file)
 
 
-def load_user(db: Session, user_id: uuid.UUID) -> UserRepresentation:
-    user = db.execute(
+def load_workflow_user(db: Session, user_id: uuid.UUID) -> WorkflowUser:
+    """Load the ORM user. Most callers want ``load_user`` (the representation);
+    the workflow-data service passes the ORM object into ``row_filter`` extension
+    callbacks, which rely on its relationships."""
+    return db.execute(
         select(WorkflowUser).where(WorkflowUser.id == user_id),
     ).scalar_one()
+
+
+def load_user(db: Session, user_id: uuid.UUID) -> UserRepresentation:
+    user = load_workflow_user(db, user_id)
     roles = {r.role.name for r in user.roles}
     claims = {claim.claim_key: claim.claim_value for claim in user.claims}
 
@@ -730,8 +738,158 @@ def delete_attachment_for_workflow_instance(
     db.flush()
 
 
+# --- Data-model file references (the normalized storage + GC source) ----------
+# Parallel family to store_attachment_for_task etc., but FLUSH-FREE: these are
+# invoked from the data-model file materializer (a before_flush listener), where
+# calling session.flush() is illegal. They add/delete ORM objects that ride the
+# in-progress flush; callers outside a flush flush themselves. Run them under
+# session.no_autoflush so the SELECTs do not trigger a re-entrant flush.
+
+
+def store_data_model_file(
+    db: Session,
+    *,
+    model_name: str,
+    row_id: uuid.UUID,
+    row_version: int,
+    field_name: str,
+    attachment_id: uuid.UUID,
+    filename: str,
+    mimetype: str | None,
+    position: int,
+) -> DataModelFile:
+    """Idempotent upsert of one data-model file reference (mirrors store_attachment_for_task)."""
+    obj = db.execute(
+        select(DataModelFile).where(
+            DataModelFile.model_name == model_name,
+            DataModelFile.row_id == row_id,
+            DataModelFile.row_version == row_version,
+            DataModelFile.field_name == field_name,
+            DataModelFile.workflow_attachment_id == attachment_id,
+        ),
+    ).scalar()
+
+    if not obj:
+        obj = DataModelFile(
+            model_name=model_name,
+            row_id=row_id,
+            row_version=row_version,
+            field_name=field_name,
+            workflow_attachment_id=attachment_id,
+            filename=filename,
+            mimetype=mimetype,
+            position=position,
+        )
+        db.add(obj)
+
+    return obj
+
+
+def find_data_model_files_for_rows(
+    db: Session,
+    model_name: str,
+    keys: list[tuple[uuid.UUID, int]],
+) -> list[DataModelFile]:
+    """All file rows for a set of ``(row_id, row_version)`` keys, eager-loading the
+    attachment (for the hash). One query for a whole page (read path)."""
+    if not keys:
+        return []
+    return list(
+        db.execute(
+            select(DataModelFile)
+            .options(joinedload(DataModelFile.attachment))
+            .where(
+                DataModelFile.model_name == model_name,
+                tuple_(DataModelFile.row_id, DataModelFile.row_version).in_(keys),
+            )
+            .order_by(DataModelFile.position),
+        ).scalars(),
+    )
+
+
+def find_data_model_file_by_hash(
+    db: Session,
+    model_name: str,
+    row_id: uuid.UUID,
+    row_version: int,
+    file_hash: str,
+) -> DataModelFile | None:
+    """The file row of one row version referencing an attachment with *file_hash*.
+
+    Used to authorize a download: a hash is downloadable for a row version only if
+    that version actually references it. Eager-loads the attachment for its bytes.
+    """
+    return db.execute(
+        select(DataModelFile)
+        .options(joinedload(DataModelFile.attachment))
+        .join(WorkflowAttachment, WorkflowAttachment.id == DataModelFile.workflow_attachment_id)
+        .where(
+            DataModelFile.model_name == model_name,
+            DataModelFile.row_id == row_id,
+            DataModelFile.row_version == row_version,
+            WorkflowAttachment.hash == file_hash,
+        ),
+    ).scalars().first()
+
+
+def delete_data_model_files_for_row(
+    db: Session,
+    model_name: str,
+    row_id: uuid.UUID,
+    row_version: int,
+    field_name: str | None = None,
+):
+    """Delete the file rows of one row version (optionally a single field).
+
+    ORM-style (select + ``session.delete``) so it rides the in-progress flush
+    rather than emitting a separate Core DELETE."""
+    stmt = select(DataModelFile).where(
+        DataModelFile.model_name == model_name,
+        DataModelFile.row_id == row_id,
+        DataModelFile.row_version == row_version,
+    )
+    if field_name is not None:
+        stmt = stmt.where(DataModelFile.field_name == field_name)
+    for obj in db.execute(stmt).scalars():
+        db.delete(obj)
+
+
+def copy_data_model_files_forward(
+    db: Session,
+    model_name: str,
+    row_id: uuid.UUID,
+    from_version: int,
+    to_version: int,
+    field_name: str,
+):
+    """Copy a field's file rows from one version to a new one (version copy-forward)."""
+    sources = db.execute(
+        select(DataModelFile).where(
+            DataModelFile.model_name == model_name,
+            DataModelFile.row_id == row_id,
+            DataModelFile.row_version == from_version,
+            DataModelFile.field_name == field_name,
+        ),
+    ).scalars()
+    for src in sources:
+        store_data_model_file(
+            db,
+            model_name=model_name,
+            row_id=row_id,
+            row_version=to_version,
+            field_name=field_name,
+            attachment_id=src.workflow_attachment_id,
+            filename=src.filename,
+            mimetype=src.mimetype,
+            position=src.position,
+        )
+
+
 def delete_dangling_attachment(db: Session, attachment_id: uuid.UUID):
     attachment = find_attachment_by_id(db=db, attachment_id=attachment_id)
+    if attachment is None:
+        # Already gone (e.g. deleted earlier in this same cleanup pass).
+        return
 
     n_tasks = db.execute(
         select(func.count()).select_from(WorkflowInstanceTaskAttachment).where(WorkflowInstanceTaskAttachment.workflow_attachment_id == attachment_id),
@@ -741,7 +899,11 @@ def delete_dangling_attachment(db: Session, attachment_id: uuid.UUID):
         select(func.count()).select_from(WorkflowInstanceAttachment).where(WorkflowInstanceAttachment.workflow_attachment_id == attachment_id),
     ).scalar_one()
 
-    if n_tasks == 0 and n_workflow_instances == 0:
+    n_data_model_files = db.execute(
+        select(func.count()).select_from(DataModelFile).where(DataModelFile.workflow_attachment_id == attachment_id),
+    ).scalar_one()
+
+    if n_tasks == 0 and n_workflow_instances == 0 and n_data_model_files == 0:
         db.delete(attachment)
 
     db.flush()
@@ -846,8 +1008,22 @@ def get_subscriptions_by_message_name_and_correlation_key(db: Session, message_n
 
 
 def delete_workflow_instance(db: Session, workflow: BpmnWorkflow):
-    """Deletes a workflow instance comletely"""
+    """Deletes a workflow instance comletely.
+
+    Deleting the instance cascades its task/instance attachment link rows, but not
+    the ``WorkflowAttachment`` rows themselves. We therefore collect the linked
+    attachment ids first and, after the delete, garbage-collect each one — which
+    now also counts data-model file references, so an attachment still referenced
+    by a data-model row survives while a truly orphaned one (and its stored file)
+    is removed.
+    """
     id = workflow.task_tree.id  # the id is the id of the top task
+
+    linked_attachment_ids: set[uuid.UUID] = set()
+    for link in find_task_attachments_by_worfklow_instance_id(db=db, workflow_instance_id=id):
+        linked_attachment_ids.add(link.workflow_attachment_id)
+    for link in find_workflow_instance_attachments_by_worfklow_instance_id(db=db, workflow_instance_id=id):
+        linked_attachment_ids.add(link.workflow_attachment_id)
 
     db.execute(
         delete(WorkflowInstance).where(
@@ -856,6 +1032,9 @@ def delete_workflow_instance(db: Session, workflow: BpmnWorkflow):
     )
 
     db.flush()
+
+    for attachment_id in linked_attachment_ids:
+        delete_dangling_attachment(db=db, attachment_id=attachment_id)
 
 
 def list_due_time_events(db: Session, *, now: datetime.datetime, limit: int = 200) -> list[TimeEvent]:

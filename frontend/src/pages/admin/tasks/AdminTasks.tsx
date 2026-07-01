@@ -12,7 +12,8 @@ import {
   getQueryParamsFromTableData,
   getTableDataFromQueryParams,
   PcAnalyticalTable,
-  PcPage,
+  PcDynamicPage,
+  PcSearch,
   useAdditionalTableFunctions,
 } from '@/ui5-components';
 import { environment } from '@/environment';
@@ -46,12 +47,13 @@ const AdminTasks: React.FC = () => {
   }, [tableData.loadData]);
 
   return (
-    <PcPage
-      header={{
-        title: t('admin.tasks'),
-        initialSearch: tableData.search,
-        searchInput: tableData.onSearch,
-      }}>
+    <PcDynamicPage
+      header={{ title: t('admin.tasks') }}
+      showHideHeaderButton={false}
+      headerContentPinnable={false}>
+      <div className="flex items-center justify-end w-100 mb-4 gap-2">
+        <PcSearch initialSearch={tableData.search} searchInput={tableData.onSearch} />
+      </div>
       <PcAnalyticalTable
         columns={adminTasksColumns(tableData, t)}
         initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
@@ -67,7 +69,7 @@ const AdminTasks: React.FC = () => {
         forcePage={tableData.forcePage}
         filterable={true}
       />
-    </PcPage>
+    </PcDynamicPage>
   );
 };
 

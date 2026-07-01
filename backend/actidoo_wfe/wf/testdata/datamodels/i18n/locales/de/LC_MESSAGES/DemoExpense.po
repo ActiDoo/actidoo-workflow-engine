@@ -1,0 +1,60 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: DemoExpense VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-11 20:36+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+msgctxt "model"
+msgid "Demo Expenses"
+msgstr "Demo-Ausgaben"
+
+msgctxt "field:id"
+msgid "ID"
+msgstr "ID"
+
+msgctxt "field:version"
+msgid "Version"
+msgstr "Version"
+
+msgctxt "field:title"
+msgid "Title"
+msgstr "Titel"
+
+msgctxt "field:amount"
+msgid "Amount"
+msgstr "Betrag"
+
+msgctxt "field:category"
+msgid "Category"
+msgstr "Kategorie"
+
+msgctxt "field:status"
+msgid "Status"
+msgstr "Status"
+
+msgctxt "field:description"
+msgid "Description"
+msgstr "Beschreibung"
+
+msgctxt "field:created_at"
+msgid "Created"
+msgstr "Erstellt"
+
+msgctxt "field:receipt"
+msgid "Receipt"
+msgstr "Beleg"
+
+msgctxt "action:edit"
+msgid "Edit"
+msgstr "Bearbeiten"
+

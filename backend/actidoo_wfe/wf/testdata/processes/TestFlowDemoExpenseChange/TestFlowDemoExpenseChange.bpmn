@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_demo_change" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_demo_change">
+    <bpmn:participant id="Participant_demo_change" name="Demo Expense Change" processRef="TestFlowDemoExpenseChange" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlowDemoExpenseChange" name="Demo Expense Change" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_demo_change">
+      <bpmn:lane id="EditorLane" name="Editor">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="demo-editor" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_change</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>PrefillFromSource</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EditExpense</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>PersistUpdate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_change</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_change">
+      <bpmn:outgoing>Flow_start_prefill</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="PrefillFromSource" name="Prefill from source">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="demo_prefill_from_source" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_start_prefill</bpmn:incoming>
+      <bpmn:outgoing>Flow_prefill_edit</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="EditExpense" name="Edit Expense">
+      <bpmn:incoming>Flow_prefill_edit</bpmn:incoming>
+      <bpmn:outgoing>Flow_edit_persist</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="PersistUpdate" name="Persist new version">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="demo_persist_update" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_edit_persist</bpmn:incoming>
+      <bpmn:outgoing>Flow_persist_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_change">
+      <bpmn:incoming>Flow_persist_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_prefill" sourceRef="StartEvent_change" targetRef="PrefillFromSource" />
+    <bpmn:sequenceFlow id="Flow_prefill_edit" sourceRef="PrefillFromSource" targetRef="EditExpense" />
+    <bpmn:sequenceFlow id="Flow_edit_persist" sourceRef="EditExpense" targetRef="PersistUpdate" />
+    <bpmn:sequenceFlow id="Flow_persist_end" sourceRef="PersistUpdate" targetRef="EndEvent_change" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_demo_change">
+      <bpmndi:BPMNShape id="Participant_demo_change_di" bpmnElement="Participant_demo_change" isHorizontal="true">
+        <dc:Bounds x="129" y="79" width="741" height="251" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EditorLane_di" bpmnElement="EditorLane" isHorizontal="true">
+        <dc:Bounds x="159" y="79" width="711" height="251" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_change_di" bpmnElement="StartEvent_change">
+        <dc:Bounds x="212" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PrefillFromSource_di" bpmnElement="PrefillFromSource">
+        <dc:Bounds x="290" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EditExpense_di" bpmnElement="EditExpense">
+        <dc:Bounds x="440" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PersistUpdate_di" bpmnElement="PersistUpdate">
+        <dc:Bounds x="590" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_change_di" bpmnElement="EndEvent_change">
+        <dc:Bounds x="742" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_prefill_di" bpmnElement="Flow_start_prefill">
+        <di:waypoint x="248" y="190" />
+        <di:waypoint x="290" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_prefill_edit_di" bpmnElement="Flow_prefill_edit">
+        <di:waypoint x="390" y="190" />
+        <di:waypoint x="440" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_edit_persist_di" bpmnElement="Flow_edit_persist">
+        <di:waypoint x="540" y="190" />
+        <di:waypoint x="590" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_persist_end_di" bpmnElement="Flow_persist_end">
+        <di:waypoint x="690" y="190" />
+        <di:waypoint x="742" y="190" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

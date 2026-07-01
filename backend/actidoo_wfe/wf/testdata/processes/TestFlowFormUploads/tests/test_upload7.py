@@ -10,7 +10,6 @@ from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.wf.service_form import remove_data_uri_fields
 from actidoo_wfe.wf.tests.helpers.dicts import are_dicts_equal, load_dict_from_file, read_and_transform, save_dict_to_file
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
-from actidoo_wfe.wf.types import UserTaskRepresentation
 
 WF_NAME = "TestFlowFormUploads"
 

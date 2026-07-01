@@ -12,7 +12,14 @@ export const WeUploadDialog: React.FC<{
   processLabel?: string | undefined;
 }> = props => {
   return createPortal(
-    <Dialog open={props.isOpen}>
+    <Dialog
+      open={props.isOpen}
+      // Progress dialog: ESC must not dismiss it mid-upload. Programmatic close
+      // (isOpen=false) fires the same cancelable before-close with escPressed=false
+      // and must proceed — an unconditional preventDefault would stick it open.
+      onBeforeClose={e => {
+        if (e.detail.escPressed) e.preventDefault();
+      }}>
       <div className="p-4 h-[150px] flex flex-col items-center justify-center">
         {props.progress !== 100 ? (
           <div className="flex flex-col gap-3 text-center">

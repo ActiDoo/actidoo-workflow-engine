@@ -19,6 +19,8 @@ import {
   Text,
   DateTimePicker,
   ButtonDesign,
+  MessageStrip,
+  MessageStripDesign,
 } from '@ui5/webcomponents-react';
 import moment from 'moment';
 import WeUserAutocomplete from '@/utils/components/WeUserAutocomplete';
@@ -78,7 +80,7 @@ const UserSettings: React.FC = () => {
   const [initialDelegations, setInitialDelegations] = useState<UserDelegation[]>([]);
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
-  const [showDelegateAddedNotice, setShowDelegateAddedNotice] = useState(false);
+  const [delegateInputResetKey, setDelegateInputResetKey] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const saving = useSelectUiLoading(key, 'POST');
 
@@ -87,6 +89,16 @@ const UserSettings: React.FC = () => {
       ? delegations.some(entry => entry.delegate_user_id === pendingDelegate.id)
       : false;
   }, [pendingDelegate.id, delegations]);
+
+  // Users already in the delegate list (plus oneself) must not be offered in the
+  // autocomplete — exclude them from the suggestions and the blur auto-pick.
+  const excludedDelegateIds = useMemo(
+    () => [
+      ...(currentUserId ? [currentUserId] : []),
+      ...delegations.map(entry => entry.delegate_user_id),
+    ],
+    [currentUserId, delegations]
+  );
 
   const isDirty = useMemo(() => {
     return (
@@ -147,7 +159,6 @@ const UserSettings: React.FC = () => {
       })),
     };
     dispatch(postRequest(key, payload));
-    setShowDelegateAddedNotice(false);
   };
 
   const handleDelegationDateChange = (delegateId: string, isoValue?: string | null) => {
@@ -160,7 +171,6 @@ const UserSettings: React.FC = () => {
 
   const handleRemoveDelegation = (delegateId: string) => {
     setDelegations(prev => prev.filter(entry => entry.delegate_user_id !== delegateId));
-    setShowDelegateAddedNotice(false);
   };
 
   const handleAddDelegation = () => {
@@ -181,7 +191,8 @@ const UserSettings: React.FC = () => {
     ]);
     setPendingDelegate({});
     setPendingValidUntil('');
-    setShowDelegateAddedNotice(true);
+    // Autocomplete via key-Wechsel neu mounten, damit das Eingabefeld geleert wird
+    setDelegateInputResetKey(prev => prev + 1);
   };
 
   const blocker = useBlocker(isDirty);
@@ -196,7 +207,12 @@ const UserSettings: React.FC = () => {
     return (
       <WeAlertDialog
         isDialogOpen={dialogOpen}
-        setDialogOpen={setDialogOpen}
+        // Dismissal (ESC/X) must act like "stay": without reset the blocker stays
+        // 'blocked' and silently swallows every further navigation attempt.
+        setDialogOpen={open => {
+          if (!open) blocker.reset?.();
+          setDialogOpen(open);
+        }}
         title={t('common.unsavedChanges.title')}
         buttons={
           <>
@@ -313,9 +329,11 @@ const UserSettings: React.FC = () => {
             ))
           )}
 
-          {showDelegateAddedNotice && (
-            <Text className="text-xs text-amber-700">{t('common.delegations.addedNotice')}</Text>
-          )}
+          {isDirty ? (
+            <MessageStrip design={MessageStripDesign.Warning} hideCloseButton className="block">
+              {t('common.unsavedChanges.hint')}
+            </MessageStrip>
+          ) : null}
         </div>
 
         <div className="border-t border-neutral-200 pt-4 space-y-3">
@@ -323,7 +341,8 @@ const UserSettings: React.FC = () => {
             {t('userSettings.delegations.add')} {t('common.delegations.addHint')}
           </Label>
           <WeUserAutocomplete
-            excludeUserIds={currentUserId ? [currentUserId] : undefined}
+            key={delegateInputResetKey}
+            excludeUserIds={excludedDelegateIds}
             onSelectUser={(userId, label) => {
               setPendingDelegate({ id: userId, label });
             }}
@@ -353,14 +372,6 @@ const UserSettings: React.FC = () => {
               disabled={!pendingDelegate.id || isDuplicatePendingDelegate}
               onClick={handleAddDelegation}>
               {t('userSettings.delegations.add')}
-            </Button>
-            <Button
-              design={ButtonDesign.Transparent}
-              onClick={() => {
-                setPendingDelegate({});
-                setPendingValidUntil('');
-              }}>
-              {t('userSettings.delegations.resetSelection')}
             </Button>
           </div>
           {isDuplicatePendingDelegate ? (

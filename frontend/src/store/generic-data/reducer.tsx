@@ -1,9 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
+import { isEqual } from 'lodash';
 import { initState, WeDataAction, WeDataState } from '@/store/generic-data/setup';
 import { GenericDataActionType } from '@/ui5-components';
 import { postDataResponseReducer } from '@/store/generic-data/reducerPostDataResponse';
+
+/**
+ * Merge an appended page into the accumulated data: ITEMS concatenated with
+ * id-deduplication (page boundaries may shift between fetches), everything else
+ * (COUNT, NEXT_CURSOR, ...) taken from the new page.
+ */
+const mergeItemsPage = (oldData: any, newData: any): any => {
+  if (!Array.isArray(oldData?.ITEMS) || !Array.isArray(newData?.ITEMS)) return newData;
+  const seen = new Set(oldData.ITEMS.map((item: any) => item?.id));
+  return {
+    ...newData,
+    ITEMS: [...oldData.ITEMS, ...newData.ITEMS.filter((item: any) => !seen.has(item?.id))],
+  };
+};
 
 export default (state = initState, action: WeDataAction): WeDataState => {
   switch (action.type) {
@@ -33,24 +48,46 @@ export default (state = initState, action: WeDataAction): WeDataState => {
         ...state,
         [action.payload.key]: {
           ...state[action.payload.key],
+          requestSignature: {
+            params: action.payload.params,
+            queryParams: action.payload.queryParams,
+            append: !!action.payload.append,
+          },
           response: undefined,
           postResponse: undefined,
           putResponse: undefined,
           deleteResponse: undefined,
         },
       };
-    case GenericDataActionType.POST_DATA_RESPONSE:
+    case GenericDataActionType.POST_DATA_RESPONSE: {
+      const entry = state[action.payload.key];
+      const signature = action.payload.signature;
+      // Supersede guard: a response (data OR error) only applies while its echoed
+      // signature is still the key's latest request — anything else is stale
+      // (newer request or resetStateForKey in between) and is dropped entirely.
+      if (signature && !isEqual(entry?.requestSignature, signature)) {
+        return state;
+      }
+      const isAppend = !!signature?.append;
+      const succeeded = action.payload.response === 200;
+      const data = isAppend
+        ? succeeded
+          ? mergeItemsPage(entry?.data, action.payload.data)
+          : entry?.data // failed append: keep the accumulated list untouched
+        : action.payload.data; // replace: today's behavior (incl. error bodies)
       return postDataResponseReducer(
         {
           ...state,
           [action.payload.key]: {
-            ...state[action.payload.key],
+            ...entry,
             postResponse: action.payload.response,
-            data: action.payload.data,
+            data,
+            dataSignature: isAppend && !succeeded ? entry?.dataSignature : signature,
           },
         },
         action
       );
+    }
     case GenericDataActionType.PUT_DATA_RESPONSE:
       return {
         ...state,

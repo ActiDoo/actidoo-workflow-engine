@@ -45,6 +45,17 @@ app = AsyncTyper()
 async def reset_db():
     database.drop_all(settings)
     database.run_migrations(settings)
+    # Bundled demo data models (wf/testdata) ship no migration — their tables are
+    # otherwise created only at app startup, so a plain reset would leave them missing
+    # until the next server restart. Recreate them here, registered via the same scan
+    # and gated on the same setting as startup (never in prod).
+    if settings.show_test_workflows:
+        from actidoo_wfe.venusian_scan import run_venusian_scan
+        from actidoo_wfe.wf.registry_data_model import create_registered_data_model_tables
+
+        engine = database.setup_db(settings)
+        run_venusian_scan()  # registers the bundled data models
+        create_registered_data_model_tables(engine)
 
 
 @app.async_command()

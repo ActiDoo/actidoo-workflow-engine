@@ -114,6 +114,7 @@ def _insert_array_component(
         "ui:arrayOverviewButtonText": overview_button_text,
         "ui:defaultRepetitions": default_repetitions,
         "ui:label": label,
+        "ui:copyable": True,
     }
     if itemgroup not in uischema["ui:layout"]:
         uischema["ui:layout"][itemgroup] = [itemgroup]

@@ -45,7 +45,7 @@ def _load_translations(process: str, locale: str, workflow_dir: pathlib.Path) ->
     """
     Loads Babel translations with context support.
     Expects:
-      wf/processes/<process>/i18n/locales/<locale>/LC_MESSAGES/<process>.mo
+      wf/testdata/processes/<process>/i18n/locales/<locale>/LC_MESSAGES/<process>.mo
     """
 
     available = _available_locales_for(process, workflow_dir)
@@ -244,10 +244,62 @@ def update_process(process: str, locale: str):
     return po
 
 
+def extract_messages_for_datamodel(descriptor) -> pathlib.Path:
+    """Extract a data model's declared labels (model, fields, actions) into
+    ``<model_dir>/i18n/<name>.pot``.
+
+    Labels are read from the registered descriptor (not parsed from source), so
+    the extraction always matches what the API actually serves. Models without an
+    api config have no labels and raise.
+    """
+    if descriptor.api is None:
+        raise ValueError(f"Data model '{descriptor.name}' has no api config — nothing to extract.")
+    if descriptor.i18n_dir is None:
+        raise FileNotFoundError(f"Data model '{descriptor.name}' has no resolvable module directory.")
+
+    pot_path = descriptor.i18n_dir / "i18n" / f"{descriptor.name}.pot"
+    pot_path.parent.mkdir(parents=True, exist_ok=True)
+
+    catalog = Catalog(locale=None, project=descriptor.name)
+    if descriptor.api.label:
+        catalog.add(id=descriptor.api.label, context="model")
+    for field in descriptor.api.fields or []:
+        if field.label:
+            catalog.add(id=field.label, context=f"field:{field.name}")
+    for action in descriptor.api.actions:
+        if action.label:
+            catalog.add(id=action.label, context=f"action:{action.key}")
+
+    with open(pot_path, "wb") as f:
+        write_po(f, catalog, ignore_obsolete=True)
+    return pot_path
+
+
+def update_datamodel(descriptor, locale: str) -> pathlib.Path:
+    """Update/create the data model's ``.po`` for *locale* from its ``.pot``."""
+    if descriptor.i18n_dir is None:
+        raise FileNotFoundError(f"Data model '{descriptor.name}' has no resolvable module directory.")
+    pot = descriptor.i18n_dir / "i18n" / f"{descriptor.name}.pot"
+    po = descriptor.i18n_dir / "i18n" / "locales" / locale / "LC_MESSAGES" / f"{descriptor.name}.po"
+    update_catalogue(template_pot=pot, input_po=po, output_po=po, locale=locale)
+    return po
+
+
 def compile_all():
-    """Compile every workflow's .po into .mo, then the global ``messages`` catalog."""
+    """Compile every workflow's and data model's .po into .mo, then the global
+    ``messages`` catalog. Data-model catalogs come from the registry, so the
+    caller must have scanned/imported the extensions first."""
+    from actidoo_wfe.wf.registry_data_model import data_model_registry
+
     for workflow_dir in workflow_providers.iter_workflow_directories():
         locales_root = workflow_dir / "i18n" / "locales"
+        if not locales_root.exists():
+            continue
+        for po_file in locales_root.glob("**/LC_MESSAGES/*.po"):
+            compile_po_to_mo(po_file)
+
+    datamodel_roots = {d.i18n_dir / "i18n" / "locales" for d in data_model_registry.list_models() if d.i18n_dir}
+    for locales_root in datamodel_roots:
         if not locales_root.exists():
             continue
         for po_file in locales_root.glob("**/LC_MESSAGES/*.po"):

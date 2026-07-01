@@ -2,10 +2,11 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 
+from sqlalchemy import select, true
+
 from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.models import WorkflowInstanceTask
-from sqlalchemy import select, true
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
 WF_NAME = "TestFlow_MultiInstance"

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Protocol, Sequence, Tuple
 
 import venusian
+
 from actidoo_wfe.wf.constants import BPMN_DIRECTORY
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class FileSystemWorkflowProvider:
     base_path: Path
     name: str = "builtin"
     priority: int = 0
-    module_base: Optional[str] = "actidoo_wfe.wf.processes"
+    module_base: Optional[str] = "actidoo_wfe.wf.testdata.processes"
 
     def iter_workflow_names(self) -> Iterable[str]:
         for directory in self.iter_directories():
@@ -234,7 +235,6 @@ def get_provider(workflow_name: str) -> WorkflowProvider:
 
 
 __all__ = [
-    "ENTRY_POINT_GROUP",
     "FileSystemWorkflowProvider",
     "WorkflowProvider",
     "WorkflowProviderRegistry",

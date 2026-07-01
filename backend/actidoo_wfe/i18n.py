@@ -13,7 +13,7 @@ This module owns:
   PO/MO compilation, supported-locale listing, Accept-Language parsing.
 
 Workflow-specific catalog handling (form labels, BPMN names, per-process
-``.po`` files in ``wf/processes/<wf>/i18n/``) stays in ``wf.service_i18n``
+``.po`` files in ``wf/testdata/processes/<wf>/i18n/``) stays in ``wf.service_i18n``
 because it depends on the workflow plugin layout.
 """
 
@@ -40,7 +40,7 @@ GLOBAL_CATALOG_DOMAIN = "messages"
 GLOBAL_I18N_DIR = pathlib.Path(__file__).parent / "locales"
 # extract_global_messages() scans every .py / .mako under here for `_(...)` calls.
 GLOBAL_I18N_SCAN_ROOT = pathlib.Path(__file__).parent
-GLOBAL_I18N_SCAN_SKIP_DIR_NAMES = {"processes", "tests", "__pycache__", "locales", ".venv"}
+GLOBAL_I18N_SCAN_SKIP_DIR_NAMES = {"testdata", "processes", "tests", "__pycache__", "locales", ".venv"}
 
 _GLOBAL_GETTEXT_CALL_RE = re.compile(r'_\(\s*(?:r?"((?:[^"\\]|\\.)*)"|r?\'((?:[^\'\\]|\\.)*)\')\s*\)')
 

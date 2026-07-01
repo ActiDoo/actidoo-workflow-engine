@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
-from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
 import logging
+
+from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
 
 log = logging.getLogger(__name__)
 

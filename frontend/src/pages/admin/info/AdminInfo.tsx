@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { getRequest } from '@/store/generic-data/actions';
-import { PcPage } from '@/ui5-components';
+import { PcDynamicPage } from '@/ui5-components';
 import { environment } from '@/environment';
 import { AnalyticalTable } from '@ui5/webcomponents-react';
 import { useTranslation } from '@/i18n';
@@ -23,10 +23,10 @@ const AdminInfo: React.FC = () => {
   }, []);
 
   return (
-    <PcPage
-      header={{
-        title: t('navigation.systemInformation'),
-      }}>
+    <PcDynamicPage
+      header={{ title: t('navigation.systemInformation') }}
+      showHideHeaderButton={false}
+      headerContentPinnable={false}>
       <AnalyticalTable
         className="mb-4"
         columns={[
@@ -51,7 +51,7 @@ const AdminInfo: React.FC = () => {
           },
         ]}
       />
-    </PcPage>
+    </PcDynamicPage>
   );
 };
 

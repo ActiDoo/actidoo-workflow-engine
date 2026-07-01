@@ -15,7 +15,3 @@ export const useSelectCurrentAdminWorkflow = (id?: string): AdminWorkflowInstanc
   useSelector((state: State) =>
     state.data[WeDataKey.ADMIN_ALL_WORKFLOWS]?.data?.ITEMS.find(t => t.id === id)
   );
-export const useSelectCurrentWorkflow = (id?: string): AdminWorkflowInstance | undefined =>
-  useSelector((state: State) =>
-    state.data[WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS]?.data?.ITEMS.find(t => t.id === id)
-  );

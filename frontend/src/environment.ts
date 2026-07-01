@@ -5,6 +5,7 @@ interface RuntimeConfig {
   FRONTEND_BASE_URL?: string;
   API_BASE_URL?: string;
   ENVIRONMENT_LABEL?: string;
+  APP_TITLE?: string;
 }
 
 declare global {
@@ -102,6 +103,8 @@ const environmentLabel = getOptionalConfigValue(
   runtimeConfig.ENVIRONMENT_LABEL,
   import.meta.env.VITE_ENVIRONMENT_LABEL
 );
+// Optional app title shown next to the brand logo; falls back to the i18n default when unset.
+const appTitle = getOptionalConfigValue(runtimeConfig.APP_TITLE, import.meta.env.VITE_APP_TITLE);
 
 export const environment = {
   apiUrl: `${apiBaseUrl}wfe/bff/`, // BFF endpoint for user routes.
@@ -111,4 +114,5 @@ export const environment = {
   urlPrefix, // Path prefix for router/assets.
   buildNumber: import.meta.env.VITE_BUILD_NUMBER,
   environmentLabel, // Environment indicator shown in UI.
+  appTitle, // Optional app title shown next to the brand logo.
 };

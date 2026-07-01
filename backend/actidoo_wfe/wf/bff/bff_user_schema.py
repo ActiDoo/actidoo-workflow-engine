@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from actidoo_wfe.helpers.schema import PaginatedDataSchema
+from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataSchema
 
 
 class ErrorResponse(BaseModel):
@@ -50,10 +50,24 @@ class SubmitTaskDataErrorResponse(BaseModel):
     error_schema: dict
 
 
+class GetUserTasksResponseWorkflowInstance(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    subtitle: Optional[str] = None
+    is_completed: bool
+    is_readonly: bool = False
+
+
 class GetUserTasksResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     usertasks: List["GetUserTasksResponseUserTasks"]
+    # The instance the tasks belong to — shipped alongside (BFF pattern: the task
+    # page needs its title), but only when the user may see the instance via the
+    # task-list scope or as initiator; ``null`` otherwise AND for unknown ids.
+    workflow_instance: Optional[GetUserTasksResponseWorkflowInstance] = None
 
 
 class GetUserTasksResponseUserTasks(BaseModel):
@@ -125,6 +139,9 @@ class GetWorkflowInstancesResponseItem(BaseModel):
 
 
 GetWorkflowInstancesResponse = PaginatedDataSchema[GetWorkflowInstancesResponseItem]
+
+# The cursor-paginated task list: a next-page token, deliberately no total count.
+GetWorkflowInstancesWithTasksResponse = CursorPaginatedDataSchema[GetWorkflowInstancesResponseItem]
 
 
 class GetWorkflowsResponse(BaseModel):

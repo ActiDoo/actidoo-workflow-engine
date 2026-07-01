@@ -25,6 +25,7 @@ const WorkflowDiagram: React.FC = () => {
         title: t('workflowDiagram.workflowTitle', {
           name: dataWorkflowSpec ? dataWorkflowSpec.name : '',
         }),
+        showBack: true,
         actionSection: (
           <Button
             design={ButtonDesign.Emphasized}

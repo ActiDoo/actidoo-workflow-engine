@@ -5,18 +5,20 @@
 This module implements the application services (services which must be used by the APIs).
 """
 
-import hashlib
 import datetime
+import hashlib
 import logging
 import uuid
+from copy import deepcopy
 from typing import Any, Literal
 
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
+
 from actidoo_wfe.helpers.bff_table import BffTableQuerySchemaBase
 from actidoo_wfe.helpers.datauri import DataURI
 from actidoo_wfe.helpers.modules import env_from_module
-from actidoo_wfe.helpers.schema import PaginatedDataSchema
-
+from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataSchema
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import providers as workflow_providers
@@ -27,7 +29,6 @@ from actidoo_wfe.wf.exceptions import (
     TaskAlreadyAssignedToDifferentUserException,
     TaskCannotBeUnassignedException,
     TaskIsNotInReadyUsertasksException,
-    TaskNotFoundException,
     UserMayNotAdministrateThisWorkflowException,
     UserMayNotAdministrateUsersException,
     UserMayNotCopyWorkflowException,
@@ -60,18 +61,31 @@ from actidoo_wfe.wf.types import (
     UserTaskWithoutNestedAssignedUserRepresentation,
     WorkflowCopyInstruction,
     WorkflowInstanceRepresentation,
+    WorkflowInstanceWithoutTasksRepresentation,
     WorkflowPreviewRepresentation,
     WorkflowRepresentation,
     WorkflowSpecRepresentation,
-    WorkflowStatisticsRepresentation,
     WorkflowStateResponse,
+    WorkflowStatisticsRepresentation,
 )
 
 log = logging.getLogger(__name__)
 
 
-def start_workflow(db: Session, name: str, user_id: uuid.UUID, initial_task_data: dict | None = None) -> uuid.UUID:
-    """Starts a workflow with the given name, and the given user as creator. Returns the workflow ID."""
+def start_workflow(
+    db: Session,
+    name: str,
+    user_id: uuid.UUID,
+    initial_task_data: dict | None = None,
+    trusted_seed: bool = False,
+) -> uuid.UUID:
+    """Starts a workflow with the given name, and the given user as creator. Returns the workflow ID.
+
+    ``trusted_seed`` marks ``initial_task_data`` as a server-built engine seed: it is
+    applied to the first user task as-is (technical fields kept, no form validation).
+    Only pass ``True`` for server-built data — never for client-supplied form data,
+    which must go through form validation.
+    """
     user_rep = repository.load_user(db=db, user_id=user_id)
     repository.persist_workflow_spec(db=db, name=name)
 
@@ -82,6 +96,15 @@ def start_workflow(db: Session, name: str, user_id: uuid.UUID, initial_task_data
         raise UserMayNotStartWorkflowException()
 
     workflow = service_workflow.start_process(name=name, created_by=user_rep)
+
+    # A trusted seed is the workflow's engine start data: seed it into the root task
+    # BEFORE run_workflow, so service tasks that run before the first user task already
+    # see it in task_data (Spiff propagates parent->child). Untrusted client start-form
+    # data (trusted_seed=False) is NOT seeded here; it stays scoped to the first user
+    # task and is cleaned against that task's form below.
+    if initial_task_data is not None and trusted_seed:
+        workflow.task_tree.set_data(**deepcopy(initial_task_data))
+
     service_workflow.run_workflow(workflow=workflow)
 
     copied_task_attachments: list[tuple[uuid.UUID, list[UploadedAttachmentRepresentation]]] = []
@@ -97,17 +120,25 @@ def start_workflow(db: Session, name: str, user_id: uuid.UUID, initial_task_data
             log.warning("No ready user tasks available to apply initial data for workflow %s", name)
         else:
             first_task = ready_tasks_in_new_workflow[0]
-            cleaned_task_data = _clean_submitted_task_data(
-                workflow=workflow,
-                task=first_task,
-                submitted_data=initial_task_data,
-            )
-            service_workflow.update_task_data(
-                workflow=workflow,
-                task_id=first_task.id,
-                cleaned_task_data=cleaned_task_data,
-            )
-            attachments = get_attachments(cleaned_task_data)
+            if trusted_seed:
+                # A trusted, server-built seed is not a form submission: it was already
+                # seeded into the task tree before run_workflow (and enriched by the
+                # service tasks that run before the first user task), so it is applied
+                # as-is. It must not go through form validation — a prefill may legitimately
+                # leave required fields empty for the user to fill in the form.
+                first_task_data = first_task.data
+            else:
+                first_task_data = _clean_submitted_task_data(
+                    workflow=workflow,
+                    task=first_task,
+                    submitted_data=initial_task_data,
+                )
+                service_workflow.update_task_data(
+                    workflow=workflow,
+                    task_id=first_task.id,
+                    cleaned_task_data=first_task_data,
+                )
+            attachments = get_attachments(first_task_data)
             if attachments:
                 copied_task_attachments.append((first_task.id, attachments))
 
@@ -468,6 +499,35 @@ def bff_user_get_initiated_workflows(
     return instances
 
 
+def get_visible_workflow_instance(
+    db: Session,
+    user_id: uuid.UUID,
+    workflow_instance_id: uuid.UUID,
+) -> WorkflowInstanceWithoutTasksRepresentation | None:
+    """Instance metadata for the task view, iff visible to the user.
+
+    Visibility is the task-list scope (ready or completed participation) or
+    being the initiator — the BFF ships this alongside the tasks so the task
+    page needs no second source for the instance title. ``None`` (and thus an
+    absent block in the response) is identical for "not visible" and "does not
+    exist".
+    """
+    instance_row = views.get_visible_workflow_instance(
+        db=db,
+        user_id=user_id,
+        workflow_instance_id=workflow_instance_id,
+    )
+    if instance_row is None:
+        return None
+    user = get_user(db=db, user_id=user_id)
+    instance = WorkflowInstanceWithoutTasksRepresentation.model_validate(instance_row)
+    if not workflow_providers.workflow_definition_available(instance.name):
+        instance.is_readonly = True
+    else:
+        instance.title = service_i18n.translate_string(msgid=instance.title, workflow_name=instance.name, locale=user.locale)
+    return instance
+
+
 def bff_get_workflows_with_usertasks(
     db: Session,
     bff_table_request_params: BffTableQuerySchemaBase,
@@ -476,7 +536,7 @@ def bff_get_workflows_with_usertasks(
 ):
     user = get_user(db=db, user_id=user_id)
     delegate_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
-    instances: PaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_get_workflows_with_usertasks(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id, state=state)
+    instances: CursorPaginatedDataSchema[WorkflowInstanceRepresentation] = views.bff_get_workflows_with_usertasks(db=db, bff_table_request_params=bff_table_request_params, user_id=user_id, state=state)
 
     for instance in instances.ITEMS:
         if not workflow_providers.workflow_definition_available(instance.name):
@@ -554,7 +614,13 @@ def get_usertasks_for_user_id(
     state: Literal["ready", "completed"],
 ) -> list[UserTaskRepresentation]:
     user = repository.load_user(db=db, user_id=user_id)
-    workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
+    try:
+        workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
+    except NoResultFound:
+        # Unknown instance ids answer with the same empty shape as instances the
+        # user is simply not involved in — the route must not be an existence
+        # oracle (and must not 500 on stale deep links).
+        return []
     delegate_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
     usertasks = service_workflow.get_usertasks_for_user(
         workflow=workflow,
@@ -604,7 +670,6 @@ def _clean_submitted_task_data(workflow, task, submitted_data):
         task_data=submitted_data,
         options_folder=options_folder,
         functions_env=functions_env,
-        preserve_unknown_fields=False,
         preserve_disabled_fields=False,
     )
 
@@ -1000,7 +1065,7 @@ def find_attachment_by_hash(db: Session, workflow_instance_id: uuid.UUID, hash: 
     return Attachment(
         id=att.id,
         hash=att.attachment.hash,
-        filename=att.attachment.first_filename,
+        filename=att.filename,
         mimetype=att.attachment.mimetype,
         data=get_file_content(att.attachment.file.file_id),
     )
@@ -1019,7 +1084,7 @@ def find_all_workflow_attachments(db: Session, workflow_instance_id: uuid.UUID):
             Attachment(
                 id=att.id,
                 hash=att.attachment.hash,
-                filename=att.attachment.first_filename,
+                filename=att.filename,
                 mimetype=att.attachment.mimetype,
                 data=get_file_content(att.attachment.file.file_id),
             ),
@@ -1070,7 +1135,7 @@ def download_attachment(
     return Attachment(
         id=att.id,
         hash=att.attachment.hash,
-        filename=att.attachment.first_filename,
+        filename=att.filename,
         mimetype=att.attachment.mimetype,
         data=get_file_content(att.attachment.file.file_id),
     )

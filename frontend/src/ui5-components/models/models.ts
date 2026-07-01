@@ -51,6 +51,13 @@ export interface ItemsAndCountResponse<T> {
   COUNT: number;
 }
 
+/** Keyset/cursor-paginated list shape: a next-page token, no total count. */
+export interface CursorItemsResponse<T> {
+  ITEMS: T[];
+  /** Token for the next page; null/absent on the last page. */
+  NEXT_CURSOR?: string | null;
+}
+
 export interface HTTPValidationError {
   detail: HTTPValidationErrorDetail[];
 }

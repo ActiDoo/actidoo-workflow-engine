@@ -50,7 +50,17 @@ function* getData(action: GenericGetRequestAction<WeDataKey>): any {
 }
 
 function* postData(action: GenericPostRequestAction<WeDataKey>): any {
-  const uiVal = `${action.payload.key}${FetchMethods.POST}`;
+  const append = !!action.payload.append;
+  // Append loads get their own loading flag (analogous to the POST suffix), so
+  // "load more" and a regular replace can be distinguished in the UI.
+  const uiVal = `${action.payload.key}${append ? 'APPEND' : FetchMethods.POST}`;
+  // Echoed in the response action: the reducer applies a response only while
+  // this is still the latest request signature for the key.
+  const signature = {
+    params: action.payload.params,
+    queryParams: action.payload.queryParams,
+    append,
+  };
   try {
     const genericUrl = WeApiUrl(action.payload.key, action.payload.params, FetchMethods.POST);
     if (genericUrl) {
@@ -65,12 +75,19 @@ function* postData(action: GenericPostRequestAction<WeDataKey>): any {
         action.payload.onUploadProgress
       );
       yield put(UiActions.setLoading(uiVal, false));
-      yield put(GenericDataActions.postResponse(action.payload.key, response, data));
+      yield put(GenericDataActions.postResponse(action.payload.key, response, data, signature));
     }
   } catch (e: any) {
     console.log('saga error', { e });
     yield put(
-      GenericDataActions.postResponse(action.payload.key, e.response?.status, e.response?.data)
+      GenericDataActions.postResponse(
+        action.payload.key,
+        // Network errors have no response object — report 400 like getData does,
+        // otherwise the failure would be invisible in the store.
+        e.response?.status ?? 400,
+        e.response?.data,
+        signature
+      )
     );
     yield put(UiActions.setLoading(uiVal, false));
   }

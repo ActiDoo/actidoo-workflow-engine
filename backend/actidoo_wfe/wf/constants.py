@@ -3,8 +3,8 @@
 
 from pathlib import Path
 
-BPMN_DIRECTORY = Path(__file__).parent / "processes"
-FORM_DIRECTORY = Path(__file__).parent / "processes" / "forms"
+BPMN_DIRECTORY = Path(__file__).parent / "testdata" / "processes"
+FORM_DIRECTORY = Path(__file__).parent / "testdata" / "processes" / "forms"
 MAIL_TEMPLATE_DIR = Path(__file__).parent / "templates" / "mails"
 
 # set_internal_data in tasks
