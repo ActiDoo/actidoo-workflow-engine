@@ -36,6 +36,8 @@ import {
 
 interface SingleTaskProps {
   state: WorkflowState;
+  reloadTask: () => void;
+  backToList: () => void;
 }
 
 const SingleTask: React.FC<SingleTaskProps> = props => {
@@ -52,6 +54,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const [errorSchema, setErrorSchema] = useState<ErrorSchema | undefined>(undefined);
 
   const [resetToInitialStateDialogOpen, setResetToInitialStateDialogOpen] = useState(false);
+  const [deleteDialogeOpen, setDeleteDialogeOpen] = useState(false);
   const [formRenderIndex] = useState(0);
 
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
@@ -68,6 +71,10 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const isSubmitLoading = loadingState[`${WeDataKey.SUBMIT_TASK_DATA}POST`];
   const isLoading = isSubmitLoading;
   const isUploadLoadingDialogOpen = isSubmitLoading;
+
+  const handleDeleteWorkflow = (taskId: string): void => {
+    dispatch(postRequest(WeDataKey.DELETE_WORKFLOW, { task_id: taskId }));
+  };
 
   const jsonschema: RJSFSchema | undefined = _.cloneDeep(task?.jsonschema);
   const uiSchema = task?.uischema
@@ -381,6 +388,40 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
       </WeAlertDialog>
     );
   };
+  const renderDeleteStateDialog = (): React.ReactElement => {
+    if (!task) return <></>;
+    return (
+      <WeAlertDialog
+        isDialogOpen={deleteDialogeOpen}
+        setDialogOpen={setDeleteDialogeOpen}
+        isLoading={false}
+        title={t('taskContent.deleteDialogTitle')}
+        buttons={
+          <>
+            <Button
+              disabled={false}
+              design={ButtonDesign.Transparent}
+              tooltip={t('common.actions.abort')}
+              onClick={() => {
+                setDeleteDialogeOpen(false);
+              }}>
+              {t('common.actions.abort')}
+            </Button>
+            <Button
+              disabled={false}
+              design={ButtonDesign.Negative}
+              tooltip={t('common.actions.delete')}
+              onClick={() => {
+                handleDeleteWorkflow(task?.id);
+              }}>
+              {t('common.actions.delete')}
+            </Button>
+          </>
+        }>
+        <Text>{t('taskContent.deleteDialogText')}</Text>
+      </WeAlertDialog>
+    );
+  };
 
   // Handle form changes and save draft
   const handleFormChange = useCallback(
@@ -459,13 +500,17 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               }
             />
           </div>
-          <div className="sticky bottom-0 bg-white px-3 pb-2.5 pt-2 mb-1">
+          <div className="sticky bottom-0 bg-white/85 px-3 pb-2.5 pt-2 mb-1">
             <div className="mb-3 h-px w-full bg-gray-200" />
             {canSubmitTask && props.state !== WorkflowState.COMPLETED ? (
               <TaskActions
+                task={task}
                 disabled={isLoading}
                 onReset={() => {
                   setResetToInitialStateDialogOpen(true);
+                }}
+                onDelete={() => {
+                  setDeleteDialogeOpen(true);
                 }}
               />
             ) : (
@@ -476,6 +521,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
 
         {renderDelegateConfirmationDialog()}
         {renderResetToInitialStateDialog()}
+        {renderDeleteStateDialog()}
       </>
     );
   }
