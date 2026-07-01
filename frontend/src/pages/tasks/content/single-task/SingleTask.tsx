@@ -500,7 +500,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               }
             />
           </div>
-          <div className="sticky bottom-0 bg-white/85 px-3 pb-2.5 pt-2 mb-1">
+          <div className="sticky bottom-0 bg-white/85 px-3 pb-2.5 pt-2">
             <div className="mb-3 h-px w-full bg-gray-200" />
             {canSubmitTask && props.state !== WorkflowState.COMPLETED ? (
               <TaskActions
