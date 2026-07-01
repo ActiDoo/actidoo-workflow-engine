@@ -159,7 +159,7 @@ export const de = {
       'Dadurch werden alle Formulardaten auf den Anfangszustand zurückgesetzt. Möchtest du fortfahren?',
     deleteDialogTitle: 'Workflow löschen',
     deleteDialogText:
-      'Dadurch wird der Workflow dauerhaft gelöscht.<br/><br/>Wenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
+      'Dadurch wird der Workflow dauerhaft gelöscht.\n\nWenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
     uploadForm: 'Formular wird hochgeladen',
     uploadDraft: 'Entwurf wird hochgeladen',
     processForm: 'Formular wird verarbeitet',

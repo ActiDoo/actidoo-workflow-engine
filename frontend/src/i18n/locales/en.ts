@@ -157,7 +157,7 @@ export const en = {
     resetDialogText: 'This will reset all form data to the initial state. Do you want to continue?',
     deleteDialogTitle: 'Delete workflow',
     deleteDialogText:
-      'This will PERMANENTLY DELETE the workflow.<br/><br/>If you have started this workflow by mistake, you can delete it without any problems.',
+      'This will PERMANENTLY DELETE the workflow.\n\nIf you have started this workflow by mistake, you can delete it without any problems.',
     uploadForm: 'Form is being uploaded',
     uploadDraft: 'Draft is being uploaded',
     processForm: 'Form is being processed',
