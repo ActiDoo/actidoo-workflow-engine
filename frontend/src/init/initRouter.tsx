@@ -70,6 +70,8 @@ const StartWorkflowPreview = React.lazy(
   async () => await import('@/pages/start-workflow-preview/StartWorkflowPreview')
 );
 const About = React.lazy(async () => await import('@/pages/about/About'));
+const AboutHelp = React.lazy(async () => await import('@/pages/about/AboutHelp'));
+const AboutNotices = React.lazy(async () => await import('@/pages/about/AboutNotices'));
 const DataModels = React.lazy(async () => await import('@/pages/data/DataModels'));
 const DataModelTable = React.lazy(async () => await import('@/pages/data/DataModelTable'));
 const DataModelDetail = React.lazy(async () => await import('@/pages/data/DataModelDetail'));
@@ -304,7 +306,11 @@ const router = createBrowserRouter(
           element={<StartWorkflowPreview />}
           errorElement={<PcErrorView />}
         />
-        <Route path="/about" element={<About />} errorElement={<PcErrorView />} />
+        <Route path="/about" element={<About />} errorElement={<PcErrorView />}>
+          <Route index element={<Navigate to="help" replace />} />
+          <Route path="help" element={<AboutHelp />} errorElement={<PcErrorView />} />
+          <Route path="notices" element={<AboutNotices />} errorElement={<PcErrorView />} />
+        </Route>
         <Route path="/data" element={<DataModels />} errorElement={<PcErrorView />} />
         <Route
           path="/data/:modelName"

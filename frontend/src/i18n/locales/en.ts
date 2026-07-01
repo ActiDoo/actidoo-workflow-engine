@@ -7,7 +7,7 @@ export const en = {
     appTitle: 'Workflow Engine',
     signOut: 'Sign out',
     settings: 'Settings',
-    about: 'About',
+    about: 'Help',
   },
   navigation: {
     tasks: 'Tasks',
@@ -403,8 +403,12 @@ export const en = {
     saveChanges: 'Save changes',
   },
   about: {
-    title: 'About',
+    title: 'Help',
     description: 'Information and license notices for this application.',
+    help: {
+      tab: 'General',
+      fallback: 'No help text has been configured for this application yet.',
+    },
     openRawNotices: 'Open third-party notices (raw)',
     thirdPartyTitle: 'Third-party components',
     generatedAt: 'Generated: {{value}}',

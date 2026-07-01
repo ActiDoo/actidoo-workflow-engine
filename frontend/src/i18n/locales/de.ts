@@ -7,7 +7,7 @@ export const de = {
     appTitle: 'Workflow Engine',
     signOut: 'Abmelden',
     settings: 'Einstellungen',
-    about: 'Über',
+    about: 'Hilfe',
   },
   navigation: {
     tasks: 'Aufgaben',
@@ -405,8 +405,12 @@ export const de = {
     saveChanges: 'Änderungen speichern',
   },
   about: {
-    title: 'Über',
+    title: 'Hilfe',
     description: 'Informationen und Lizenzhinweise für diese Anwendung.',
+    help: {
+      tab: 'Allgemein',
+      fallback: 'Für diese Anwendung wurde noch kein Hilfetext hinterlegt.',
+    },
     openRawNotices: 'Drittanbieter-Hinweise öffnen (raw)',
     thirdPartyTitle: 'Drittanbieter-Komponenten',
     generatedAt: 'Erstellt: {{value}}',
