@@ -5,8 +5,18 @@
 
 #pc-tasks {
   ui5-li::part(native-li) {
-    padding:0
+    padding: 0;
   }
+
+  ui5-li[focused]::part(native-li)::after {
+    display: none;
+  }
+
+  ui5-li[data-task-selected="true"] {
+    background: var(--sapList_Hover_Background);
+  }
+
+
 
   [data-component-name="ObjectPageContent"] {
     padding: 0;

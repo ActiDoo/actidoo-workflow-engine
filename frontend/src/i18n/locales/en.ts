@@ -135,8 +135,8 @@ export const en = {
   tasks: {
     header: 'Tasks',
     tabs: {
-      open: 'Open',
-      completed: 'Completed',
+      open: 'Open Tasks',
+      completed: 'Completed Tasks',
     },
     empty: {
       open: "You don't have any open tasks",
