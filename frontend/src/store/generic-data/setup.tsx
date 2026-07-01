@@ -57,6 +57,7 @@ export enum WeDataKey {
   TOGGLE_PINNED_WORKFLOW = 'toggle-pinned-workflow',
   WORKFLOW_INSTANCES_WITH_TASKS = 'workflow-instances-with-tasks',
   MY_OPEN_WORKFLOW_INSTANCES = 'my-open-workflow-instances',
+  MY_WORKFLOW_INSTANCES_ALL = 'my-workflow-instances-all',
   MY_COMPLETED_WORKFLOW_INSTANCES = 'my-completed-workflow-instances',
   ASSIGN_TASK_TO_ME = 'assign-task-to-me',
   UNASSIGN_TASK_FROM_ME = 'unassign-task-from-me',
@@ -116,6 +117,7 @@ export interface WeDataState {
   [WeDataKey.TOGGLE_PINNED_WORKFLOW]: GenericDataEntry<PinnedWorkflowsResponse> | null;
   [WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS]: GenericDataEntry<WorkflowInstanceTable> | null;
   [WeDataKey.MY_OPEN_WORKFLOW_INSTANCES]: GenericDataEntry<MyInitiatedWorkflowInstanceTable> | null;
+  [WeDataKey.MY_WORKFLOW_INSTANCES_ALL]: GenericDataEntry<MyInitiatedWorkflowInstanceTable> | null;
   [WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES]: GenericDataEntry<MyInitiatedWorkflowInstanceTable> | null;
   [WeDataKey.ASSIGN_TASK_TO_ME]: GenericDataEntry<string> | null;
   [WeDataKey.UNASSIGN_TASK_FROM_ME]: GenericDataEntry<string> | null;
@@ -172,6 +174,7 @@ export const WeApiUrl = (
       // Cursor-paginated; "load more" appends via postRequest(..., { append: true })
       // — see useInfiniteWorkflowInstances.
       return `user/workflow_instances_with_tasks/${params?.state}`;
+    case WeDataKey.MY_WORKFLOW_INSTANCES_ALL:
     case WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES:
     case WeDataKey.MY_OPEN_WORKFLOW_INSTANCES:
       return 'user/my_initiated_workflow_instances';
@@ -248,6 +251,7 @@ export const initState: WeDataState = {
   [WeDataKey.TOGGLE_PINNED_WORKFLOW]: null,
   [WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS]: null,
   [WeDataKey.MY_OPEN_WORKFLOW_INSTANCES]: null,
+  [WeDataKey.MY_WORKFLOW_INSTANCES_ALL]: null,
   [WeDataKey.MY_COMPLETED_WORKFLOW_INSTANCES]: null,
   [WeDataKey.ASSIGN_TASK_TO_ME]: null,
   [WeDataKey.UNASSIGN_TASK_FROM_ME]: null,
