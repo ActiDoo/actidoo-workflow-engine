@@ -2254,6 +2254,7 @@ __metadata:
     eslint-plugin-unused-imports: "npm:^2.0.0"
     feelin: "npm:^1.0.0"
     lodash: "npm:^4.18.1"
+    markdown-to-jsx: "npm:^8.0.0"
     moment: "npm:^2.30.1"
     postcss: "npm:^8.5.12"
     prettier: "npm:^2.8.8"
