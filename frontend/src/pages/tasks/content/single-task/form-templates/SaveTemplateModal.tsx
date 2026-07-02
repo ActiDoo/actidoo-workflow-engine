@@ -10,6 +10,8 @@ import {
   ButtonDesign,
   Input,
   InputDomRef,
+  MessageStrip,
+  MessageStripDesign,
   Modals,
   SuggestionItem,
   Text,
@@ -42,8 +44,15 @@ const SaveTemplateModal: React.FC<SaveTemplateModalProps> = props => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const showDialog = Modals.useShowDialog();
-  const { saveTemplate, saveEntry, saveLoading, previewTemplate, previewResult, previewLoading } =
-    useFormTemplates(props.taskId);
+  const {
+    saveTemplate,
+    saveEntry,
+    saveLoading,
+    previewTemplate,
+    previewResult,
+    previewError,
+    previewLoading,
+  } = useFormTemplates(props.taskId);
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
 
@@ -167,6 +176,10 @@ const SaveTemplateModal: React.FC<SaveTemplateModalProps> = props => {
             <div className="flex justify-center py-8">
               <BusyIndicator active delay={0} />
             </div>
+          ) : previewError ? (
+            <MessageStrip design={MessageStripDesign.Negative} hideCloseButton>
+              {t('formTemplates.apply.loadError')}
+            </MessageStrip>
           ) : previewResult ? (
             <TemplatePreviewList
               jsonschema={props.jsonschema}

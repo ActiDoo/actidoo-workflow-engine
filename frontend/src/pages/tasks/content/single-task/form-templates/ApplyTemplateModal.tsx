@@ -39,6 +39,24 @@ interface ApplyTemplateModalProps {
   onApply: (data: object) => void;
 }
 
+// Deep "would a leaf value be overwritten?" — mirrors the deep merge in applyResolved:
+// recurse into nested groups and compare scalars/arrays at the leaves. A template only
+// overwrites when an existing non-empty leaf differs from the incoming one, so excluded
+// child fields the template never touches don't count as an overwrite.
+const wouldOverwriteData = (
+  current: Record<string, unknown> | undefined,
+  incoming: Record<string, unknown>
+): boolean =>
+  Object.keys(incoming).some(key => {
+    const inc = incoming[key];
+    const cur = current?.[key];
+    if (_.isPlainObject(inc) && _.isPlainObject(cur)) {
+      return wouldOverwriteData(cur as Record<string, unknown>, inc as Record<string, unknown>);
+    }
+    const isEmpty = cur === undefined || cur === null || cur === '';
+    return !isEmpty && !_.isEqual(cur, inc);
+  });
+
 const ApplyTemplateModal: React.FC<ApplyTemplateModalProps> = props => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -50,8 +68,10 @@ const ApplyTemplateModal: React.FC<ApplyTemplateModalProps> = props => {
     saveTemplate,
     resolved,
     resolveLoading,
+    resolveError,
     resolveTemplate,
     resetResolve,
+    listError,
     deleteEntry,
     deleteLoading,
     deleteTemplate,
@@ -143,19 +163,25 @@ const ApplyTemplateModal: React.FC<ApplyTemplateModalProps> = props => {
       const name = templates.find(template => template.id === selectedId)?.name;
       if (name) saveTemplate(name, resolved.applicable_data);
     }
-    props.onApply({ ..._.cloneDeep(props.currentFormData ?? {}), ...resolved.applicable_data });
+    // Deep-merge so nested groups only get their templatable leaves overwritten;
+    // excluded/untouched child fields (template_field: false) are preserved. Arrays
+    // are replaced wholesale rather than merged element-by-index.
+    const merged = _.mergeWith(
+      _.cloneDeep(props.currentFormData ?? {}),
+      resolved.applicable_data,
+      (_objValue: unknown, srcValue: unknown) => (_.isArray(srcValue) ? srcValue : undefined)
+    );
+    props.onApply(merged);
     dispatch(addToast(<WeToastContent type="success" text={t('formTemplates.apply.success')} />));
     props.onClose();
   };
 
   const wouldOverwrite = (): boolean => {
     if (!resolved) return false;
-    const current = props.currentFormData as Record<string, unknown>;
-    return Object.keys(resolved.applicable_data).some(key => {
-      const value = current?.[key];
-      const isEmpty = value === undefined || value === null || value === '';
-      return !isEmpty && !_.isEqual(value, resolved.applicable_data[key]);
-    });
+    return wouldOverwriteData(
+      props.currentFormData as Record<string, unknown>,
+      resolved.applicable_data
+    );
   };
 
   const applySelected = (): void => {
@@ -232,6 +258,10 @@ const ApplyTemplateModal: React.FC<ApplyTemplateModalProps> = props => {
             <div className="flex justify-center py-8">
               <BusyIndicator active delay={0} />
             </div>
+          ) : listError ? (
+            <MessageStrip design={MessageStripDesign.Negative} hideCloseButton>
+              {t('formTemplates.apply.loadError')}
+            </MessageStrip>
           ) : templates.length === 0 ? (
             <MessageStrip design={MessageStripDesign.Information} hideCloseButton>
               {t('formTemplates.apply.empty')}
@@ -287,6 +317,10 @@ const ApplyTemplateModal: React.FC<ApplyTemplateModalProps> = props => {
           <div className="flex justify-center py-8">
             <BusyIndicator active delay={0} />
           </div>
+        ) : resolveError ? (
+          <MessageStrip design={MessageStripDesign.Negative} hideCloseButton>
+            {t('formTemplates.apply.loadError')}
+          </MessageStrip>
         ) : resolved ? (
           <>
             <TemplatePreviewList

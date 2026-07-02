@@ -73,22 +73,33 @@ export const useFormTemplates = (taskId?: string) => {
     dispatch(resetStateForKey(WeDataKey.FORM_TEMPLATE_RESOLVE));
   }, [dispatch]);
 
+  // The generic-data reducer stores POST error bodies in entry.data, so results
+  // must only be consumed when the request actually succeeded (postResponse 200).
+  const listError = listEntry?.postResponse !== undefined && listEntry.postResponse !== 200;
+  const previewError =
+    previewEntry?.postResponse !== undefined && previewEntry.postResponse !== 200;
+  const resolveError =
+    resolveEntry?.postResponse !== undefined && resolveEntry.postResponse !== 200;
+
   return {
-    templates: listEntry?.data?.templates ?? [],
+    templates: listEntry?.postResponse === 200 ? listEntry?.data?.templates ?? [] : [],
     listLoading: useSelectUiLoading(WeDataKey.FORM_TEMPLATES_LIST, 'POST'),
+    listError,
     fetchList,
 
     saveEntry,
     saveLoading: useSelectUiLoading(WeDataKey.FORM_TEMPLATE_SAVE, 'POST'),
     saveTemplate,
 
-    previewResult: previewEntry?.data,
+    previewResult: previewEntry?.postResponse === 200 ? previewEntry?.data : undefined,
+    previewError,
     previewLoading: useSelectUiLoading(WeDataKey.FORM_TEMPLATE_PREVIEW, 'POST'),
     previewTemplate,
     resetPreview,
 
     resolveEntry,
-    resolved: resolveEntry?.data,
+    resolved: resolveEntry?.postResponse === 200 ? resolveEntry?.data : undefined,
+    resolveError,
     resolveLoading: useSelectUiLoading(WeDataKey.FORM_TEMPLATE_RESOLVE, 'POST'),
     resolveTemplate,
     resetResolve,
