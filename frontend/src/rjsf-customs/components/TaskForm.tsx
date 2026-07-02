@@ -4,7 +4,11 @@
 import React from 'react';
 import { Form } from '@rjsf/react-bootstrap';
 import { customizeValidator } from '@rjsf/validator-ajv8';
-import type { RegistryFieldsType, RegistryWidgetsType } from '@rjsf/utils';
+import type {
+  Experimental_DefaultFormStateBehavior,
+  RegistryFieldsType,
+  RegistryWidgetsType,
+} from '@rjsf/utils';
 
 import '@/rjsf-customs/components/TaskForm.scss';
 
@@ -28,6 +32,12 @@ import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
 
 const validator = customizeValidator();
+
+// Restore rjsf v5 semantics: selects/radios are rendered as oneOf of {const, title},
+// and v6's const-as-defaults would otherwise prefill them with their first option.
+const defaultFormStateBehavior: Experimental_DefaultFormStateBehavior = {
+  constAsDefaults: 'never',
+};
 
 const customFields: RegistryFieldsType = {
   AttachmentMulti: CustomMultiFileField,
@@ -68,6 +78,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   fields,
   widgets,
   showErrorList,
+  experimental_defaultFormStateBehavior: providedDefaultFormStateBehavior,
   children,
   ...rest
 }) => (
@@ -77,6 +88,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
     templates={templates ?? customTemplates}
     fields={fields ?? customFields}
     widgets={widgets ?? customWidgets}
+    experimental_defaultFormStateBehavior={
+      providedDefaultFormStateBehavior ?? defaultFormStateBehavior
+    }
     showErrorList={showErrorList ?? false}>
     {children ?? <></>}
   </Form>

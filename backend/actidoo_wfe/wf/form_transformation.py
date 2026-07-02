@@ -103,6 +103,9 @@ def _insert_array_component(
     jsonschema["properties"][itemgroup] = {
         "type": "array",
         "items": {"type": "object", "properties": {}},
+        # Empty list so the itemgroup is always present in the task data,
+        # even without rows (rjsf >= 6 no longer initializes optional arrays).
+        "default": [],
     }
     if min_items > 0:
         jsonschema["properties"][itemgroup]["minItems"] = min_items
@@ -200,6 +203,9 @@ def _insert_single_component(
                 },
             }
         )
+        # Default to an empty list so the field is always present in the task data,
+        # even when no file gets uploaded (rjsf >= 6 no longer initializes optional arrays).
+        jsonschema["properties"][key].setdefault("default", [])
         # If the attachment_multi field is 'required' we must set the minItems attribute,
         # because in the jsonschema the type is an array, which means we must have at least one file attached.
         # That is also the reaons we do not need call _handle_validate() for this component.
@@ -273,6 +279,9 @@ def _insert_single_component(
                 },
             }
         )
+        # Default to an empty list so the field is always present in the task data,
+        # even when nothing gets selected (rjsf >= 6 no longer initializes optional arrays).
+        jsonschema["properties"][key].setdefault("default", [])
 
         if not custom_properties.get("options_file") and not custom_properties.get("options_function"):
             # static values configured

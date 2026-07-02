@@ -169,7 +169,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
           </div>
         )}
 
-        {isDisabled && files?.length === 0 && (
+        {isDisabled && !files?.length && (
           <Text className="bg-neutral-50 w-full p-2 text-center rounded !text-neutral-400">
             No files uploaded
           </Text>
