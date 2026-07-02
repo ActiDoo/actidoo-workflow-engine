@@ -84,10 +84,12 @@
                                     "title": "Text Field in Inner Dynamic List"
                                 }
                             }
-                        }
+                        },
+                        "default": []
                     }
                 }
             },
+            "default": [],
             "minItems": 1
         }
     },

@@ -146,6 +146,7 @@ EXPECTED = {
             },
             "title": "",
             "type": "array",
+            "default": [],
         },
         "multiDefaultRequired": {
             "items": {
@@ -168,6 +169,7 @@ EXPECTED = {
             "minItems": 1,
             "title": "",
             "type": "array",
+            "default": [],
         },
         "single_default": {
             "properties": {
@@ -225,6 +227,7 @@ EXPECTED = {
             },
             "title": "Multi upload",
             "type": "array",
+            "default": [],
         },
         "uploadFieldMultiDisabled": {
             "items": {
@@ -246,6 +249,7 @@ EXPECTED = {
             },
             "title": "Multi upload disabled",
             "type": "array",
+            "default": [],
         },
         "uploadFieldMultiRequired": {
             "items": {
@@ -268,6 +272,7 @@ EXPECTED = {
             "minItems": 1,
             "title": "Multi upload required",
             "type": "array",
+            "default": [],
         },
         "uploadFieldMultiRequiredDisabledEmpty": {
             "items": {
@@ -289,6 +294,7 @@ EXPECTED = {
             },
             "title": "Multi Upload required+disabled, empty",
             "type": "array",
+            "default": [],
         },
         "uploadFieldSingle": {
             "properties": {
@@ -405,6 +411,7 @@ JSONSCHEMA_ORG = {
             },
             "title": "",
             "type": "array",
+            "default": [],
         },
         "multiDefaultRequired": {
             "items": {
@@ -431,6 +438,7 @@ JSONSCHEMA_ORG = {
             "minItems": 1,
             "title": "",
             "type": "array",
+            "default": [],
         },
         "single_default": {
             "properties": {
@@ -500,6 +508,7 @@ JSONSCHEMA_ORG = {
             },
             "title": "Multi upload",
             "type": "array",
+            "default": [],
         },
         "uploadFieldMultiDisabled": {
             "items": {
@@ -525,6 +534,7 @@ JSONSCHEMA_ORG = {
             },
             "title": "Multi upload disabled",
             "type": "array",
+            "default": [],
         },
         "uploadFieldMultiRequired": {
             "items": {
@@ -551,6 +561,7 @@ JSONSCHEMA_ORG = {
             "minItems": 1,
             "title": "Multi upload required",
             "type": "array",
+            "default": [],
         },
         "uploadFieldMultiRequiredDisabledEmpty": {
             "items": {
@@ -576,6 +587,7 @@ JSONSCHEMA_ORG = {
             },
             "title": "Multi Upload required+disabled, empty",
             "type": "array",
+            "default": [],
         },
         "uploadFieldSingle": {
             "properties": {

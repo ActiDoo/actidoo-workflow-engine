@@ -25,7 +25,8 @@
                         "type": "string"
                     }
                 }
-            }
+            },
+            "default": []
         },
         "uploadFieldSingle": {
             "type": "object",
@@ -73,6 +74,7 @@
                     }
                 }
             },
+            "default": [],
             "minItems": 1
         },
         "uploadFieldSingleRequired": {
@@ -124,7 +126,8 @@
                         "type": "string"
                     }
                 }
-            }
+            },
+            "default": []
         },
         "single_default": {
             "type": "object",
@@ -172,6 +175,7 @@
                     }
                 }
             },
+            "default": [],
             "minItems": 1
         },
         "singleDefaultRequired": {
@@ -223,7 +227,8 @@
                         "type": "string"
                     }
                 }
-            }
+            },
+            "default": []
         },
         "uploadFieldSingleDisabled": {
             "type": "object",
@@ -270,7 +275,8 @@
                         "type": "string"
                     }
                 }
-            }
+            },
+            "default": []
         },
         "uploadFieldSingleRequiredDisabledEmpty": {
             "type": "object",
