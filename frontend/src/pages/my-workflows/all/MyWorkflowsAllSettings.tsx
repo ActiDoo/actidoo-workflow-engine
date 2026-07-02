@@ -77,7 +77,7 @@ export const myWorkflowsAllColumns = (
             <Link
               to={`/tasks/completed/${data.id}/${data.completed_tasks[0].id}`}
               className="w-full text-center">
-              <Button icon="document-text" className="bg-[#009ba4] border-[#009ba4]" />
+              <Button icon="document-text" className="bg-brand-primary border-brand-primary" />
             </Link>
           );
         }
@@ -93,7 +93,10 @@ export const myWorkflowsAllColumns = (
         <Link
           to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
           className="w-full text-center">
-          <Button icon={isReadonly ? 'show' : 'edit'} className="bg-[#009ba4] border-[#009ba4]" />
+          <Button
+            icon={isReadonly ? 'show' : 'edit'}
+            className="bg-brand-primary border-brand-primary"
+          />
         </Link>
       );
     },
