@@ -411,6 +411,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               tooltip={t('common.actions.delete')}
               onClick={() => {
                 handleDeleteWorkflow(task?.id);
+                setDeleteDialogeOpen(false);
               }}>
               {t('common.actions.delete')}
             </Button>
