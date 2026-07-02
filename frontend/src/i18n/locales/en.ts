@@ -211,6 +211,7 @@ export const en = {
     submittedFormTitle: 'Submitted form',
     submittedFormTitleWithTask: 'Submitted form: {{title}}',
     submittedFormUnavailable: 'Submitted form data could not be loaded.',
+    showInstanceId: 'Show instance ID',
   },
   myWorkflowsTable: {
     workflow: 'Workflow',

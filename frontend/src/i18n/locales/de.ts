@@ -213,6 +213,7 @@ export const de = {
     submittedFormTitle: 'Abgeschicktes Formular',
     submittedFormTitleWithTask: 'Abgeschicktes Formular: {{title}}',
     submittedFormUnavailable: 'Formulardaten konnten nicht geladen werden.',
+    showInstanceId: 'Instanz-ID anzeigen',
   },
   myWorkflowsTable: {
     workflow: 'Workflow',

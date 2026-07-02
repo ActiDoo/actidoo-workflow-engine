@@ -175,7 +175,7 @@ const MyWorkflowsAll: React.FC = () => {
     <>
       <div className="flex items-center justify-between w-100 mb-4 gap-2 -mt-4">
         <CheckBox
-          text="show instance id"
+          text={t('myWorkflows.showInstanceId')}
           checked={showInstanceID}
           onChange={event => {
             setShowInstanceID(event.currentTarget?.checked ?? false);
