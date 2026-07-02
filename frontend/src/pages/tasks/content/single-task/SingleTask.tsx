@@ -36,8 +36,6 @@ import {
 
 interface SingleTaskProps {
   state: WorkflowState;
-  reloadTask: () => void;
-  backToList: () => void;
 }
 
 const SingleTask: React.FC<SingleTaskProps> = props => {
