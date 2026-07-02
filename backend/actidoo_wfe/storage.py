@@ -60,7 +60,7 @@ def setup_storage(
     elif settings.storage_mode == "AZURE_BLOB_TENANT":
         driver = AzureBlobsStorageDriver(
             key=settings.storage_azure_account_name,
-            secret=settings.storage_azure_account_key,  # AZURE_CLIENT_SECRET of Service Principal
+            secret=settings.storage_azure_account_key.encode(),  # AZURE_CLIENT_SECRET of Service Principal
             tenant_id=settings.storage_azure_tenant_id,
             identity=settings.storage_azure_client_id,
             auth_type="azureAd",
