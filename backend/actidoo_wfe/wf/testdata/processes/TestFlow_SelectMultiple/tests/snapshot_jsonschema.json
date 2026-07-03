@@ -73,8 +73,7 @@
             },
             "items": {
                 "type": "string"
-            },
-            "default": []
+            }
         },
         "select_peaul": {
             "type": "array",
@@ -110,8 +109,7 @@
                         "title": "Value 10"
                     }
                 ]
-            },
-            "default": []
+            }
         }
     },
     "required": [
