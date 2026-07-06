@@ -1,0 +1,89 @@
+{
+  "components": [
+    {
+      "label": "Select",
+      "values": [
+        {
+          "label": "Value",
+          "value": "value"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_04tmkau",
+        "columns": null
+      },
+      "id": "Field_1r1r4bn",
+      "key": "select_first"
+    },
+    {
+      "label": "Select",
+      "values": [
+        {
+          "label": "Value",
+          "value": "value"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_1ucyupt",
+        "columns": null
+      },
+      "id": "Field_1kzljpu",
+      "key": "select_second",
+      "validate": {
+        "required": true
+      },
+      "conditional": {
+        "hide": "=select_first != None"
+      }
+    },
+    {
+      "label": "Checkbox",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_0wb54ev",
+        "columns": null
+      },
+      "id": "Field_14xjv55",
+      "key": "checkbox_first",
+      "conditional": {
+        "hide": "=select_first = None"
+      },
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Select",
+      "values": [
+        {
+          "label": "Value",
+          "value": "value"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_1vtcqn2",
+        "columns": null
+      },
+      "id": "Field_1m11rli",
+      "key": "select_gmyzy",
+      "conditional": {
+        "hide": "=checkbox_first = true"
+      },
+      "validate": {
+        "required": true
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form_1mvk8un",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.7.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.38.1"
+  },
+  "schemaVersion": 19
+}

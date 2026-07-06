@@ -351,7 +351,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
     elif isinstance(node, ast.Name):  # Variable
         return node.id, []
     elif isinstance(node, ast.Constant):  # Constant
-        if isinstance(node.value, (int, float, bool, str)):
+        if isinstance(node.value, (int, float, bool, str)) or node.value is None:
             return node.value, []
         else:
             raise NotImplementedError("Unsupported constant type")
@@ -435,6 +435,11 @@ def get_jsonschema_for_validation(
     assert isinstance(schema, dict)
     return schema
 
+def _remove_none_fields(data: dict):
+    return {
+        k: v for k, v in data.items()
+        if v is not None
+    }
 
 def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None):
     cls = jsonschema.validators.validator_for(validation_schema)
@@ -910,6 +915,7 @@ def validate_task_data(
         validation_schema,
         on_remove=_collect_unknown_field if preserve_unknown_fields else None,
     )
+    cleaned_task_data = _remove_none_fields(cleaned_task_data)
 
     position, tracked_task_data = get_position_tracker(cleaned_task_data)
 
