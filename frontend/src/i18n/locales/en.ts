@@ -371,6 +371,8 @@ export const en = {
     deadline: 'Deadline',
     urgency: 'Urgency at : ',
     critical: 'Deadline : ',
+    subtitle: 'Subtitle',
+    moreInformation: 'More information',
     searchPlaceholder: 'Search …',
     loadMore: 'Load more',
     retry: 'Try again',

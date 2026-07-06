@@ -245,7 +245,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
             </div>
           )}
           <div className="flex flex-col gap-1 !max-w-[250px] !break-words mb-4">
-            <Text className="!text-xs !font-bold !text-neutral-700">Subtitle</Text>
+            <Text className="!text-xs !font-bold !text-neutral-700">{t('sidebar.subtitle')}</Text>
             <Text className="!text-xs !text-neutral-600">{infoContent?.subtitle ?? '-'}</Text>
           </div>
           {infoContent?.worfkFlowID && (
@@ -335,7 +335,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                       </div>
                       <Icon
                         name="message-information"
-                        accessibleName="Mehr Informationen"
+                        accessibleName={t('sidebar.moreInformation')}
                         className="!w-4 !h-4 relative top-2"
                         onClick={event => {
                           event.stopPropagation();

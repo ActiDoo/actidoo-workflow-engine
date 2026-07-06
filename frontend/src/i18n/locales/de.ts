@@ -373,6 +373,8 @@ export const de = {
     deadline: 'Prioritäten',
     urgency: 'Soll-Termin : ',
     critical: 'Deadline : ',
+    subtitle: 'Untertitel',
+    moreInformation: 'Mehr Information',
     searchPlaceholder: 'Suchen …',
     loadMore: 'Mehr laden',
     retry: 'Erneut versuchen',
