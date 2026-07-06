@@ -306,6 +306,14 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             # matching FEEL where null != x is true and null == x is false.
             requires_reference = True
 
+        if isinstance(op, ast.NotEq):
+            # FEEL: null != x is true for any non-null x — a missing reference must not
+            # satisfy the comparison that gets negated below.
+            requires_reference = True
+        if value is None:
+            # Comparisons against the null literal match exactly when the field is unset.
+            requires_reference = False
+
         if requires_reference and "required" not in if_schema:
             # Missing values must not satisfy hide-if comparisons for hidden/boolean fields.
             if_schema["required"] = [property]
@@ -349,9 +357,12 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         else:
             raise NotImplementedError("Unsupported boolean operator")
     elif isinstance(node, ast.Name):  # Variable
+        if node.id == "null":  # FEEL null literal, e.g. 'somefield = null'
+            return None, []
         return node.id, []
     elif isinstance(node, ast.Constant):  # Constant
-        if isinstance(node.value, (int, float, bool, str)):
+        if isinstance(node.value, (int, float, bool, str)) or node.value is None:
+            # None: some forms write 'somefield != None' instead of the FEEL null literal.
             return node.value, []
         else:
             raise NotImplementedError("Unsupported constant type")
