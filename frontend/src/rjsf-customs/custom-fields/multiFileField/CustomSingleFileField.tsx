@@ -6,10 +6,11 @@ import { addNameToDataURL, getRandomString } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
 import { FieldProps } from '@rjsf/utils';
 import { Button, ButtonDesign, FileUploader, Text } from '@ui5/webcomponents-react';
-import React, { DragEvent, ReactElement, useState } from 'react';
+import React, { DragEvent, ReactElement, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
 import { useDragging } from '@/utils/hooks/useDragging';
+import { isRealFile } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 
 export interface PcFile {
   datauri?: string | null;
@@ -33,6 +34,9 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
   const isDisabled = !!props.readonly || !!props.disabled;
 
   const isRequired = !!props.required;
+
+  const file = files && isRealFile(files) ? files : undefined;
+
   const label =
     (props.schema?.title ? props.schema?.title : 'Single File Upload') + (isRequired ? '*' : '');
   const hint = props.uiSchema?.['ui:description']
@@ -52,7 +56,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
     if (newFile.size > maxFileSize) {
       dispatch(addToast(<WeToastContent text={`File exceeds the max size of 15MB.`} />));
       return;
-    } else if (files && files.filename === newFile.name) {
+    } else if (file && file.filename === newFile.name) {
       dispatch(addToast(<WeToastContent text={`File is already in list.`} />));
       return;
     }
@@ -120,11 +124,13 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
     (Unfortunately this behaviour is implemented in RJSF itself)
     This will look like an attached file without filename etc., which can not be validated due to the above schema,
     (the properties are missing)
-    So as a workaround we delete this invalid object by calling removeFile(), which will result in an undefined formData again.
+    We turn that placeholder back into "no file" once, so the required check reports the
+    missing upload. Only once — rjsf recreates the placeholder every time, so deleting it
+    again and again would loop forever.
    */
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means property not set, treat as falsy
-  if (files && !(files.datauri || files.filename || files.hash || files.id || files.mimetype)) {
-    console.log(`files undefined: ${props.id}`);
+  const removedPlaceholderOnce = useRef(false);
+  if (files && !file && !removedPlaceholderOnce.current) {
+    removedPlaceholderOnce.current = true;
     // remove it async, after rendering, to avoid warnings
     setTimeout(() => {
       removeFile();
@@ -141,7 +147,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
           (props.className ?? '') +
           ' relative border-2 border-neutral-200 border-solid rounded mb-2 p-3'
         }>
-        {!isDisabled && !files && (
+        {!isDisabled && !file && (
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -164,16 +170,16 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
           </div>
         )}
 
-        {isDisabled && !files && (
+        {isDisabled && !file && (
           <Text className="bg-neutral-50 w-full p-2 text-center rounded !text-neutral-400">
             No files uploaded
           </Text>
         )}
 
-        {files && (
+        {file && (
           <MultiFileRow
             key={`file0`}
-            file={files}
+            file={file}
             disabled={isDisabled}
             onRemove={() => {
               removeFile();

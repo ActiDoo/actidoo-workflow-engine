@@ -21,6 +21,7 @@ import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 import CustomArraySchemaField from '@/rjsf-customs/custom-fields/CustomArraySchemaField';
 import CustomMultiFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomMultiFileField';
 import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomSingleFileField';
+import { isAttachmentMultiSchema } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
@@ -37,6 +38,11 @@ const validator = customizeValidator();
 // and v6's const-as-defaults would otherwise prefill them with their first option.
 const defaultFormStateBehavior: Experimental_DefaultFormStateBehavior = {
   constAsDefaults: 'never',
+  arrayMinItems: {
+    // Never pre-fill attachment arrays with an empty item: an "empty" upload would
+    // satisfy the required-check without being a file. Empty stays empty.
+    computeSkipPopulate: (_validator, schema) => isAttachmentMultiSchema(schema),
+  },
 };
 
 const customFields: RegistryFieldsType = {

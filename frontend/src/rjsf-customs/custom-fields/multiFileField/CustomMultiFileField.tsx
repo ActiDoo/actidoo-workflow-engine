@@ -11,6 +11,7 @@ import React, { DragEvent, ReactElement, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
 import { useDragging } from '@/utils/hooks/useDragging';
+import { isRealFile } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 
 export interface PcFile {
   datauri?: string | null; // available during adding, not available when showing backend data
@@ -37,6 +38,11 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
   const isDisabled = Boolean(props.readonly || props.disabled);
   const isRequired = !!props.schema?.minItems;
 
+  // Show only real files. Cleaning placeholders out of the data is not this field's
+  // job (it happens centrally when the form data is loaded) — rendering must not
+  // modify data.
+  const visibleFiles = files?.filter(isRealFile);
+
   const label =
     (props.schema?.title ? props.schema?.title : 'File Upload') + (isRequired ? '*' : '');
   const hint = props.uiSchema?.['ui:description']
@@ -52,7 +58,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
     Array.from(fileList).forEach(file => {
       if (file.size > maxFileSize) {
         oversizedFiles.push(file);
-      } else if (files?.some(x => x.filename === file.name)) {
+      } else if (visibleFiles?.some(x => x.filename === file.name)) {
         duplicatedFiles.push(file);
       } else {
         newFiles.push(file);
@@ -101,40 +107,19 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
     )
       .then(results => {
         const nonNullResults: PcFile[] = results.filter(x => x !== null);
-        onChange([...(files ?? []), ...nonNullResults], fieldPath);
+        onChange([...(visibleFiles ?? []), ...nonNullResults], fieldPath);
         setFileUploadKey(getRandomString());
       })
       .catch(() => {});
   };
   const removeFile = (file: PcFile): void => {
-    if (files) {
+    if (visibleFiles) {
       onChange(
-        _.remove(files, current => current.filename !== file.filename),
+        visibleFiles.filter(current => current.filename !== file.filename),
         fieldPath
       );
     }
   };
-
-  /**
-   * In case of a non-required field, we get an empty object {} as formData if there is no file attached. Ok.
-   *
-   * In case of a required field, we get an object with an empty list {[]} for formData if there is no file attached:
-   * This will look like an attached file without filename etc., which is wrong.
-   * Unfortunately this behaviour is implemented in RJSF itself, so as a workaround
-   * we delete this invalid file by calling removeFile(), which will result in an undefined formData again.
-   */
-  if (
-    files &&
-    files.length === 1 &&
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means property not set, treat as falsy
-    !(files[0].datauri || files[0].filename || files[0].hash || files[0].id || files[0].mimetype)
-  ) {
-    console.log(`files undefined: ${props.id}`);
-    // remove it async, after rendering, to avoid warnings
-    setTimeout(() => {
-      removeFile(files[0]);
-    });
-  }
 
   return (
     <div className="relative">
@@ -169,13 +154,13 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
           </div>
         )}
 
-        {isDisabled && !files?.length && (
+        {isDisabled && !visibleFiles?.length && (
           <Text className="bg-neutral-50 w-full p-2 text-center rounded !text-neutral-400">
             No files uploaded
           </Text>
         )}
 
-        {files?.map((file, index) => (
+        {visibleFiles?.map((file, index) => (
           <MultiFileRow
             key={`file${index}`}
             file={file}
