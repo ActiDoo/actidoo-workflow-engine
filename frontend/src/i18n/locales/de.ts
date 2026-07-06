@@ -369,7 +369,7 @@ export const de = {
     noSearchResults: 'Die Suche hat keine übereinstimmenden Aufgaben gefunden.',
     taskCount: '{{count}} Aufgabe{{suffix}}:',
     startDate: 'Eingangsdatum',
-    workFlowInstanceID: 'Workflow Instanze ID',
+    workFlowInstanceID: 'Workflow-Instanz-ID',
     deadline: 'Prioritäten',
     urgency: 'Soll-Termin : ',
     critical: 'Deadline : ',
