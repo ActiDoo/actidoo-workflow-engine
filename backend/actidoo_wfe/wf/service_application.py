@@ -670,7 +670,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data):
         task_data=submitted_data,
         options_folder=options_folder,
         functions_env=functions_env,
-        preserve_disabled_fields=False,
+        authoritative_disabled_values=task.data if isinstance(task.data, dict) else {},
     )
 
     if validation_result.error_schema:
