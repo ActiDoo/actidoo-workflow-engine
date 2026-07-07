@@ -1,14 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { AnalyticalTableColumnDefinition, Button } from '@ui5/webcomponents-react';
+import {
+  AnalyticalTableColumnDefinition,
+  Icon,
+  IconDesign,
+  TextAlign,
+  Button,
+} from '@ui5/webcomponents-react';
 import { PcDateColumn, PcInputColumn, PcTableData } from '@/ui5-components';
 import { Link } from 'react-router-dom';
 import { type useTranslation } from '@/i18n';
+import '@ui5/webcomponents-icons/dist/status-negative';
+import '@ui5/webcomponents-icons/dist/status-positive';
+import '@ui5/webcomponents-icons/dist/document-text';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-export const myOpenWorkflowsColumns = (
+export const myWorkflowsAllColumns = (
   tableData: PcTableData,
   userId: string | undefined,
   t: Translate
@@ -40,6 +49,17 @@ export const myOpenWorkflowsColumns = (
     },
   },
   PcDateColumn('created_at', t('myWorkflowsTable.createdAt'), tableData),
+  {
+    ...PcInputColumn('is_completed', t('adminTables.isCompleted'), tableData),
+    disableFilters: true,
+    width: 90,
+    hAlign: TextAlign.Center,
+    Cell: (instance: any) =>
+      instance.row.original.is_completed ? (
+        <Icon name="status-positive" design={IconDesign.Positive} />
+      ) : null,
+  },
+  PcDateColumn('completed_at', t('myWorkflowsTable.completedAt'), tableData),
   PcInputColumn('id', t('myWorkflowsTable.instanceId'), tableData),
   {
     accessor: '.',
@@ -52,6 +72,16 @@ export const myOpenWorkflowsColumns = (
         data.active_tasks?.length === 1 && data.active_tasks[0].assigned_user?.id === userId;
 
       if (!canEditTask) {
+        if (data.completed_tasks?.length === 1) {
+          return (
+            <Link
+              to={`/tasks/completed/${data.id}/${data.completed_tasks[0].id}`}
+              className="w-full text-center">
+              <Button icon="document-text" className="bg-brand-primary border-brand-primary" />
+            </Link>
+          );
+        }
+
         return '';
       }
 
@@ -63,7 +93,10 @@ export const myOpenWorkflowsColumns = (
         <Link
           to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
           className="w-full text-center">
-          <Button icon={isReadonly ? 'show' : 'edit'} />
+          <Button
+            icon={isReadonly ? 'show' : 'edit'}
+            className="bg-brand-primary border-brand-primary"
+          />
         </Link>
       );
     },
