@@ -780,6 +780,23 @@ def get_single_task(db: Session, task_id: uuid.UUID) -> WorkflowInstanceTask:
     return task
 
 
+def get_erroneous_tasks(db: Session) -> list[WorkflowInstanceTask]:
+    q = (
+        select(WorkflowInstanceTask)
+        .join(WorkflowInstance, WorkflowInstanceTask.workflow_instance_id == WorkflowInstance.id)
+        .options(
+            selectinload(WorkflowInstanceTask.workflow_instance),
+        )
+        .where(
+            WorkflowInstanceTask.state_error == true(),
+            WorkflowInstance.is_completed == false(),
+        )
+        .order_by(WorkflowInstance.name, WorkflowInstanceTask.created_at)
+    )
+
+    return list(db.execute(q).scalars())
+
+
 def get_workflow_statistics(db: Session, workflow_name: str):
     active_instances = db.execute(
         select(func.count())

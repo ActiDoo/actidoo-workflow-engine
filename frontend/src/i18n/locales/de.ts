@@ -385,6 +385,11 @@ export const de = {
     save: 'Einstellungen speichern',
     saveSuccess: 'Einstellungen gespeichert',
     saveError: 'Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.',
+    errorReminder: {
+      title: 'Erinnerung über fehlerhafte Aufgaben',
+      hint: 'Nur relevant für Administratoren und Workflow-Owner: tägliche Zusammenfassung aller Aufgaben im Fehlerzustand.',
+      label: 'Tägliche Erinnerungs-E-Mail über fehlerhafte Aufgaben erhalten',
+    },
     delegations: {
       title: 'Vertretungen',
       hint: 'Wähle Kolleg:innen, die Aufgaben in deiner Vertretung bearbeiten dürfen. Optional kannst du eine Frist hinterlegen.',

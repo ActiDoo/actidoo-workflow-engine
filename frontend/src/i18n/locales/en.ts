@@ -383,6 +383,11 @@ export const en = {
     save: 'Save Settings',
     saveSuccess: 'Settings saved',
     saveError: 'Could not save settings. Please try again.',
+    errorReminder: {
+      title: 'Erroneous task reminders',
+      hint: 'Only relevant for administrators and workflow owners: a daily summary of all tasks in an error state.',
+      label: 'Receive a daily reminder email about erroneous tasks',
+    },
     delegations: {
       title: 'Delegations',
       hint: 'Select colleagues who may work on tasks as your delegate. You can optionally limit the delegation to a deadline.',

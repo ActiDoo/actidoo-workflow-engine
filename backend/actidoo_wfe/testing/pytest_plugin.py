@@ -133,6 +133,7 @@ def mock_send_text_mail():
         }
         emails.append(email)
         log_email(subject, content, recipient_or_recipients_list, attachments)
+        return True
 
     with patch("actidoo_wfe.helpers.mail.send_text_mail", new=mock_send):
         yield emails

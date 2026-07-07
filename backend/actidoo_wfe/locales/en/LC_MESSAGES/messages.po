@@ -14,6 +14,34 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
+#, python-brace-format
+msgid "{n_assigned} assigned tasks / {n_available} available tasks"
+msgstr "{n_assigned} assigned tasks / {n_available} available tasks"
+
+#, python-brace-format
+msgid "A task is assigned to you in \"{workflow_title}\""
+msgstr "A task is assigned to you in \"{workflow_title}\""
+
+#, python-brace-format
+msgid "A task is waiting in your role for \"{workflow_title}\""
+msgstr "A task is waiting in your role for \"{workflow_title}\""
+
+#, python-brace-format
+msgid "Role notification limit exceeded for \"{workflow_title}\""
+msgstr "Role notification limit exceeded for \"{workflow_title}\""
+
+#, python-brace-format
+msgid "A task became erroneous \"{workflow_title}\""
+msgstr "A task became erroneous \"{workflow_title}\""
+
+#, python-brace-format
+msgid "erroneous since {date}"
+msgstr "erroneous since {date}"
+
+#, python-brace-format
+msgid "Erroneous workflow tasks: {n_total} total, {n_new} new"
+msgstr "Erroneous workflow tasks: {n_total} total, {n_new} new"
+
 msgid "A task notification was sent only to a capped subset of role members."
 msgstr "A task notification was sent only to a capped subset of role members."
 
@@ -49,6 +77,20 @@ msgstr "A task became erroneous:"
 msgid "A task in your role(s) {roles} is waiting for someone to pick it up:"
 msgstr "A task in your role(s) {roles} is waiting for someone to pick it up:"
 
+msgid "Hello,"
+msgstr "Hello,"
+
+#, python-brace-format
+msgid ""
+"The following workflow tasks are in an error state ({n_total} total, "
+"{n_new} new):"
+msgstr ""
+"The following workflow tasks are in an error state ({n_total} total, "
+"{n_new} new):"
+
+msgid "NEW"
+msgstr "NEW"
+
 msgid ""
 "Currently you have personally assigned tasks in the following workflow "
 "instances:"
@@ -63,22 +105,3 @@ msgstr ""
 "There are also tasks for the groups you are a member of. Feel free to "
 "assign these tasks to yourself:"
 
-#, python-brace-format
-msgid "{n_assigned} assigned tasks / {n_available} available tasks"
-msgstr "{n_assigned} assigned tasks / {n_available} available tasks"
-
-#, python-brace-format
-msgid "A task is assigned to you in \"{workflow_title}\""
-msgstr "A task is assigned to you in \"{workflow_title}\""
-
-#, python-brace-format
-msgid "A task is waiting in your role for \"{workflow_title}\""
-msgstr "A task is waiting in your role for \"{workflow_title}\""
-
-#, python-brace-format
-msgid "Role notification limit exceeded for \"{workflow_title}\""
-msgstr "Role notification limit exceeded for \"{workflow_title}\""
-
-#, python-brace-format
-msgid "A task became erroneous \"{workflow_title}\""
-msgstr "A task became erroneous \"{workflow_title}\""
