@@ -12,6 +12,10 @@ import { FilterOptionOption } from 'react-select/dist/declarations/src/filters';
 import { WeComboBox } from '@/utils/components/WeComboBox';
 import { PcValueLabelItem } from '@/models/models';
 import { debounce } from 'lodash';
+import { useDispatch } from 'react-redux';
+import { addToast } from '@/store/ui/actions';
+import { WeToastContent } from '@/utils/components/WeToast';
+import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 
 const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   const [options, setOptions] = useState<PcValueLabelItem[] | undefined>(undefined);
@@ -20,6 +24,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   const [search, setSearch] = useState<string>('');
   const isDisabled = props.disabled ?? props.readonly;
   const lastValueChangeRef = useRef(Date.now());
+  const dispatch = useDispatch();
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
@@ -40,7 +45,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
         property_path: props.uiSchema['ui:path'],
         search,
         include_value: props?.value,
-        form_data: (props.registry as any)?.formContext?.formData,
+        form_data: stripAttachmentPayload((props.registry as any)?.formContext?.formData),
       });
 
       // console.log(`opts = ${JSON.stringify(res.data)}`)
@@ -52,8 +57,10 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
       setOptions(data.options);
     },
     onError: () => {
-      // TODO implement proper error message to the user
-      console.log('an error occurred');
+      // Keep the field usable after a failed search: clear the loading/stale state so the
+      // menu shows the standard "no options" and a corrected input re-triggers the search.
+      setOptions([]);
+      dispatch(addToast(<WeToastContent text={`Could not load options. Please try again.`} />));
     },
   });
 
