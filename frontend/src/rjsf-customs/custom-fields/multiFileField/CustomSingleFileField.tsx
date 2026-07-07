@@ -6,7 +6,7 @@ import { addNameToDataURL, getRandomString } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
 import { FieldProps } from '@rjsf/utils';
 import { Button, ButtonDesign, FileUploader, Text } from '@ui5/webcomponents-react';
-import React, { DragEvent, ReactElement, useRef, useState } from 'react';
+import React, { DragEvent, ReactElement, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
 import { useDragging } from '@/utils/hooks/useDragging';
@@ -94,48 +94,6 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
   const removeFile = (): void => {
     onChange(undefined, fieldPath);
   };
-
-  /**
-    In case of a non-required field, we initially get "undefined" formData if there is no file attached.
-    This is okay, because the schema says that _if_ we have a file it must be an object like this:
-    {
-      "type": "object",
-      "title": "Single upload",
-      "properties": {
-        "datauri": {
-          "type": "string",
-          "format": "data-url"git 
-        },
-        "filename": {
-          "type": "string"
-        },
-        "hash": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "mimetype": {
-          "type": "string"
-        }
-      }
-
-    In case of a required field, we initially get an empty object {} for formData if there is no file attached.
-    (Unfortunately this behaviour is implemented in RJSF itself)
-    This will look like an attached file without filename etc., which can not be validated due to the above schema,
-    (the properties are missing)
-    We turn that placeholder back into "no file" once, so the required check reports the
-    missing upload. Only once — rjsf recreates the placeholder every time, so deleting it
-    again and again would loop forever.
-   */
-  const removedPlaceholderOnce = useRef(false);
-  if (files && !file && !removedPlaceholderOnce.current) {
-    removedPlaceholderOnce.current = true;
-    // remove it async, after rendering, to avoid warnings
-    setTimeout(() => {
-      removeFile();
-    });
-  }
 
   return (
     <div className="relative">
