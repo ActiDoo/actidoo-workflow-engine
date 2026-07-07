@@ -873,7 +873,6 @@ def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
             options_folder=options_folder,
             functions_env=functions_env,
             preserve_unknown_fields=True,
-            preserve_disabled_fields=True,
             log_validation_errors=False,
         ).task_data
 

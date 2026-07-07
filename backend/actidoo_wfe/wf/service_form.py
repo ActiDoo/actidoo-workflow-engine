@@ -301,6 +301,18 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         elif isinstance(left_node, dict) and left_node.get("hideif") is not None:
             # The field has its own hide-if, so only compare if it is present.
             requires_reference = True
+        elif isinstance(left_node, dict) and left_node.get("disabled", False):
+            # Disabled reference (opaque mode): without a stored value the comparison must fail,
+            # matching FEEL where null != x is true and null == x is false.
+            requires_reference = True
+
+        if isinstance(op, ast.NotEq):
+            # FEEL: null != x is true for any non-null x — a missing reference must not
+            # satisfy the comparison that gets negated below.
+            requires_reference = True
+        if value is None:
+            # Comparisons against the null literal match exactly when the field is unset.
+            requires_reference = False
 
         if requires_reference and "required" not in if_schema:
             # Missing values must not satisfy hide-if comparisons for hidden/boolean fields.
@@ -345,9 +357,12 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         else:
             raise NotImplementedError("Unsupported boolean operator")
     elif isinstance(node, ast.Name):  # Variable
+        if node.id == "null":  # FEEL null literal, e.g. 'somefield = null'
+            return None, []
         return node.id, []
     elif isinstance(node, ast.Constant):  # Constant
-        if isinstance(node.value, (int, float, bool, str)):
+        if isinstance(node.value, (int, float, bool, str)) or node.value is None:
+            # None: some forms write 'somefield != None' instead of the FEEL null literal.
             return node.value, []
         else:
             raise NotImplementedError("Unsupported constant type")
@@ -385,20 +400,23 @@ def _build_nested_schema_for_path(path: list[str], inner_schema: dict):
 
 def get_jsonschema_for_validation(
     form: ReactJsonSchemaFormData,
-    preserve_disabled_fields: bool = False,
+    opaque_disabled_fields: bool = False,
 ) -> dict[Any, Any]:
     """Returns the jsonschma used for validation.
     The validation schema needs to be slightly different (remove null fields; do not allow additional properties)
     This is to be used when a user is submitting data to user tasks.
+
+    With ``opaque_disabled_fields`` the content of ``ui:disabled`` fields is not
+    validated, but stays visible to hide-if conditions; without it they are
+    treated like regular fields.
     """
 
     schema = copy.deepcopy(form.jsonschema)
     uischema = copy.deepcopy(form.uischema)
-    if not preserve_disabled_fields:
-        convert_disabled_fields_to_null_fields(
+    if opaque_disabled_fields:
+        convert_disabled_fields_to_opaque_fields(
             global_jsonschema=schema,
             global_uischema=uischema,
-            path=[],
         )
     convert_hide_if_props_to_declarative_jsonschema(schema, [])
 
@@ -857,7 +875,7 @@ def validate_task_data(
     options_folder: pathlib.Path,
     functions_env: dict,
     preserve_unknown_fields: bool = False,
-    preserve_disabled_fields: bool = False,
+    authoritative_disabled_values: dict | None = None,
     log_validation_errors: bool = True,
 ) -> ValidationResult:
     """Validate incoming task data against a form definition and clean it up.
@@ -866,9 +884,18 @@ def validate_task_data(
     a workflow instance). It removes fields that are not part of the form
     definition, optionally remembers technical fields that should survive the
     check, and applies the hide-if handling so that hidden values cannot
-    leak into user tasks. With ``preserve_disabled_fields`` callers can opt to
-    keep values of read-only/disabled form fields. The function returns the
-    cleaned task data together with an error payload."""
+    leak into user tasks.
+
+    Disabled fields belong to the server, and ``authoritative_disabled_values``
+    states where their values come from. ``None`` means ``task_data`` itself is
+    trusted engine data (e.g. cleaning stored task data), so disabled fields are
+    validated like any other. A dict (typically the task's current data) means
+    ``task_data`` is an untrusted submission: disabled fields are overwritten
+    with the authoritative values so hide-if conditions evaluate against the
+    real ones (matching the frontend's FEEL evaluation), their content is not
+    validated, and they are stripped from the result afterwards.
+
+    The function returns the cleaned task data together with an error payload."""
 
     log.debug("> validate_task_data")
 
@@ -878,9 +905,15 @@ def validate_task_data(
         if preserve_unknown_fields:
             removed_unknown_fields.append((path, value))
 
+    disabled_field_paths: list[list[str]] = []
+    if authoritative_disabled_values is not None:
+        disabled_field_paths = list(_iter_disabled_field_paths(form.jsonschema, form.uischema))
+        for disabled_path in disabled_field_paths:
+            _overwrite_disabled_field_with_authoritative_value(task_data, authoritative_disabled_values, disabled_path)
+
     validation_schema = get_jsonschema_for_validation(
         form,
-        preserve_disabled_fields=preserve_disabled_fields,
+        opaque_disabled_fields=authoritative_disabled_values is not None,
     )
 
     cleaned_task_data = remove_unknown_fields_from_task_data(
@@ -931,6 +964,12 @@ def validate_task_data(
     if preserve_unknown_fields and removed_unknown_fields:
         for path, value in removed_unknown_fields:
             set_item(untracked_task_data, path, value)
+
+    for disabled_path in disabled_field_paths:
+        # The authoritative values only served the hide-if evaluation; overwriting with
+        # "nothing stored" drops them, so the stored task data remains the single
+        # source of truth for disabled fields.
+        _overwrite_disabled_field_with_authoritative_value(untracked_task_data, {}, disabled_path)
 
     if log_validation_errors:
         log.debug("< validate_task_data, errors = %s", error_schema)
@@ -1004,18 +1043,35 @@ def get_attachments(task_data) -> list[UploadedAttachmentRepresentation]:
     return attachments
 
 
-def convert_disabled_fields_to_null_fields(global_jsonschema, global_uischema, path=[]):
-    """We convert disabled fields to null fields for validating posted formdata"""
+def convert_disabled_fields_to_opaque_fields(global_jsonschema, global_uischema):
+    """Rewrite every disabled field to accept any content without validating it.
+
+    Their (server-provided) values stay in the instance, so hide-if conditions
+    referencing a disabled field evaluate against the real value — matching the
+    frontend's FEEL evaluation. Callers feed authoritative values in and strip
+    the fields from the validated result (see ``validate_task_data``)."""
+    for path in list(_iter_disabled_field_paths(global_jsonschema, global_uischema)):
+        properties = _get_subschema(global_jsonschema=global_jsonschema, path=path[:-1])["properties"]
+        properties[path[-1]] = {
+            "type": ["array", "boolean", "integer", "null", "number", "object", "string"],  # any JSON type
+            "disabled": True,
+        }
+
+
+def _iter_disabled_field_paths(global_jsonschema, global_uischema, path=None):
+    """Yield the schema path of every ``ui:disabled`` field, recursing into
+    object/array containers. Disabled containers are yielded as a whole."""
+    if path is None:
+        path = []
     uischema = _traverse_uischema(global_uischema=global_uischema, path=path)
     jsonschema = _get_subschema(global_jsonschema=global_jsonschema, path=path)
 
-    for k in uischema.keys():
-        if isinstance(uischema[k], dict) and uischema[k].get("ui:disabled", False):
-            jsonschema["properties"][k]["type"] = "null"
-
-    for k in jsonschema.get("properties", {}).keys():  # properties might be missing. e.g. in a multi select, we will have an array of strings
-        if "type" in jsonschema["properties"][k] and jsonschema["properties"][k]["type"] in ["object", "array"]:
-            convert_disabled_fields_to_null_fields(
+    for k in jsonschema.get("properties", {}).keys():
+        ui = uischema.get(k) if isinstance(uischema, dict) else None
+        if isinstance(ui, dict) and ui.get("ui:disabled", False):
+            yield path + [k]
+        elif jsonschema["properties"][k].get("type") in ["object", "array"]:
+            yield from _iter_disabled_field_paths(
                 global_jsonschema=global_jsonschema,
                 global_uischema=global_uischema,
                 path=path
@@ -1023,6 +1079,33 @@ def convert_disabled_fields_to_null_fields(global_jsonschema, global_uischema, p
                     k,
                 ],
             )
+
+
+def _overwrite_disabled_field_with_authoritative_value(submitted, authoritative, path):
+    """Replace the submitted value of a disabled field with the authoritative one,
+    or drop the key when the authoritative data holds no value. Array levels are
+    aligned by index."""
+    if not isinstance(submitted, dict):
+        return
+    key = path[0]
+    if len(path) == 1:
+        if isinstance(authoritative, dict) and key in authoritative:
+            submitted[key] = copy.deepcopy(authoritative[key])
+        else:
+            submitted.pop(key, None)
+        return
+    sub = submitted.get(key)
+    auth_sub = authoritative.get(key) if isinstance(authoritative, dict) else None
+    if isinstance(sub, list):
+        auth_items = auth_sub if isinstance(auth_sub, list) else []
+        for index, item in enumerate(sub):
+            _overwrite_disabled_field_with_authoritative_value(
+                item,
+                auth_items[index] if index < len(auth_items) else None,
+                path[1:],
+            )
+    elif isinstance(sub, dict):
+        _overwrite_disabled_field_with_authoritative_value(sub, auth_sub, path[1:])
 
 
 def _traverse_uischema(global_uischema: dict, path: list[str]):

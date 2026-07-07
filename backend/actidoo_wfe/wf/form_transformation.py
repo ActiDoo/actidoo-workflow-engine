@@ -114,7 +114,6 @@ def _insert_array_component(
         "ui:arrayOverviewButtonText": overview_button_text,
         "ui:defaultRepetitions": default_repetitions,
         "ui:label": label,
-        "ui:copyable": True,
     }
     if itemgroup not in uischema["ui:layout"]:
         uischema["ui:layout"][itemgroup] = [itemgroup]
@@ -273,7 +272,6 @@ def _insert_single_component(
                 },
             }
         )
-
         if not custom_properties.get("options_file") and not custom_properties.get("options_function"):
             # static values configured
             uischema[key].update({"ui:widget": "MultiSelectStatic"})

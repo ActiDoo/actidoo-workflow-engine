@@ -4,7 +4,11 @@
 import React from 'react';
 import { Form } from '@rjsf/react-bootstrap';
 import { customizeValidator } from '@rjsf/validator-ajv8';
-import type { RegistryFieldsType, RegistryWidgetsType } from '@rjsf/utils';
+import type {
+  Experimental_DefaultFormStateBehavior,
+  RegistryFieldsType,
+  RegistryWidgetsType,
+} from '@rjsf/utils';
 
 import '@/rjsf-customs/components/TaskForm.scss';
 
@@ -17,6 +21,7 @@ import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 import CustomArraySchemaField from '@/rjsf-customs/custom-fields/CustomArraySchemaField';
 import CustomMultiFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomMultiFileField';
 import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomSingleFileField';
+import { isAttachmentMultiSchema } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
@@ -28,6 +33,17 @@ import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
 
 const validator = customizeValidator();
+
+// Restore rjsf v5 semantics: selects/radios are rendered as oneOf of {const, title},
+// and v6's const-as-defaults would otherwise prefill them with their first option.
+const defaultFormStateBehavior: Experimental_DefaultFormStateBehavior = {
+  constAsDefaults: 'never',
+  arrayMinItems: {
+    // Never pre-fill attachment arrays with an empty item: an "empty" upload would
+    // satisfy the required-check without being a file. Empty stays empty.
+    computeSkipPopulate: (_validator, schema) => isAttachmentMultiSchema(schema),
+  },
+};
 
 const customFields: RegistryFieldsType = {
   AttachmentMulti: CustomMultiFileField,
@@ -68,6 +84,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   fields,
   widgets,
   showErrorList,
+  experimental_defaultFormStateBehavior: providedDefaultFormStateBehavior,
   children,
   ...rest
 }) => (
@@ -77,6 +94,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
     templates={templates ?? customTemplates}
     fields={fields ?? customFields}
     widgets={widgets ?? customWidgets}
+    experimental_defaultFormStateBehavior={
+      providedDefaultFormStateBehavior ?? defaultFormStateBehavior
+    }
     showErrorList={showErrorList ?? false}>
     {children ?? <></>}
   </Form>

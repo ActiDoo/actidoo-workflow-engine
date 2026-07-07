@@ -15,14 +15,15 @@ export interface StoredFileData {
 }
 
 export const DB_NAME = 'TaskFormDatabase';
-export const DB_VERSION = 1;
+// Must stay greater than every version ever shipped for this database: the legacy
+// frontend used version 2 on the same origin, and requesting a lower version than
+// the one stored in the browser fails with a VersionError.
+export const DB_VERSION = 3;
 export const FORM_STORE = 'forms';
+// Object store of the legacy frontend; no longer used and dropped on upgrade.
+const LEGACY_TEMPLATE_STORE = 'templates';
 
-/**
- * Opens the IndexedDB database and creates object stores if they don't exist.
- * @returns {Promise<IDBDatabase>}
- */
-export const openDB = async (): Promise<IDBDatabase> => {
+const requestOpenDB = async (): Promise<IDBDatabase> => {
   return await new Promise((resolve, reject) => {
     const request: IDBOpenDBRequest = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -33,6 +34,10 @@ export const openDB = async (): Promise<IDBDatabase> => {
       if (!db.objectStoreNames.contains(FORM_STORE)) {
         db.createObjectStore(FORM_STORE, { keyPath: 'taskId' });
       }
+
+      if (db.objectStoreNames.contains(LEGACY_TEMPLATE_STORE)) {
+        db.deleteObjectStore(LEGACY_TEMPLATE_STORE);
+      }
     };
 
     request.onsuccess = (event: Event) => {
@@ -41,10 +46,44 @@ export const openDB = async (): Promise<IDBDatabase> => {
     };
 
     request.onerror = (event: Event) => {
-      const error = (event.target as IDBOpenDBRequest).error;
-      reject(new Error(`Database error: ${error}`));
+      reject((event.target as IDBOpenDBRequest).error ?? new Error('unknown IndexedDB error'));
     };
   });
+};
+
+const deleteDB = async (): Promise<void> => {
+  await new Promise((resolve, reject) => {
+    const request: IDBRequest = indexedDB.deleteDatabase(DB_NAME);
+
+    request.onsuccess = () => {
+      resolve(null);
+    };
+
+    request.onerror = (event: Event) => {
+      const error = (event.target as IDBRequest).error;
+      reject(new Error(`Delete database error: ${error}`));
+    };
+  });
+};
+
+/**
+ * Opens the IndexedDB database and creates object stores if they don't exist.
+ *
+ * If the browser holds a newer database version than DB_VERSION (e.g. left behind by a
+ * different build), the database is deleted and recreated: it only caches form drafts,
+ * so starting over is preferable to permanently failing with a VersionError.
+ * @returns {Promise<IDBDatabase>}
+ */
+export const openDB = async (): Promise<IDBDatabase> => {
+  try {
+    return await requestOpenDB();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'VersionError') {
+      await deleteDB();
+      return await requestOpenDB();
+    }
+    throw new Error(`Database error: ${error}`);
+  }
 };
 
 /**

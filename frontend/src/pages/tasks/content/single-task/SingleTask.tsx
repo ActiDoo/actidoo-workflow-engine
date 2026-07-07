@@ -22,6 +22,11 @@ import { handleResponse } from '@/services/HelperService';
 import { TaskActions } from '@/pages/tasks/content/TaskActions';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
+import {
+  isAttachmentMultiSchema,
+  isAttachmentSingleSchema,
+  isRealFile,
+} from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import { useTranslation } from '@/i18n';
 import { refreshWorkflowInstancesWithTasks } from '@/utils/hooks/useInfiniteWorkflowInstances';
 import { StringDict } from '@/ui5-components';
@@ -37,6 +42,100 @@ import {
 interface SingleTaskProps {
   state: WorkflowState;
 }
+
+/**
+ * Brings freshly loaded form data (task data or a stored draft) into the shape the form
+ * expects, before the form renders it. Historically the custom fields repaired the data
+ * themselves while rendering, each with its own deferred onChange; under rjsf 6 these
+ * corrections collide with re-renders and crash large forms. Normalizing once, up front,
+ * keeps rendering free of data fixes.
+ */
+const prepareFormData = (
+  jsonschema: any,
+  uischema: any,
+  data: Record<string, any>
+): { prepared: Record<string, any>; changed: boolean } => {
+  const prepared = { ...data };
+  let changed = false;
+  for (const [key, prop] of Object.entries<any>(jsonschema?.properties ?? {})) {
+    if (typeof prop !== 'object' || prop === null) continue;
+    const ui = uischema?.[key] ?? {};
+    const value = prepared[key];
+
+    // Old drafts may still contain attachment placeholders like {}. Drop them, so a
+    // required upload counts as missing rather than as an uploaded file.
+    if (isAttachmentSingleSchema(prop)) {
+      const isRequired = Array.isArray(jsonschema?.required) && jsonschema.required.includes(key);
+
+      // Only values with attachment identifiers are real files. Everything else
+      // (undefined, null, {}, or stale/corrupt data) means "no file selected".
+      if (isRealFile(value)) continue;
+
+      // Required single uploads must remain present as null; deleting the key lets
+      // rjsf repopulate the required object as {}. Optional empty uploads can vanish.
+      if (isRequired) {
+        if (value !== null) {
+          prepared[key] = null;
+          changed = true;
+        }
+      } else if (value !== undefined) {
+        delete prepared[key];
+        changed = true;
+      }
+      continue;
+    }
+
+    if (isAttachmentMultiSchema(prop)) {
+      const files = Array.isArray(value) ? value : [];
+      const realFiles = files.filter(isRealFile);
+
+      // Multi uploads are always arrays. RJSF may leave placeholder entries in
+      // required arrays, so keep only real files and turn missing/stale values into [].
+      if (files !== value || realFiles.length !== files.length) {
+        prepared[key] = realFiles;
+        changed = true;
+      }
+      continue;
+    }
+
+    // Itemgroup rows are nested forms — normalize each row the same way.
+    const itemSchema =
+      typeof prop.items === 'object' && !Array.isArray(prop.items) ? prop.items : undefined;
+    if (prop.type === 'array' && itemSchema?.properties && Array.isArray(value)) {
+      let rowsChanged = false;
+      const rows = value.map((row: any) => {
+        // Invalid/stale rows should fail validation as-is; only real row objects
+        // are nested forms that can be normalized recursively.
+        if (row === null || typeof row !== 'object' || Array.isArray(row)) return row;
+        const result = prepareFormData(itemSchema, ui.items ?? {}, row);
+        rowsChanged = rowsChanged || result.changed;
+        return result.changed ? result.prepared : row;
+      });
+      if (rowsChanged) {
+        prepared[key] = rows;
+        changed = true;
+      }
+      continue;
+    }
+
+    if (value !== undefined) continue;
+    if (prop.default !== undefined) {
+      prepared[key] = _.cloneDeep(prop.default);
+      changed = true;
+    } else if (prop.type === 'null') {
+      prepared[key] = null;
+      changed = true;
+    } else if (
+      prop.type === 'boolean' &&
+      ui['ui:widget'] !== 'hidden' &&
+      ui['ui:hideif'] === undefined
+    ) {
+      prepared[key] = false;
+      changed = true;
+    }
+  }
+  return { prepared, changed };
+};
 
 const SingleTask: React.FC<SingleTaskProps> = props => {
   const { t } = useTranslation();
@@ -201,6 +300,13 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
 
     setFormData(task.data ?? {});
   }, [isDraftLoaded, task, taskId, formData]);
+
+  // The form and everything that watches it (hide-if conditions, dynamic selects) must
+  // all see the same, already-normalized data from the very first render on.
+  const preparedFormData = useMemo(() => {
+    if (!task?.jsonschema || task.id !== taskId || formData === undefined) return formData;
+    return prepareFormData(task.jsonschema, task.uischema, formData).prepared;
+  }, [task, taskId, formData]);
 
   // Handle responses for submit
   useEffect(() => {
@@ -422,7 +528,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
           <div className="bg-white pt-4 px-3 md:px-12 pc-form pb-20">
             <TaskForm
               key={`form_${formRenderIndex}`}
-              formData={formData}
+              formData={preparedFormData}
               className={`max-w-7xl ${!canSubmitTask || isLoading ? 'opacity-30' : ''}`}
               disabled={!canSubmitTask || isLoading || props.state === WorkflowState.COMPLETED}
               schema={jsonschema}
@@ -443,7 +549,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               }}
               noHtml5Validate={false}
               formContext={{
-                formData,
+                formData: preparedFormData,
                 schema: task.jsonschema,
                 uiSchema: task.uischema,
               }}>

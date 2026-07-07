@@ -638,7 +638,7 @@ def store_attachment_for_workflow_instance(
 ) -> WorkflowInstanceAttachment:
     obj = db.execute(
         select(WorkflowInstanceAttachment).where(
-            WorkflowInstanceAttachment.workflow_attachment_id == workflow_instance_id,
+            WorkflowInstanceAttachment.workflow_attachment_id == attachment_id,
             WorkflowInstanceAttachment.workflow_instance_id == workflow_instance_id,
         ),
     ).scalar()

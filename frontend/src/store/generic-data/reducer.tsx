@@ -5,6 +5,7 @@ import { isEqual } from 'lodash';
 import { initState, WeDataAction, WeDataState } from '@/store/generic-data/setup';
 import { GenericDataActionType } from '@/ui5-components';
 import { postDataResponseReducer } from '@/store/generic-data/reducerPostDataResponse';
+import { normalizeTaskSchemasForResponse } from '@/store/generic-data/normalizeTaskSchemas';
 
 /**
  * Merge an appended page into the accumulated data: ITEMS concatenated with
@@ -39,7 +40,7 @@ export default (state = initState, action: WeDataAction): WeDataState => {
         ...state,
         [action.payload.key]: {
           queryParams: state[action.payload.key]?.queryParams,
-          data: action.payload.data,
+          data: normalizeTaskSchemasForResponse(action.payload.key, action.payload.data),
           response: action.payload.response,
         },
       };
@@ -70,11 +71,15 @@ export default (state = initState, action: WeDataAction): WeDataState => {
       }
       const isAppend = !!signature?.append;
       const succeeded = action.payload.response === 200;
+      const normalizedData = normalizeTaskSchemasForResponse(
+        action.payload.key,
+        action.payload.data
+      );
       const data = isAppend
         ? succeeded
-          ? mergeItemsPage(entry?.data, action.payload.data)
+          ? mergeItemsPage(entry?.data, normalizedData)
           : entry?.data // failed append: keep the accumulated list untouched
-        : action.payload.data; // replace: today's behavior (incl. error bodies)
+        : normalizedData; // replace: today's behavior (incl. error bodies)
       return postDataResponseReducer(
         {
           ...state,
