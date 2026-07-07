@@ -7,11 +7,16 @@ from fastapi import HTTPException, Request
 from actidoo_wfe.auth.core import (
     get_login_state,
     has_role,
+    refresh_token_if_needed,
 )
 
 
 def require_authenticated(request: Request):
     """Ensure the current session is authenticated, otherwise raise 401."""
+
+    # Renew a near-expired access token first so an idle-but-valid session is not
+    # logged out just because the short-lived token lapsed.
+    refresh_token_if_needed(request=request)
 
     loginstate = get_login_state(request=request)
 
