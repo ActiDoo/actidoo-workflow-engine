@@ -88,7 +88,7 @@ def _find_property_upwards(
     global_jsonschema: dict,
     starting_path: list[str],
     property: str,
-):
+) -> list[str] | None:
     found = False
     found_path = None
 
@@ -103,13 +103,10 @@ def _find_property_upwards(
 
     if not found:
         if property in global_jsonschema.get("properties", {}):
-            found = True
             found_path = []
 
-    if found_path is None:
-        log.warning(f"Property {property} not found with starting_path {starting_path}")
-        raise Exception(f"Property {property} not found with starting_path {starting_path}")
-
+    # None when the property is absent from the schema: a hide-if can reference a field that no
+    # longer exists. The caller treats that as unset (FEEL null) rather than failing the request.
     return found_path
 
 
@@ -273,10 +270,17 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         # property auflösen und auf const wert setzen
         starting_path = path[:-hops] if hops > 0 else path
         found_path = _find_property_upwards(global_jsonschema, starting_path, property)
-        left_node = _get_subschema(
-            global_jsonschema=global_jsonschema,
-            path=found_path,
-        )["properties"][property]
+        reference_missing = found_path is None
+        if reference_missing:
+            # Field isn't declared in the schema (hide-if references a removed field): anchor the
+            # condition at the field's own level and treat the reference as unset (FEEL null).
+            found_path = starting_path
+            left_node = None
+        else:
+            left_node = _get_subschema(
+                global_jsonschema=global_jsonschema,
+                path=found_path,
+            )["properties"][property]
         property_type = left_node["type"] if isinstance(left_node, dict) else None
         # property_type can be a single string like "boolean" or "string" or a list of strings like: ["string", "null"]
         value_type = type(value)
@@ -292,26 +296,18 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             },
         }
 
-        # Ensure hide-if comparisons only match when the referenced field exists, so hidden or
-        # unset fields are treated as undefined and don't accidentally satisfy the comparison.
-        requires_reference = is_bool_type
-        if left_node is True:
-            # The field definition lives in an allOf/then branch; treat it as potentially hidden.
-            requires_reference = True
-        elif isinstance(left_node, dict) and left_node.get("hideif") is not None:
-            # The field has its own hide-if, so only compare if it is present.
-            requires_reference = True
-        elif isinstance(left_node, dict) and left_node.get("disabled", False):
-            # Disabled reference (opaque mode): without a stored value the comparison must fail,
-            # matching FEEL where null != x is true and null == x is false.
-            requires_reference = True
-
-        if isinstance(op, ast.NotEq):
-            # FEEL: null != x is true for any non-null x — a missing reference must not
-            # satisfy the comparison that gets negated below.
-            requires_reference = True
+        # A hide-if comparison may only match when the referenced field actually holds a value:
+        # a hidden, disabled, unset, or entirely absent reference is treated as FEEL null
+        # (null = x is false, null != x is true). Comparing against the null literal is the one
+        # case that is meant to match the unset field.
+        requires_reference = (
+            is_bool_type
+            or reference_missing
+            or left_node is True
+            or (isinstance(left_node, dict) and (left_node.get("hideif") is not None or left_node.get("disabled", False)))
+            or isinstance(op, ast.NotEq)
+        )
         if value is None:
-            # Comparisons against the null literal match exactly when the field is unset.
             requires_reference = False
 
         if requires_reference and "required" not in if_schema:

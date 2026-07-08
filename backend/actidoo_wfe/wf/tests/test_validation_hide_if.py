@@ -206,3 +206,29 @@ def test__none_spelling_behaves_like_null_literal():
 
     assert "detail" in (unset.error_schema or {})  # kind unset -> detail visible
     assert not hidden.error_schema  # kind set -> detail hidden, may be absent
+
+
+MISSING_REFERENCE_FORM = {
+    # A hide-if that references a field which no longer exists in the form at all (e.g. a
+    # checkbox was removed but its paired select still guards on it). FEEL treats the missing
+    # reference as null: 'null = false' is false, so the field stays visible — and, crucially,
+    # building the schema must not raise.
+    "components": [
+        {
+            "type": "select",
+            "key": "subarea",
+            "validate": {"required": True},
+            "conditional": {"hide": "=missing_checkbox = false"},
+            "values": AB_OPTIONS,
+        },
+    ],
+}
+
+
+def test__missing_hide_if_reference_is_treated_as_unset_and_does_not_crash():
+    # Regression: an absent reference used to raise and 500 the request. It must now behave
+    # like FEEL null — 'null = false' is false, so the field is visible and its required rule
+    # applies, instead of crashing the whole submit/advance.
+    result = _validate(MISSING_REFERENCE_FORM, {})
+
+    assert "subarea" in (result.error_schema or {})
