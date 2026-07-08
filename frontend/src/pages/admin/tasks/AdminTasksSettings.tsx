@@ -16,7 +16,8 @@ type Translate = ReturnType<typeof useTranslation>['t'];
 
 export const adminTasksColumns = (
   tableData: PcTableData,
-  t: Translate
+  t: Translate,
+  detailsPath?: string
 ): AnalyticalTableColumnDefinition[] => [
   PcInputColumn('workflow_instance.title', t('adminTables.workflow'), tableData),
   PcInputColumn('workflow_instance.subtitle', t('adminTables.subtitle'), tableData),
@@ -81,6 +82,12 @@ export const adminTasksColumns = (
     disableFilters: true,
     disableSortBy: true,
     width: 70,
-    Cell: (instance: any) => <PcArrowLink link={`${instance.row.original.id}`} />,
+    Cell: (instance: any) => (
+      <PcArrowLink
+        link={
+          detailsPath ? `${detailsPath}/${instance.row.original.id}` : `${instance.row.original.id}`
+        }
+      />
+    ),
   },
 ];
