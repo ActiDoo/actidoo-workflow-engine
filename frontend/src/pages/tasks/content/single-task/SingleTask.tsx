@@ -11,7 +11,10 @@ import { ErrorSchema, RJSFSchema, UiSchema } from '@rjsf/utils';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { getRequest, postRequest } from '@/store/generic-data/actions';
 import { State } from '@/store';
-import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
+import {
+  changeRequiredDefinitionForFieldsWithHideIfDefinition,
+  computeHiddenMap,
+} from '@/services/FeelService';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
 import { useScrollTop } from '@/utils/hooks/useScrollTop';
 import { WeUploadDialog } from '@/utils/components/WeUploadDialog';
@@ -57,6 +60,7 @@ const prepareFormData = (
 ): { prepared: Record<string, any>; changed: boolean } => {
   const prepared = { ...data };
   let changed = false;
+  const hiddenMap = computeHiddenMap(uischema ?? {}, jsonschema?.properties, data);
   for (const [key, prop] of Object.entries<any>(jsonschema?.properties ?? {})) {
     if (typeof prop !== 'object' || prop === null) continue;
     const ui = uischema?.[key] ?? {};
@@ -125,11 +129,10 @@ const prepareFormData = (
     } else if (prop.type === 'null') {
       prepared[key] = null;
       changed = true;
-    } else if (
-      prop.type === 'boolean' &&
-      ui['ui:widget'] !== 'hidden' &&
-      ui['ui:hideif'] === undefined
-    ) {
+    } else if (prop.type === 'boolean' && ui['ui:widget'] !== 'hidden' && !hiddenMap[key]) {
+      // Seed every currently-visible checkbox to false, so the submitted value equals the false
+      // computeHiddenMap already assumed when rendering it. This keeps backend visibility aligned
+      // with the frontend; a hidden checkbox stays absent (the backend then reads it as unset).
       prepared[key] = false;
       changed = true;
     }

@@ -42,7 +42,7 @@ function safeUnaryTest(expr: string, ctx: Record<string, any>): boolean {
  * The fixpoint iteration continues until the hidden map stabilizes or
  * max iterations are reached (prevents infinite loops).
  */
-function computeHiddenMap(
+export function computeHiddenMap(
   uiSchema: UiSchema<any, RJSFSchema, any>,
   schemaProperties: Record<string, any> | undefined,
   formData: Record<string, any>
