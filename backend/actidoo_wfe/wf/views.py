@@ -10,7 +10,7 @@ import uuid
 from typing import Literal
 
 from sqlalchemy import and_, false, func, null, or_, select, true
-from sqlalchemy.orm import Session, aliased, contains_eager, selectinload
+from sqlalchemy.orm import Session, aliased, contains_eager, defer, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 
 from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase, CursorBFFTable
@@ -143,6 +143,43 @@ def get_visible_workflow_instance(
     ).scalar_one_or_none()
 
 
+def _inline_task_loader_options():
+    """Loader options for the task lists embedded in a workflow-instance list.
+
+    The inline representation shows only id/name/title, the involved users and
+    the delegate comment; the payload blobs are deferred with ``raiseload`` so
+    a future consumer that needs one fails loudly instead of silently
+    re-introducing a per-row blob load.
+    """
+    return (
+        defer(WorkflowInstanceTask.data, raiseload=True),
+        defer(WorkflowInstanceTask.jsonschema, raiseload=True),
+        defer(WorkflowInstanceTask.uischema, raiseload=True),
+        defer(WorkflowInstanceTask.error_stacktrace, raiseload=True),
+        selectinload(WorkflowInstanceTask.assigned_user),
+        selectinload(WorkflowInstanceTask.assigned_delegate_user),
+        selectinload(WorkflowInstanceTask.completed_by_user),
+        selectinload(WorkflowInstanceTask.completed_by_delegate_user),
+    )
+
+
+def _instance_list_loader_options():
+    """Loader options for instance lists rendered as ``WorkflowInstanceRepresentation``.
+
+    Eager-load exactly the relations the representation shows and defer the
+    payload blobs it never touches: the tasks' form data/schemas and error
+    stacktrace and the instance's workflow state would otherwise dominate the
+    transfer of every list page.
+    """
+    return (
+        defer(WorkflowInstance.data, raiseload=True),
+        defer(WorkflowInstance.lane_mapping, raiseload=True),
+        selectinload(WorkflowInstance.active_tasks).options(*_inline_task_loader_options()),
+        selectinload(WorkflowInstance.completed_tasks).options(*_inline_task_loader_options()),
+        selectinload(WorkflowInstance.created_by),
+    )
+
+
 def bff_get_workflows_with_usertasks(
     db: Session,
     bff_table_request_params: BffTableQuerySchemaBase,
@@ -182,33 +219,7 @@ def bff_get_workflows_with_usertasks(
 
     q = (
         select(WorkflowInstance)
-        .options(
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.assigned_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.assigned_delegate_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_delegate_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.assigned_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.assigned_delegate_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_delegate_user,
-            ),
-            selectinload(WorkflowInstance.created_by),
-        )
+        .options(*_instance_list_loader_options())
         .where(WorkflowInstance.id.in_(sq))
     )
 
@@ -251,33 +262,7 @@ def bff_user_get_initiated_workflows(
 
     q = (
         select(WorkflowInstance)
-        .options(
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.assigned_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.assigned_delegate_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_delegate_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.assigned_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.assigned_delegate_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_delegate_user,
-            ),
-            selectinload(WorkflowInstance.created_by),
-        )
+        .options(*_instance_list_loader_options())
         .where(and_(WorkflowInstance.created_by == user))
     )
 
@@ -390,35 +375,24 @@ def bff_admin_get_graph_workflow_instances(db: Session) -> ReducedWorkflowInstan
     return ReducedWorkflowInstanceResponse(ITEMS=completed_workflows)
 
 
-def bff_admin_get_all_workflow_instances(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
+def _bff_admin_all_workflow_instances_table(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str]) -> BFFTable:
+    """The BFFTable behind the admin instance list.
+
+    Separate from the view so the SQL-shape guard test compiles the production
+    query instead of a replica that could silently drift from it.
+    """
     CreatedByUser = aliased(WorkflowUser)
 
     q = (
         select(WorkflowInstance)
         .join(CreatedByUser, WorkflowInstance.created_by_id == CreatedByUser.id, isouter=True)
-        .options(
-            selectinload(WorkflowInstance.tasks).selectinload(
-                WorkflowInstanceTask.assigned_user,
-            ),
-            selectinload(WorkflowInstance.tasks).selectinload(
-                WorkflowInstanceTask.assigned_delegate_user,
-            ),
-            selectinload(WorkflowInstance.tasks).selectinload(
-                WorkflowInstanceTask.completed_by_user,
-            ),
-            selectinload(WorkflowInstance.tasks).selectinload(
-                WorkflowInstanceTask.completed_by_delegate_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks),
-            selectinload(WorkflowInstance.completed_tasks),
-            selectinload(WorkflowInstance.created_by),
-        )
+        .options(*_instance_list_loader_options())
         .where(
             WorkflowInstance.name.in_(allowed_workflow_names),
         )
     )
 
-    bff_table = BFFTable(
+    return BFFTable(
         db=db,
         request_params=bff_table_request_params,
         query=q,
@@ -426,6 +400,14 @@ def bff_admin_get_all_workflow_instances(db: Session, bff_table_request_params: 
             "created_by___full_name": CreatedByUser.full_name,
         },
         default_order_by=WorkflowInstance.created_at.desc(),
+    )
+
+
+def bff_admin_get_all_workflow_instances(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
+    bff_table = _bff_admin_all_workflow_instances_table(
+        db=db,
+        bff_table_request_params=bff_table_request_params,
+        allowed_workflow_names=allowed_workflow_names,
     )
 
     paginated_data = bff_table.get_paginated_data()
@@ -681,33 +663,7 @@ def get_workflows_with_usertasks(
 
     q = (
         select(WorkflowInstance)
-        .options(
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.assigned_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.assigned_delegate_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_user,
-            ),
-            selectinload(WorkflowInstance.active_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_delegate_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.assigned_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.assigned_delegate_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_user,
-            ),
-            selectinload(WorkflowInstance.completed_tasks).selectinload(
-                WorkflowInstanceTask.completed_by_delegate_user,
-            ),
-            selectinload(WorkflowInstance.created_by),
-        )
+        .options(*_instance_list_loader_options())
         .where(WorkflowInstance.id.in_(sq))
     )
 

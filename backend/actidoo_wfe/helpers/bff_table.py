@@ -18,8 +18,8 @@ from fastapi import Query, Request
 from fastapi.dependencies.models import Dependant
 from fastapi.dependencies.utils import get_dependant, request_params_to_args
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy import ScalarResult, Select, and_, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import ScalarResult, Select, and_, func, inspect, or_, select
+from sqlalchemy.orm import Mapper, Session
 
 from actidoo_wfe.database import eilike, search_uuid_by_prefix
 
@@ -502,27 +502,44 @@ class BFFTable:
     def _get_scalars(self) -> ScalarResult:
         return self.db.execute(self._paginate(self.query)).scalars()
 
-    def _get_count(self):
-        """Retrieve the total count of records matching the current query without limit, offset, or order by clauses.
+    def _count_query(self) -> Select:
+        """Build the statement counting all records matching the current query,
+        without limit, offset, or order by clauses.
 
-        This method constructs a count query based on the current query configuration, removing any existing
-        limits, offsets, or orderings to ensure an accurate total count of records. By wrapping the query as a
-        subquery, DISTINCT clauses are properly respected in the count.
-
-        Returns:
-            int: The total count of records as an integer.
+        The count runs on every page request, so the wrapped subquery must stay
+        cheap: an entity's select list can carry blob columns and correlated
+        column_property subselects, and a subselect in a derived table's select
+        list prevents MySQL from merging it — the whole filtered set would be
+        materialized (blobs included) on every request. Counting over just the
+        primary key avoids that. The subquery wrap stays so a DISTINCT in the
+        original query keeps deduplicating: distinct entity rows are exactly
+        distinct primary keys.
         """
-        count_query = self.query
-        count_query = count_query.limit(None)
-        count_query = count_query.offset(None)
-        count_query = count_query.order_by(None)
+        count_query = self.query.limit(None).offset(None).order_by(None)
 
-        # Wrap as subquery to correctly handle DISTINCT in the original query,
-        # then count the rows of the subquery.
+        # Reduce only a pure single-entity select: exactly one selected item,
+        # and that item is a plain mapped class. Column selects, multiple
+        # entities and aliased entities (whose mapper PK would point at the
+        # unaliased base table) keep the full select list.
+        described = count_query.column_descriptions
+        entity = described[0].get("entity") if len(described) == 1 else None
+        entity_insp = inspect(entity) if entity is not None and described[0]["expr"] is entity else None
+        if isinstance(entity_insp, Mapper):
+            # The PK replaces the select list; FROM, joins and WHERE stay intact
+            count_query = count_query.with_only_columns(
+                *entity_insp.primary_key,
+                maintain_column_froms=True,
+            )
+        else:
+            # The fallback counts correctly but may materialize — keep it loud
+            log.warning("BFF count keeps the full select list (no reducible single-entity select) — blob columns or per-row subselects would be materialized on every count")
+
         subquery = count_query.subquery()
-        count_query = select(func.count()).select_from(subquery)
+        return select(func.count()).select_from(subquery)
 
-        return self.db.execute(count_query).scalar()
+    def _get_count(self):
+        """The total count of records matching the current query as an integer."""
+        return self.db.execute(self._count_query()).scalar()
 
     def get_paginated_data(self) -> PaginatedData:
         """
