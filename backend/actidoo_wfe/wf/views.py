@@ -143,15 +143,17 @@ def get_visible_workflow_instance(
     ).scalar_one_or_none()
 
 
-def _inline_task_loader_options():
-    """Loader options for the task lists embedded in a workflow-instance list.
+def _instance_list_loader_options():
+    """Loader options for instance lists rendered as ``WorkflowInstanceRepresentation``.
 
-    The inline representation shows only id/name/title, the involved users and
-    the delegate comment; the payload blobs are deferred with ``raiseload`` so
-    a future consumer that needs one fails loudly instead of silently
-    re-introducing a per-row blob load.
+    Eager-load exactly the relations the representation shows and defer the
+    payload blobs it never touches: the tasks' form data/schemas and error
+    stacktrace and the instance's workflow state would otherwise dominate the
+    transfer of every list page. ``raiseload`` makes a future consumer that
+    needs a deferred column fail loudly instead of silently re-introducing a
+    per-row blob load.
     """
-    return (
+    inline_task_options = (
         defer(WorkflowInstanceTask.data, raiseload=True),
         defer(WorkflowInstanceTask.jsonschema, raiseload=True),
         defer(WorkflowInstanceTask.uischema, raiseload=True),
@@ -161,21 +163,11 @@ def _inline_task_loader_options():
         selectinload(WorkflowInstanceTask.completed_by_user),
         selectinload(WorkflowInstanceTask.completed_by_delegate_user),
     )
-
-
-def _instance_list_loader_options():
-    """Loader options for instance lists rendered as ``WorkflowInstanceRepresentation``.
-
-    Eager-load exactly the relations the representation shows and defer the
-    payload blobs it never touches: the tasks' form data/schemas and error
-    stacktrace and the instance's workflow state would otherwise dominate the
-    transfer of every list page.
-    """
     return (
         defer(WorkflowInstance.data, raiseload=True),
         defer(WorkflowInstance.lane_mapping, raiseload=True),
-        selectinload(WorkflowInstance.active_tasks).options(*_inline_task_loader_options()),
-        selectinload(WorkflowInstance.completed_tasks).options(*_inline_task_loader_options()),
+        selectinload(WorkflowInstance.active_tasks).options(*inline_task_options),
+        selectinload(WorkflowInstance.completed_tasks).options(*inline_task_options),
         selectinload(WorkflowInstance.created_by),
     )
 

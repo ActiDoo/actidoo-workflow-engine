@@ -4,15 +4,17 @@
 """Guards for the SQL shape of the BFF instance lists.
 
 The count runs on every page request. MySQL cannot merge a derived table whose
-select list contains a subselect, so if the count subquery dragged the entity's
-full select list along (blob columns, correlated column_properties like
-``has_task_in_error_state``), the whole filtered set would be materialized into
-an on-disk temp table per request — the prod regression these tests pin down.
-The page-query tests pin the other half of the same fix: the payload blobs stay
-deferred out of every list page.
+select list contains a subselect, so a count subquery carrying the entity's
+full select list (blob columns, correlated column_properties like
+``has_task_in_error_state``) materializes the whole filtered set into an
+on-disk temp table on every request. These tests pin both halves of the
+guarantee: the count subquery stays reduced to the primary key, and the
+payload blobs stay deferred out of every list page.
 """
 
-from sqlalchemy import literal, select
+import uuid
+
+from sqlalchemy import event, literal, select
 from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import aliased
 
@@ -20,7 +22,7 @@ import actidoo_wfe.helpers.bff_table as bff_table_module
 from actidoo_wfe.helpers.bff_table import BFFTable
 from actidoo_wfe.wf.bff.bff_admin import AdminWorkflowInstancesBffTableQuerySchema, AdminWorkflowUsersBffTableQuerySchema
 from actidoo_wfe.wf.models import WorkflowInstance, WorkflowInstanceTask, WorkflowRole, WorkflowUser, WorkflowUserRole
-from actidoo_wfe.wf.views import _bff_admin_all_workflow_instances_table, _inline_task_loader_options
+from actidoo_wfe.wf.views import _bff_admin_all_workflow_instances_table, _instance_list_loader_options
 
 # Schema without filter/sort fields, for count-fallback tests whose queries do
 # not export the admin columns.
@@ -119,11 +121,46 @@ def test_page_query_defers_instance_blobs_but_keeps_the_error_flag():
     assert "EXISTS" in sql.upper()
 
 
-def test_inline_task_loader_defers_task_payload_blobs():
-    sql = _compile(select(WorkflowInstanceTask).options(*_inline_task_loader_options()))
+def test_instance_list_load_does_not_select_task_payload_blobs(db_engine_ctx):
+    """The task lists are selectin-loaded in separate statements, so the main
+    page-query compile cannot see them — capture the SQL a real list load
+    emits and check the blob columns stayed deferred there too."""
+    with db_engine_ctx():
+        from actidoo_wfe.database import SessionLocal
 
-    assert "workflow_instance_tasks.id" in sql
-    assert "workflow_instance_tasks.data" not in sql
-    assert "workflow_instance_tasks.jsonschema" not in sql
-    assert "workflow_instance_tasks.uischema" not in sql
-    assert "workflow_instance_tasks.error_stacktrace" not in sql
+        db = SessionLocal()
+        instance = WorkflowInstance(id=uuid.uuid4(), name="wf", title="t", lane_mapping={}, data={}, is_completed=False)
+        task = WorkflowInstanceTask(
+            id=uuid.uuid4(),
+            workflow_instance=instance,
+            name="t1",
+            title="t1",
+            state=1,
+            state_ready=True,
+            data={"k": "v"},
+            jsonschema={},
+            uischema={},
+        )
+        db.add_all([instance, task])
+        db.commit()
+
+        statements = []
+
+        def capture(conn, cursor, statement, parameters, context, executemany):
+            statements.append(statement)
+
+        engine = db.get_bind()
+        event.listen(engine, "before_cursor_execute", capture)
+        try:
+            rows = db.execute(select(WorkflowInstance).options(*_instance_list_loader_options())).scalars().all()
+        finally:
+            event.remove(engine, "before_cursor_execute", capture)
+
+        assert rows
+        task_selects = [s for s in statements if "FROM workflow_instance_tasks" in s]
+        assert task_selects
+        for sql in task_selects:
+            assert "workflow_instance_tasks.data" not in sql
+            assert "workflow_instance_tasks.jsonschema" not in sql
+            assert "workflow_instance_tasks.uischema" not in sql
+            assert "workflow_instance_tasks.error_stacktrace" not in sql
