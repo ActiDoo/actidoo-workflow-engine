@@ -293,8 +293,12 @@ def bff_user_get_initiated_workflows(
     return res_representation
 
 
-def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
+def _bff_admin_all_tasks_table(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str]) -> BFFTable:
+    """The BFFTable behind the admin task list.
 
+    Separate from the view so the SQL-shape guard test compiles the production
+    query instead of a replica that could silently drift from it.
+    """
     AssignedUser = aliased(WorkflowUser)
     AssignedDelegateUser = aliased(WorkflowUser)
     TriggeredByUser = aliased(WorkflowUser)
@@ -308,7 +312,14 @@ def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuery
         .join(TriggeredByUser, WorkflowInstanceTask.triggered_by_id == TriggeredByUser.id, isouter=True)
         .join(AssociatedWorkflow, WorkflowInstanceTask.workflow_instance_id == AssociatedWorkflow.id, isouter=True)
         .options(
-            selectinload(WorkflowInstanceTask.workflow_instance),
+            # The nested instance representation shows neither payload blob;
+            # created_by is one of its required fields and would otherwise
+            # lazy-load once per instance during validation.
+            selectinload(WorkflowInstanceTask.workflow_instance).options(
+                defer(WorkflowInstance.data, raiseload=True),
+                defer(WorkflowInstance.lane_mapping, raiseload=True),
+                selectinload(WorkflowInstance.created_by),
+            ),
             contains_eager(WorkflowInstanceTask.assigned_user, alias=AssignedUser),
             contains_eager(WorkflowInstanceTask.assigned_delegate_user, alias=AssignedDelegateUser),
             contains_eager(WorkflowInstanceTask.triggered_by, alias=TriggeredByUser),
@@ -319,7 +330,7 @@ def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuery
         .where(WorkflowInstance.name.in_(allowed_workflow_names))
     )
 
-    bff_table = BFFTable(
+    return BFFTable(
         db=db,
         request_params=bff_table_request_params,
         query=q,
@@ -331,6 +342,14 @@ def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuery
             "workflow_instance___subtitle": AssociatedWorkflow.subtitle,
         },
         default_order_by=[WorkflowInstanceTask.sort.desc()],
+    )
+
+
+def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
+    bff_table = _bff_admin_all_tasks_table(
+        db=db,
+        bff_table_request_params=bff_table_request_params,
+        allowed_workflow_names=allowed_workflow_names,
     )
 
     paginated_data = bff_table.get_paginated_data()
