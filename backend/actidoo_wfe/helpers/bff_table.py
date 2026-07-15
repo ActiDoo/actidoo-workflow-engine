@@ -430,27 +430,8 @@ class BFFTable:
         self.field_to_dbfield_map = field_to_dbfield_map
         self.filter_fields = request_params.get_filter_fields()
         self.default_order_by = [default_order_by] if not isinstance(default_order_by, Iterable) else default_order_by
-        self.entity_mapper = self._single_entity_mapper(query)
 
         self._prepare_query()
-
-    @staticmethod
-    def _single_entity_mapper(query: Select) -> Mapper:
-        """The mapper of the single selected entity — the BFFTable contract.
-
-        The pagination statements are built around the entity's primary key,
-        which is only well-defined for a select of exactly one plain mapped
-        class; an aliased entity is rejected too, because its mapper primary
-        key belongs to the unaliased base table. Rejecting other shapes at
-        construction turns an unsupported query into a loud development-time
-        error instead of a silently slow list.
-        """
-        described = query.column_descriptions
-        entity = described[0].get("entity") if len(described) == 1 else None
-        entity_insp = inspect(entity) if entity is not None and described[0]["expr"] is entity else None
-        if not isinstance(entity_insp, Mapper):
-            raise ValueError("BFFTable requires a select of exactly one mapped class, e.g. select(WorkflowInstance)")
-        return entity_insp
 
     def _get_query_field(self, param_name):
         if param_name in self.field_to_dbfield_map:
@@ -521,95 +502,25 @@ class BFFTable:
     def _get_scalars(self) -> ScalarResult:
         return self.db.execute(self._paginate(self.query)).scalars()
 
-    def _count_query(self) -> Select:
-        """Build the statement counting all records matching the current query,
-        without limit, offset, or order by clauses.
-
-        The count runs on every page request, so the wrapped subquery must stay
-        cheap: an entity's select list can carry blob columns and correlated
-        column_property subselects, and a subselect in a derived table's select
-        list prevents MySQL from merging it — the whole filtered set would be
-        materialized (blobs included) on every request. Counting over just the
-        primary key avoids that. The subquery wrap stays so a DISTINCT in the
-        original query keeps deduplicating: distinct entity rows are exactly
-        distinct primary keys.
-        """
-        count_query = (
-            self.query.limit(None)
-            .offset(None)
-            .order_by(None)
-            # The PK replaces the select list; FROM, joins and WHERE stay intact
-            .with_only_columns(*self.entity_mapper.primary_key, maintain_column_froms=True)
-        )
-        return select(func.count()).select_from(count_query.subquery())
-
     def _get_count(self):
-        """The total count of records matching the current query as an integer."""
-        return self.db.execute(self._count_query()).scalar()
+        count_query = self.query.limit(None).offset(None).order_by(None)
 
-    def _uses_late_lookup(self) -> bool:
-        """Whether the page loads in two phases (primary keys first, rows second).
+        # Without DISTINCT, the selected columns cannot change the row count, so
+        # a plain entity can be counted without its blobs or computed columns.
+        described = count_query.column_descriptions
+        entity = described[0].get("entity") if len(described) == 1 else None
+        entity_insp = inspect(entity) if entity is not None and described[0]["expr"] is entity else None
+        if isinstance(entity_insp, Mapper) and not count_query._distinct:
+            count_query = count_query.with_only_columns(
+                *entity_insp.primary_key,
+                maintain_column_froms=True,
+            )
 
-        The late lookup needs one IN-able key column, so composite primary keys
-        (versioned data models) stay on the direct path. DISTINCT queries must
-        too — not merely unsupported, the reduction would be wrong: MySQL
-        rejects ``SELECT DISTINCT id … ORDER BY <column not in the select
-        list>``, and the reduction drops exactly those sorting columns.
-        """
-        # _distinct is part of SQLAlchemy's cache-key traversal contract;
-        # a guard test pins it against upgrades.
-        return len(self.entity_mapper.primary_key) == 1 and not self.query._distinct
-
-    def _page_ids_query(self) -> Select:
-        """The requested page reduced to its primary keys — filters, ORDER BY,
-        LIMIT and OFFSET included.
-
-        Sorting the full entity rows forces MySQL to materialize the whole
-        filtered join (blob columns included) into a temp table before the
-        LIMIT can apply; a bare primary-key projection sorts over narrow
-        tuples instead.
-        """
-        return self._paginate(self.query.with_only_columns(self.entity_mapper.primary_key[0], maintain_column_froms=True))
-
-    def _page_items(self) -> list:
-        """Load the requested page in two phases: primary keys first, then the
-        full rows for exactly those keys.
-
-        The row lookup is bounded by the page size, so blob columns and eager
-        loads only ever touch the rows actually delivered. Small tables pay one
-        extra page-sized IN lookup for the uniform path.
-        """
-        if not self._uses_late_lookup():
-            return list(self._get_scalars().all())
-
-        pk_col = self.entity_mapper.primary_key[0]
-        page_ids = list(self.db.execute(self._page_ids_query()).scalars())
-        if not page_ids:
-            return []
-
-        # The original filters stay on the row lookup as defense in depth; the
-        # order comes from the id list. A row deleted between the two phases
-        # shrinks the page instead of failing it.
-        rows = self.db.execute(self.query.order_by(None).where(pk_col.in_(page_ids))).scalars()
-        pk_attr = self.entity_mapper.get_property_by_column(pk_col).key
-        rows_by_id = {getattr(row, pk_attr): row for row in rows}
-        return [rows_by_id[page_id] for page_id in page_ids if page_id in rows_by_id]
+        return self.db.execute(select(func.count()).select_from(count_query.subquery())).scalar()
 
     def get_paginated_data(self) -> PaginatedData:
-        """
-        Retrieve a paginated set of data from the database with the current query.
-
-        This method executes the current SQLAlchemy query with limit and offset
-        parameters applied, fetching a list of scalar results. It also calculates
-        the total count of available records that match the current query without
-        pagination restrictions. The results are returned as a PaginatedData
-        object, which includes the list of items and the total count.
-
-        Returns:
-            PaginatedData: An object containing a list of items and the total
-            count of matching records.
-        """
-        return self._make_result(self._page_items(), self._get_count() or 0)
+        items = list(self._get_scalars().all())
+        return self._make_result(items, self._get_count() or 0)
 
     def get_all_data(self) -> list:
         """Every row matching the prepared query — filters, search and sorting

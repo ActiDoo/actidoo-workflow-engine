@@ -10,7 +10,7 @@ import uuid
 from typing import Literal
 
 from sqlalchemy import and_, false, func, null, or_, select, true
-from sqlalchemy.orm import Session, aliased, contains_eager, defer, selectinload
+from sqlalchemy.orm import Session, aliased, contains_eager, defer, load_only, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 
 from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase, CursorBFFTable
@@ -293,12 +293,7 @@ def bff_user_get_initiated_workflows(
     return res_representation
 
 
-def _bff_admin_all_tasks_table(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str]) -> BFFTable:
-    """The BFFTable behind the admin task list.
-
-    Separate from the view so the SQL-shape guard test compiles the production
-    query instead of a replica that could silently drift from it.
-    """
+def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
     AssignedUser = aliased(WorkflowUser)
     AssignedDelegateUser = aliased(WorkflowUser)
     TriggeredByUser = aliased(WorkflowUser)
@@ -312,6 +307,12 @@ def _bff_admin_all_tasks_table(db: Session, bff_table_request_params: BffTableQu
         .join(TriggeredByUser, WorkflowInstanceTask.triggered_by_id == TriggeredByUser.id, isouter=True)
         .join(AssociatedWorkflow, WorkflowInstanceTask.workflow_instance_id == AssociatedWorkflow.id, isouter=True)
         .options(
+            # Keep the large payloads out of MySQL's sorted page; they are loaded
+            # together for the finished page below.
+            defer(WorkflowInstanceTask.data, raiseload=True),
+            defer(WorkflowInstanceTask.jsonschema, raiseload=True),
+            defer(WorkflowInstanceTask.uischema, raiseload=True),
+            defer(WorkflowInstanceTask.error_stacktrace, raiseload=True),
             # The nested instance representation shows neither payload blob;
             # created_by is one of its required fields and would otherwise
             # lazy-load once per instance during validation.
@@ -330,7 +331,7 @@ def _bff_admin_all_tasks_table(db: Session, bff_table_request_params: BffTableQu
         .where(WorkflowInstance.name.in_(allowed_workflow_names))
     )
 
-    return BFFTable(
+    bff_table = BFFTable(
         db=db,
         request_params=bff_table_request_params,
         query=q,
@@ -344,15 +345,21 @@ def _bff_admin_all_tasks_table(db: Session, bff_table_request_params: BffTableQu
         default_order_by=[WorkflowInstanceTask.sort.desc()],
     )
 
-
-def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
-    bff_table = _bff_admin_all_tasks_table(
-        db=db,
-        bff_table_request_params=bff_table_request_params,
-        allowed_workflow_names=allowed_workflow_names,
-    )
-
     paginated_data = bff_table.get_paginated_data()
+
+    if paginated_data.items:
+        db.scalars(
+            select(WorkflowInstanceTask)
+            .options(
+                load_only(
+                    WorkflowInstanceTask.data,
+                    WorkflowInstanceTask.jsonschema,
+                    WorkflowInstanceTask.uischema,
+                    WorkflowInstanceTask.error_stacktrace,
+                ),
+            )
+            .where(WorkflowInstanceTask.id.in_([row.id for row in paginated_data.items])),
+        ).all()
 
     for row in paginated_data.items:
         db.expunge(row)
@@ -386,24 +393,22 @@ def bff_admin_get_graph_workflow_instances(db: Session) -> ReducedWorkflowInstan
     return ReducedWorkflowInstanceResponse(ITEMS=completed_workflows)
 
 
-def _bff_admin_all_workflow_instances_table(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str]) -> BFFTable:
-    """The BFFTable behind the admin instance list.
-
-    Separate from the view so the SQL-shape guard test compiles the production
-    query instead of a replica that could silently drift from it.
-    """
+def bff_admin_get_all_workflow_instances(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
     CreatedByUser = aliased(WorkflowUser)
 
     q = (
         select(WorkflowInstance)
         .join(CreatedByUser, WorkflowInstance.created_by_id == CreatedByUser.id, isouter=True)
-        .options(*_instance_list_loader_options())
+        .options(
+            *_instance_list_loader_options(),
+            defer(WorkflowInstance.has_task_in_error_state, raiseload=True),
+        )
         .where(
             WorkflowInstance.name.in_(allowed_workflow_names),
         )
     )
 
-    return BFFTable(
+    bff_table = BFFTable(
         db=db,
         request_params=bff_table_request_params,
         query=q,
@@ -413,15 +418,18 @@ def _bff_admin_all_workflow_instances_table(db: Session, bff_table_request_param
         default_order_by=WorkflowInstance.created_at.desc(),
     )
 
-
-def bff_admin_get_all_workflow_instances(db: Session, bff_table_request_params: BffTableQuerySchemaBase, allowed_workflow_names: set[str] = set()):
-    bff_table = _bff_admin_all_workflow_instances_table(
-        db=db,
-        bff_table_request_params=bff_table_request_params,
-        allowed_workflow_names=allowed_workflow_names,
-    )
-
     paginated_data = bff_table.get_paginated_data()
+
+    if paginated_data.items:
+        db.scalars(
+            select(WorkflowInstance)
+            .options(
+                load_only(
+                    WorkflowInstance.has_task_in_error_state,
+                ),
+            )
+            .where(WorkflowInstance.id.in_([row.id for row in paginated_data.items])),
+        ).all()
 
     for row in paginated_data.items:
         db.expunge(row)
