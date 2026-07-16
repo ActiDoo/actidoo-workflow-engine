@@ -50,6 +50,9 @@ const AdminWorkflows = React.lazy(
   async () => await import('@/pages/admin/workflows/AdminWorkflows')
 );
 const AdminTasks = React.lazy(async () => await import('@/pages/admin/tasks/AdminTasks'));
+const AdminErroneousTasks = React.lazy(
+  async () => await import('@/pages/admin/erroneous-tasks/AdminErroneousTasks')
+);
 const AdminTaskDetails = React.lazy(
   async () => await import('@/pages/admin/tasks/details/AdminTaskDetails')
 );
@@ -118,6 +121,7 @@ const Wrapper: React.FC = () => {
     const subNav = [
       { title: t('navigation.adminWorkflows'), to: '/admin/all-workflows' },
       { title: t('navigation.adminTasks'), to: '/admin/all-tasks' },
+      { title: t('navigation.adminErroneousTasks'), to: '/admin/erroneous-tasks' },
       { title: t('navigation.adminUsers'), to: '/admin/all-users' },
     ];
 
@@ -253,6 +257,15 @@ const router = createBrowserRouter(
           element={
             <WeAdminRoute>
               <AdminTaskDetails />
+            </WeAdminRoute>
+          }
+          errorElement={<PcErrorView />}
+        />
+        <Route
+          path="/admin/erroneous-tasks"
+          element={
+            <WeAdminRoute>
+              <AdminErroneousTasks />
             </WeAdminRoute>
           }
           errorElement={<PcErrorView />}

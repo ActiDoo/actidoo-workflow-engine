@@ -16,6 +16,7 @@ export const de = {
     admin: 'Admin',
     adminWorkflows: 'Workflows',
     adminTasks: 'Aufgaben',
+    adminErroneousTasks: 'Fehlerhafte laufende Aufgaben',
     adminUsers: 'Benutzer',
     statistics: 'Statistiken',
     systemInformation: 'Systeminformationen',
@@ -226,6 +227,7 @@ export const de = {
   admin: {
     workflows: 'Workflows',
     tasks: 'Aufgaben',
+    erroneousTasks: 'Fehlerhafte Aufgaben laufender Workflows',
     users: 'Benutzer',
     systemInformation: 'Systeminformationen',
     adminSection: 'Admin',

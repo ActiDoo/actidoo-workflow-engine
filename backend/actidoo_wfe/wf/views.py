@@ -341,6 +341,7 @@ def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuery
             "assigned_delegate_user___full_name": AssignedDelegateUser.full_name,
             "workflow_instance___title": AssociatedWorkflow.title,
             "workflow_instance___subtitle": AssociatedWorkflow.subtitle,
+            "workflow_instance___is_completed": AssociatedWorkflow.is_completed,
         },
         default_order_by=[WorkflowInstanceTask.sort.desc()],
     )
