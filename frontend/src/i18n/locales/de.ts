@@ -271,6 +271,7 @@ export const de = {
     createdAt: 'Erstellt am',
     completedAt: 'Abgeschlossen am',
     assignedTo: 'Zugewiesen an',
+    assignedDelegate: 'Delegiert an',
     canceled: 'Abgebrochen',
     completed: 'Abgeschlossen',
     error: 'Fehler',

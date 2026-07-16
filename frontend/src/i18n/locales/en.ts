@@ -269,6 +269,7 @@ export const en = {
     createdAt: 'Created at',
     completedAt: 'Completed at',
     assignedTo: 'Assigned to',
+    assignedDelegate: 'Assigned delegate',
     canceled: 'Canceled',
     completed: 'Completed',
     error: 'Error',
