@@ -324,6 +324,30 @@ class WorkflowInstanceTask(Base):
     )
     delegate_submit_comment: Mapped[str | None] = mapped_column(ty.Text(), nullable=True)
 
+    @property
+    def deadline(self):
+        """Computed task deadline from BPMN user-task custom properties.
+
+        ``urgency`` and ``critical`` are intentionally not persisted. They are
+        read from the current BPMN user-task definition and combined with this
+        persisted task's ``created_at`` timestamp.
+        """
+        if self.created_at is None or self.workflow_instance is None:
+            return None
+
+        from actidoo_wfe.wf import service_workflow
+
+        urgency_days, critical_days = service_workflow.get_task_deadline_thresholds_cached(
+            workflow_name=self.workflow_instance.name,
+            task_name=self.name,
+            bpmn_id=self.bpmn_id,
+        )
+        return service_workflow.build_task_deadline(
+            created_at=self.created_at,
+            urgency_days=urgency_days,
+            critical_days=critical_days,
+        )
+
 
 class WorkflowSpec(Base):
     __tablename__ = "workflow_specs"
@@ -432,6 +456,34 @@ class WorkflowInstance(Base):
         )
         .exists(),
     )
+
+    @property
+    def deadline(self):
+        """Highest active manual-task deadline for list and detail headers."""
+        active_manual_tasks = [task for task in self.active_tasks if task.manual]
+        deadlines = [task.deadline for task in active_manual_tasks]
+        deadlines = [deadline for deadline in deadlines if deadline is not None]
+        if not deadlines:
+            return None
+
+        level_priority = {"normal": 0, "urgency": 1, "critical": 2}
+
+        def _reference_time(deadline):
+            if deadline.level == "critical" and deadline.critical_at is not None:
+                return deadline.critical_at
+            if deadline.urgency_at is not None:
+                return deadline.urgency_at
+            if deadline.critical_at is not None:
+                return deadline.critical_at
+            return datetime.datetime.max
+
+        return max(
+            deadlines,
+            key=lambda deadline: (
+                level_priority.get(deadline.level, 0),
+                -_reference_time(deadline).timestamp(),
+            ),
+        )
 
 
 class WorkflowInstanceTaskRole(Base):

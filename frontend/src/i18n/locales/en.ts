@@ -136,8 +136,8 @@ export const en = {
   tasks: {
     header: 'Tasks',
     tabs: {
-      open: 'Open',
-      completed: 'Completed',
+      open: 'Open Tasks',
+      completed: 'Completed Tasks',
     },
     empty: {
       open: "You don't have any open tasks",
@@ -203,8 +203,8 @@ export const en = {
   },
   myWorkflows: {
     title: 'My Workflows',
-    inProgress: 'In progress',
-    completed: 'Completed',
+    inProgress: 'Workflows in progress',
+    completed: 'Completed Workflows',
     activeTasksOfWorkflow: 'Active tasks of workflow',
     tasksOfWorkflow: 'Tasks of workflow',
     completedTasksOfWorkflow: 'Completed tasks of workflow',
@@ -368,6 +368,13 @@ export const en = {
     noItems: 'No items found.',
     noSearchResults: 'The search found no matching tasks.',
     taskCount: '{{count}} Task{{suffix}}:',
+    startDate: 'Start date',
+    workFlowInstanceID: 'Workflow Instance ID',
+    deadline: 'Deadline',
+    urgency: 'Urgency at : ',
+    critical: 'Deadline : ',
+    subtitle: 'Subtitle',
+    moreInformation: 'More information',
     searchPlaceholder: 'Search …',
     loadMore: 'Load more',
     retry: 'Try again',
@@ -385,6 +392,18 @@ export const en = {
     save: 'Save Settings',
     saveSuccess: 'Settings saved',
     saveError: 'Could not save settings. Please try again.',
+    taskPriority: {
+      title: 'Task prioritization',
+      hint: 'Define when open tasks are marked as urgent or critical in the list and sorted accordingly.',
+      enabled: 'Enable prioritization',
+      urgentAfter: 'Urgent after',
+      criticalAfter: 'Critical after',
+      unitDays: 'days',
+      urgentHint: 'Tasks receive the yellow urgency marker from this age onward.',
+      criticalHint:
+        'Tasks receive the red critical marker from this age onward and move to the top.',
+      invalid: 'The critical value must be greater than the urgent value.',
+    },
     delegations: {
       title: 'Delegations',
       hint: 'Select colleagues who may work on tasks as your delegate. You can optionally limit the delegation to a deadline.',

@@ -137,8 +137,8 @@ export const de = {
   tasks: {
     header: 'Aufgaben',
     tabs: {
-      open: 'Offen',
-      completed: 'Abgeschlossen',
+      open: 'Offene Aufgaben',
+      completed: 'Abgeschlossene Aufgaben',
     },
     empty: {
       open: 'Du hast keine offenen Aufgaben',
@@ -205,8 +205,8 @@ export const de = {
   },
   myWorkflows: {
     title: 'Meine Workflows',
-    inProgress: 'In Bearbeitung',
-    completed: 'Abgeschlossen',
+    inProgress: 'Workflows in Bearbeitung',
+    completed: 'Abgeschlossene Workflows',
     activeTasksOfWorkflow: 'Aktive Aufgaben des Workflows',
     tasksOfWorkflow: 'Aufgaben des Workflows',
     completedTasksOfWorkflow: 'Abgeschlossene Aufgaben des Workflows',
@@ -370,6 +370,13 @@ export const de = {
     noItems: 'Keine Einträge gefunden.',
     noSearchResults: 'Die Suche hat keine übereinstimmenden Aufgaben gefunden.',
     taskCount: '{{count}} Aufgabe{{suffix}}:',
+    startDate: 'Eingangsdatum',
+    workFlowInstanceID: 'Workflow-Instanz-ID',
+    deadline: 'Prioritäten',
+    urgency: 'Soll-Termin : ',
+    critical: 'Deadline : ',
+    subtitle: 'Untertitel',
+    moreInformation: 'Mehr Information',
     searchPlaceholder: 'Suchen …',
     loadMore: 'Mehr laden',
     retry: 'Erneut versuchen',
@@ -387,6 +394,18 @@ export const de = {
     save: 'Einstellungen speichern',
     saveSuccess: 'Einstellungen gespeichert',
     saveError: 'Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.',
+    taskPriority: {
+      title: 'Aufgaben-Priorisierung',
+      hint: 'Lege fest, ab wann offene Aufgaben in der Liste als dringend oder kritisch markiert und entsprechend sortiert werden.',
+      enabled: 'Priorisierung aktivieren',
+      urgentAfter: 'Dringend nach',
+      criticalAfter: 'Kritisch nach',
+      unitDays: 'Tage',
+      urgentHint: 'Aufgaben erhalten ab diesem Alter die gelbe Dringlichkeitsmarkierung.',
+      criticalHint:
+        'Aufgaben erhalten ab diesem Alter die rote Kritisch-Markierung und stehen ganz oben.',
+      invalid: 'Der kritische Wert muss größer als der dringende Wert sein.',
+    },
     delegations: {
       title: 'Vertretungen',
       hint: 'Wähle Kolleg:innen, die Aufgaben in deiner Vertretung bearbeiten dürfen. Optional kannst du eine Frist hinterlegen.',

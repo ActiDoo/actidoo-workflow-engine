@@ -478,8 +478,6 @@ def _mark_instance_readonly(instance: WorkflowInstanceRepresentation) -> None:
     for task in instance.completed_tasks:
         task.is_readonly = True
         task.can_be_assigned_as_delegate = False
-
-
 def bff_user_get_initiated_workflows(
     db: Session,
     bff_table_request_params: BffTableQuerySchemaBase,

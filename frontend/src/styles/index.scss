@@ -33,3 +33,16 @@ body {
 .pc-pl-responsive {
   @apply pl-3 sm:pl-8 xl:pl-12 #{!important}
 }
+
+.footer-base {
+  bottom: 0;
+  right: 0;
+  left: 0;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.85);
+  border-top: 1px solid #ddd;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+}
+
