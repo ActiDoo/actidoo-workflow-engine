@@ -6,7 +6,7 @@ Welcome to the Workflow Engine. This page contains information on how to use the
 
 - Use the navigation on the left to start workflows and view your tasks.
 - Open tasks appear under "Tasks".
-- License information for the open-source components used is available below.
+- License information for the open-source components used is available in the "Third-party components" tab.
 
 If you have any questions, please contact your designated point of contact.
 

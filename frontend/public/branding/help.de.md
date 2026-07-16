@@ -6,7 +6,7 @@ Willkommen in der Workflow Engine. Hier finden Sie Hinweise zur Nutzung der Anwe
 
 - Über die Navigation links starten Sie Workflows und sehen Ihre Aufgaben.
 - Offene Aufgaben erscheinen unter „Aufgaben“.
-- Den Lizenzhinweis zu den verwendeten Open-Source-Komponenten finden Sie weiter unten.
+- Den Lizenzhinweis zu den verwendeten Open-Source-Komponenten finden Sie im Tab „Drittanbieter-Komponenten“.
 
 Bei Fragen wenden Sie sich bitte an Ihren zuständigen Ansprechpartner.
 

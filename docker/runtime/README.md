@@ -46,6 +46,6 @@ This image bundles the workflow engine frontend (static assets + nginx) and the 
 
 - **Branding logo via static file** (no extra env): place or mount a file at `/srv/frontend.template/branding/logo.svg` (supported: svg/png/jpg/jpeg/webp). The runtime copy step will pick it up and serve it at `<FRONTEND_PATH>branding/logo.svg`, with a built-in Actidoo logo as the fallback when none is provided.
 
-- **Custom help text via static file** (no extra env): place or mount per-language markdown files at `/srv/frontend.template/branding/help.<lang>.md` (e.g. `help.de.md`, `help.en.md`). They are served at `<FRONTEND_PATH>branding/help.<lang>.md` and shown above the open-source notices behind the `?` icon. The app falls back to the requested language → English → a built-in default text. Content is rendered as markdown (raw HTML allowed) — only deploy trusted content here.
+- **Custom help text via static file** (no extra env): place or mount per-language markdown files at `/srv/frontend.template/branding/help.<lang>.md` (e.g. `help.de.md`, `help.en.md`). They are served at `<FRONTEND_PATH>branding/help.<lang>.md` and shown in the "General" tab behind the `?` icon, next to the open-source notices tab. The app falls back to the requested language → English → a built-in default text. Content is rendered as markdown (raw HTML allowed) — only deploy trusted content here.
 
 > Note: `render-runtime-assets.py` wipes `/srv/frontend` on each start and copies from `/srv/frontend.template`, so mount/replace assets in the template folder, not directly in `/srv/frontend`.
