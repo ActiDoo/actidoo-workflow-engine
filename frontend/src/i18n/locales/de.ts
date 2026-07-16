@@ -157,6 +157,9 @@ export const de = {
     resetDialogTitle: 'Auf Anfangszustand zurücksetzen',
     resetDialogText:
       'Dadurch werden alle Formulardaten auf den Anfangszustand zurückgesetzt. Möchtest du fortfahren?',
+    deleteDialogTitle: 'Workflow löschen',
+    deleteDialogText:
+      'Dadurch wird der Workflow dauerhaft gelöscht.\n\nWenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
     uploadForm: 'Formular wird hochgeladen',
     uploadDraft: 'Entwurf wird hochgeladen',
     processForm: 'Formular wird verarbeitet',
@@ -165,8 +168,9 @@ export const de = {
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
   },
   taskActions: {
-    reset: 'Auf Anfangszustand zurücksetzen',
+    reset: 'Zurücksetzen',
     submit: 'Absenden',
+    delete: 'Löschen',
   },
   singleTaskHeader: {
     readonlyDefinitionMissing:
@@ -178,11 +182,8 @@ export const de = {
     assignedDelegate: 'Delegiert an',
     unassignFromMe: 'Zuweisung aufheben',
     cancelWorkflow: 'Workflow abbrechen',
-    deleteWorkflow: 'Workflow löschen',
     cancelWorkflowDialogText:
       'Dadurch wird der Workflow abgebrochen.<br/><br/>Alle bisher eingegebenen Daten bleiben in der Übersicht „Meine Workflows“ sichtbar.',
-    deleteWorkflowDialogText:
-      'Dadurch wird der Workflow dauerhaft gelöscht.<br/><br/>Wenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
     closeDialog: 'Dialog schließen',
     cancelWorkflowAction: 'Workflow abbrechen',
     deleteWorkflowAction: 'Workflow löschen',
