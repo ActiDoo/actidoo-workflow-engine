@@ -9,6 +9,11 @@ from pathlib import Path
 import orjson
 
 from actidoo_wfe.helpers.string import create_random_string
+from actidoo_wfe.wf.constants import (
+    DEFAULT_TEMPLATE_MODE,
+    TEMPLATE_MODE_UISCHEMA_KEY,
+    TemplateMode,
+)
 from actidoo_wfe.wf.types import ReactJsonSchemaFormData
 
 log = logging.getLogger(__name__)
@@ -33,6 +38,17 @@ def transform_camunda_form_from_file(form_file_path: Path):
     return form
 
 
+def _parse_template_mode(form_camunda_json) -> str:
+    """Reads the form-level template_mode (default blacklist). Used to gate form templates."""
+    raw = form_camunda_json.get("template_mode") or DEFAULT_TEMPLATE_MODE
+    candidate = str(raw).strip().lower()
+    try:
+        return TemplateMode(candidate).value
+    except ValueError:
+        log.warning("Invalid template_mode %r in form; defaulting to %s", raw, DEFAULT_TEMPLATE_MODE.value)
+        return DEFAULT_TEMPLATE_MODE.value
+
+
 def transform_camunda_form(form_camunda_json) -> ReactJsonSchemaFormData:
     """Transforms a camunda form to jsonschema + uischema. This should be sent to the browser to render the form."""
     jsonschema = {"definitions": dict(), "type": "object", "properties": dict()}
@@ -41,6 +57,9 @@ def transform_camunda_form(form_camunda_json) -> ReactJsonSchemaFormData:
     for component in form_camunda_json["components"]:
         _insert_component(component=component, global_jsonschema=jsonschema, jsonschemapath=[], uischema=uischema)
     # convert_hide_if_props_to_declarative_jsonschema(jsonschema, [])
+
+    # Form-level flags live in the uischema root (like ui:layout), keeping the jsonschema a clean data schema.
+    uischema[TEMPLATE_MODE_UISCHEMA_KEY] = _parse_template_mode(form_camunda_json)
 
     return ReactJsonSchemaFormData(jsonschema=jsonschema, uischema=uischema)
 
@@ -104,6 +123,8 @@ def _insert_array_component(
         "type": "array",
         "items": {"type": "object", "properties": {}},
     }
+    if label:
+        jsonschema["properties"][itemgroup]["title"] = label
     if min_items > 0:
         jsonschema["properties"][itemgroup]["minItems"] = min_items
 
@@ -114,6 +135,7 @@ def _insert_array_component(
         "ui:arrayOverviewButtonText": overview_button_text,
         "ui:defaultRepetitions": default_repetitions,
         "ui:label": label,
+        "ui:copyable": True,
     }
     if itemgroup not in uischema["ui:layout"]:
         uischema["ui:layout"][itemgroup] = [itemgroup]

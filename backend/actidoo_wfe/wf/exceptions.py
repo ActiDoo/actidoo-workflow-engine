@@ -94,6 +94,22 @@ class WorkflowDefinitionMissingError(Exception):
         super().__init__(f"Workflow definition '{workflow_name}' is not available from any provider")
 
 
+class TaskNotAccessibleException(Exception):
+    """Raised when a user tries to access a task (and its templates) they may not see."""
+
+
+class FormTemplatesDisabledException(Exception):
+    """Raised when form templates are saved/resolved for a form whose template_mode is off."""
+
+
+class FormTemplatesNotAvailableException(Exception):
+    """Raised when a task carries no form, so templates cannot apply."""
+
+
+class TemplateNotFoundException(Exception):
+    """Raised when a form template does not exist or is not owned by the requesting user."""
+
+
 class DataModelNotFoundError(KeyError):
     """Raised when a data model name is not in the registry."""
 

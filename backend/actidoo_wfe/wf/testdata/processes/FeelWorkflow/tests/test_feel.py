@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.wf import repository, service_application
+from actidoo_wfe.wf import repository, service_application, service_form_templates
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
 WF_NAME = "FeelWorkflow"
@@ -203,3 +203,93 @@ def test_hideif_backwards_compat_hidden_field_values_filtered(db_engine_ctx, moc
 
         assert "globalB" not in cleaned_task_data, "Hidden field should be removed even with user value"
         workflow.user("initiator").submit(task_data=task_data, workflow_instance_id=workflow.workflow_instance_id)
+
+
+def test_hideif_parent_scope_hides_number_c_in_nested_list(db_engine_ctx, mock_send_text_mail):
+    """parent.number_a == 7 hides number_c in the nested list (parent reference across a level)."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        task_data = {
+            "globalA": 2,
+            "globalB": 4,
+            "my_list": [
+                {"number_a": 7, "number_b": 1, "my_list_B": [{"number_c": 32, "number_d": 123}]},
+            ],
+        }
+
+        inner = _clean_task_data(workflow, task_data)["my_list"][0]["my_list_B"][0]
+        assert "number_c" not in inner
+        assert inner["number_d"] == 123
+
+        workflow.user("initiator").submit(
+            task_data=task_data,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+
+def test_template_save_and_preview_drop_hidden_fields(db_engine_ctx, mock_send_text_mail):
+    """Conditionally hidden fields must not enter a template, at root and inside nested lists."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        user_id = workflow.user("initiator").user.id
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+        template_data = {
+            "globalA": 1,  # hides globalB (root)
+            "globalB": 99,
+            "my_list": [
+                {"number_a": 7, "number_b": 1, "my_list_B": [{"number_c": 32, "number_d": 123}]},
+            ],
+        }
+
+        preview = service_form_templates.preview_template(
+            db=workflow.db,
+            user_id=user_id,
+            task_id=task.id,
+            template_data=template_data,
+        )
+        assert "globalB" not in preview.applicable_data
+        # Hidden (not "excluded by template rules"), so it is not surfaced as a skipped field either.
+        assert "globalB" not in {item["key"] for item in preview.skipped_fields}
+        assert "number_c" not in preview.applicable_data["my_list"][0]["my_list_B"][0]
+
+        row = service_form_templates.save_template(
+            db=workflow.db,
+            user_id=user_id,
+            task_id=task.id,
+            template_name="A",
+            template_data=template_data,
+        )
+        assert "globalB" not in row.template_data
+        assert "number_c" not in row.template_data["my_list"][0]["my_list_B"][0]
+
+
+def test_strip_hidden_form_fields_removes_hidden_values_in_nested_list(db_engine_ctx, mock_send_text_mail):
+    """Overview helper drops nested hidden fields even when an unrelated required field is missing.
+
+    number_b (required) is intentionally omitted: its validation error must not short-circuit the
+    removal of the deeper, parent-scoped hidden number_c.
+    """
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        user_id = workflow.user("initiator").user.id
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        form_data = {
+            "globalA": 1,  # hides globalB (root)
+            "globalB": 4,
+            "my_list": [
+                {"number_a": 7, "my_list_B": [{"number_c": 32, "number_d": 123}]},  # number_b missing
+            ],
+        }
+
+        cleaned = service_application.strip_hidden_form_fields(
+            db=workflow.db,
+            user_id=user_id,
+            task_id=task.id,
+            form_data=form_data,
+        )
+
+        assert "globalB" not in cleaned
+        inner = cleaned["my_list"][0]["my_list_B"][0]
+        assert "number_c" not in inner
+        assert inner["number_d"] == 123

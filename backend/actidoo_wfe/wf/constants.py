@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+from enum import StrEnum
 from pathlib import Path
 
 BPMN_DIRECTORY = Path(__file__).parent / "testdata" / "processes"
@@ -20,3 +21,15 @@ INTERNAL_DATA_KEY_DELEGATE_COMMENT = "delegate_submit_comment"
 # set_data in workflow instances
 DATA_KEY_CREATED_BY = "_created_by_id"
 DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE = "_subtitle"
+
+# Form template modes (see ADR-008). Single source for transform, services and BFF schema.
+class TemplateMode(StrEnum):
+    OFF = "off"
+    BLACKLIST = "blacklist"
+    WHITELIST = "whitelist"
+
+
+DEFAULT_TEMPLATE_MODE = TemplateMode.BLACKLIST
+
+# uischema root key carrying the form-level template mode to client and server.
+TEMPLATE_MODE_UISCHEMA_KEY = "ui:templateMode"

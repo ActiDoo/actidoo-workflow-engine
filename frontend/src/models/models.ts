@@ -80,6 +80,31 @@ export interface StartWorkflowPreviewResponse {
   task: UserTask;
 }
 
+export type FormTemplateMode = 'off' | 'blacklist' | 'whitelist';
+
+export interface FormTemplateSummary {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormTemplateListResponse {
+  templates: FormTemplateSummary[];
+  template_mode: FormTemplateMode;
+}
+
+export interface SkippedTemplateField {
+  key: string;
+  label: string;
+  value?: unknown;
+}
+
+export interface ResolveTemplateResponse {
+  applicable_data: Record<string, unknown>;
+  skipped_fields: SkippedTemplateField[];
+}
+
 export interface GetWorkflowResponse {
   workflows: Array<{
     name: string;
