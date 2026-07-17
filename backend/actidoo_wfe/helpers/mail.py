@@ -169,7 +169,7 @@ def send_text_mail(
     content: str,
     recipient_or_recipients_list: list[str] | str,
     attachments: Dict[str, io.BytesIO],
-):
+) -> bool:
     """Sends a text email via Microsoft Graph API or SMTP.
 
     Args:
@@ -177,6 +177,10 @@ def send_text_mail(
         content (str): The content of the email.
         recipient_or_recipients_list (list[str] | str): The recipient(s) of the email.
         attachments (list[io.BytesIO]): The file-like objects to be attached to the email.
+
+    Returns:
+        bool: True if the mail was handed to a transport, False if sending was skipped
+            (test/debug mode or email_skip).
 
     Raises:
         Exception: If sending the email fails with an exception.
@@ -206,7 +210,7 @@ def send_text_mail(
     # Skip sending email in test/debug mode or when email_skip is set
     if shall_skip_sending_email():
         log_email(subject, content, recipients_list, attachments)
-        return
+        return False
 
     transport = (settings.email_transport or "GRAPH").upper()
     if transport == "SMTP":
@@ -215,3 +219,5 @@ def send_text_mail(
         _send_via_graph(subject, content, recipients_list, attachments)
     else:
         raise ValueError(f"Unsupported email transport configured: {settings.email_transport}")
+
+    return True

@@ -142,6 +142,9 @@ class Settings(BaseSettings):
     email_override_recipients_list: list[str] = []
     email_skip: bool = False
     email_receivers_erroneous_tasks: list[str] = []
+    # Cron schedule (CRON_TIMEZONE) for the daily erroneous-tasks reminder digest.
+    # An empty string disables the reminder.
+    email_erroneous_tasks_reminder_cron: str = "0 7 * * *"
     email_signature: str = """
 Best regards,
 

@@ -21,6 +21,7 @@ import {
   ButtonDesign,
   MessageStrip,
   MessageStripDesign,
+  Switch,
 } from '@ui5/webcomponents-react';
 import moment from 'moment';
 import WeUserAutocomplete from '@/utils/components/WeUserAutocomplete';
@@ -78,6 +79,9 @@ const UserSettings: React.FC = () => {
   const [initialLocale, setInitialLocale] = useState<string>('');
   const [delegations, setDelegations] = useState<UserDelegation[]>([]);
   const [initialDelegations, setInitialDelegations] = useState<UserDelegation[]>([]);
+  const [receiveErrorTaskReminder, setReceiveErrorTaskReminder] = useState<boolean>(true);
+  const [initialReceiveErrorTaskReminder, setInitialReceiveErrorTaskReminder] =
+    useState<boolean>(true);
   const [pendingDelegate, setPendingDelegate] = useState<{ id?: string; label?: string }>({});
   const [pendingValidUntil, setPendingValidUntil] = useState<string>('');
   const [delegateInputResetKey, setDelegateInputResetKey] = useState(0);
@@ -103,9 +107,17 @@ const UserSettings: React.FC = () => {
   const isDirty = useMemo(() => {
     return (
       locale !== initialLocale ||
+      receiveErrorTaskReminder !== initialReceiveErrorTaskReminder ||
       serializeDelegations(delegations) !== serializeDelegations(initialDelegations)
     );
-  }, [delegations, initialDelegations, initialLocale, locale]);
+  }, [
+    delegations,
+    initialDelegations,
+    initialLocale,
+    initialReceiveErrorTaskReminder,
+    locale,
+    receiveErrorTaskReminder,
+  ]);
 
   useEffect(() => {
     dispatch(getRequest(key));
@@ -116,6 +128,7 @@ const UserSettings: React.FC = () => {
 
     const nextLocale = data.data.locale || '';
     const nextDelegations = cloneDelegations(data.data.delegations || []);
+    const nextReceiveErrorTaskReminder = data.data.receive_error_task_reminder ?? true;
 
     setLocale(nextLocale);
     setInitialLocale(nextLocale);
@@ -124,6 +137,8 @@ const UserSettings: React.FC = () => {
     }
     setDelegations(nextDelegations);
     setInitialDelegations(nextDelegations);
+    setReceiveErrorTaskReminder(nextReceiveErrorTaskReminder);
+    setInitialReceiveErrorTaskReminder(nextReceiveErrorTaskReminder);
   }, [data?.data, changeLanguage]);
 
   useEffect(() => {
@@ -132,10 +147,14 @@ const UserSettings: React.FC = () => {
     if (data.postResponse === 200) {
       const nextLocale = data.data?.locale ?? locale;
       const nextDelegations = cloneDelegations(data.data?.delegations ?? delegations);
+      const nextReceiveErrorTaskReminder =
+        data.data?.receive_error_task_reminder ?? receiveErrorTaskReminder;
       setLocale(nextLocale);
       setDelegations(nextDelegations);
       setInitialLocale(nextLocale);
       setInitialDelegations(nextDelegations);
+      setReceiveErrorTaskReminder(nextReceiveErrorTaskReminder);
+      setInitialReceiveErrorTaskReminder(nextReceiveErrorTaskReminder);
     }
 
     handleResponse(
@@ -157,6 +176,7 @@ const UserSettings: React.FC = () => {
         delegate_user_id: entry.delegate_user_id,
         valid_until: entry.valid_until ?? null,
       })),
+      receive_error_task_reminder: receiveErrorTaskReminder,
     };
     dispatch(postRequest(key, payload));
   };
@@ -265,6 +285,24 @@ const UserSettings: React.FC = () => {
         <div>
           <Text className="mr-2 text-sm text-neutral-700">{t('userSettings.localeHint')}</Text>
         </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-6 space-y-4 mb-8">
+        <div>
+          <Label className="font-semibold block mb-1">
+            {t('userSettings.errorReminder.title')}
+          </Label>
+          <Text className="text-sm text-neutral-700">{t('userSettings.errorReminder.hint')}</Text>
+        </div>
+        <FlexBox className="items-center gap-2" alignItems={FlexBoxAlignItems.Center}>
+          <Switch
+            checked={receiveErrorTaskReminder}
+            onChange={event => {
+              setReceiveErrorTaskReminder(event.target.checked);
+            }}
+          />
+          <Text>{t('userSettings.errorReminder.label')}</Text>
+        </FlexBox>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
