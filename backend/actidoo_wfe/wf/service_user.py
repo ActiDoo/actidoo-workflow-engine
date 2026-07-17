@@ -301,12 +301,16 @@ def update_user_settings(
     user_id: uuid.UUID,
     locale: str,
     delegations: list[tuple[uuid.UUID, datetime.datetime | None]] | None = None,
+    receive_error_task_reminder: bool | None = None,
 ) -> WorkflowUser:
     user = db.execute(
         select(WorkflowUser).where(WorkflowUser.id == user_id),
     ).scalar_one()
 
     user.locale = locale
+
+    if receive_error_task_reminder is not None:
+        user.receive_error_task_reminder = receive_error_task_reminder
 
     if delegations is not None:
         set_user_delegations(db=db, principal_user_id=user_id, delegations=delegations)

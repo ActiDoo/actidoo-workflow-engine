@@ -4,12 +4,17 @@
 import logging
 import uuid
 
+import pytz
+from babel import Locale
+from babel.dates import format_date
 from mako.lookup import TemplateLookup
 from markupsafe import Markup
-from sqlalchemy import select
+from sqlalchemy import false, select
 from sqlalchemy.orm import Session
 
+from actidoo_wfe.constants import CRON_TIMEZONE
 from actidoo_wfe.helpers import mail
+from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.i18n import make_translator
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import providers as workflow_providers
@@ -17,8 +22,8 @@ from actidoo_wfe.wf import service_i18n
 from actidoo_wfe.wf.constants import MAIL_TEMPLATE_DIR
 from actidoo_wfe.wf.models import WorkflowInstanceTask, WorkflowUser
 from actidoo_wfe.wf.service_user import get_all_users, get_users_of_role
-from actidoo_wfe.wf.service_workflow import get_workflow_owner
-from actidoo_wfe.wf.views import get_single_task, get_workflows_with_usertasks
+from actidoo_wfe.wf.service_workflow import get_wf_owner_role_to_workflow_mapping, get_workflow_owner
+from actidoo_wfe.wf.views import get_erroneous_tasks, get_single_task, get_workflows_with_usertasks
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +68,17 @@ def _build_signature_block() -> str:
     sig = (settings.email_signature or "").strip()
     if not sig:
         return ""
+    # "-- " (dash-dash-space) is the RFC 3676 signature delimiter mail clients detect.
     return f"\n\n-- \n{sig}\n"
+
+
+def _format_error_date(error_at, locale: str) -> str:
+    aware = error_at if error_at.tzinfo else pytz.utc.localize(error_at)
+    local_dt = aware.astimezone(pytz.timezone(CRON_TIMEZONE))
+    try:
+        return format_date(local_dt.date(), format="medium", locale=Locale.parse(locale, sep="-"))
+    except Exception:
+        return local_dt.date().isoformat()
 
 
 def compile_email_template(template: str, params: dict, locale: str | None = None, template_dir=MAIL_TEMPLATE_DIR) -> str:
@@ -390,5 +405,125 @@ def send_task_became_erroneous_mail(db: Session, task_id: uuid.UUID):
         num_sent += 1
 
     log.info(f"Sent task_became_erroneous to {num_sent} recipients")
+
+    return num_sent
+
+
+def send_erroneous_tasks_reminder_mail(db: Session) -> int:
+    """Send the daily digest of erroneous tasks.
+
+    wf-admin members and settings.email_receivers_erroneous_tasks get a global digest
+    over all workflows; wf-owner role members get a digest limited to their own
+    workflows (unless they already receive the global one). Tasks not yet included in
+    any sent digest (error_reported_at is NULL) are marked as new.
+    """
+    tasks = [t for t in get_erroneous_tasks(db) if workflow_providers.workflow_definition_available(t.workflow_instance.name)]
+    if not tasks:
+        return 0
+
+    # email -> locale
+    admin_recipients: dict[str, str] = {}
+    locale_by_email: dict[str, str] = {}
+    for u in get_users_of_role(db=db, role_name="wf-admin"):
+        if u.email:
+            admin_recipients[u.email] = u.locale
+            locale_by_email[u.email] = u.locale
+
+    # email -> (locale, owned workflow names); admins are skipped (global digest wins)
+    owner_recipients: dict[str, tuple[str, set[str]]] = {}
+    for owner_role, wf_names in get_wf_owner_role_to_workflow_mapping().items():
+        for u in get_users_of_role(db=db, role_name=owner_role):
+            if not u.email or u.email in admin_recipients:
+                continue
+            locale_by_email[u.email] = u.locale
+            _locale, owned = owner_recipients.setdefault(u.email, (u.locale, set()))
+            owned.update(wf_names)
+
+    role_emails = set(admin_recipients) | set(owner_recipients)
+    if role_emails:
+        opted_out = set(
+            db.execute(
+                select(WorkflowUser.email).where(
+                    WorkflowUser.email.in_(role_emails),
+                    WorkflowUser.receive_error_task_reminder == false(),
+                ),
+            ).scalars(),
+        )
+        for email in opted_out:
+            admin_recipients.pop(email, None)
+            owner_recipients.pop(email, None)
+
+    # The statically configured receivers always get the global digest (no opt-out).
+    for email in settings.email_receivers_erroneous_tasks:
+        if email:
+            admin_recipients.setdefault(email, locale_by_email.get(email, settings.default_locale))
+            owner_recipients.pop(email, None)
+
+    num_sent = 0
+    reported_tasks: set[WorkflowInstanceTask] = set()
+
+    def _send_digest(email: str, locale: str, recipient_tasks: list[WorkflowInstanceTask]):
+        nonlocal num_sent
+        _ = make_translator(locale)
+
+        def _item(t: WorkflowInstanceTask) -> dict:
+            workflow_title = _translated_instance_title(t, locale)
+            if t.workflow_instance.subtitle:
+                workflow_title += " / " + t.workflow_instance.subtitle
+            title = f"{workflow_title} - {_translated_task_title(t, locale)}"
+            if t.error_at:
+                title += " (" + _("erroneous since {date}").format(date=_format_error_date(t.error_at, locale)) + ")"
+            return {
+                "title": title,
+                "is_new": t.error_reported_at is None,
+                "admin_url": _generate_workflow_instance_admin_url(t.workflow_instance.id),
+            }
+
+        items = [_item(t) for t in recipient_tasks]
+        params = {
+            "items": items,
+            "n_total": len(items),
+            "n_new": sum(1 for i in items if i["is_new"]),
+        }
+
+        text = compile_email_template(template="erroneous_tasks_reminder.mako", params=params, locale=locale)
+
+        subject = _("Erroneous workflow tasks: {n_total} total, {n_new} new").format(
+            n_total=params["n_total"],
+            n_new=params["n_new"],
+        )
+
+        try:
+            sent = mail.send_text_mail(
+                subject=subject,
+                content=text,
+                recipient_or_recipients_list=email,
+                attachments=dict(),
+            )
+        except Exception:
+            log.exception(f"Failed to send erroneous_tasks_reminder to '{email}', continuing with remaining recipients")
+            return
+
+        if sent:
+            reported_tasks.update(recipient_tasks)
+            num_sent += 1
+
+    for email, locale in admin_recipients.items():
+        _send_digest(email, locale, tasks)
+
+    for email, (locale, owned_wfs) in owner_recipients.items():
+        recipient_tasks = [t for t in tasks if t.workflow_instance.name in owned_wfs]
+        if recipient_tasks:
+            _send_digest(email, locale, recipient_tasks)
+
+    # Only tasks that were part of at least one sent mail count as reported.
+    if reported_tasks:
+        now = dt_now_naive()
+        for t in reported_tasks:
+            if t.error_reported_at is None:
+                t.error_reported_at = now
+        db.flush()
+
+    log.info(f"Sent erroneous_tasks_reminder to {num_sent} recipients ({len(tasks)} erroneous tasks)")
 
     return num_sent
