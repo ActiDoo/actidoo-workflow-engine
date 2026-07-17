@@ -46,6 +46,10 @@ Role-based recipients can opt out through a new per-user flag `receive_error_tas
 
 New failures are marked with a `* NEW *` prefix and each entry shows the date the task entered the error state (new column `error_at`, set on the error transition and reset on recovery); `error_reported_at` is stamped only for tasks that were actually included in at least one sent mail.
 
+The `error_reported_at` markers are flushed once, after all recipients are served, so the digest is at-least-once: if the run dies before that commit the sent mails stand but the markers roll back, and the next run re-sends and re-flags them as new. A duplicate on a rare retry is acceptable for a daily digest; making it exactly-once would need the rejected notification-log table. Rendering and sending each recipient runs under its own guard, so one failure skips that recipient instead of aborting the run and starving the rest — safe because nothing is written before the final flush.
+
+Because `error_reported_at` starts NULL, the migration backfills the current `state_error` rows to a non-NULL sentinel, so the first post-deploy digest treats the existing backlog as known instead of flooding it as new.
+
 ## Consequences
 
 - Unresolved errors resurface every day instead of being mentioned once; the new/known split keeps repeated digests scannable.

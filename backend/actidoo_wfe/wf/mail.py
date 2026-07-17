@@ -479,21 +479,25 @@ def send_erroneous_tasks_reminder_mail(db: Session) -> int:
                 "admin_url": _generate_workflow_instance_admin_url(t.workflow_instance.id),
             }
 
-        items = [_item(t) for t in recipient_tasks]
-        params = {
-            "items": items,
-            "n_total": len(items),
-            "n_new": sum(1 for i in items if i["is_new"]),
-        }
-
-        text = compile_email_template(template="erroneous_tasks_reminder.mako", params=params, locale=locale)
-
-        subject = _("Erroneous workflow tasks: {n_total} total, {n_new} new").format(
-            n_total=params["n_total"],
-            n_new=params["n_new"],
-        )
-
+        # Guard the whole per-recipient body, not just the send: a failure while rendering
+        # one recipient's titles/template must not abort the run and starve the recipients
+        # after it. Nothing here writes to the DB (reads + mail I/O only), so skipping a
+        # recipient leaves the transaction intact for the rest and the final marker flush.
         try:
+            items = [_item(t) for t in recipient_tasks]
+            params = {
+                "items": items,
+                "n_total": len(items),
+                "n_new": sum(1 for i in items if i["is_new"]),
+            }
+
+            text = compile_email_template(template="erroneous_tasks_reminder.mako", params=params, locale=locale)
+
+            subject = _("Erroneous workflow tasks: {n_total} total, {n_new} new").format(
+                n_total=params["n_total"],
+                n_new=params["n_new"],
+            )
+
             sent = mail.send_text_mail(
                 subject=subject,
                 content=text,
@@ -501,7 +505,7 @@ def send_erroneous_tasks_reminder_mail(db: Session) -> int:
                 attachments=dict(),
             )
         except Exception:
-            log.exception(f"Failed to send erroneous_tasks_reminder to '{email}', continuing with remaining recipients")
+            log.exception(f"Failed to build/send erroneous_tasks_reminder to '{email}', continuing with remaining recipients")
             return
 
         if sent:

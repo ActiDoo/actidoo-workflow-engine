@@ -18,6 +18,7 @@ from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.helpers.concurrency import wait_for_background_tasks
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
+from actidoo_wfe.wf import mail as wf_mail
 from actidoo_wfe.wf import repository, service_application
 from actidoo_wfe.wf.mail import send_erroneous_tasks_reminder_mail
 from actidoo_wfe.wf.models import WorkflowInstance, WorkflowInstanceTask
@@ -254,6 +255,45 @@ def test_one_failing_recipient_does_not_block_others(db_engine_ctx):
 
         assert num_sent == 1
         assert delivered == [ADMIN_OWNER]
+        db.refresh(task)
+        assert task.error_reported_at is not None
+
+
+def test_rendering_error_for_one_recipient_does_not_block_others(db_engine_ctx, mock_send_text_mail):
+    """A failure while building one recipient's digest (title/template rendering, not a
+    transport error) must not abort the run and starve later recipients. The successfully
+    sent recipient's tasks are still marked; nothing rolls back."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        wf = WorkflowDummy(
+            db_session=db,
+            users_with_roles={
+                ADMIN: ["wf-user", "wf-admin"],
+                ADMIN_OWNER: ["wf-user", "wf-admin"],
+            },
+        )
+        instance_id = _start_workflow(db, wf, WF_PLAIN, ADMIN)
+        task = _make_task_erroneous(db, instance_id)
+        wait_for_background_tasks()
+
+        real_compile = wf_mail.compile_email_template
+        calls = {"n": 0}
+
+        def flaky_compile(*args, **kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError("template rendering boom")
+            return real_compile(*args, **kwargs)
+
+        _reset_mailbox(mock_send_text_mail)
+        with patch("actidoo_wfe.wf.mail.compile_email_template", side_effect=flaky_compile):
+            num_sent = send_erroneous_tasks_reminder_mail(db=db)
+        db.commit()
+
+        # First recipient's render raised and was skipped; the second still received the digest.
+        assert num_sent == 1
+        assert len(mock_send_text_mail) == 1
+        # The successfully sent recipient's task is marked reported (no rollback).
         db.refresh(task)
         assert task.error_reported_at is not None
 
