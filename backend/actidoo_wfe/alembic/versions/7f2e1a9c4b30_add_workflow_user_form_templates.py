@@ -4,7 +4,7 @@
 """add workflow user form templates
 
 Revision ID: 7f2e1a9c4b30
-Revises: d4f7a1e9c2b6
+Revises: e8b3d5c7a9f1
 Create Date: 2026-06-17 09:00:00.000000
 
 """
@@ -15,7 +15,7 @@ import actidoo_wfe.database
 
 # revision identifiers, used by Alembic.
 revision = "7f2e1a9c4b30"
-down_revision = "d4f7a1e9c2b6"
+down_revision = "e8b3d5c7a9f1"
 branch_labels = None
 depends_on = None
 

@@ -866,7 +866,6 @@ def strip_hidden_field_values(
         options_folder=options_folder,
         functions_env=functions_env,
         preserve_unknown_fields=True,
-        preserve_disabled_fields=True,
         log_validation_errors=False,
     ).task_data
 

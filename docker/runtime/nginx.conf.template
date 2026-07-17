@@ -92,6 +92,12 @@ server {
     # Important for Docker: do not let nginx generate absolute redirects (http://localhost:8080/...)
     absolute_redirect off;
 
+    # Attachments are submitted inline (base64) in the form data, so a single submit can
+    # be large. This is only a safety ceiling; hard request-size policy belongs on the
+    # reverse proxy in front of the container. Rendered from CLIENT_MAX_BODY_SIZE
+    # (default 256m) — see docker/runtime/render-runtime-assets.py.
+    client_max_body_size __CLIENT_MAX_BODY_SIZE__;
+
     # ------------------------------------------------------------------
     # BACKEND API
     # ------------------------------------------------------------------

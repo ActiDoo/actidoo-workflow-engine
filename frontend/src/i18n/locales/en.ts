@@ -7,7 +7,7 @@ export const en = {
     appTitle: 'Workflow Engine',
     signOut: 'Sign out',
     settings: 'Settings',
-    about: 'About',
+    about: 'Help',
   },
   navigation: {
     tasks: 'Tasks',
@@ -16,6 +16,7 @@ export const en = {
     admin: 'Admin',
     adminWorkflows: 'Workflows',
     adminTasks: 'Tasks',
+    adminErroneousTasks: 'Erroneous Running Tasks',
     adminUsers: 'Users',
     statistics: 'Statistics',
     systemInformation: 'System Information',
@@ -275,6 +276,7 @@ export const en = {
   admin: {
     workflows: 'Workflows',
     tasks: 'Tasks',
+    erroneousTasks: 'Erroneous Tasks of Running Workflows',
     users: 'Users',
     systemInformation: 'System Information',
     adminSection: 'Admin',
@@ -318,6 +320,7 @@ export const en = {
     createdAt: 'Created at',
     completedAt: 'Completed at',
     assignedTo: 'Assigned to',
+    assignedDelegate: 'Assigned delegate',
     canceled: 'Canceled',
     completed: 'Completed',
     error: 'Error',
@@ -434,6 +437,11 @@ export const en = {
     save: 'Save Settings',
     saveSuccess: 'Settings saved',
     saveError: 'Could not save settings. Please try again.',
+    errorReminder: {
+      title: 'Erroneous task reminders',
+      hint: 'Only relevant for administrators and workflow owners: a daily summary of all tasks in an error state.',
+      label: 'Receive a daily reminder email about erroneous tasks',
+    },
     delegations: {
       title: 'Delegations',
       hint: 'Select colleagues who may work on tasks as your delegate. You can optionally limit the delegation to a deadline.',
@@ -454,8 +462,12 @@ export const en = {
     saveChanges: 'Save changes',
   },
   about: {
-    title: 'About',
+    title: 'Help',
     description: 'Information and license notices for this application.',
+    help: {
+      tab: 'General',
+      fallback: 'No help text has been configured for this application yet.',
+    },
     openRawNotices: 'Open third-party notices (raw)',
     thirdPartyTitle: 'Third-party components',
     generatedAt: 'Generated: {{value}}',

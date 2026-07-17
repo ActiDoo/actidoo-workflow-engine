@@ -10,6 +10,11 @@ export const WeComboBox: React.FC<StateManagerProps> = props => {
     <Select
       {...props}
       isClearable={props.isClearable ?? true}
+      // Opening a select must not scroll the page — react-select's default made the
+      // view jump inside our scrolling layout. When there is no space below, the menu
+      // opens upwards instead.
+      menuPlacement={props.menuPlacement ?? 'auto'}
+      menuShouldScrollIntoView={props.menuShouldScrollIntoView ?? false}
       styles={{
         control: (baseStyles, _state) => ({
           ...baseStyles,

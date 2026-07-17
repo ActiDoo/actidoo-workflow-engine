@@ -2,15 +2,18 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 import pytest
+from sqlalchemy import select
 
 from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.testing.utils import wait_for_results
 from actidoo_wfe.wf import repository, service_application, service_workflow
 from actidoo_wfe.wf.bff import bff_admin
 from actidoo_wfe.wf.exceptions import UserMayNotAdministrateThisWorkflowException
+from actidoo_wfe.wf.models import WorkflowInstanceTask
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
 WF_NAME = "TestFlowWorkflowOwnerPermissions"  # must match the "Process ID" inside bpmn and the folder name in actidoo_wfe/wf/processes (but not the bpmn file name itself)
+FOREIGN_WF_NAME = "TestFlowBff"  # a workflow the wf-owner neither owns nor administrates
 
 FILL_FORM_DATA = {}
 
@@ -31,6 +34,57 @@ def start_my_workflow():
     )
 
     return wf, db_session
+
+
+def _first_task(db, instance_id):
+    return db.execute(
+        select(WorkflowInstanceTask).where(WorkflowInstanceTask.workflow_instance_id == instance_id),
+    ).scalars().first()
+
+
+def test_erroneous_running_tasks_are_scoped_to_workflow_owner(db_engine_ctx, mock_send_text_mail):
+    """The admin "erroneous running tasks" view (f_state_error + f_workflow_instance___is_completed=False)
+    must only show a workflow owner the erroneous tasks of workflows they own, not those of other owners."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        wf = WorkflowDummy(
+            db_session=db,
+            users_with_roles={
+                "initiator": ["wf-user"],
+                "wfowner": ["wf-user", "wf-owner-testflowworkflowownerpermissions"],
+                "otherwfowner": ["wf-user", "wf-owner-testflowworkflowownerpermissionsb"],
+            },
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        owned_instance = wf.workflow_instance_id
+        foreign_instance = service_application.start_workflow(
+            db=db, name=FOREIGN_WF_NAME, user_id=wf.user("initiator").user.id
+        )
+        db.commit()
+
+        # both instances stay running; put one task of each into the error state
+        for instance_id in (owned_instance, foreign_instance):
+            task = _first_task(db, instance_id)
+            assert task is not None
+            task.state_error = True
+        db.commit()
+
+        params = bff_admin.AdminWorkflowInstanceTasksBffTableQuerySchema(
+            f_state_error=True,
+            f_workflow_instance___is_completed=False,
+        )
+        result = service_application.bff_admin_get_all_tasks(
+            db=db,
+            user_id=wf.user("wfowner").user.id,
+            bff_table_request_params=params,
+        )
+
+        returned_instances = {t.workflow_instance.id for t in result.ITEMS}
+        assert owned_instance in returned_instances, "owner must see erroneous tasks of their own workflow"
+        assert foreign_instance not in returned_instances, "owner must NOT see erroneous tasks of a workflow they do not own"
+        assert all(t.state_error for t in result.ITEMS)
+        assert all(not t.workflow_instance.is_completed for t in result.ITEMS)
 
 
 def test_getAllTasks_MustRespectWFOwner(db_engine_ctx, mock_send_text_mail):

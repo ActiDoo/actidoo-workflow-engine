@@ -255,6 +255,7 @@ export interface UserSettings {
   locale: string;
   supported_locales: LocaleItem[];
   delegations: UserDelegation[];
+  receive_error_task_reminder: boolean;
 }
 
 export interface PcValueLabelItem {

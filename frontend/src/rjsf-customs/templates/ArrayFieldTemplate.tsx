@@ -25,6 +25,7 @@ import {
 import { fetchPost } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
 import { PcValueLabelItem } from '@/models/models';
+import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import _ from 'lodash';
 
 export default function CustomArrayFieldTemplate<
@@ -174,7 +175,7 @@ export default function CustomArrayFieldTemplate<
               property_path: propertyPath,
               search: '',
               include_value: values.length === 1 ? values[0] : values,
-              form_data: (props.registry as any)?.formContext?.formData,
+              form_data: stripAttachmentPayload((props.registry as any)?.formContext?.formData),
             });
 
             const options = (response?.data?.options ?? []) as PcValueLabelItem[];

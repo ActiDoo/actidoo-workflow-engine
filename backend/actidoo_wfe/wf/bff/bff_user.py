@@ -671,6 +671,7 @@ def save_user_settings(
         user_id=user.id,
         locale=reqdata.locale,
         delegations=delegations,
+        receive_error_task_reminder=reqdata.receive_error_task_reminder,
     )
 
     locales = global_i18n.get_supported_locales()
@@ -680,6 +681,7 @@ def save_user_settings(
         locale=updated_user.locale,
         supported_locales=[LocaleItem(**l) for l in locales],
         delegations=delegation_responses,
+        receive_error_task_reminder=updated_user.receive_error_task_reminder,
     )
 
 
@@ -700,4 +702,5 @@ def get_user_settings(
         locale=user.locale,
         supported_locales=[LocaleItem(**l) for l in locales],
         delegations=delegation_responses,
+        receive_error_task_reminder=user.receive_error_task_reminder,
     )

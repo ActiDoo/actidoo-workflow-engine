@@ -25,6 +25,12 @@ from typing import Optional, Tuple
 # Markers used during the build process that need replacement at runtime
 FRONTEND_PATH_PLACEHOLDER = "/__WFE_FRONTEND__/"
 API_PATH_PLACEHOLDER = "/__WFE_API__/"
+CLIENT_MAX_BODY_SIZE_PLACEHOLDER = "__CLIENT_MAX_BODY_SIZE__"
+# Generous default: attachments are submitted inline (base64, ~1.33x the raw file) and a
+# form may carry several of them. Hard request-size policy belongs on the reverse proxy in
+# front of the container; this is only a safety ceiling so the in-container nginx is never
+# the bottleneck.
+DEFAULT_CLIENT_MAX_BODY_SIZE = "256m"
 TEXT_EXTENSIONS = {".conf", ".html", ".js", ".css", ".json", ".map", ".txt", ".webmanifest"}
 DEFAULT_REAL_IP_SOURCES = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
 REAL_IP_BLOCK_START = "# __REAL_IP_FROM_START__"
@@ -371,6 +377,9 @@ def main() -> int:
     replacements = {
         FRONTEND_PATH_PLACEHOLDER: ctx.frontend_base_path,
         API_PATH_PLACEHOLDER: ctx.api_base_path,
+        # `or` (not the get_config default) so an explicitly empty value also falls back,
+        # instead of rendering a directive with no argument that nginx rejects at startup.
+        CLIENT_MAX_BODY_SIZE_PLACEHOLDER: get_config("CLIENT_MAX_BODY_SIZE") or DEFAULT_CLIENT_MAX_BODY_SIZE,
     }
     print(f"--> Hydrating path placeholders (FE: '{ctx.frontend_base_path}', API: '{ctx.api_base_path}')...")
     hydrate_frontend_paths(ctx.frontend_dist, replacements)

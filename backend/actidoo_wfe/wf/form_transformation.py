@@ -294,7 +294,6 @@ def _insert_single_component(
                 },
             }
         )
-
         if not custom_properties.get("options_file") and not custom_properties.get("options_function"):
             # static values configured
             uischema[key].update({"ui:widget": "MultiSelectStatic"})

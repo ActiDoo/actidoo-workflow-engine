@@ -50,6 +50,26 @@ def load_session(db, token):
     return sess
 
 
+def load_session_for_update(db, token, skip_locked=True):
+    """Load a session row and lock it until the transaction commits.
+
+    Lets the token refresh serialize on the row so a single-use refresh token is spent
+    only once. With skip_locked the caller backs off when another refresh already holds
+    the row (it still has a usable token of its own); without it the caller waits for that
+    refresh and then adopts its result. The row stays attached to `db` so the caller can
+    update it inside the same transaction.
+    """
+    return db.execute(
+        select(SessionModel)
+        .where(SessionModel.token == token)
+        .with_for_update(skip_locked=skip_locked)
+    ).scalar_one_or_none()
+
+
+# Session writes are whole-blob and last-writer-wins. That is safe for the OIDC token
+# because the session only ever holds auth data written freshly under a lock (login and
+# the refresh), so there is no stale writer that could downgrade a rotated single-use
+# token. Keep it that way if you ever store request-scoped state in the session.
 def save_session(db, id, token, data):
     if id is None:
         session = SessionModel()

@@ -18,8 +18,8 @@ from fastapi import Query, Request
 from fastapi.dependencies.models import Dependant
 from fastapi.dependencies.utils import get_dependant, request_params_to_args
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy import ScalarResult, Select, and_, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import ScalarResult, Select, and_, func, inspect, or_, select
+from sqlalchemy.orm import Mapper, Session
 
 from actidoo_wfe.database import eilike, search_uuid_by_prefix
 
@@ -503,41 +503,22 @@ class BFFTable:
         return self.db.execute(self._paginate(self.query)).scalars()
 
     def _get_count(self):
-        """Retrieve the total count of records matching the current query without limit, offset, or order by clauses.
+        count_query = self.query.limit(None).offset(None).order_by(None)
 
-        This method constructs a count query based on the current query configuration, removing any existing
-        limits, offsets, or orderings to ensure an accurate total count of records. By wrapping the query as a
-        subquery, DISTINCT clauses are properly respected in the count.
+        # Without DISTINCT, the selected columns cannot change the row count, so
+        # a plain entity can be counted without its blobs or computed columns.
+        described = count_query.column_descriptions
+        entity = described[0].get("entity") if len(described) == 1 else None
+        entity_insp = inspect(entity) if entity is not None and described[0]["expr"] is entity else None
+        if isinstance(entity_insp, Mapper) and not count_query._distinct:
+            count_query = count_query.with_only_columns(
+                *entity_insp.primary_key,
+                maintain_column_froms=True,
+            )
 
-        Returns:
-            int: The total count of records as an integer.
-        """
-        count_query = self.query
-        count_query = count_query.limit(None)
-        count_query = count_query.offset(None)
-        count_query = count_query.order_by(None)
-
-        # Wrap as subquery to correctly handle DISTINCT in the original query,
-        # then count the rows of the subquery.
-        subquery = count_query.subquery()
-        count_query = select(func.count()).select_from(subquery)
-
-        return self.db.execute(count_query).scalar()
+        return self.db.execute(select(func.count()).select_from(count_query.subquery())).scalar()
 
     def get_paginated_data(self) -> PaginatedData:
-        """
-        Retrieve a paginated set of data from the database with the current query.
-
-        This method executes the current SQLAlchemy query with limit and offset
-        parameters applied, fetching a list of scalar results. It also calculates
-        the total count of available records that match the current query without
-        pagination restrictions. The results are returned as a PaginatedData
-        object, which includes the list of items and the total count.
-
-        Returns:
-            PaginatedData: An object containing a list of items and the total
-            count of matching records.
-        """
         items = list(self._get_scalars().all())
         return self._make_result(items, self._get_count() or 0)
 

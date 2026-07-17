@@ -10,6 +10,7 @@ import React, { DragEvent, ReactElement, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
 import { useDragging } from '@/utils/hooks/useDragging';
+import { isRealFile } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 
 export interface PcFile {
   datauri?: string | null;
@@ -33,6 +34,9 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
   const isDisabled = !!props.readonly || !!props.disabled;
 
   const isRequired = !!props.required;
+
+  const file = files && isRealFile(files) ? files : undefined;
+
   const label =
     (props.schema?.title ? props.schema?.title : 'Single File Upload') + (isRequired ? '*' : '');
   const hint = props.uiSchema?.['ui:description']
@@ -52,7 +56,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
     if (newFile.size > maxFileSize) {
       dispatch(addToast(<WeToastContent text={`File exceeds the max size of 15MB.`} />));
       return;
-    } else if (files && files.filename === newFile.name) {
+    } else if (file && file.filename === newFile.name) {
       dispatch(addToast(<WeToastContent text={`File is already in list.`} />));
       return;
     }
@@ -91,46 +95,6 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
     onChange(undefined, fieldPath);
   };
 
-  /**
-    In case of a non-required field, we initially get "undefined" formData if there is no file attached.
-    This is okay, because the schema says that _if_ we have a file it must be an object like this:
-    {
-      "type": "object",
-      "title": "Single upload",
-      "properties": {
-        "datauri": {
-          "type": "string",
-          "format": "data-url"git 
-        },
-        "filename": {
-          "type": "string"
-        },
-        "hash": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "mimetype": {
-          "type": "string"
-        }
-      }
-
-    In case of a required field, we initially get an empty object {} for formData if there is no file attached.
-    (Unfortunately this behaviour is implemented in RJSF itself)
-    This will look like an attached file without filename etc., which can not be validated due to the above schema,
-    (the properties are missing)
-    So as a workaround we delete this invalid object by calling removeFile(), which will result in an undefined formData again.
-   */
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means property not set, treat as falsy
-  if (files && !(files.datauri || files.filename || files.hash || files.id || files.mimetype)) {
-    console.log(`files undefined: ${props.id}`);
-    // remove it async, after rendering, to avoid warnings
-    setTimeout(() => {
-      removeFile();
-    });
-  }
-
   return (
     <div className="relative">
       <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">
@@ -141,7 +105,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
           (props.className ?? '') +
           ' relative border-2 border-neutral-200 border-solid rounded mb-2 p-3'
         }>
-        {!isDisabled && !files && (
+        {!isDisabled && !file && (
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -164,16 +128,16 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
           </div>
         )}
 
-        {isDisabled && !files && (
+        {isDisabled && !file && (
           <Text className="bg-neutral-50 w-full p-2 text-center rounded !text-neutral-400">
             No files uploaded
           </Text>
         )}
 
-        {files && (
+        {file && (
           <MultiFileRow
             key={`file0`}
-            file={files}
+            file={file}
             disabled={isDisabled}
             onRemove={() => {
               removeFile();

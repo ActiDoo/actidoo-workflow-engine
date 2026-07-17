@@ -72,6 +72,7 @@ export enum WeDataKey {
   REFRESH_GET_WORKFLOW_SPEC = 'refresh_get_workflow_spec',
   WORKFLOW_STATISTICS = 'workflow_statistics',
   ADMIN_ALL_TASKS = 'admin_all_tasks',
+  ADMIN_ERRONEOUS_TASKS = 'admin_erroneous_tasks',
   ADMIN_ALL_WORKFLOWS = 'admin_all_workflows',
   ADMIN_ALL_USERS = 'admin_all_users',
   ADMIN_GRAPH_OBJECTS = 'admin_all_graph_objects',
@@ -136,6 +137,7 @@ export interface WeDataState {
   [WeDataKey.REFRESH_GET_WORKFLOW_SPEC]: GenericDataEntry<RefreshGetWorkflowSpec> | null;
   [WeDataKey.WORKFLOW_STATISTICS]: GenericDataEntry<GetWorkflowStatisticsResponse> | null;
   [WeDataKey.ADMIN_ALL_TASKS]: GenericDataEntry<AllTasksTable> | null;
+  [WeDataKey.ADMIN_ERRONEOUS_TASKS]: GenericDataEntry<AllTasksTable> | null;
   [WeDataKey.ADMIN_ALL_WORKFLOWS]: GenericDataEntry<AllWorkflowsTable> | null;
   [WeDataKey.ADMIN_ALL_USERS]: GenericDataEntry<AllUsersTable> | null;
   [WeDataKey.ADMIN_GRAPH_OBJECTS]: GenericDataEntry<AllGraphObjects> | null;
@@ -209,6 +211,7 @@ export const WeApiUrl = (
     case WeDataKey.WORKFLOW_STATISTICS:
       return 'user/statistics';
     case WeDataKey.ADMIN_ALL_TASKS:
+    case WeDataKey.ADMIN_ERRONEOUS_TASKS:
     case WeDataKey.ADMIN_TASKS_OF_WORKFLOW:
       return 'admin/all_tasks';
     case WeDataKey.ADMIN_ALL_WORKFLOWS:
@@ -283,6 +286,7 @@ export const initState: WeDataState = {
   [WeDataKey.REFRESH_GET_WORKFLOW_SPEC]: null,
   [WeDataKey.WORKFLOW_STATISTICS]: null,
   [WeDataKey.ADMIN_ALL_TASKS]: null,
+  [WeDataKey.ADMIN_ERRONEOUS_TASKS]: null,
   [WeDataKey.ADMIN_ALL_WORKFLOWS]: null,
   [WeDataKey.ADMIN_ALL_USERS]: null,
   [WeDataKey.ADMIN_TASKS_OF_WORKFLOW]: null,

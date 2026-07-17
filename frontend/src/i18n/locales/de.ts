@@ -7,7 +7,7 @@ export const de = {
     appTitle: 'Workflow Engine',
     signOut: 'Abmelden',
     settings: 'Einstellungen',
-    about: 'Über',
+    about: 'Hilfe',
   },
   navigation: {
     tasks: 'Aufgaben',
@@ -16,6 +16,7 @@ export const de = {
     admin: 'Admin',
     adminWorkflows: 'Workflows',
     adminTasks: 'Aufgaben',
+    adminErroneousTasks: 'Fehlerhafte laufende Aufgaben',
     adminUsers: 'Benutzer',
     statistics: 'Statistiken',
     systemInformation: 'Systeminformationen',
@@ -278,6 +279,7 @@ export const de = {
   admin: {
     workflows: 'Workflows',
     tasks: 'Aufgaben',
+    erroneousTasks: 'Fehlerhafte Aufgaben laufender Workflows',
     users: 'Benutzer',
     systemInformation: 'Systeminformationen',
     adminSection: 'Admin',
@@ -321,6 +323,7 @@ export const de = {
     createdAt: 'Erstellt am',
     completedAt: 'Abgeschlossen am',
     assignedTo: 'Zugewiesen an',
+    assignedDelegate: 'Delegiert an',
     canceled: 'Abgebrochen',
     completed: 'Abgeschlossen',
     error: 'Fehler',
@@ -437,6 +440,11 @@ export const de = {
     save: 'Einstellungen speichern',
     saveSuccess: 'Einstellungen gespeichert',
     saveError: 'Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.',
+    errorReminder: {
+      title: 'Erinnerung über fehlerhafte Aufgaben',
+      hint: 'Nur relevant für Administratoren und Workflow-Owner: tägliche Zusammenfassung aller Aufgaben im Fehlerzustand.',
+      label: 'Tägliche Erinnerungs-E-Mail über fehlerhafte Aufgaben erhalten',
+    },
     delegations: {
       title: 'Vertretungen',
       hint: 'Wähle Kolleg:innen, die Aufgaben in deiner Vertretung bearbeiten dürfen. Optional kannst du eine Frist hinterlegen.',
@@ -457,8 +465,12 @@ export const de = {
     saveChanges: 'Änderungen speichern',
   },
   about: {
-    title: 'Über',
+    title: 'Hilfe',
     description: 'Informationen und Lizenzhinweise für diese Anwendung.',
+    help: {
+      tab: 'Allgemein',
+      fallback: 'Für diese Anwendung wurde noch kein Hilfetext hinterlegt.',
+    },
     openRawNotices: 'Drittanbieter-Hinweise öffnen (raw)',
     thirdPartyTitle: 'Drittanbieter-Komponenten',
     generatedAt: 'Erstellt: {{value}}',

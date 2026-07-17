@@ -313,6 +313,7 @@ class SaveUserSettingsRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     locale: str
     delegations: List["UserDelegationRequest"] | None = Field(default=None)
+    receive_error_task_reminder: bool | None = Field(default=None)
 
 
 class LocaleItem(BaseModel):
@@ -325,6 +326,7 @@ class UserSettingsResponse(BaseModel):
     locale: str
     supported_locales: List[LocaleItem]
     delegations: List["UserDelegationResponse"]
+    receive_error_task_reminder: bool
 
 
 class UserDelegationRequest(BaseModel):

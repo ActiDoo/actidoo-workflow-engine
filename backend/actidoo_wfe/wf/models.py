@@ -75,6 +75,13 @@ class WorkflowUser(Base):
 
         return value
 
+    receive_error_task_reminder: Mapped[bool] = mapped_column(
+        ty.Boolean,
+        nullable=False,
+        default=True,
+        server_default="1",
+    )
+
     assigned_tasks: Mapped[List["WorkflowInstanceTask"]] = relationship(
         back_populates="assigned_user",
         foreign_keys="WorkflowInstanceTask.assigned_user_id",
@@ -303,6 +310,19 @@ class WorkflowInstanceTask(Base):
         nullable=False,
         index=True,
         default=False,
+    )
+    # When the task entered the error state; reset when it recovers.
+    error_at: Mapped[datetime.datetime | None] = mapped_column(
+        UTCDateTime(),
+        nullable=True,
+        default=None,
+    )
+    # Set when the erroneous task was included in a sent reminder digest;
+    # NULL means the error has not been reported yet (task counts as "new").
+    error_reported_at: Mapped[datetime.datetime | None] = mapped_column(
+        UTCDateTime(),
+        nullable=True,
+        default=None,
     )
     state_cancelled: Mapped[bool] = mapped_column(
         ty.Boolean,
