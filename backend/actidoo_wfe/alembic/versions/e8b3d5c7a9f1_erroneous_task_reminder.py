@@ -34,6 +34,20 @@ def upgrade() -> None:
         sa.Column("error_reported_at", actidoo_wfe.database.UTCDateTime(), nullable=True),
     )
 
+    # Mark the pre-existing error backlog as an already-reported baseline so the first
+    # digest after deploy does not flag every long-standing failure as "* NEW *".
+    # error_reported_at is only ever checked for NULL (never displayed or compared by
+    # time), so any non-NULL sentinel is enough; CURRENT_TIMESTAMP keeps the intent clear.
+    # error_at is deliberately left NULL: the real error time of the backlog is unknown.
+    wit = sa.table(
+        "workflow_instance_tasks",
+        sa.column("state_error"),
+        sa.column("error_reported_at"),
+    )
+    op.execute(
+        wit.update().where(wit.c.state_error == sa.true()).values(error_reported_at=sa.func.now())
+    )
+
 
 def downgrade() -> None:
     op.drop_column("workflow_instance_tasks", "error_reported_at")
