@@ -31,7 +31,7 @@ pytest backend
 Additional tooling such as Ruff/Pylint is included via `backend[dev]`.
 
 ### Frontend
-The frontend uses [Vitest](https://vitest.dev/) with [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) (jsdom environment). Test files live next to their source files as `*.test.ts(x)` under `frontend/src/`.
+The frontend uses [Vitest](https://vitest.dev/) with [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/), split into two projects: fast unit/component tests in jsdom (test files live next to their source files as `*.test.ts(x)` under `frontend/src/`), and workflow form tests in a real Chromium via Vitest browser mode (`frontend/src/test/workflows/`, one directory per workflow — see the README there). The browser needs a one-time `yarn playwright install chromium`.
 
 ```bash
 cd frontend
@@ -47,7 +47,7 @@ Notes:
 
 - The test setup is configured in `frontend/vitest.config.ts`. It is deliberately standalone and does not reuse `vite.config.js`, whose third-party-notices plugin writes into `public/` on dev-server start.
 - When writing a new test, use an existing `*.test.ts` (unit) or `*.test.tsx` (component) file as a template.
-- Prefer plain unit tests for pure logic. Component tests work well for RJSF/Bootstrap-based components; avoid them for UI5 web components, which rely on Shadow DOM and are not supported by jsdom.
+- Prefer plain unit tests for pure logic. jsdom component tests work well for RJSF/Bootstrap-based components; UI5 web components rely on Shadow DOM and do not work in jsdom — test them in the browser-mode `workflows` project instead.
 - New dependencies must be committed together with their `.yarn/cache` zips (zero-installs), otherwise `yarn install --immutable` fails in CI.
 
 ## Build the documentation locally

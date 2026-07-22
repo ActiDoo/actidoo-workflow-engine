@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-// Deliberately standalone (no mergeConfig with vite.config.js): the third-party-notices
-// plugin there writes files into public/ on every dev-server start, which a test run
-// must not trigger.
+// Standalone on purpose: vite.config.js's notices plugin writes into public/ on serve.
 
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults, coverageConfigDefaults } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
 import react from '@vitejs/plugin-react';
 import * as path from 'path';
 
@@ -18,18 +17,45 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
     globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    env: {
+      VITE_FRONTEND_BASE_URL: 'http://localhost/',
+      VITE_API_BASE_URL: 'http://localhost/api/',
+    },
     server: {
       deps: {
         inline: [/@rjsf\//],
       },
     },
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       include: ['src/**'],
+      exclude: [...coverageConfigDefaults.exclude, 'src/test/**'],
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          include: ['src/**/*.test.{ts,tsx}'],
+          exclude: [...configDefaults.exclude, 'src/test/workflows/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'workflows',
+          include: ['src/test/workflows/**/*.test.{ts,tsx}'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+    ],
   },
 });

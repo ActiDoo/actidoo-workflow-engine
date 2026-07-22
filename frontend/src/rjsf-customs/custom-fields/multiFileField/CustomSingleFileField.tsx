@@ -96,7 +96,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
   };
 
   return (
-    <div className="relative">
+    <div id={fieldPathId?.$id} className="relative">
       <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">
         {label}
       </label>

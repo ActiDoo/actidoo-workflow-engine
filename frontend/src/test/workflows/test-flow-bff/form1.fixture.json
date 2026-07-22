@@ -1,0 +1,127 @@
+{
+  "jsonschema": {
+    "definitions": {},
+    "type": "object",
+    "properties": {
+      "required_text": {
+        "type": "string",
+        "title": "Required text",
+        "minLength": 2
+      },
+      "short_code": {
+        "type": "string",
+        "title": "Short code",
+        "maxLength": 3
+      },
+      "category": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Category",
+        "custom_properties": {
+          "options_file": "categories.csv"
+        }
+      },
+      "attachment": {
+        "type": "object",
+        "title": "Attachment",
+        "properties": {
+          "datauri": {
+            "type": "string",
+            "format": "data-url"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          }
+        }
+      },
+      "optional_note": {
+        "type": "string",
+        "title": "Optional note"
+      },
+      "trigger_error": {
+        "type": "boolean",
+        "title": "Trigger error"
+      }
+    },
+    "required": [
+      "required_text"
+    ]
+  },
+  "uischema": {
+    "ui:field": "layout",
+    "ui:layout": {
+      "Row_1": [
+        "required_text"
+      ],
+      "Row_1b": [
+        "short_code"
+      ],
+      "Row_2": [
+        "category"
+      ],
+      "Row_3": [
+        "attachment"
+      ],
+      "Row_4": [
+        "optional_note"
+      ],
+      "Row_5": [
+        "trigger_error"
+      ]
+    },
+    "required_text": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "required_text"
+      ]
+    },
+    "short_code": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "short_code"
+      ]
+    },
+    "category": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "category"
+      ],
+      "ui:widget": "SelectDynamic"
+    },
+    "attachment": {
+      "ui:description": "",
+      "ui:path": [
+        "attachment"
+      ],
+      "ui:field": "AttachmentSingle"
+    },
+    "optional_note": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "optional_note"
+      ]
+    },
+    "trigger_error": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "trigger_error"
+      ]
+    }
+  }
+}

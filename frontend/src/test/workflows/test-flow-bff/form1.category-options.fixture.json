@@ -1,0 +1,16 @@
+{
+  "options": [
+    {
+      "value": "cat_alpha",
+      "label": "Alpha Category"
+    },
+    {
+      "value": "cat_beta",
+      "label": "Beta Category"
+    },
+    {
+      "value": "cat_gamma",
+      "label": "Gamma Category"
+    }
+  ]
+}

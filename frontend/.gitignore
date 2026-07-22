@@ -20,6 +20,8 @@ out/
 
 # testing
 /coverage
+__screenshots__/
+/.vitest-attachments
 
 # production
 /build
