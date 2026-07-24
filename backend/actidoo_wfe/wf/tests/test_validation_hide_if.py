@@ -208,6 +208,25 @@ def test__none_spelling_behaves_like_null_literal():
     assert not hidden.error_schema  # kind set -> detail hidden, may be absent
 
 
+LIST_OR_CONDITION_FORM = {
+    # Regression: multi-condition hide-if in a dynamic list must be evaluated per item.
+    "components": [
+        {
+            "type": "dynamiclist",
+            "path": "employees",
+            "isRepeating": True,
+            "components": [
+                {"type": "textfield", "key": "employee"},
+                {
+                    "type": "textfield",
+                    "key": "region",
+                    "conditional": {"hide": '=this.employee="intern"\nor this.employee = null'},
+                },
+            ],
+        },
+    ],
+}
+
 MISSING_REFERENCE_FORM = {
     # A hide-if that references a field which no longer exists in the form at all (e.g. a
     # checkbox was removed but its paired select still guards on it). FEEL treats the missing
@@ -223,6 +242,24 @@ MISSING_REFERENCE_FORM = {
         },
     ],
 }
+
+
+def test__list_or_condition_is_evaluated_per_item():
+    result = _validate(
+        LIST_OR_CONDITION_FORM,
+        {
+            "employees": [
+                {"employee": "manager", "region": "west"},
+                {"employee": "intern", "region": "ost"},
+                {"region": "sued"},
+            ]
+        },
+    )
+
+    assert not result.error_schema
+    assert result.task_data["employees"][0]["region"] == "west"
+    assert "region" not in result.task_data["employees"][1]
+    assert "region" not in result.task_data["employees"][2]
 
 
 def test__missing_hide_if_reference_is_treated_as_unset_and_does_not_crash():

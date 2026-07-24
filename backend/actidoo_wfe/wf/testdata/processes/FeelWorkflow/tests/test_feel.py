@@ -119,6 +119,32 @@ def test_hideif_globalA4_hides_number_c_keeps_number_a(db_engine_ctx, mock_send_
         )
 
 
+def test_hideif_or_condition_in_list_keeps_visible_value(db_engine_ctx, mock_send_text_mail):
+    """Regression: an or-condition in a dynamic list used to strip the field from every item."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        task_data = {
+            "globalA": 2,
+            "globalB": 4,
+            "my_list": [
+                {
+                    "number_a": 7,
+                    "number_b": 1,
+                    "number_or": 5,
+                    "my_list_B": [],
+                },
+            ],
+        }
+
+        cleaned_task_data = _clean_task_data(workflow, task_data)
+        assert cleaned_task_data["my_list"][0]["number_or"] == 5
+
+        workflow.user("initiator").submit(
+            task_data=task_data,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+
 # ==================== BACKWARDS COMPATIBILITY TESTS ====================
 # Tests for old-style hide-if conditions (without explicit parent/this keywords)
 # These tests ensure that forms using scope shadowing still work with new implementation

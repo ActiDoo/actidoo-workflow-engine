@@ -345,19 +345,21 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
 
     elif isinstance(node, ast.BoolOp):  # and/or
         values_jsonschema = []
+        found_paths = []
         for i in range(len(node.values)):
             assert isinstance(node.values[i], ast.Compare) or isinstance(node.values[i], ast.BoolOp)
-            value_jsonschema, _ = _camunda_hide_if_expression_ast_to_jsonschema(
+            value_jsonschema, value_path = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.values[i],
                 global_jsonschema,
                 path,
             )
             values_jsonschema.append(value_jsonschema)
+            found_paths.append(value_path)
 
         if isinstance(node.op, ast.And):
-            return {"allOf": values_jsonschema}, []
+            return {"allOf": values_jsonschema}, found_paths[0]
         elif isinstance(node.op, ast.Or):
-            return {"anyOf": values_jsonschema}, []
+            return {"anyOf": values_jsonschema}, found_paths[0]
         else:
             raise NotImplementedError("Unsupported boolean operator")
     elif isinstance(node, ast.Name):  # Variable

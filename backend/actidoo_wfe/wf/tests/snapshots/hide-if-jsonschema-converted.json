@@ -6,7 +6,21 @@
             "type": "string",
             "title": "Text field 1"
         },
-        "textfield_with_condition": true
+        "textfield_with_condition": true,
+        "employees": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "employee": {
+                        "type": "string",
+                        "title": "Employee"
+                    },
+                    "region": true
+                }
+            },
+            "title": "Dynamic list (employees)"
+        }
     },
     "allOf": [
         {
@@ -50,6 +64,76 @@
                     }
                 },
                 "type": "object"
+            }
+        },
+        {
+            "if": {},
+            "then": {
+                "type": "object",
+                "properties": {
+                    "employees": {
+                        "type": "array",
+                        "items": {
+                            "if": {
+                                "not": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "employee": {
+                                                    "const": "intern",
+                                                    "default": ""
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "employee": {
+                                                    "const": null,
+                                                    "default": ""
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "then": {
+                                "type": "object",
+                                "properties": {
+                                    "region": {
+                                        "type": "string",
+                                        "title": "Region"
+                                    }
+                                }
+                            },
+                            "else": {
+                                "properties": {
+                                    "region": {
+                                        "type": "null"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            },
+            "else": {
+                "type": "object",
+                "properties": {
+                    "employees": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "region": {
+                                    "type": "null"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
             }
         }
     ]

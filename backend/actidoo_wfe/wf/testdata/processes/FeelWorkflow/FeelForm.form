@@ -72,6 +72,19 @@
           }
         },
         {
+          "label": "number_or Label (hidden if number_a=9 or number_a=null)",
+          "type": "number",
+          "layout": {
+            "row": "Row_0r35sy1",
+            "columns": 4
+          },
+          "id": "Field_0numor1",
+          "key": "number_or",
+          "conditional": {
+            "hide": "=this.number_a=9\nor this.number_a=null"
+          }
+        },
+        {
           "text": "globalA={{ globalA }}\n\na*b = {{this.number_a * this.number_b}}\n\nSum for inner my_list_B: {{sum(for elem in this.my_list_B return elem.number_c * elem.number_d)}}",
           "label": "Text view",
           "type": "text",

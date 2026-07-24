@@ -22,6 +22,45 @@
       "conditional": {
         "hide": "=textfield1 = \"A\" or textfield1 = \"B\""
       }
+    },
+    {
+      "label": "Dynamic list (employees)",
+      "components": [
+        {
+          "label": "Employee",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_0dynli1",
+            "columns": 5
+          },
+          "id": "Field_0dynli2",
+          "key": "employee"
+        },
+        {
+          "label": "Region",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_0dynli1",
+            "columns": 5
+          },
+          "id": "Field_0dynli3",
+          "key": "region",
+          "conditional": {
+            "hide": "=this.employee=\"intern\"\nor this.employee = null"
+          }
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_0dynli0",
+        "columns": null
+      },
+      "id": "Field_0dynli4",
+      "path": "employees"
     }
   ],
   "type": "default",
