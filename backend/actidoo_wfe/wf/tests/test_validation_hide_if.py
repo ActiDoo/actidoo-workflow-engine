@@ -206,3 +206,41 @@ def test__none_spelling_behaves_like_null_literal():
 
     assert "detail" in (unset.error_schema or {})  # kind unset -> detail visible
     assert not hidden.error_schema  # kind set -> detail hidden, may be absent
+
+
+LIST_OR_CONDITION_FORM = {
+    # Regression: multi-condition hide-if in a dynamic list must be evaluated per item.
+    "components": [
+        {
+            "type": "dynamiclist",
+            "path": "employees",
+            "isRepeating": True,
+            "components": [
+                {"type": "textfield", "key": "employee"},
+                {
+                    "type": "textfield",
+                    "key": "region",
+                    "conditional": {"hide": '=this.employee="intern"\nor this.employee = null'},
+                },
+            ],
+        },
+    ],
+}
+
+
+def test__list_or_condition_is_evaluated_per_item():
+    result = _validate(
+        LIST_OR_CONDITION_FORM,
+        {
+            "employees": [
+                {"employee": "manager", "region": "west"},
+                {"employee": "intern", "region": "ost"},
+                {"region": "sued"},
+            ]
+        },
+    )
+
+    assert not result.error_schema
+    assert result.task_data["employees"][0]["region"] == "west"
+    assert "region" not in result.task_data["employees"][1]
+    assert "region" not in result.task_data["employees"][2]

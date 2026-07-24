@@ -6,6 +6,9 @@
         ],
         "Row_17lhu7b": [
             "textfield_with_condition"
+        ],
+        "employees": [
+            "employees"
         ]
     },
     "textfield1": {
@@ -22,5 +25,38 @@
             "textfield_with_condition"
         ],
         "ui:hideif": "=textfield1 = \"A\" or textfield1 = \"B\""
+    },
+    "employees": {
+        "items": {
+            "ui:field": "layout",
+            "ui:layout": {
+                "Row_0dynli1": [
+                    "employee",
+                    "region"
+                ]
+            },
+            "employee": {
+                "ui:description": "",
+                "ui:enableMarkdownInDescription": true,
+                "ui:path": [
+                    "employees",
+                    "employee"
+                ]
+            },
+            "region": {
+                "ui:description": "",
+                "ui:enableMarkdownInDescription": true,
+                "ui:path": [
+                    "employees",
+                    "region"
+                ],
+                "ui:hideif": "=this.employee=\"intern\"\nor this.employee = null"
+            }
+        },
+        "ui:arrayAddButtonText": "Add",
+        "ui:arrayAllowAddRemove": "True",
+        "ui:arrayOverviewButtonText": "Overview",
+        "ui:defaultRepetitions": 1,
+        "ui:label": "Dynamic list (employees)"
     }
 }

@@ -10,6 +10,23 @@
             "type": "string",
             "title": "Text field 2",
             "hideif": "=textfield1 = \"A\" or textfield1 = \"B\""
+        },
+        "employees": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "employee": {
+                        "type": "string",
+                        "title": "Employee"
+                    },
+                    "region": {
+                        "type": "string",
+                        "title": "Region",
+                        "hideif": "=this.employee=\"intern\"\nor this.employee = null"
+                    }
+                }
+            }
         }
     }
 }
