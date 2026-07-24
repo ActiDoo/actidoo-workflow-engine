@@ -1,0 +1,45 @@
+{
+  "components": [
+    {
+      "label": "Whitelisted text (saved)",
+      "type": "textfield",
+      "layout": {"row": "Row_1", "columns": null},
+      "id": "Field_wl_text",
+      "key": "wl_text",
+      "validate": {"required": true},
+      "properties": {"template_field": "true"}
+    },
+    {
+      "label": "Whitelisted category (saved)",
+      "values": [
+        {"label": "Alpha Category", "value": "cat_alpha"},
+        {"label": "Beta Category", "value": "cat_beta"}
+      ],
+      "type": "select",
+      "layout": {"row": "Row_2", "columns": null},
+      "id": "Field_wl_category",
+      "key": "wl_category",
+      "properties": {"template_field": "true"}
+    },
+    {
+      "label": "Other text (not whitelisted)",
+      "type": "textfield",
+      "layout": {"row": "Row_3", "columns": null},
+      "id": "Field_wl_other",
+      "key": "other_text"
+    },
+    {
+      "label": "Other amount (not whitelisted)",
+      "type": "number",
+      "layout": {"row": "Row_4", "columns": null},
+      "id": "Field_wl_amount",
+      "key": "other_amount"
+    }
+  ],
+  "type": "default",
+  "id": "WhitelistFormDef",
+  "template_mode": "whitelist",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 16
+}

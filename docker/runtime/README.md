@@ -15,6 +15,7 @@ This image bundles the workflow engine frontend (static assets + nginx) and the 
 - `RENDER_RUNTIME_AT_BUILD` (default `false`): when `true`, runs path normalization + asset rendering during the image build so the resulting image is ready-only.
 - `RENDER_RUNTIME_WRITE` (no default): optional override for the runtime render flag (see below). Typically leave unset and let the runtime decide.
 - `NGINX_REAL_IP_FROM` (optional): space- or comma-separated CIDR list for nginx `set_real_ip_from` when baking runtime assets.
+- `CLIENT_MAX_BODY_SIZE` (default `256m`): nginx request body-size limit when baking runtime assets.
 
 ### Runtime (ENV)
 - Required: `BASE_URL`, `FRONTEND_PATH`, `API_PATH`. If you set the build args above, they land in the image `ENV` and satisfy these.
@@ -25,6 +26,7 @@ This image bundles the workflow engine frontend (static assets + nginx) and the 
   - `RENDER_RUNTIME_WRITE=0` is recommended for read-only runtime.
   - `ENVIRONMENT_LABEL`: optional short label (e.g., `STAGING`, `Customer-QA`) injected into `env.js` and shown inside the app header for easy environment identification. Falls back to hostname heuristics when omitted.
   - `NGINX_REAL_IP_FROM`: space- or comma-separated CIDRs for nginx `set_real_ip_from`. Defaults to private ranges (`10.0.0.0/8 172.16.0.0/12 192.168.0.0/16`).
+  - `CLIENT_MAX_BODY_SIZE`: nginx request body-size limit. Defaults to `256m`. In baked/read-only images this must be set at build time, unless runtime rendering is forced.
   - `PROXY_TRUSTED_NETWORKS`: JSON array of CIDRs the backend trusts for forwarded headers. Defaults to `["127.0.0.1/32"]` so only nginx inside the container is honored.
 
 ## Typical flows
@@ -43,5 +45,7 @@ This image bundles the workflow engine frontend (static assets + nginx) and the 
   or `... --only=frontend`
 
 - **Branding logo via static file** (no extra env): place or mount a file at `/srv/frontend.template/branding/logo.svg` (supported: svg/png/jpg/jpeg/webp). The runtime copy step will pick it up and serve it at `<FRONTEND_PATH>branding/logo.svg`, with a built-in Actidoo logo as the fallback when none is provided.
+
+- **Custom help text via static file** (no extra env): place or mount per-language markdown files at `/srv/frontend.template/branding/help.<lang>.md` (e.g. `help.de.md`, `help.en.md`). They are served at `<FRONTEND_PATH>branding/help.<lang>.md` and shown in the "General" tab behind the `?` icon, next to the open-source notices tab. The app falls back to the requested language → English → a built-in default text. Content is rendered as markdown (raw HTML allowed) — only deploy trusted content here.
 
 > Note: `render-runtime-assets.py` wipes `/srv/frontend` on each start and copies from `/srv/frontend.template`, so mount/replace assets in the template folder, not directly in `/srv/frontend`.

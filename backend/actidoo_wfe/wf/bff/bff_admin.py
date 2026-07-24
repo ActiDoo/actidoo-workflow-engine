@@ -86,7 +86,7 @@ AdminWorkflowInstanceTasksBffTableQuerySchema = bff_table.get_bff_table_query_sc
         bff_table.TextSearchFilterField(name="lane"),
         bff_table.TextSearchFilterField(name="assigned_user___full_name"),
         bff_table.TextSearchFilterField(name="assigned_delegate_user___full_name"),
-        # bff_table.BooleanFilterField(name="is_completed")
+        bff_table.BooleanFilterField(name="workflow_instance___is_completed"),
     ],
     add_global_search_filter=True,
 )

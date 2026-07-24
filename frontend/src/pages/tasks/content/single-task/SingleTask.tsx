@@ -11,15 +11,19 @@ import { ErrorSchema, RJSFSchema, UiSchema } from '@rjsf/utils';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { getRequest, postRequest } from '@/store/generic-data/actions';
 import { State } from '@/store';
-import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
+import {
+  changeRequiredDefinitionForFieldsWithHideIfDefinition,
+  computeHiddenMap,
+} from '@/services/FeelService';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
 import { useScrollTop } from '@/utils/hooks/useScrollTop';
 import { WeUploadDialog } from '@/utils/components/WeUploadDialog';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { SingleTaskHeader } from '@/pages/tasks/content/single-task/SingleTaskHeader';
-import { WorkflowState } from '@/models/models';
+import { FormTemplateMode, WorkflowState } from '@/models/models';
 import { handleResponse } from '@/services/HelperService';
 import { TaskActions } from '@/pages/tasks/content/TaskActions';
+import FormTemplateActions from '@/pages/tasks/content/single-task/form-templates/FormTemplateActions';
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import {
@@ -57,6 +61,7 @@ const prepareFormData = (
 ): { prepared: Record<string, any>; changed: boolean } => {
   const prepared = { ...data };
   let changed = false;
+  const hiddenMap = computeHiddenMap(uischema ?? {}, jsonschema?.properties, data);
   for (const [key, prop] of Object.entries<any>(jsonschema?.properties ?? {})) {
     if (typeof prop !== 'object' || prop === null) continue;
     const ui = uischema?.[key] ?? {};
@@ -125,11 +130,10 @@ const prepareFormData = (
     } else if (prop.type === 'null') {
       prepared[key] = null;
       changed = true;
-    } else if (
-      prop.type === 'boolean' &&
-      ui['ui:widget'] !== 'hidden' &&
-      ui['ui:hideif'] === undefined
-    ) {
+    } else if (prop.type === 'boolean' && ui['ui:widget'] !== 'hidden' && !hiddenMap[key]) {
+      // Seed every currently-visible checkbox to false, so the submitted value equals the false
+      // computeHiddenMap already assumed when rendering it. This keeps backend visibility aligned
+      // with the frontend; a hidden checkbox stays absent (the backend then reads it as unset).
       prepared[key] = false;
       changed = true;
     }
@@ -151,7 +155,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const [errorSchema, setErrorSchema] = useState<ErrorSchema | undefined>(undefined);
 
   const [resetToInitialStateDialogOpen, setResetToInitialStateDialogOpen] = useState(false);
-  const [formRenderIndex] = useState(0);
+  const [formRenderIndex, setFormRenderIndex] = useState(0);
 
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
   const [delegateComment, setDelegateComment] = useState('');
@@ -172,6 +176,11 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const uiSchema = task?.uischema
     ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>)
     : undefined;
+
+  // Form-level template mode lives in the uischema root (see form_transformation).
+  const templateMode = (task?.uischema as { 'ui:templateMode'?: FormTemplateMode } | undefined)?.[
+    'ui:templateMode'
+  ];
 
   const isBlockedByDelegateAssignment = !!(
     task?.assigned_to_me &&
@@ -503,6 +512,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     [isDraftLoaded, taskId, debouncedSaveDraft]
   );
 
+  // Apply a template: replace the controlled formData and remount RJSF so it picks up the new values.
+  const handleApplyTemplate = useCallback(
+    (data: object) => {
+      const next = _.cloneDeep(data);
+      setFormData(next);
+      setFormRenderIndex(index => index + 1);
+      if (isDraftLoaded && taskId) {
+        void debouncedSaveDraft(taskId, next);
+      }
+    },
+    [isDraftLoaded, taskId, debouncedSaveDraft]
+  );
+
   if (loadingState[WeDataKey.MY_USER_TASKS] || !isDraftLoaded || (task && formData === undefined)) {
     return (
       <div className="flex flex-col w-full h-full items-center justify-center pb-32 gap-2">
@@ -526,6 +548,18 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
             }}
           />
           <div className="bg-white pt-4 px-3 md:px-12 pc-form pb-20">
+            {taskId &&
+            canSubmitTask &&
+            props.state !== WorkflowState.COMPLETED &&
+            templateMode &&
+            templateMode !== 'off' ? (
+              <FormTemplateActions
+                taskId={taskId}
+                jsonschema={jsonschema}
+                formData={formData}
+                onApply={handleApplyTemplate}
+              />
+            ) : null}
             <TaskForm
               key={`form_${formRenderIndex}`}
               formData={preparedFormData}

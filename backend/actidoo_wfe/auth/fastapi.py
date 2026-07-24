@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from actidoo_wfe.auth.authlib_starlette import OAuthError
 from actidoo_wfe.auth.claims import get_claims, set_claims
-from actidoo_wfe.auth.core import get_login_state, get_token_from_session, set_token_in_session, client
+from actidoo_wfe.auth.core import client, get_login_state, get_token_from_session, refresh_token_if_needed, set_token_in_session
 from actidoo_wfe.auth.hooks import call_login_hooks
 from actidoo_wfe.auth.schema import LoginStateResponseSchema
 from actidoo_wfe.database import get_db
@@ -28,6 +28,7 @@ def do_login(request: Request, redirect_url: str) -> Response:
 
 @router.get("/get_login_state", name="auth_get_login_state")
 def get_login_state_endpoint(request: Request) -> LoginStateResponseSchema:
+    refresh_token_if_needed(request=request)
     loginstate = get_login_state(request=request)
     return LoginStateResponseSchema.model_validate(loginstate.model_dump())
 

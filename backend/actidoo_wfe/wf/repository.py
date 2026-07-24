@@ -200,6 +200,17 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
         db_task.state_cancelled = task.has_state(TaskState.CANCELLED)
         db_task.error_stacktrace = get_stacktrace(workflow=workflow, task_id=task.id)
 
+        became_erroneous = not task_was_erroneous and db_task.state_error
+        recovered_from_error = task_was_erroneous and not db_task.state_error
+
+        if became_erroneous:
+            db_task.error_at = dt_now_naive()
+
+        if recovered_from_error:
+            # task recovered: a future re-failure must count as NEW again
+            db_task.error_at = None
+            db_task.error_reported_at = None
+
         if db_task.state_completed and not task_was_completed:
             # task has just been set completed
             db_task.completed_at = dt_now_naive()
@@ -256,7 +267,7 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
                 )
 
         ### Conditionally fire TaskBecameErroneousEvent
-        if not task_was_erroneous and db_task.state_error:
+        if became_erroneous:
             events.publish_event(events.TaskBecameErroneousEvent(task_id=db_task.id))
 
     all_task_ids = {x.id for x in all_tasks}

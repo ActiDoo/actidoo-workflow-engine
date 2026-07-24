@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_dr" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_dr">
+    <bpmn:participant id="Participant_dr" name="Vorlagen – Drift" processRef="TestFlowTplDrift" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlowTplDrift" name="Vorlagen – Drift" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_dr">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_dr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>DriftForm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_dr</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_dr">
+      <bpmn:outgoing>Flow_start_task</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="DriftForm" name="Drift-Formular">
+      <bpmn:incoming>Flow_start_task</bpmn:incoming>
+      <bpmn:outgoing>Flow_task_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_dr">
+      <bpmn:incoming>Flow_task_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_task" sourceRef="StartEvent_dr" targetRef="DriftForm" />
+    <bpmn:sequenceFlow id="Flow_task_end" sourceRef="DriftForm" targetRef="EndEvent_dr" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_dr">
+      <bpmndi:BPMNShape id="Participant_dr_di" bpmnElement="Participant_dr" isHorizontal="true">
+        <dc:Bounds x="100" y="60" width="600" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InitLane_di" bpmnElement="InitLane" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="570" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_dr_di" bpmnElement="StartEvent_dr">
+        <dc:Bounds x="180" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DriftForm_di" bpmnElement="DriftForm">
+        <dc:Bounds x="280" y="118" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_dr_di" bpmnElement="EndEvent_dr">
+        <dc:Bounds x="440" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_task_di" bpmnElement="Flow_start_task">
+        <di:waypoint x="216" y="158" />
+        <di:waypoint x="280" y="158" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_task_end_di" bpmnElement="Flow_task_end">
+        <di:waypoint x="380" y="158" />
+        <di:waypoint x="440" y="158" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

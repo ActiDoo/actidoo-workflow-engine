@@ -2,7 +2,9 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 import sys
+import threading
 import time
+from types import SimpleNamespace
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -16,12 +18,20 @@ from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+import actidoo_wfe.auth.core as auth_core
 from actidoo_wfe.auth.authlib_starlette import OAuthError, StarletteOAuth2App
-from actidoo_wfe.auth.constants import SESSION_TOKEN_KEY
-from actidoo_wfe.auth.core import FrameworkOAuth2Token
+from actidoo_wfe.auth.claims import get_roles
+from actidoo_wfe.auth.constants import SESSION_IDP_CLAIMS_KEY, SESSION_TOKEN_KEY
+from actidoo_wfe.auth.core import FrameworkOAuth2Token, refresh_token_if_needed
 from actidoo_wfe.auth.fastapi import router as auth_router
 from actidoo_wfe.database import get_db_contextmanager
-from actidoo_wfe.session import SessionMiddleware, SessionModel
+from actidoo_wfe.session import (
+    SessionMiddleware,
+    SessionModel,
+    generate_session_id,
+    load_session,
+    save_session,
+)
 from actidoo_wfe.settings import settings
 
 
@@ -291,8 +301,8 @@ def auth_test_client(monkeypatch, oidc_environment, db_engine_ctx):
             https_only=settings.session_https_only,
         )
 
-        import actidoo_wfe.auth.hooks as hooks_module
         import actidoo_wfe.auth.fastapi as auth_fastapi_module
+        import actidoo_wfe.auth.hooks as hooks_module
 
         monkeypatch.setattr(hooks_module, "call_login_hooks", lambda request, db: None)
         monkeypatch.setattr(auth_fastapi_module, "call_login_hooks", lambda request, db: None)
@@ -402,8 +412,8 @@ def test_login_callback_redirects_to_fallback_after_many_failures(
     auth_test_client,
     monkeypatch,
 ):
-    import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
+    import actidoo_wfe.auth.fastapi as auth_fastapi
 
     def auth_error(self, request: Request, redirect_uri: str, **_: Any):
         raise OAuthError(error="invalid_grant")
@@ -446,8 +456,8 @@ def test_login_callback_invalid_claims_redirects_to_original_target(
     auth_test_client,
     monkeypatch,
 ):
-    import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
+    import actidoo_wfe.auth.fastapi as auth_fastapi
 
     def boom(self, token: dict):
         raise OAuthError(error="invalid_token")
@@ -483,8 +493,8 @@ def test_login_callback_value_error_redirects_to_original_target(
     auth_test_client,
     monkeypatch,
 ):
-    import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
+    import actidoo_wfe.auth.fastapi as auth_fastapi
 
     def boom(self, token: dict):
         raise ValueError("invalid aud")
@@ -538,8 +548,8 @@ def test_login_callback_can_skip_access_token_validation(
     auth_test_client,
     monkeypatch,
 ):
-    import actidoo_wfe.auth.fastapi as auth_fastapi
     import actidoo_wfe.auth.core as auth_core
+    import actidoo_wfe.auth.fastapi as auth_fastapi
 
     monkeypatch.setattr(settings, "validate_and_parse_access_token", False)
 
@@ -660,7 +670,7 @@ def test_initial_login(oidc_environment, auth_test_client):
     assert original_token, "expected OIDC token in session"
 
 
-def test_expired_session_reports_logged_out(oidc_environment, auth_test_client):
+def test_login_state_refreshes_expired_token_with_refresh_token(oidc_environment, auth_test_client):
     client = auth_test_client
     state, _ = _initiate_login(client)
 
@@ -673,7 +683,7 @@ def test_expired_session_reports_logged_out(oidc_environment, auth_test_client):
 
     initial_session = _fetch_session_data(client)
     original_token = dict(initial_session.get(SESSION_TOKEN_KEY, {}))
-    original_received_at = original_token.get("received_at")
+    assert original_token.get("refresh_token") == oidc_environment["refresh_token"]
 
     session_cookie = client.cookies.get("wfesess")
     assert session_cookie, "missing session cookie"
@@ -695,9 +705,296 @@ def test_expired_session_reports_logged_out(oidc_environment, auth_test_client):
     )
     assert login_state_response.status_code == 200
     payload = login_state_response.json()
+    assert payload["is_logged_in"] is True
+    assert payload["can_access_wf"] is True
+
+    refreshed_session = _fetch_session_data(client)
+    refreshed_token = dict(refreshed_session.get(SESSION_TOKEN_KEY, {}))
+    assert refreshed_token["expires_at"] > int(time.time())
+    assert refreshed_token["expires_at"] != mutated_token["expires_at"]
+    assert refreshed_token["refresh_token"] == oidc_environment["refresh_token"]
+
+
+def test_login_state_reports_logged_out_for_expired_token_without_refresh_token(
+    oidc_environment, auth_test_client
+):
+    client = auth_test_client
+    state, _ = _initiate_login(client)
+
+    callback_url = client.app.url_path_for("auth_login_callback")
+    client.get(
+        callback_url,
+        params={"code": oidc_environment["code"], "state": state},
+        follow_redirects=False,
+    )
+
+    session_cookie = client.cookies.get("wfesess")
+    assert session_cookie, "missing session cookie"
+
+    with get_db_contextmanager() as db:
+        record = db.execute(
+            select(SessionModel).where(SessionModel.token == session_cookie),
+        ).scalar_one()
+        mutated_data = dict(record.data or {})
+        mutated_token = dict(mutated_data.get(SESSION_TOKEN_KEY, {}))
+        mutated_token["expires_at"] = int(time.time()) - 20
+        mutated_token.pop("refresh_token", None)
+        mutated_data[SESSION_TOKEN_KEY] = mutated_token
+        record.data = mutated_data
+
+    login_state_url = client.app.url_path_for("auth_get_login_state")
+    login_state_response = client.get(
+        login_state_url,
+        follow_redirects=False,
+    )
+    assert login_state_response.status_code == 200
+    payload = login_state_response.json()
     assert payload["is_logged_in"] is False
 
     refreshed_session = _fetch_session_data(client)
     refreshed_token = dict(refreshed_session.get(SESSION_TOKEN_KEY, {}))
     assert refreshed_token["expires_at"] == mutated_token["expires_at"]
-    assert refreshed_token.get("received_at") == original_received_at
+    assert "refresh_token" not in refreshed_token
+
+
+def _persist_session(data: dict) -> tuple[str, Any]:
+    """Persist a session row and return its (cookie, id) so tests can wire a request or
+    reissue writes against the same row."""
+    cookie = generate_session_id()
+    with get_db_contextmanager() as db:
+        save_session(db=db, id=None, token=cookie, data=data)
+    with get_db_contextmanager() as db:
+        session_id = load_session(db=db, token=cookie).id
+    return cookie, session_id
+
+
+def _seed_session_and_request(session_data: dict) -> SimpleNamespace:
+    """Persist a session row and return a request wired to it (scope + a copy of the data),
+    so refresh_token_if_needed can take the session row lock the real code path uses."""
+    cookie, session_id = _persist_session(session_data)
+    return SimpleNamespace(
+        session=dict(session_data),
+        scope={"session_token": cookie, "session_id": session_id},
+    )
+
+
+def test_refresh_token_if_needed_renews_near_expiry_token(oidc_environment, db_engine_ctx):
+    """A near-expiry token with a refresh token is silently renewed (single spend)."""
+    provider = oidc_environment
+    with db_engine_ctx():
+        near_expiry = {
+            "access_token": "stale-access-token",
+            "refresh_token": provider["refresh_token"],
+            "token_type": "Bearer",
+            "expires_at": int(time.time()) - 10,
+            "id_token": "stale-id-token",
+            "id_info": {"sub": "user-123"},
+        }
+        request = _seed_session_and_request({SESSION_TOKEN_KEY: near_expiry})
+
+        refresh_token_if_needed(request)
+
+        renewed = request.session[SESSION_TOKEN_KEY]
+        assert renewed["access_token"] != "stale-access-token"
+        assert renewed["expires_at"] > int(time.time())
+        assert renewed["refresh_token"] == provider["refresh_token"]
+
+
+def test_refresh_token_if_needed_noop_without_refresh_token():
+    """Without a refresh token there is nothing to renew; the session is untouched."""
+    token = {"access_token": "x", "expires_at": int(time.time()) - 10}
+    request = SimpleNamespace(session={SESSION_TOKEN_KEY: token})
+
+    refresh_token_if_needed(request)
+
+    assert request.session[SESSION_TOKEN_KEY] is token
+
+
+def test_refresh_token_if_needed_noop_when_token_still_fresh(oidc_environment):
+    """A token that is not near expiry is not refreshed (no refresh token is spent)."""
+    provider = oidc_environment
+    fresh = {
+        "access_token": "fresh-access-token",
+        "refresh_token": provider["refresh_token"],
+        "expires_at": int(time.time()) + 3600,
+    }
+    request = SimpleNamespace(session={SESSION_TOKEN_KEY: fresh})
+
+    refresh_token_if_needed(request)
+
+    assert request.session[SESSION_TOKEN_KEY]["access_token"] == "fresh-access-token"
+
+
+def test_refresh_token_if_needed_adopts_concurrently_rotated_token(oidc_environment, db_engine_ctx):
+    """Single-use refresh tokens: if a concurrent request already rotated the token in the
+    store, adopt that fresh token instead of spending the (now consumed) refresh token."""
+    with db_engine_ctx():
+        already_rotated = {
+            "access_token": "already-rotated-access-token",
+            "refresh_token": "rotated-refresh-token",
+            "expires_at": int(time.time()) + 3600,
+        }
+        session_cookie, session_id = _persist_session({SESSION_TOKEN_KEY: already_rotated})
+
+        # This request still holds the pre-rotation (stale, expired) token snapshot.
+        stale = {
+            "access_token": "stale-access-token",
+            "refresh_token": oidc_environment["refresh_token"],
+            "expires_at": int(time.time()) - 10,
+        }
+        request = SimpleNamespace(
+            session={SESSION_TOKEN_KEY: dict(stale)},
+            scope={"session_token": session_cookie, "session_id": session_id},
+        )
+
+        refresh_token_if_needed(request)
+
+        adopted = request.session[SESSION_TOKEN_KEY]
+        # Adopted the store's fresh token; the stale refresh token was NOT spent again.
+        assert adopted["access_token"] == "already-rotated-access-token"
+        assert adopted["refresh_token"] == "rotated-refresh-token"
+
+
+def test_refresh_token_if_needed_spends_refresh_token_once_under_concurrency(
+    oidc_environment, db_engine_ctx, monkeypatch
+):
+    """Two concurrent requests for the same session, both holding an already-expired token,
+    must present the single-use refresh token to the IdP exactly once, and neither may be
+    left logged out: the loser waits for the winner and adopts the rotated token."""
+    monkeypatch.setattr(settings, "validate_and_parse_access_token", False)
+    with db_engine_ctx():
+        stale = {
+            "access_token": "stale-access-token",
+            "refresh_token": oidc_environment["refresh_token"],
+            "expires_at": int(time.time()) - 10,
+        }
+        session_cookie, session_id = _persist_session({SESSION_TOKEN_KEY: dict(stale)})
+
+        calls: list[int] = []
+        calls_lock = threading.Lock()
+
+        def fake_fetch(*_args, **_kwargs):
+            with calls_lock:
+                calls.append(1)
+            time.sleep(0.05)  # hold the session row lock so the second thread must wait
+            return {
+                "access_token": "rotated-access-token",
+                "refresh_token": "rotated-refresh-token",
+                "expires_at": int(time.time()) + 3600,
+            }
+
+        monkeypatch.setattr(auth_core.client, "fetch_access_token", fake_fetch)
+
+        requests_after = []
+        requests_lock = threading.Lock()
+
+        def worker():
+            request = SimpleNamespace(
+                session={SESSION_TOKEN_KEY: dict(stale)},
+                scope={"session_token": session_cookie, "session_id": session_id},
+            )
+            refresh_token_if_needed(request)
+            with requests_lock:
+                requests_after.append(request)
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(calls) == 1, "refresh token was presented to the IdP more than once"
+        with get_db_contextmanager() as db:
+            stored = dict(load_session(db=db, token=session_cookie).data)
+        assert stored[SESSION_TOKEN_KEY]["refresh_token"] == "rotated-refresh-token"
+        # Both requests end up on the rotated token — the loser adopted it rather than
+        # skipping (and then 401ing) on its already-expired token.
+        for request in requests_after:
+            assert request.session[SESSION_TOKEN_KEY]["access_token"] == "rotated-access-token"
+
+
+def test_refresh_token_if_needed_leaves_session_untouched_on_failure(
+    oidc_environment, db_engine_ctx, monkeypatch
+):
+    """A failed refresh (IdP hiccup) must not clear or corrupt the session token."""
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("idp unavailable")
+
+    monkeypatch.setattr(auth_core.client, "fetch_access_token", boom)
+    with db_engine_ctx():
+        stale = {
+            "access_token": "stale-access-token",
+            "refresh_token": oidc_environment["refresh_token"],
+            "expires_at": int(time.time()) - 10,
+        }
+        request = _seed_session_and_request({SESSION_TOKEN_KEY: stale})
+
+        refresh_token_if_needed(request)
+
+        assert request.session[SESSION_TOKEN_KEY]["access_token"] == "stale-access-token"
+        assert request.session[SESSION_TOKEN_KEY]["refresh_token"] == oidc_environment["refresh_token"]
+
+
+def test_refresh_token_if_needed_carries_over_missing_id_token(
+    oidc_environment, db_engine_ctx, monkeypatch
+):
+    """When the refresh response omits id_token/id_info, the originals are kept."""
+    monkeypatch.setattr(settings, "validate_and_parse_access_token", False)
+
+    def fetch_without_id(*_args, **_kwargs):
+        return {
+            "access_token": "new-access-token",
+            "refresh_token": "rotated-refresh-token",
+            "expires_at": int(time.time()) + 3600,
+        }
+
+    monkeypatch.setattr(auth_core.client, "fetch_access_token", fetch_without_id)
+    with db_engine_ctx():
+        stale = {
+            "access_token": "stale-access-token",
+            "refresh_token": oidc_environment["refresh_token"],
+            "expires_at": int(time.time()) - 10,
+            "id_token": "original-id-token",
+            "id_info": {"sub": "user-123"},
+        }
+        request = _seed_session_and_request({SESSION_TOKEN_KEY: stale})
+
+        refresh_token_if_needed(request)
+
+        renewed = request.session[SESSION_TOKEN_KEY]
+        assert renewed["id_token"] == "original-id-token"
+        assert renewed["id_info"] == {"sub": "user-123"}
+
+
+def test_refresh_token_if_needed_updates_roles_from_new_token(
+    oidc_environment, db_engine_ctx, monkeypatch
+):
+    """Roles/claims are re-derived from the refreshed token so IdP role changes take
+    effect instead of staying frozen at login."""
+    monkeypatch.setattr(settings, "validate_and_parse_access_token", False)
+
+    def fetch_with_new_roles(*_args, **_kwargs):
+        return {
+            "access_token": "new-access-token",
+            "refresh_token": "rotated-refresh-token",
+            "expires_at": int(time.time()) + 3600,
+            "id_info": {"sub": "user-123", "realm_access": {"roles": ["wf-admin"]}},
+        }
+
+    monkeypatch.setattr(auth_core.client, "fetch_access_token", fetch_with_new_roles)
+    with db_engine_ctx():
+        stale = {
+            "access_token": "stale-access-token",
+            "refresh_token": oidc_environment["refresh_token"],
+            "expires_at": int(time.time()) - 10,
+        }
+        request = _seed_session_and_request(
+            {
+                SESSION_TOKEN_KEY: stale,
+                SESSION_IDP_CLAIMS_KEY: {"realm_access": {"roles": ["wf-user"]}},
+            }
+        )
+
+        refresh_token_if_needed(request)
+
+        assert "wf-admin" in get_roles(request)

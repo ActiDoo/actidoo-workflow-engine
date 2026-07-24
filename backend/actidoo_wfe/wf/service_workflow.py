@@ -852,12 +852,28 @@ def auto_assign_all_tasks_in_initiator_lane(workflow: BpmnWorkflow):
                 assign_task_without_checks(workflow=workflow, task_id=task.id, user_id=created_by_id)
 
 
+def strip_hidden_field_values(
+    workflow_name: str,
+    form_spec: ReactJsonSchemaFormData,
+    data: dict,
+) -> dict:
+    """Remove values of currently hidden (conditional-hide) fields, preserving everything else."""
+    options_folder = workflow_providers.get_workflow_directory(workflow_name) / "options"
+    functions_env = _get_workflow_functions_env(workflow_name)
+    return validate_task_data(
+        form=form_spec,
+        task_data=data,
+        options_folder=options_folder,
+        functions_env=functions_env,
+        preserve_unknown_fields=True,
+        log_validation_errors=False,
+    ).task_data
+
+
 def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
     """Ensure ready tasks do not expose values of currently hidden form fields."""
 
     tasks = get_ready_and_waiting_usertasks(workflow=workflow)
-    options_folder = workflow_providers.get_workflow_directory(workflow.spec.name) / "options"
-    functions_env = _get_workflow_functions_env(workflow.spec.name)
     for task in tasks:
         form_spec = get_react_json_schema_form_data(task=task)
         if form_spec is None:
@@ -867,15 +883,7 @@ def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
         if not isinstance(task_data, dict) or not task_data:
             continue
 
-        cleaned = validate_task_data(
-            form=form_spec,
-            task_data=task_data,
-            options_folder=options_folder,
-            functions_env=functions_env,
-            preserve_unknown_fields=True,
-            log_validation_errors=False,
-        ).task_data
-
+        cleaned = strip_hidden_field_values(workflow.spec.name, form_spec, task_data)
         task.data.clear()
         task.data.update(cleaned)
 

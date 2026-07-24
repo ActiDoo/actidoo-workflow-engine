@@ -18,7 +18,8 @@
                     },
                     "region": true
                 }
-            }
+            },
+            "title": "Dynamic list (employees)"
         }
     },
     "allOf": [

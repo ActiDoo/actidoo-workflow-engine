@@ -57,6 +57,8 @@
         "ui:arrayAllowAddRemove": "True",
         "ui:arrayOverviewButtonText": "Overview",
         "ui:defaultRepetitions": 1,
-        "ui:label": "Dynamic list (employees)"
-    }
+        "ui:label": "Dynamic list (employees)",
+        "ui:copyable": true
+    },
+    "ui:templateMode": "blacklist"
 }

@@ -215,4 +215,7 @@ def sanitize_metadata_value(value: str | None) -> str:
     safe_chars = "-_. "
     # quote() nimmt str, encodet nach UTF-8 und ersetzt Nicht-ASCII durch %XX
     # from urllib.parse import quote, unquote
+
+    value = value.strip()
+
     return quote(value, safe=safe_chars, encoding="utf-8", errors="strict")

@@ -25,6 +25,7 @@ import {
 import { fetchPost } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
 import { PcValueLabelItem } from '@/models/models';
+import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import _ from 'lodash';
 
 export default function CustomArrayFieldTemplate<
@@ -43,6 +44,7 @@ export default function CustomArrayFieldTemplate<
   const [dynamicSelectLabels, setDynamicSelectLabels] = useState<
     Record<string, Record<string, string>>
   >({});
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const itemUiSchema = (props.uiSchema as any)?.items;
   const itemUiSchemaSignature = JSON.stringify(itemUiSchema ?? null);
   const dynamicSelectConfigs = useMemo<Record<string, any>>(() => {
@@ -173,7 +175,7 @@ export default function CustomArrayFieldTemplate<
               property_path: propertyPath,
               search: '',
               include_value: values.length === 1 ? values[0] : values,
-              form_data: (props.registry as any)?.formContext?.formData,
+              form_data: stripAttachmentPayload((props.registry as any)?.formContext?.formData),
             });
 
             const options = (response?.data?.options ?? []) as PcValueLabelItem[];
@@ -308,9 +310,48 @@ export default function CustomArrayFieldTemplate<
     return <Table columns={<>{tableColumns}</>}>{tableRows}</Table>;
   };
 
-  const reviewContent = renderTable(items, props.formData as any[]);
-
   const allowAddRemove = String((uiOptions as any)?.arrayAllowAddRemove ?? 'True') === 'True';
+
+  // Read-only: fetch form data with hidden fields stripped (hide-if is server-side only);
+  // fieldPathId.path locates this (possibly nested) list in the cleaned data. Falls back to raw.
+  const openOverview = async (): Promise<void> => {
+    let dataArray = (props.formData as any[]) ?? [];
+    const fullFormData = (props.registry as any)?.formContext?.formData;
+    if (effectiveTaskId && fullFormData) {
+      try {
+        setOverviewLoading(true);
+        const response = await fetchPost(getApiUrl('user/strip_hidden_fields'), {
+          task_id: effectiveTaskId,
+          form_data: fullFormData,
+        });
+        const cleaned = response?.data?.form_data;
+        const slice = cleaned ? _.get(cleaned, props.fieldPathId?.path as any) : undefined;
+        if (Array.isArray(slice)) {
+          dataArray = slice;
+        }
+      } catch (error) {
+        console.error('Failed to strip hidden fields for overview', error);
+      } finally {
+        setOverviewLoading(false);
+      }
+    }
+
+    const { close } = showDialog({
+      children: renderTable(items, dataArray),
+      footer: (
+        <Bar
+          endContent={
+            <Button
+              onClick={() => {
+                close();
+              }}>
+              Close
+            </Button>
+          }
+        />
+      ),
+    });
+  };
 
   return (
     <div>
@@ -329,23 +370,8 @@ export default function CustomArrayFieldTemplate<
           {props.items.length > 0 ? (
             <Button
               design={ButtonDesign.Transparent}
-              onClick={() => {
-                const { close } = showDialog({
-                  children: reviewContent,
-                  footer: (
-                    <Bar
-                      endContent={
-                        <Button
-                          onClick={() => {
-                            close();
-                          }}>
-                          Close
-                        </Button>
-                      }
-                    />
-                  ),
-                });
-              }}>
+              disabled={overviewLoading}
+              onClick={openOverview}>
               {uiOptions.arrayOverviewButtonText
                 ? (uiOptions.arrayOverviewButtonText as string)
                 : 'Overview'}

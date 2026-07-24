@@ -50,6 +50,9 @@ const AdminWorkflows = React.lazy(
   async () => await import('@/pages/admin/workflows/AdminWorkflows')
 );
 const AdminTasks = React.lazy(async () => await import('@/pages/admin/tasks/AdminTasks'));
+const AdminErroneousTasks = React.lazy(
+  async () => await import('@/pages/admin/erroneous-tasks/AdminErroneousTasks')
+);
 const AdminTaskDetails = React.lazy(
   async () => await import('@/pages/admin/tasks/details/AdminTaskDetails')
 );
@@ -70,6 +73,8 @@ const StartWorkflowPreview = React.lazy(
   async () => await import('@/pages/start-workflow-preview/StartWorkflowPreview')
 );
 const About = React.lazy(async () => await import('@/pages/about/About'));
+const AboutHelp = React.lazy(async () => await import('@/pages/about/AboutHelp'));
+const AboutNotices = React.lazy(async () => await import('@/pages/about/AboutNotices'));
 const DataModels = React.lazy(async () => await import('@/pages/data/DataModels'));
 const DataModelTable = React.lazy(async () => await import('@/pages/data/DataModelTable'));
 const DataModelDetail = React.lazy(async () => await import('@/pages/data/DataModelDetail'));
@@ -118,6 +123,7 @@ const Wrapper: React.FC = () => {
     const subNav = [
       { title: t('navigation.adminWorkflows'), to: '/admin/all-workflows' },
       { title: t('navigation.adminTasks'), to: '/admin/all-tasks' },
+      { title: t('navigation.adminErroneousTasks'), to: '/admin/erroneous-tasks' },
       { title: t('navigation.adminUsers'), to: '/admin/all-users' },
     ];
 
@@ -258,6 +264,15 @@ const router = createBrowserRouter(
           errorElement={<PcErrorView />}
         />
         <Route
+          path="/admin/erroneous-tasks"
+          element={
+            <WeAdminRoute>
+              <AdminErroneousTasks />
+            </WeAdminRoute>
+          }
+          errorElement={<PcErrorView />}
+        />
+        <Route
           path="/admin/all-workflows"
           element={
             <WeAdminRoute>
@@ -304,7 +319,11 @@ const router = createBrowserRouter(
           element={<StartWorkflowPreview />}
           errorElement={<PcErrorView />}
         />
-        <Route path="/about" element={<About />} errorElement={<PcErrorView />} />
+        <Route path="/about" element={<About />} errorElement={<PcErrorView />}>
+          <Route index element={<Navigate to="help" replace />} />
+          <Route path="help" element={<AboutHelp />} errorElement={<PcErrorView />} />
+          <Route path="notices" element={<AboutNotices />} errorElement={<PcErrorView />} />
+        </Route>
         <Route path="/data" element={<DataModels />} errorElement={<PcErrorView />} />
         <Route
           path="/data/:modelName"

@@ -12,5 +12,6 @@
             "select_static"
         ],
         "ui:widget": "SelectStatic"
-    }
+    },
+    "ui:templateMode": "blacklist"
 }

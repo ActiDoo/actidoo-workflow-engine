@@ -10,6 +10,7 @@
   ],
   "type": "default",
   "id": "BffForm2",
+  "template_mode": "off",
   "executionPlatform": "Camunda Cloud",
   "executionPlatformVersion": "8.4.0",
   "schemaVersion": 16

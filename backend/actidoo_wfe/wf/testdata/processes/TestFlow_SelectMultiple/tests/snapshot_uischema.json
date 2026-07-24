@@ -67,5 +67,6 @@
             "select_peaul"
         ],
         "ui:widget": "MultiSelectStatic"
-    }
+    },
+    "ui:templateMode": "blacklist"
 }

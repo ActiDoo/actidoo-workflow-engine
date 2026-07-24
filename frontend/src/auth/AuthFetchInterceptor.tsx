@@ -12,7 +12,9 @@ export function interceptFetch(): void {
       return response;
     },
     async error => {
-      if (error.response.status === 401) {
+      // A network failure (e.g. connection reset) has no response — guard against it so
+      // this handler does not throw its own TypeError and mask the real error.
+      if (error.response?.status === 401) {
         login();
       }
       return await Promise.reject(error);

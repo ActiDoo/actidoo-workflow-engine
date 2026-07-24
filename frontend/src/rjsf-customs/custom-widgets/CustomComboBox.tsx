@@ -12,6 +12,10 @@ import { FilterOptionOption } from 'react-select/dist/declarations/src/filters';
 import { WeComboBox } from '@/utils/components/WeComboBox';
 import { PcValueLabelItem } from '@/models/models';
 import { debounce } from 'lodash';
+import { useDispatch } from 'react-redux';
+import { addToast } from '@/store/ui/actions';
+import { WeToastContent } from '@/utils/components/WeToast';
+import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 
 const CustomComboBox = (props: WidgetProps): ReactElement => {
   const [options, setOptions] = useState<PcValueLabelItem[] | undefined>(undefined);
@@ -23,6 +27,7 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
   const isMultiple = props.schema.type === 'array';
   const isDisabled = props.disabled ?? props.readonly;
   const lastValueChangeRef = useRef(Date.now());
+  const dispatch = useDispatch();
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
@@ -41,7 +46,7 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
         property_path: props.uiSchema['ui:path'],
         search,
         include_value: props?.value,
-        form_data: (props.registry as any)?.formContext?.formData,
+        form_data: stripAttachmentPayload((props.registry as any)?.formContext?.formData),
       });
 
       return res.data;
@@ -50,7 +55,10 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
       setOptions(data.options);
     },
     onError: () => {
-      console.log('an error occurred');
+      // Keep the field usable after a failed search: clear the loading/stale state so the
+      // menu shows the standard "no options" and a corrected input re-triggers the search.
+      setOptions([]);
+      dispatch(addToast(<WeToastContent text={`Could not load options. Please try again.`} />));
     },
   });
 

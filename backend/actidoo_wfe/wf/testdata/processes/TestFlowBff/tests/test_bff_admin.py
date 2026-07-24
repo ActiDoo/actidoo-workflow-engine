@@ -6,11 +6,14 @@ import logging
 from datetime import timedelta
 from pathlib import Path
 
+from sqlalchemy import select
+
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff import bff_admin
+from actidoo_wfe.wf.models import WorkflowInstanceTask
 from actidoo_wfe.wf.bff.bff_admin_schema import (
     CancelWorkflowInstanceResponse,
     GetAllTasksResponse,
@@ -475,6 +478,51 @@ def test_admin_system_information(db_engine_ctx):
 
         assert status == 200
         assert json_resp.build_number  # default "dev" in tests
+
+
+def test_admin_get_all_tasks_filters_erroneous_of_running_instances(db_engine_ctx):
+    """The filter combination for the admin view "erroneous tasks of running workflows":
+    f_state_error=True + f_workflow_instance___is_completed=False must exclude
+    erroneous tasks whose instance is already completed."""
+    with db_engine_ctx():
+        db = SessionLocal()
+
+        completed = _create_completed_workflow(db=db)
+        completed_task = db.execute(
+            select(WorkflowInstanceTask).where(
+                WorkflowInstanceTask.workflow_instance_id == completed.workflow_instance_id,
+            ),
+        ).scalars().first()
+        completed_task.state_error = True
+        db.commit()
+
+        running = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"admin": ["wf-admin"], "initiator": ["wf-user"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        running.user("initiator").submit(
+            task_data=FORM1_DATA_TRIGGER_ERROR,
+            workflow_instance_id=running.workflow_instance_id,
+        )
+
+        params = bff_admin.AdminWorkflowInstanceTasksBffTableQuerySchema(
+            f_state_error=True,
+            f_workflow_instance___is_completed=False,
+        )
+        result = service_application.bff_admin_get_all_tasks(
+            db=db,
+            user_id=running.user("admin").user.id,
+            bff_table_request_params=params,
+        )
+
+        assert result.COUNT > 0
+        assert all(t.state_error for t in result.ITEMS)
+        assert all(not t.workflow_instance.is_completed for t in result.ITEMS)
+        returned_instance_ids = {t.workflow_instance.id for t in result.ITEMS}
+        assert running.workflow_instance_id in returned_instance_ids
+        assert completed.workflow_instance_id not in returned_instance_ids
 
 
 def test_admin_get_task_states_per_workflow(db_engine_ctx):

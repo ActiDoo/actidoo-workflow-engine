@@ -4,6 +4,7 @@
 import { BusyIndicator, BusyIndicatorSize, Icon, Text } from '@ui5/webcomponents-react';
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import { loadAndShowFile } from '@/services/HelperService';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
@@ -16,12 +17,14 @@ interface MultiFileRowProps {
 }
 export const MultiFileRow: React.FC<MultiFileRowProps> = props => {
   const dispatch = useDispatch();
+  const { taskId } = useParams<{ taskId: string }>();
   const [isLoading, setIsLoading] = useState(false);
 
+  // The download endpoint authorizes per task, so it needs the current task id (from the route).
   const downloadFile = (file: PcFile): void => {
-    if (file.hash) {
+    if (taskId && file.hash) {
       setIsLoading(() => true);
-      loadAndShowFile('user/download_attachment', { hash: file.hash })
+      loadAndShowFile('user/download_attachment', { task_id: taskId, hash: file.hash })
         .catch(() => {
           dispatch(
             addToast(

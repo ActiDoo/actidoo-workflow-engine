@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_wl" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_wl">
+    <bpmn:participant id="Participant_wl" name="Vorlagen – Whitelist" processRef="TestFlowTplWhitelist" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlowTplWhitelist" name="Vorlagen – Whitelist" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_wl">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_wl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>WhitelistForm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_wl</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_wl">
+      <bpmn:outgoing>Flow_start_task</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="WhitelistForm" name="Whitelist-Formular">
+      <bpmn:incoming>Flow_start_task</bpmn:incoming>
+      <bpmn:outgoing>Flow_task_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_wl">
+      <bpmn:incoming>Flow_task_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_task" sourceRef="StartEvent_wl" targetRef="WhitelistForm" />
+    <bpmn:sequenceFlow id="Flow_task_end" sourceRef="WhitelistForm" targetRef="EndEvent_wl" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_wl">
+      <bpmndi:BPMNShape id="Participant_wl_di" bpmnElement="Participant_wl" isHorizontal="true">
+        <dc:Bounds x="100" y="60" width="600" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InitLane_di" bpmnElement="InitLane" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="570" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_wl_di" bpmnElement="StartEvent_wl">
+        <dc:Bounds x="180" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="WhitelistForm_di" bpmnElement="WhitelistForm">
+        <dc:Bounds x="280" y="118" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_wl_di" bpmnElement="EndEvent_wl">
+        <dc:Bounds x="440" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_task_di" bpmnElement="Flow_start_task">
+        <di:waypoint x="216" y="158" />
+        <di:waypoint x="280" y="158" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_task_end_di" bpmnElement="Flow_task_end">
+        <di:waypoint x="380" y="158" />
+        <di:waypoint x="440" y="158" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
