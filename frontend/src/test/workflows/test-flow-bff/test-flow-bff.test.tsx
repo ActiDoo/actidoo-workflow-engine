@@ -41,17 +41,22 @@ describe('Test Flow BFF — Form1', () => {
     });
   });
 
-  it('defaults the untouched checkbox to false in the payload', async () => {
+  it('defaults the untouched checkbox to false and omits all untouched fields', async () => {
     const { user, submitted, field, submit } = renderTaskForm(form1);
 
     await user.type(field('required_text'), 'Hello BFF');
     await submit();
 
     expect(submitted).toHaveBeenCalledTimes(1);
-    expect(submitted.mock.calls[0][0]).toEqual({
+    const payload = submitted.mock.calls[0][0];
+    expect(payload).toEqual({
       required_text: 'Hello BFF',
       trigger_error: false,
     });
+    expect(payload).not.toHaveProperty('short_code');
+    expect(payload).not.toHaveProperty('category');
+    expect(payload).not.toHaveProperty('attachment');
+    expect(payload).not.toHaveProperty('optional_note');
   });
 
   it('blocks submission when the required field is missing', async () => {
