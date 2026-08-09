@@ -1,6 +1,6 @@
 # ADR 005: Workflow Project Database Migrations
 
-**Status:** Proposed
+**Status:** Implemented
 **Date:** 2026-02-11
 
 ## Context

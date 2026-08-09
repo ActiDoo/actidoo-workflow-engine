@@ -1,6 +1,6 @@
 # ADR 002: Extension Architecture
 
-**Status:** Accepted
+**Status:** Implemented
 **Date:** 2026-02-11
 
 ## Context

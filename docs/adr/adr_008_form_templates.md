@@ -1,7 +1,7 @@
 # ADR 008: Form Templates (User-Scoped Reusable Form Inputs)
 
-**Status:** Accepted
-**Date:** 2026-06-08 (accepted 2026-06-17)
+**Status:** Implemented
+**Date:** 2026-06-08
 
 ## Context
 

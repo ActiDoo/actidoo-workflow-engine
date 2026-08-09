@@ -1,6 +1,6 @@
 # ADR 007: Lane-Level Role Notifications
 
-**Status:** Proposed
+**Status:** Implemented
 **Date:** 2026-05-06
 
 ## Context

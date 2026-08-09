@@ -1,6 +1,6 @@
 # ADR 003: Connector Registry
 
-**Status:** Proposed
+**Status:** Implemented
 **Date:** 2026-02-11
 
 ## Context

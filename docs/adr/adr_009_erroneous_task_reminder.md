@@ -1,6 +1,6 @@
 # ADR 009: Daily Reminder Mail for Erroneous Tasks
 
-**Status:** Proposed
+**Status:** Implemented
 **Date:** 2026-07-03
 
 ## Context

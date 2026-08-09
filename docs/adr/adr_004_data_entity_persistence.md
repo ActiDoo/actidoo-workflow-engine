@@ -1,6 +1,6 @@
 # ADR 004: Data Model Persistence
 
-**Status:** Proposed
+**Status:** Implemented
 **Date:** 2026-02-11
 
 ## Context

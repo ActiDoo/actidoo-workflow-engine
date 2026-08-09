@@ -1,8 +1,7 @@
 # ADR 006: Workflow Data REST API
 
-**Status:** Proposed
+**Status:** Implemented
 **Date:** 2026-02-11
-**Updated:** 2026-06-11
 
 ## Context
 

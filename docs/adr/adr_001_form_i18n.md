@@ -1,6 +1,6 @@
 # ADR 001: Internationalization of Process Forms
 
-**Status:** Accepted
+**Status:** Implemented
 **Date:** 2025-05-09
 
 ## Context
