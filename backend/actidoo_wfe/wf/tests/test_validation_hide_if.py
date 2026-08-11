@@ -9,9 +9,9 @@ evaluation:
 - A missing reference value counts as null: ``null = x`` is false, ``null != x``
   is true, and comparisons against the ``null`` literal match exactly the unset
   case.
-- Disabled references cannot be trusted from the client: their values come from
-  ``authoritative_disabled_values`` (the task's stored data) and are stripped
-  from the result again.
+- Disabled references cannot be trusted from the client: their effective values
+  come from ``authoritative_disabled_values`` (the task's stored data), falling
+  back to the schema default, and stay in the result (ADR 010).
 - Values submitted for hidden fields are dropped without raising errors, while
   visible required fields stay required.
 """
@@ -128,7 +128,7 @@ def test__submitted_disabled_value_cannot_override_stored_one():
     assert "approval" in (result.error_schema or {})
 
 
-def test__garbage_in_disabled_field_is_ignored():
+def test__garbage_in_disabled_field_is_replaced_by_the_stored_value():
     result = _validate(
         DISABLED_REFERENCE_FORM,
         {"testclass": "NOT_A_VALID_OPTION", "approval": "approved"},
@@ -136,7 +136,7 @@ def test__garbage_in_disabled_field_is_ignored():
     )
 
     assert not result.error_schema
-    assert "testclass" not in result.task_data
+    assert result.task_data["testclass"] == "b"
 
 
 def test__unset_disabled_reference_behaves_like_feel_null():

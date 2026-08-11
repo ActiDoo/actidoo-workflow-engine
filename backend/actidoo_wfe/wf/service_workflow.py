@@ -44,6 +44,7 @@ from actidoo_wfe.wf.constants import (
     INTERNAL_DATA_KEY_COMPLETED_BY_USER,
     INTERNAL_DATA_KEY_DELEGATE_COMMENT,
     INTERNAL_DATA_KEY_STACKTRACE,
+    ROW_ID_KEY,
 )
 from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf.exceptions import (
@@ -56,6 +57,10 @@ from actidoo_wfe.wf.exceptions import (
 from actidoo_wfe.wf.service_form import (
     get_options,
     get_options_detailed,
+    get_row_id,
+    index_rows_by_id,
+    iter_dynamic_lists,
+    use_row_id_matching,
     validate_task_data,
 )
 from actidoo_wfe.wf.spiff_customized import (
@@ -189,6 +194,54 @@ def run_workflow(workflow: BpmnWorkflow):
     return result
 
 
+def _merge_list_of_dicts_by_row_id(stored, upd_list):
+    """Merge a dynamic list by row identity (ADR 010): result order and row
+    existence follow the submission. Rows matched by ID are deep-merged so their
+    stored, backend-owned values survive; rows with unknown or missing IDs are
+    new and are never matched against stored data; stored rows whose ID is
+    absent from the submission are deleted."""
+    stored_by_id = index_rows_by_id(stored)
+
+    result = []
+    for new_value in upd_list:
+        if not isinstance(new_value, collections.abc.Mapping):
+            # Hidden lists bypass item-type validation; fail fast instead of
+            # persisting junk that would crash downstream consumers later.
+            raise TypeError(f"dynamic-list rows must be objects, got {type(new_value).__name__}")
+        stored_item = stored_by_id.get(get_row_id(new_value))
+        base = deepcopy(stored_item) if isinstance(stored_item, collections.abc.Mapping) else {}
+        result.append(update(base, new_value))
+    return result
+
+
+def _merge_list_of_dicts_by_index(dest, k, v):
+    """Legacy index-aligned list merge. Only used as fallback for submissions
+    that carry no row IDs (old frontends, forms opened before the rollout)."""
+    if k not in dest or not isinstance(dest[k], list):  # in dest we may not have a list or some other type (see new_list or some_other_list_type_dict)
+        dest[k] = [{}] * len(v)  # create an empty list with as many elements as v
+    elif len(dest[k]) < len(v):
+        dest[k].extend([{}] * (len(v) - len(dest[k])))  # if dest[k] is smaller extend it with a list of empty dicts to get the same size as v
+    elif len(dest[k]) > len(v):
+        del dest[k][-(len(dest[k]) - len(v)) :]  # if dest[k] is bigger then delete the last items
+        # Index alignment cannot express which row was deleted and mixes neighbors
+        # after a middle-row deletion. The row-id merge solves this; this branch
+        # only remains until monitoring shows ID-less submissions no longer happen.
+
+    # now we have equally sized lists of the same type on both sides and can safely update each element of dest:
+    assert len(v) == len(dest[k])
+
+    for idx, new_value in enumerate(v):
+        # We can't write
+        #    update(dest[k][idx], new_value)
+        #    or dest[k][idx] = update(dest[k][idx], new_value)
+        # but we need a deepcopy, because otherwise update() insert 'new_value' into every index of 'dest[k]'
+        # and not only at position 'idx'
+        # This happens only if dest[k] was initialized with empty dicts: [{}]*len(v)
+        tmp = deepcopy(dest[k][idx])
+        dest[k][idx] = update(tmp, new_value)
+        # update((dest[k])[idx], new_value)
+
+
 def update(dest, upd):
     """A deep update function, which merges the contents of two dictionaries."""
     # we assume that d and u are dicts (or more general 'Mappings')
@@ -205,30 +258,14 @@ def update(dest, upd):
                 # if it's a list, it can be a list of dicts [{...}, {...}] or a list of strings ["..", ".."]
                 # we only support lists of same types and therfore only check the first entry for its type
                 if isinstance(v[0], collections.abc.Mapping):  # [{...}, {...}]
-                    if k not in dest or not isinstance(dest[k], list):  # in dest we may not have a list or some other type (see new_list or some_other_list_type_dict)
-                        dest[k] = [{}] * len(v)  # create an empty list with as many elements as v
-                    elif len(dest[k]) < len(v):
-                        dest[k].extend([{}] * (len(v) - len(dest[k])))  # if dest[k] is smaller extend it with a list of empty dicts to get the same size as v
-                    elif len(dest[k]) > len(v):
-                        del dest[k][-(len(dest[k]) - len(v)) :]  # if dest[k] is bigger then delete the last items
-                        # TODO actually we do not know that the user intended to remove the last item!
-                        # This works only if all the items contain ALL the properties, otherwise we might mix different items together
-                        # But to solve this a list is not sufficient, we would need a data structure, which stores the information if an item got deleted
-
-                    # now we have equally sized lists of the same type on both sides and can safely update each element of dest:
-                    assert len(v) == len(dest[k])
-
-                    for idx, new_value in enumerate(v):
-                        # We can't write
-                        #    update(dest[k][idx], new_value)
-                        #    or dest[k][idx] = update(dest[k][idx], new_value)
-                        # but we need a deepcopy, because otherwise update() insert 'new_value' into every index of 'dest[k]'
-                        # and not only at position 'idx'
-                        # This happens only if dest[k] was initialized with empty dicts: [{}]*len(v)
-                        tmp = deepcopy(dest[k][idx])
-                        dest[k][idx] = update(tmp, new_value)
-                        # update((dest[k])[idx], new_value)
-
+                    # ID matching requires IDs on BOTH sides: a stored list
+                    # without IDs is pre-rollout data - index-matching it keeps
+                    # its backend-owned values and the submitted IDs stick, so
+                    # the very next submission matches by ID.
+                    if use_row_id_matching(dest.get(k), v):
+                        dest[k] = _merge_list_of_dicts_by_row_id(dest.get(k), v)
+                    else:
+                        _merge_list_of_dicts_by_index(dest, k, v)
                 else:  # ["", ""] or any other list
                     # the list of strings in dest mus be overwritten with the exact list of v.
                     dest[k] = []
@@ -264,8 +301,19 @@ def execute_user_task(
     # Prevent the principal from working while a different delegate is assigned.
     assert not (assigned_delegate_user_id is not None and assigned_user_id == user.id and assigned_delegate_user_id != user.id)
 
+    form_spec = get_react_json_schema_form_data(task=task)
+    if form_spec is not None:
+        # Monitored marker for retiring the index fallback: fires only for
+        # dynamic lists submitted without IDs (legacy frontend / stale form).
+        warn_id_less_dynamic_list_submissions(form_spec.uischema, cleaned_task_data)
+
     # Deep-Update task.data with cleaned_task_data
     update(task.data, cleaned_task_data)
+
+    # Rows added by this submission may still lack an ID (old frontend); stamp
+    # them before the engine advances so downstream tasks see stable identities.
+    if form_spec is not None:
+        stamp_missing_row_ids(form_spec.uischema, task.data)
 
     set_stacktrace(
         workflow=workflow,
@@ -870,8 +918,30 @@ def strip_hidden_field_values(
     ).task_data
 
 
+def stamp_missing_row_ids(uischema: dict, data) -> None:
+    """Stamp a ``ROW_ID_KEY`` onto every dynamic-list item that lacks one
+    (ADR 010). Only form dynamic lists are touched - lists written by service
+    tasks stay untouched, and no persisted schema knows the technical field."""
+    for _path, rows in iter_dynamic_lists(uischema, data):
+        for row in rows:
+            if isinstance(row, dict) and get_row_id(row) is None:
+                row[ROW_ID_KEY] = str(uuid.uuid4())
+
+
+def warn_id_less_dynamic_list_submissions(uischema: dict, data) -> None:
+    """Log the monitored ``row-id-merge-fallback`` marker for every dynamic
+    list whose submitted rows all lack row IDs (legacy frontend, or a form
+    delivered before the rollout). Attachment arrays and service-task lists
+    never pollute the signal."""
+    for path, rows in iter_dynamic_lists(uischema, data):
+        dict_rows = [row for row in rows if isinstance(row, dict)]
+        if dict_rows and all(get_row_id(row) is None for row in dict_rows):
+            log.warning("row-id-merge-fallback: dynamic list %r submitted without %s", path[-1], ROW_ID_KEY)
+
+
 def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
-    """Ensure ready tasks do not expose values of currently hidden form fields."""
+    """Ensure ready tasks do not expose values of currently hidden form fields,
+    and lazily migrate their dynamic-list rows to carry row IDs."""
 
     tasks = get_ready_and_waiting_usertasks(workflow=workflow)
     for task in tasks:
@@ -886,6 +956,7 @@ def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
         cleaned = strip_hidden_field_values(workflow.spec.name, form_spec, task_data)
         task.data.clear()
         task.data.update(cleaned)
+        stamp_missing_row_ids(form_spec.uischema, task.data)
 
 
 class LaneMappingSchema(BaseModel):

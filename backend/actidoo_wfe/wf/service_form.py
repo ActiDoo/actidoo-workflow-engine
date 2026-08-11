@@ -9,6 +9,7 @@ This module implements logic around forms:
 """
 
 import ast
+import collections.abc
 import copy
 import csv
 import logging
@@ -27,13 +28,13 @@ from SpiffWorkflow.bpmn.script_engine.feel_engine import fixes as feel_fixes
 from actidoo_wfe.helpers.collections import remove_item, set_item
 from actidoo_wfe.helpers.datauri import DATA_URI_RE
 from actidoo_wfe.helpers.json_traverse import get_position_tracker
-from actidoo_wfe.wf.error_schema import validate_and_create_error_dict
+from actidoo_wfe.wf.error_schema import set_nested_error, validate_and_create_error_dict
 from actidoo_wfe.wf.exceptions import (
     OptionFunctionNotFound,
     OptionsFileCouldNotBeReadException,
     OptionsFileNotExistsException,
 )
-from actidoo_wfe.wf.constants import TemplateMode
+from actidoo_wfe.wf.constants import ROW_ID_KEY, UI_FIELD_LAYOUT, TemplateMode
 from actidoo_wfe.wf.form_transformation import _get_subschema
 from actidoo_wfe.wf.option_task_helper import OptionTaskHelper
 from actidoo_wfe.wf.types import (
@@ -43,6 +44,10 @@ from actidoo_wfe.wf.types import (
 from actidoo_wfe.wf.validation_task_helper import ValidationTaskHelper
 
 log = logging.getLogger(__name__)
+
+# Sentinel for "the field declares no default" (a schema default on a disabled
+# field is a forced assignment, ADR 010 - None would be a valid default value).
+_NO_DEFAULT = object()
 
 # Form Service
 
@@ -1012,14 +1017,15 @@ def validate_task_data(
     check, and applies the hide-if handling so that hidden values cannot
     leak into user tasks.
 
-    Disabled fields belong to the server, and ``authoritative_disabled_values``
+    Disabled fields belong to the backend, and ``authoritative_disabled_values``
     states where their values come from. ``None`` means ``task_data`` itself is
     trusted engine data (e.g. cleaning stored task data), so disabled fields are
     validated like any other. A dict (typically the task's current data) means
     ``task_data`` is an untrusted submission: disabled fields are overwritten
-    with the authoritative values so hide-if conditions evaluate against the
-    real ones (matching the frontend's FEEL evaluation), their content is not
-    validated, and they are stripped from the result afterwards.
+    with their effective value - the authoritative (stored) one, else the schema
+    default, which acts as a declared forced assignment (ADR 010). The effective
+    value feeds the hide-if evaluation (matching the frontend's FEEL evaluation),
+    is not content-validated, and stays in the result so the merge persists it.
 
     The function returns the cleaned task data together with an error payload."""
 
@@ -1031,16 +1037,25 @@ def validate_task_data(
         if preserve_unknown_fields:
             removed_unknown_fields.append((path, value))
 
-    disabled_field_paths: list[list[str]] = []
     if authoritative_disabled_values is not None:
-        disabled_field_paths = list(_iter_disabled_field_paths(form.jsonschema, form.uischema))
-        for disabled_path in disabled_field_paths:
-            _overwrite_disabled_field_with_authoritative_value(task_data, authoritative_disabled_values, disabled_path)
+        for disabled_path, default in _iter_disabled_field_paths(form.jsonschema, form.uischema):
+            _overwrite_disabled_field_with_authoritative_value(
+                task_data,
+                authoritative_disabled_values,
+                disabled_path,
+                default=default,
+            )
 
     validation_schema = get_jsonschema_for_validation(
         form,
         opaque_disabled_fields=authoritative_disabled_values is not None,
     )
+    if authoritative_disabled_values is not None:
+        # Submissions legitimately carry row IDs for dynamic-list items. The
+        # validation schema is already a throwaway copy, so admitting the
+        # technical ROW_ID_KEY here keeps the submitted IDs through unknown-field
+        # cleaning without the field ever entering a persisted schema (ADR 010).
+        inject_row_ids_into_validation_schema(validation_schema, form.uischema)
 
     cleaned_task_data = remove_unknown_fields_from_task_data(
         task_data,
@@ -1085,15 +1100,23 @@ def validate_task_data(
 
     untracked_task_data = copy.deepcopy(tracked_task_data)
 
+    if authoritative_disabled_values is not None:
+        # Submissions must not repeat a row ID within one list - the merge could
+        # not tell the rows apart. Checked after hidden-value removal: whatever
+        # is stripped can no longer reject. Trusted engine data is not checked.
+        duplicate_paths = _collect_duplicate_row_id_paths(form.uischema, untracked_task_data)
+        if duplicate_paths:
+            error_schema = error_schema if error_schema is not None else {}
+            for duplicate_path in duplicate_paths:
+                set_nested_error(error_schema, duplicate_path, "duplicate row id")
+
     if preserve_unknown_fields and removed_unknown_fields:
         for path, value in removed_unknown_fields:
             set_item(untracked_task_data, path, value)
 
-    for disabled_path in disabled_field_paths:
-        # The authoritative values only served the hide-if evaluation; overwriting with
-        # "nothing stored" drops them, so the stored task data remains the single
-        # source of truth for disabled fields.
-        _overwrite_disabled_field_with_authoritative_value(untracked_task_data, {}, disabled_path)
+    # Disabled fields keep their effective values (stored, else schema default) in
+    # the cleaned result on purpose: the merge persists them, which is what turns a
+    # default on a disabled field into a real forced assignment (ADR 010).
 
     if log_validation_errors:
         log.debug("< validate_task_data, errors = %s", error_schema)
@@ -1170,31 +1193,40 @@ def get_attachments(task_data) -> list[UploadedAttachmentRepresentation]:
 def convert_disabled_fields_to_opaque_fields(global_jsonschema, global_uischema):
     """Rewrite every disabled field to accept any content without validating it.
 
-    Their (server-provided) values stay in the instance, so hide-if conditions
-    referencing a disabled field evaluate against the real value — matching the
-    frontend's FEEL evaluation. Callers feed authoritative values in and strip
-    the fields from the validated result (see ``validate_task_data``)."""
-    for path in list(_iter_disabled_field_paths(global_jsonschema, global_uischema)):
+    Their (backend-provided) values stay in the instance, so hide-if conditions
+    referencing a disabled field evaluate against the effective value — matching
+    the frontend's FEEL evaluation. ``validate_task_data`` feeds authoritative
+    values (or the declared default) in and keeps them in the result (ADR 010)."""
+    for path, _default in list(_iter_disabled_field_paths(global_jsonschema, global_uischema)):
         properties = _get_subschema(global_jsonschema=global_jsonschema, path=path[:-1])["properties"]
-        properties[path[-1]] = {
+        original = properties.get(path[-1])
+        opaque = {
             "type": ["array", "boolean", "integer", "null", "number", "object", "string"],  # any JSON type
             "disabled": True,
         }
+        if isinstance(original, dict) and "hideif" in original:
+            # Keep the hide-if annotation: a currently hidden disabled field must be
+            # stripped like any other hidden field - otherwise its effective value
+            # (notably a declared default) would be persisted while hidden.
+            opaque["hideif"] = original["hideif"]
+        properties[path[-1]] = opaque
 
 
 def _iter_disabled_field_paths(global_jsonschema, global_uischema, path=None):
-    """Yield the schema path of every ``ui:disabled`` field, recursing into
-    object/array containers. Disabled containers are yielded as a whole."""
+    """Yield ``(path, default)`` for every ``ui:disabled`` field, recursing into
+    object/array containers. Disabled containers are yielded as a whole; the
+    default is the field's declared forced assignment, else ``_NO_DEFAULT``."""
     if path is None:
         path = []
     uischema = _traverse_uischema(global_uischema=global_uischema, path=path)
     jsonschema = _get_subschema(global_jsonschema=global_jsonschema, path=path)
 
-    for k in jsonschema.get("properties", {}).keys():
+    for k, field_schema in jsonschema.get("properties", {}).items():
         ui = uischema.get(k) if isinstance(uischema, dict) else None
         if isinstance(ui, dict) and ui.get("ui:disabled", False):
-            yield path + [k]
-        elif jsonschema["properties"][k].get("type") in ["object", "array"]:
+            default = field_schema.get("default", _NO_DEFAULT) if isinstance(field_schema, dict) else _NO_DEFAULT
+            yield path + [k], default
+        elif field_schema.get("type") in ["object", "array"]:
             yield from _iter_disabled_field_paths(
                 global_jsonschema=global_jsonschema,
                 global_uischema=global_uischema,
@@ -1205,16 +1237,130 @@ def _iter_disabled_field_paths(global_jsonschema, global_uischema, path=None):
             )
 
 
-def _overwrite_disabled_field_with_authoritative_value(submitted, authoritative, path):
-    """Replace the submitted value of a disabled field with the authoritative one,
-    or drop the key when the authoritative data holds no value. Array levels are
-    aligned by index."""
+# Dynamic-list row identity (ADR 010). Every rule about what counts as a row
+# ID, when rows are matched by ID, and what makes a list a dynamic list lives
+# here exactly once - the merge (in service_workflow), the submission
+# validation and the ID stamping must never disagree on them.
+
+
+def get_row_id(item) -> str | None:
+    """The row's identity: a non-empty string under ``ROW_ID_KEY``, else None."""
+    if isinstance(item, collections.abc.Mapping):
+        row_id = item.get(ROW_ID_KEY)
+        if isinstance(row_id, str) and row_id:
+            return row_id
+    return None
+
+
+def use_row_id_matching(stored_items, submitted_items) -> bool:
+    """One matching rule for merge AND validation: rows are matched by ID only
+    when the submission carries IDs and the stored side does too (or holds
+    nothing yet). A stored list without IDs is pre-rollout data and must be
+    index-matched even against a freshly stamped submission - otherwise every
+    row would count as "new" on rollout and lose its backend-owned values.
+    Under ID matching, a submitted row without an ID is a new row."""
+
+    def has_ids(items):
+        return isinstance(items, list) and any(get_row_id(item) is not None for item in items)
+
+    if not has_ids(submitted_items):
+        return False
+    return not isinstance(stored_items, list) or not stored_items or has_ids(stored_items)
+
+
+def index_rows_by_id(items) -> dict:
+    """Index rows by their ID; the first occurrence wins, so a duplicated ID
+    can never steal another row's identity."""
+    rows_by_id = {}
+    if isinstance(items, list):
+        for item in items:
+            row_id = get_row_id(item)
+            if row_id is not None and row_id not in rows_by_id:
+                rows_by_id[row_id] = item
+    return rows_by_id
+
+
+def _is_dynamic_list_items_ui(ui_items) -> bool:
+    # The uischema signature of a dynamic list's items (rendered via the layout
+    # field) - distinguishes them from other arrays of objects such as
+    # attachments, without any schema marker.
+    return isinstance(ui_items, dict) and ui_items.get("ui:field") == UI_FIELD_LAYOUT
+
+
+def iter_dynamic_lists(uischema, data, path=()):
+    """Yield ``(path, rows)`` for every dynamic list in ``data``, recursing into
+    nested lists and object containers. ``path`` holds the keys and row indices
+    leading to the list. Driven purely by the uischema signature, so lists
+    written by service tasks are never yielded."""
+    if not isinstance(uischema, dict) or not isinstance(data, dict):
+        return
+    for key, ui in uischema.items():
+        if key.startswith("ui:") or not isinstance(ui, dict):
+            continue
+        value = data.get(key)
+        ui_items = ui.get("items")
+        if _is_dynamic_list_items_ui(ui_items):
+            if isinstance(value, list):
+                yield (*path, key), value
+                for index, row in enumerate(value):
+                    if isinstance(row, dict):
+                        yield from iter_dynamic_lists(ui_items, row, (*path, key, index))
+        elif isinstance(value, dict):
+            yield from iter_dynamic_lists(ui, value, (*path, key))
+
+
+def inject_row_ids_into_validation_schema(jsonschema, uischema) -> None:
+    """Admit ``ROW_ID_KEY`` in a *transient* validation schema so unknown-field
+    cleaning keeps the submitted row IDs. Mutates only ``jsonschema`` (which the
+    caller obtained as a throwaway copy); ``uischema`` is read-only and serves
+    as the dynamic-list detector. Persisted schemas never contain the field."""
+    if not isinstance(jsonschema, dict) or not isinstance(uischema, dict):
+        return
+    properties = jsonschema.get("properties")
+    if not isinstance(properties, dict):
+        return
+    for key, prop in properties.items():
+        if not isinstance(prop, dict):
+            continue
+        ui = uischema.get(key)
+        items = prop.get("items")
+        ui_items = ui.get("items") if isinstance(ui, dict) else None
+        if prop.get("type") == "array" and isinstance(items, dict) and _is_dynamic_list_items_ui(ui_items):
+            items.setdefault("properties", {}).setdefault(ROW_ID_KEY, {"type": "string"})
+            inject_row_ids_into_validation_schema(items, ui_items)
+        elif prop.get("type") == "object" and isinstance(ui, dict):
+            inject_row_ids_into_validation_schema(prop, ui)
+
+
+def _collect_duplicate_row_id_paths(uischema, data):
+    """Error paths for every repeated ROW_ID_KEY within one dynamic list - a
+    duplicated ID would make row identity ambiguous in the merge (ADR 010)."""
+    paths = []
+    for list_path, rows in iter_dynamic_lists(uischema, data):
+        seen = set()
+        for index, row in enumerate(rows):
+            row_id = get_row_id(row)
+            if row_id is not None:
+                if row_id in seen:
+                    paths.append([*list_path, index, ROW_ID_KEY])
+                seen.add(row_id)
+    return paths
+
+
+def _overwrite_disabled_field_with_authoritative_value(submitted, authoritative, path, default=_NO_DEFAULT):
+    """Replace the submitted value of a disabled field with its effective value:
+    the authoritative (stored) one, else the schema default (a declared forced
+    assignment, ADR 010), else drop the key. Array levels follow the shared
+    matching rule (``use_row_id_matching``), so restore and merge always agree
+    on which stored row - if any - a submitted row corresponds to."""
     if not isinstance(submitted, dict):
         return
     key = path[0]
     if len(path) == 1:
         if isinstance(authoritative, dict) and key in authoritative:
             submitted[key] = copy.deepcopy(authoritative[key])
+        elif default is not _NO_DEFAULT:
+            submitted[key] = copy.deepcopy(default)
         else:
             submitted.pop(key, None)
         return
@@ -1222,14 +1368,18 @@ def _overwrite_disabled_field_with_authoritative_value(submitted, authoritative,
     auth_sub = authoritative.get(key) if isinstance(authoritative, dict) else None
     if isinstance(sub, list):
         auth_items = auth_sub if isinstance(auth_sub, list) else []
+        match_by_id = use_row_id_matching(auth_items, sub)
+        auth_by_id = index_rows_by_id(auth_items) if match_by_id else {}
         for index, item in enumerate(sub):
-            _overwrite_disabled_field_with_authoritative_value(
-                item,
-                auth_items[index] if index < len(auth_items) else None,
-                path[1:],
-            )
+            if match_by_id:
+                # A submitted row without an ID (or an unknown one) is a new row
+                # here just like in the merge - it matches nothing.
+                auth_match = auth_by_id.get(get_row_id(item))
+            else:
+                auth_match = auth_items[index] if index < len(auth_items) else None
+            _overwrite_disabled_field_with_authoritative_value(item, auth_match, path[1:], default)
     elif isinstance(sub, dict):
-        _overwrite_disabled_field_with_authoritative_value(sub, auth_sub, path[1:])
+        _overwrite_disabled_field_with_authoritative_value(sub, auth_sub, path[1:], default)
 
 
 def _traverse_uischema(global_uischema: dict, path: list[str]):

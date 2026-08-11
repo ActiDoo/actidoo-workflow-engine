@@ -15,6 +15,8 @@ import {
   changeRequiredDefinitionForFieldsWithHideIfDefinition,
   computeHiddenMap,
 } from '@/services/FeelService';
+import { ROW_ID_KEY } from '@/models/models';
+import { generateRowId, isDynamicListUiItems } from '@/utils/rowIdentity';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
 import { useScrollTop } from '@/utils/hooks/useScrollTop';
 import { WeUploadDialog } from '@/utils/components/WeUploadDialog';
@@ -57,7 +59,8 @@ interface SingleTaskProps {
 const prepareFormData = (
   jsonschema: any,
   uischema: any,
-  data: Record<string, any>
+  data: Record<string, any>,
+  serverData?: Record<string, any>
 ): { prepared: Record<string, any>; changed: boolean } => {
   const prepared = { ...data };
   let changed = false;
@@ -107,14 +110,39 @@ const prepareFormData = (
     const itemSchema =
       typeof prop.items === 'object' && !Array.isArray(prop.items) ? prop.items : undefined;
     if (prop.type === 'array' && itemSchema?.properties && Array.isArray(value)) {
+      // Dynamic lists are recognized by their uischema signature; the technical
+      // row id never appears in any schema, it lives in the form data only.
+      const isDynamicList = isDynamicListUiItems(ui.items);
+      const serverRows = Array.isArray(serverData?.[key]) ? serverData[key] : [];
+      const seenRowIds = new Set<string>();
       let rowsChanged = false;
-      const rows = value.map((row: any) => {
+      const rows = value.map((row: any, index: number) => {
         // Invalid/stale rows should fail validation as-is; only real row objects
         // are nested forms that can be normalized recursively.
         if (row === null || typeof row !== 'object' || Array.isArray(row)) return row;
-        const result = prepareFormData(itemSchema, ui.items ?? {}, row);
+        let current = row;
+        if (isDynamicList) {
+          const rowId = current[ROW_ID_KEY];
+          // Missing ID: adopt the stored row's identity at the same position if
+          // there is one (pre-rollout drafts must not mint fresh IDs for rows
+          // that exist server-side - disjoint IDs would delete the stored rows),
+          // else it is a freshly added row. Duplicate ID: rjsf's copy-row button
+          // clones a row verbatim - a copy IS a new row with its own identity,
+          // otherwise the backend rejects the duplicate.
+          if (typeof rowId !== 'string' || rowId === '' || seenRowIds.has(rowId)) {
+            const serverRowId = serverRows[index]?.[ROW_ID_KEY];
+            const adopted =
+              typeof serverRowId === 'string' && serverRowId !== '' && !seenRowIds.has(serverRowId)
+                ? serverRowId
+                : generateRowId();
+            current = { ...current, [ROW_ID_KEY]: adopted };
+            rowsChanged = true;
+          }
+          seenRowIds.add(current[ROW_ID_KEY]);
+        }
+        const result = prepareFormData(itemSchema, ui.items ?? {}, current, serverRows[index]);
         rowsChanged = rowsChanged || result.changed;
-        return result.changed ? result.prepared : row;
+        return result.changed ? result.prepared : current;
       });
       if (rowsChanged) {
         prepared[key] = rows;
@@ -314,7 +342,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   // all see the same, already-normalized data from the very first render on.
   const preparedFormData = useMemo(() => {
     if (!task?.jsonschema || task.id !== taskId || formData === undefined) return formData;
-    return prepareFormData(task.jsonschema, task.uischema, formData).prepared;
+    return prepareFormData(task.jsonschema, task.uischema, formData, task.data ?? undefined).prepared;
   }, [task, taskId, formData]);
 
   // Handle responses for submit

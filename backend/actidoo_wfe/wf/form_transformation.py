@@ -12,6 +12,7 @@ from actidoo_wfe.helpers.string import create_random_string
 from actidoo_wfe.wf.constants import (
     DEFAULT_TEMPLATE_MODE,
     TEMPLATE_MODE_UISCHEMA_KEY,
+    UI_FIELD_LAYOUT,
     TemplateMode,
 )
 from actidoo_wfe.wf.types import ReactJsonSchemaFormData
@@ -21,7 +22,7 @@ log = logging.getLogger(__name__)
 
 def empty_form():
     jsonschema = {"definitions": dict(), "type": "object", "properties": dict()}
-    uischema = {"ui:field": "layout", "ui:layout": dict()}
+    uischema = {"ui:field": UI_FIELD_LAYOUT, "ui:layout": dict()}
     return ReactJsonSchemaFormData(jsonschema=jsonschema, uischema=uischema)
 
 
@@ -52,7 +53,7 @@ def _parse_template_mode(form_camunda_json) -> str:
 def transform_camunda_form(form_camunda_json) -> ReactJsonSchemaFormData:
     """Transforms a camunda form to jsonschema + uischema. This should be sent to the browser to render the form."""
     jsonschema = {"definitions": dict(), "type": "object", "properties": dict()}
-    uischema = {"ui:field": "layout", "ui:layout": dict()}
+    uischema = {"ui:field": UI_FIELD_LAYOUT, "ui:layout": dict()}
 
     for component in form_camunda_json["components"]:
         _insert_component(component=component, global_jsonschema=jsonschema, jsonschemapath=[], uischema=uischema)
@@ -129,7 +130,7 @@ def _insert_array_component(
         jsonschema["properties"][itemgroup]["minItems"] = min_items
 
     uischema[itemgroup] = {
-        "items": {"ui:field": "layout", "ui:layout": dict()},
+        "items": {"ui:field": UI_FIELD_LAYOUT, "ui:layout": dict()},
         "ui:arrayAddButtonText": add_button_text,
         "ui:arrayAllowAddRemove": str(arrayAllowAddRemove),
         "ui:arrayOverviewButtonText": overview_button_text,

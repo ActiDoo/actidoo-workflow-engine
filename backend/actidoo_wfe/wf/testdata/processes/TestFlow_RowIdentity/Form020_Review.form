@@ -1,0 +1,107 @@
+{
+  "components": [
+    {
+      "text": "## Step 2 - edit rows\n\n**backend_value** is disabled here (backend-owned) and declares a default. Things to try:\n\n1. **Delete a middle row** - the following row must keep its own hidden_note, not its neighbour's.\n2. **Add a row** - its disabled backend_value is filled with the declared default and is really stored (visible in step 3).\n3. **Copy a row** (copy icon) - the copy is a new row and gets its own identity.\n4. **Reorder rows** - every row keeps its values.\n5. **Set number_a to 9** - hidden_note disappears but stays stored on its own row.",
+      "type": "text",
+      "layout": {
+        "row": "Row_intro",
+        "columns": null
+      },
+      "id": "Field_intro"
+    },
+    {
+      "label": "Text field (outside the list)",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_header",
+        "columns": null
+      },
+      "id": "Field_header_text",
+      "key": "header_text",
+      "disabled": true
+    },
+    {
+      "label": "Dynamic list (my_list)",
+      "components": [
+        {
+          "label": "text_a Label",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_item_1",
+            "columns": 8
+          },
+          "id": "Field_text_a",
+          "key": "text_a",
+          "validate": {
+            "required": true
+          }
+        },
+        {
+          "label": "number_a Label",
+          "type": "number",
+          "layout": {
+            "row": "Row_item_1",
+            "columns": 8
+          },
+          "id": "Field_number_a",
+          "key": "number_a"
+        },
+        {
+          "label": "backend_value Label (disabled, default = Value 1)",
+          "values": [
+            {
+              "label": "Value 1",
+              "value": "value_1"
+            },
+            {
+              "label": "Value 2",
+              "value": "value_2"
+            },
+            {
+              "label": "Value 3",
+              "value": "value_3"
+            }
+          ],
+          "type": "radio",
+          "layout": {
+            "row": "Row_item_2",
+            "columns": null
+          },
+          "id": "Field_backend_value",
+          "key": "backend_value",
+          "defaultValue": "value_1",
+          "disabled": true
+        },
+        {
+          "label": "hidden_note Label (hidden while number_a is 9)",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_item_3",
+            "columns": null
+          },
+          "id": "Field_hidden_note",
+          "key": "hidden_note",
+          "conditional": {
+            "hide": "=this.number_a=9"
+          }
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 0,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_my_list",
+        "columns": null
+      },
+      "id": "Field_my_list",
+      "path": "my_list"
+    }
+  ],
+  "type": "default",
+  "id": "Form020_Review",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.6.0",
+  "schemaVersion": 17
+}

@@ -1,0 +1,103 @@
+{
+  "components": [
+    {
+      "text": "## Step 3 - result\n\nEverything is disabled here: this is the stored state.\n\nThis form deliberately declares **no** hide-if, so hidden_note is shown even for rows with number_a = 9. That is the point of this step: a value hidden in step 2 must still exist afterwards - on its own row. Visibility is per form, the stored value is not deleted by hiding it.",
+      "type": "text",
+      "layout": {
+        "row": "Row_intro",
+        "columns": null
+      },
+      "id": "Field_intro"
+    },
+    {
+      "label": "Text field (outside the list)",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_header",
+        "columns": null
+      },
+      "id": "Field_header_text",
+      "key": "header_text",
+      "disabled": true
+    },
+    {
+      "label": "Dynamic list (my_list) - stored state",
+      "components": [
+        {
+          "label": "text_a Label",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_item_1",
+            "columns": 8
+          },
+          "id": "Field_text_a",
+          "key": "text_a",
+          "disabled": true
+        },
+        {
+          "label": "number_a Label",
+          "type": "number",
+          "layout": {
+            "row": "Row_item_1",
+            "columns": 8
+          },
+          "id": "Field_number_a",
+          "key": "number_a",
+          "disabled": true
+        },
+        {
+          "label": "backend_value Label",
+          "values": [
+            {
+              "label": "Value 1",
+              "value": "value_1"
+            },
+            {
+              "label": "Value 2",
+              "value": "value_2"
+            },
+            {
+              "label": "Value 3",
+              "value": "value_3"
+            }
+          ],
+          "type": "radio",
+          "layout": {
+            "row": "Row_item_2",
+            "columns": null
+          },
+          "id": "Field_backend_value",
+          "key": "backend_value",
+          "disabled": true
+        },
+        {
+          "label": "hidden_note Label (no hide-if in this form - always shows the stored value)",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_item_3",
+            "columns": null
+          },
+          "id": "Field_hidden_note",
+          "key": "hidden_note",
+          "disabled": true
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": false,
+      "defaultRepetitions": 0,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_my_list",
+        "columns": null
+      },
+      "id": "Field_my_list",
+      "path": "my_list"
+    }
+  ],
+  "type": "default",
+  "id": "Form030_Confirm",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.6.0",
+  "schemaVersion": 17
+}

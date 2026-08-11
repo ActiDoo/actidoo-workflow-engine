@@ -82,6 +82,13 @@ export interface StartWorkflowPreviewResponse {
 
 export type FormTemplateMode = 'off' | 'blacklist' | 'whitelist';
 
+// Mirrors ROW_ID_KEY / UI_FIELD_LAYOUT in backend wf/constants.py (ADR 010).
+// ROW_ID_KEY: technical row identity of dynamic-list items - lives in form
+// DATA only, never in a schema. UI_FIELD_LAYOUT: items rendered with it are
+// the signature by which dynamic lists are recognized.
+export const ROW_ID_KEY = '_row_id';
+export const UI_FIELD_LAYOUT = 'layout';
+
 export interface FormTemplateSummary {
   id: string;
   name: string;

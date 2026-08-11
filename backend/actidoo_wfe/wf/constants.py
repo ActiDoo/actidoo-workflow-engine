@@ -22,6 +22,15 @@ INTERNAL_DATA_KEY_DELEGATE_COMMENT = "delegate_submit_comment"
 DATA_KEY_CREATED_BY = "_created_by_id"
 DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE = "_subtitle"
 
+# Technical row identity of dynamic-list items (ADR 010). Part of the task data
+# contract: exposed to service tasks and API consumers, survives workflow completion.
+ROW_ID_KEY = "_row_id"
+
+# The ui:field renderer of layouted containers. Items rendered with it are the
+# signature by which dynamic lists are recognized (form_transformation produces
+# it, service_form detects it, the frontend mirrors it in models.ts).
+UI_FIELD_LAYOUT = "layout"
+
 # Form template modes (see ADR-008). Single source for transform, services and BFF schema.
 class TemplateMode(StrEnum):
     OFF = "off"

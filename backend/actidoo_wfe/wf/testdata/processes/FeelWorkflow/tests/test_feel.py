@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.wf import repository, service_application, service_form_templates
+from actidoo_wfe.wf import repository, service_application, service_form_templates, service_workflow
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
 WF_NAME = "FeelWorkflow"
@@ -143,6 +143,61 @@ def test_hideif_or_condition_in_list_keeps_visible_value(db_engine_ctx, mock_sen
             task_data=task_data,
             workflow_instance_id=workflow.workflow_instance_id,
         )
+
+
+def test_hideif_or_condition_added_list_item_survives_merge(db_engine_ctx, mock_send_text_mail):
+    """A multi-condition (or) hide-if inside a dynamic list must be evaluated
+    per item. A newly added row is the sensitive case: it has no stored
+    counterpart, so the merge cannot mask an over-stripped visible value the
+    way it does for pre-existing rows - whatever the cleaning strips from an
+    added row is lost for good."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+
+        # Simulate data inherited from earlier tasks: one complete stored row.
+        stored_workflow = repository.load_workflow_instance(
+            db=workflow.db,
+            workflow_id=workflow.workflow_instance_id,
+        )
+        ready_task = service_workflow.get_ready_and_waiting_usertasks(workflow=stored_workflow)[0]
+        ready_task.data.update(
+            {
+                "globalA": 2,
+                "globalB": 4,
+                "my_list": [
+                    {"number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []},
+                ],
+            }
+        )
+        repository.store_workflow_instance(db=workflow.db, workflow=stored_workflow)
+        workflow.db.commit()
+
+        # The user keeps the existing row and adds a second, fully filled row.
+        workflow.user("initiator").submit(
+            task_data={
+                "globalA": 2,
+                "globalB": 4,
+                "my_list": [
+                    {"number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []},
+                    {"number_a": 8, "number_b": 2, "number_or": 6, "my_list_B": []},
+                ],
+            },
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        completed_workflow = repository.load_workflow_instance(
+            db=workflow.db,
+            workflow_id=workflow.workflow_instance_id,
+        )
+        feel_form_task = service_workflow.get_completed_usertasks(completed_workflow)[0]
+        my_list = feel_form_task.data["my_list"]
+        assert len(my_list) == 2
+        # Pre-existing row: the merge restores its stored value in any case.
+        assert my_list[0]["number_or"] == 5
+        # Added row: no stored counterpart - the submitted value must survive
+        # the cleaning itself, the merge cannot restore it.
+        assert my_list[1].get("number_or") == 6
+        assert my_list[1]["number_b"] == 2
 
 
 # ==================== BACKWARDS COMPATIBILITY TESTS ====================

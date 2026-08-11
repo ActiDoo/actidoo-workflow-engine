@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_ri" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_ri">
+    <bpmn:participant id="Participant_ri" name="Dynamic List Row Identity" processRef="TestFlow_RowIdentity" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_RowIdentity" name="Dynamic List Row Identity" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_ri">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_ri</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form010_Capture</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form020_Review</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form030_Confirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ri</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_ri">
+      <bpmn:outgoing>Flow_start_capture</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Form010_Capture" name="1 - Enter rows">
+      <bpmn:incoming>Flow_start_capture</bpmn:incoming>
+      <bpmn:outgoing>Flow_capture_review</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form020_Review" name="2 - Edit rows">
+      <bpmn:incoming>Flow_capture_review</bpmn:incoming>
+      <bpmn:outgoing>Flow_review_confirm</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form030_Confirm" name="3 - Result">
+      <bpmn:incoming>Flow_review_confirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_confirm_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_ri">
+      <bpmn:incoming>Flow_confirm_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_capture" sourceRef="StartEvent_ri" targetRef="Form010_Capture" />
+    <bpmn:sequenceFlow id="Flow_capture_review" sourceRef="Form010_Capture" targetRef="Form020_Review" />
+    <bpmn:sequenceFlow id="Flow_review_confirm" sourceRef="Form020_Review" targetRef="Form030_Confirm" />
+    <bpmn:sequenceFlow id="Flow_confirm_end" sourceRef="Form030_Confirm" targetRef="EndEvent_ri" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_ri">
+      <bpmndi:BPMNShape id="Participant_ri_di" bpmnElement="Participant_ri" isHorizontal="true">
+        <dc:Bounds x="100" y="60" width="820" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InitLane_di" bpmnElement="InitLane" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="790" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_ri_di" bpmnElement="StartEvent_ri">
+        <dc:Bounds x="180" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form010_Capture_di" bpmnElement="Form010_Capture">
+        <dc:Bounds x="280" y="118" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form020_Review_di" bpmnElement="Form020_Review">
+        <dc:Bounds x="440" y="118" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form030_Confirm_di" bpmnElement="Form030_Confirm">
+        <dc:Bounds x="600" y="118" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_ri_di" bpmnElement="EndEvent_ri">
+        <dc:Bounds x="760" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_capture_di" bpmnElement="Flow_start_capture">
+        <di:waypoint x="216" y="158" />
+        <di:waypoint x="280" y="158" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_capture_review_di" bpmnElement="Flow_capture_review">
+        <di:waypoint x="380" y="158" />
+        <di:waypoint x="440" y="158" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_review_confirm_di" bpmnElement="Flow_review_confirm">
+        <di:waypoint x="540" y="158" />
+        <di:waypoint x="600" y="158" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_confirm_end_di" bpmnElement="Flow_confirm_end">
+        <di:waypoint x="700" y="158" />
+        <di:waypoint x="760" y="158" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
