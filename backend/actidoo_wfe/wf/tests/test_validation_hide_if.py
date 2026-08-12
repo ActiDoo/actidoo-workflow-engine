@@ -269,3 +269,41 @@ def test__missing_hide_if_reference_is_treated_as_unset_and_does_not_crash():
     result = _validate(MISSING_REFERENCE_FORM, {})
 
     assert "subarea" in (result.error_schema or {})
+
+
+SCOPED_REFERENCE_FORM = {
+    # 'this.' binds to the row the field itself lives in, and 'parent.' to the surrounding one -
+    # exactly like the frontend binds them. 'flag' sits two levels up, so 'this.flag' names nothing
+    # and counts as unset (FEEL null): 'null = false' is false and the field stays visible.
+    "components": [
+        {
+            "type": "dynamiclist",
+            "path": "outer",
+            "components": [
+                {"type": "checkbox", "key": "flag"},
+                {
+                    "type": "dynamiclist",
+                    "path": "inner",
+                    "components": [
+                        {"type": "textfield", "key": "note", "conditional": {"hide": "=this.flag = false"}},
+                        {"type": "textfield", "key": "scoped_note", "conditional": {"hide": "=parent.flag = false"}},
+                    ],
+                },
+            ],
+        },
+    ],
+}
+
+
+def test__this_reference_does_not_reach_into_an_outer_row():
+    result = _validate(SCOPED_REFERENCE_FORM, {"outer": [{"flag": False, "inner": [{"note": "kept"}]}]})
+
+    assert not result.error_schema
+    assert result.task_data["outer"][0]["inner"][0]["note"] == "kept"
+
+
+def test__parent_reference_addresses_the_surrounding_row():
+    result = _validate(SCOPED_REFERENCE_FORM, {"outer": [{"flag": False, "inner": [{"scoped_note": "dropped"}]}]})
+
+    assert not result.error_schema
+    assert "scoped_note" not in result.task_data["outer"][0]["inner"][0]

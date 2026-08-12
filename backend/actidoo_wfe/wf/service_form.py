@@ -251,6 +251,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         assert isinstance(node.comparators[0], ast.Name) or isinstance(node.comparators[0], ast.Constant) or isinstance(node.comparators[0], ast.Attribute)
 
         hops = 0
+        scoped = False
         if isinstance(node.left, ast.Name):
             property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.left,
@@ -276,13 +277,20 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         else:  # ast.Attribute:
             assert isinstance(node.left, ast.Attribute)
             hops, property = _extract_attribute_reference(node.left)
+            scoped = True
             value, _ = _camunda_hide_if_expression_ast_to_jsonschema(node.comparators[0], global_jsonschema, path)  # type: ignore
 
         op = node.ops[0]
 
         # property auflösen und auf const wert setzen
         starting_path = path[:-hops] if hops > 0 else path
-        found_path = _find_property_upwards(global_jsonschema, starting_path, property)
+        if scoped:
+            # 'this.' and 'parent.' name their level explicitly, exactly like the frontend binds
+            # them: resolve the property there and nowhere else. A bare name keeps searching
+            # upwards, which is what forms written before those keywords existed rely on.
+            found_path = starting_path if property in _get_subschema(global_jsonschema, starting_path).get("properties", {}) else None
+        else:
+            found_path = _find_property_upwards(global_jsonschema, starting_path, property)
         reference_missing = found_path is None
         if reference_missing:
             # Field isn't declared in the schema (hide-if references a removed field): anchor the
