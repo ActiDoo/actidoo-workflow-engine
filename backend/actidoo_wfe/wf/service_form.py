@@ -131,7 +131,14 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
     # Die aktuelle Node (jsonschema) sollte direkt "properties" Kinder haben
     for key in jsonschema["properties"]:
         try:
-            if jsonschema["properties"][key]["type"] == "array" and "items" in jsonschema["properties"][key] and "properties" in jsonschema["properties"][key]["items"]:
+            node = jsonschema["properties"][key]
+
+            # Arrays of objects (dynamic lists, attachment fields) carry a subtree of their own:
+            # their hide-ifs are converted first. The array's own hide-if is handled afterwards -
+            # being hidden is a property of the submitted data, so the schema has to describe the
+            # hidden and the visible list alike.
+            is_list = node["type"] == "array" and "items" in node and "properties" in node["items"]
+            if is_list:
                 convert_hide_if_props_to_declarative_jsonschema(
                     global_jsonschema=global_jsonschema,
                     path=path
@@ -139,22 +146,29 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                         key,
                     ],
                 )
-            elif jsonschema["properties"][key].get("hideif", None) is not None:
+
+            if node.get("hideif", None) is not None:
                 # Hier haben wir eine hideif property gefunden
                 # der path zeigt auf den container, in dem die property ist
-                hideif = jsonschema["properties"][key].get("hideif")
+                hideif = node.get("hideif")
 
-                # Wir extrahieren das Schema für die Property, die versteckt werden soll
-                then_property = copy.deepcopy(
-                    jsonschema["properties"][key],
-                )  # Das ist der positive Fall, also der korrekte Schema
                 else_property = {
                     "type": "null",
                 }  # Im negativen Fall, setzen wir den Typen auf null, dadurch wird das Feld nicht angezeigt
 
-                # Aufräumen: hideif Property löschen; im globalen Schema das Property auf "True" setzen, weil die eigentliche Definition erst im allOf Teil folgt; required rausziehen
-                del then_property["hideif"]
-                jsonschema["properties"][key] = True
+                # A hidden field is replaced by "True" and re-declared inside the allOf then-branch.
+                # A list stays where it is: additionalProperties cleaning and the row-id injection walk
+                # 'properties' only and would not reach a copy parked inside allOf. Its hideif stays put
+                # as well, so a condition referencing the list still sees that it can be hidden. For the
+                # list, the else-branch nulling it is all that is needed.
+                then_property = None
+                if not is_list:
+                    # Wir extrahieren das Schema für die Property, die versteckt werden soll
+                    then_property = copy.deepcopy(node)  # Das ist der positive Fall, also der korrekte Schema
+
+                    # Aufräumen: hideif Property löschen; im globalen Schema das Property auf "True" setzen, weil die eigentliche Definition erst im allOf Teil folgt; required rausziehen
+                    del then_property["hideif"]
+                    jsonschema["properties"][key] = True
 
                 outer_ifthenschema, inner_ifthenschema = _build_allOf_schema_for_path(path)
 
@@ -166,7 +180,8 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                 # Das allOfSchema ist eine hierarchische Struktur, ganz innen ist ein {"if": {}, "then": {}, "else": {}}
                 # Das innerste "then" ist immer das Feld, das wir verstecken/anzeigen wollen.
 
-                inner_ifthenschema["then"]["properties"][key] = copy.deepcopy(then_property)
+                if then_property is not None:
+                    inner_ifthenschema["then"]["properties"][key] = then_property
                 if key in jsonschema.get("required", []):
                     jsonschema["required"].remove(key)  # cleanup the old 'required' entry
                     inner_ifthenschema["then"]["required"] = [key]
@@ -1120,6 +1135,11 @@ def validate_task_data(
 
     if preserve_unknown_fields and removed_unknown_fields:
         for path, value in removed_unknown_fields:
+            if any(path[: len(removed_path)] == removed_path for removed_path in removed):
+                # The value sits below a node that was just removed for being hidden. Restoring it
+                # would rebuild the hidden subtree - a dynamic list would come back as a skeleton of
+                # rows carrying nothing but their technical row id.
+                continue
             set_item(untracked_task_data, path, value)
 
     # Disabled fields keep their effective values (stored, else schema default) in

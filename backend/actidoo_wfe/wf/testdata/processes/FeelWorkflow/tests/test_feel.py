@@ -374,3 +374,54 @@ def test_strip_hidden_form_fields_removes_hidden_values_in_nested_list(db_engine
         inner = cleaned["my_list"][0]["my_list_B"][0]
         assert "number_c" not in inner
         assert inner["number_d"] == 123
+
+
+def test_hidden_dynamic_list_is_not_persisted(db_engine_ctx, mock_send_text_mail):
+    """A hide-if on the list itself must hold for the whole list, not just for the
+    fields inside it: rows submitted for a hidden list are dropped like any other
+    hidden value and never reach the persisted task data."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+
+        workflow.user("initiator").submit(
+            task_data={
+                "globalA": 1,  # hides hidden_list (and globalB)
+                "globalB": 4,
+                "my_list": [{"number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []}],
+                "hidden_list": [{"number_e": 42}],
+            },
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        completed_workflow = repository.load_workflow_instance(
+            db=workflow.db,
+            workflow_id=workflow.workflow_instance_id,
+        )
+        task_data = service_workflow.get_completed_usertasks(completed_workflow)[0].data
+
+        assert "globalB" not in task_data
+        assert "hidden_list" not in task_data
+        assert task_data["my_list"][0]["number_b"] == 1
+
+
+def test_visible_dynamic_list_with_hide_if_is_persisted(db_engine_ctx, mock_send_text_mail):
+    with db_engine_ctx():
+        workflow = _start_workflow()
+
+        workflow.user("initiator").submit(
+            task_data={
+                "globalA": 2,  # leaves hidden_list visible
+                "globalB": 4,
+                "my_list": [{"number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []}],
+                "hidden_list": [{"number_e": 42}],
+            },
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        completed_workflow = repository.load_workflow_instance(
+            db=workflow.db,
+            workflow_id=workflow.workflow_instance_id,
+        )
+        task_data = service_workflow.get_completed_usertasks(completed_workflow)[0].data
+
+        assert task_data["hidden_list"][0]["number_e"] == 42

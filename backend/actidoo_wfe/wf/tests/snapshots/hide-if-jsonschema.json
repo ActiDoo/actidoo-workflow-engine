@@ -28,6 +28,20 @@
                 }
             },
             "title": "Dynamic list (employees)"
+        },
+        "assets": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string",
+                        "title": "Asset"
+                    }
+                }
+            },
+            "title": "Dynamic list (assets)",
+            "hideif": "=textfield1 = \"A\""
         }
     }
 }

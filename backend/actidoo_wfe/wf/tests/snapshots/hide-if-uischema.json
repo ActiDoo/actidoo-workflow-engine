@@ -9,6 +9,9 @@
         ],
         "employees": [
             "employees"
+        ],
+        "assets": [
+            "assets"
         ]
     },
     "textfield1": {
@@ -59,6 +62,31 @@
         "ui:defaultRepetitions": 1,
         "ui:label": "Dynamic list (employees)",
         "ui:copyable": true
+    },
+    "assets": {
+        "items": {
+            "ui:field": "layout",
+            "ui:layout": {
+                "Row_0dynli6": [
+                    "asset"
+                ]
+            },
+            "asset": {
+                "ui:description": "",
+                "ui:enableMarkdownInDescription": true,
+                "ui:path": [
+                    "assets",
+                    "asset"
+                ]
+            }
+        },
+        "ui:arrayAddButtonText": "Add",
+        "ui:arrayAllowAddRemove": "True",
+        "ui:arrayOverviewButtonText": "Overview",
+        "ui:defaultRepetitions": 1,
+        "ui:label": "Dynamic list (assets)",
+        "ui:copyable": true,
+        "ui:hideif": "=textfield1 = \"A\""
     },
     "ui:templateMode": "blacklist"
 }

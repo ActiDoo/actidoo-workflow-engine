@@ -172,6 +172,35 @@
         "columns": null
       },
       "id": "Field_0ik1grh"
+    },
+    {
+      "label": "Dynamic list (hidden_list, hidden if globalA=1)",
+      "components": [
+        {
+          "label": "number_e Label",
+          "type": "number",
+          "layout": {
+            "row": "Row_0hidlst1",
+            "columns": 5
+          },
+          "id": "Field_0hidlst2",
+          "key": "number_e"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_0hidlst0",
+        "columns": null
+      },
+      "id": "Field_0hidlst3",
+      "path": "hidden_list",
+      "conditional": {
+        "hide": "=globalA=1"
+      }
     }
   ],
   "type": "default",

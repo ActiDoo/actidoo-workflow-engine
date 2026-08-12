@@ -281,39 +281,41 @@ def test__duplicate_row_ids_are_a_validation_error():
     assert result.error_schema is not None
 
 
-def test__hidden_lists_keep_their_data_so_their_duplicates_still_reject():
-    """Hidden dynamic lists are NOT stripped by the engine (only scalar hidden
-    fields are) - their rows reach the merge and get persisted. The duplicate
-    check therefore must guard hidden lists too. The check runs after hidden-
-    value removal on purpose: whatever IS stripped can no longer reject."""
-    hidden_list_form = {
-        "components": [
-            {
-                "type": "select",
-                "key": "mode",
-                "values": [{"label": "A", "value": "a"}, {"label": "B", "value": "b"}],
-            },
-            {
-                "type": "dynamiclist",
-                "path": "positions",
-                "conditional": {"hide": '=mode != "b"'},
-                "components": [{"type": "textfield", "key": "name"}],
-            },
-        ],
-    }
-    submitted = {
-        "mode": "a",
-        "positions": [
-            {"_row_id": "dup", "name": "x"},
-            {"_row_id": "dup", "name": "y"},
-        ],
-    }
+HIDEABLE_LIST_FORM = {
+    "components": [
+        {
+            "type": "select",
+            "key": "variant",
+            "values": [{"label": "A", "value": "a"}, {"label": "B", "value": "b"}],
+        },
+        {
+            "type": "dynamiclist",
+            "path": "positions",
+            "conditional": {"hide": '=variant != "b"'},
+            "components": [{"type": "textfield", "key": "name"}],
+        },
+    ],
+}
 
-    result = _validate(hidden_list_form, submitted, stored={})
+DUPLICATE_ROWS = [
+    {"_row_id": "dup", "name": "x"},
+    {"_row_id": "dup", "name": "y"},
+]
 
-    # The hidden list's rows survive cleaning (pre-existing engine behavior) ...
-    assert result.task_data["positions"][0]["name"] == "x"
-    # ... so an ambiguous identity inside it must still block the submission.
+
+def test__duplicates_in_a_hidden_list_cannot_reject_because_the_list_is_stripped():
+    """A hidden dynamic list is stripped like any other hidden field, so its rows
+    never reach the merge. The duplicate check runs after hidden-value removal on
+    purpose: whatever IS stripped can no longer reject."""
+    result = _validate(HIDEABLE_LIST_FORM, {"variant": "a", "positions": DUPLICATE_ROWS}, stored={})
+
+    assert "positions" not in result.task_data
+    assert result.error_schema is None
+
+
+def test__duplicates_in_a_visible_list_still_reject():
+    result = _validate(HIDEABLE_LIST_FORM, {"variant": "b", "positions": DUPLICATE_ROWS}, stored={})
+
     assert result.error_schema is not None
 
 

@@ -18,6 +18,7 @@ evaluation:
 
 from pathlib import Path
 
+from actidoo_wfe.wf.constants import ROW_ID_KEY
 from actidoo_wfe.wf.form_transformation import transform_camunda_form
 from actidoo_wfe.wf.service_form import validate_task_data
 
@@ -307,3 +308,151 @@ def test__parent_reference_addresses_the_surrounding_row():
 
     assert not result.error_schema
     assert "scoped_note" not in result.task_data["outer"][0]["inner"][0]
+
+
+# --- hide-if on the dynamic list itself -----------------------------------------
+
+HIDDEN_LIST_FORM = {
+    # The hide-if sits on the list, not on a field inside it. A dynamic list is an array of
+    # objects and used to take the recursion branch only, so its own condition was never
+    # converted: the list stayed validated (and persisted) as if it were visible.
+    "components": [
+        {"type": "select", "key": "variant", "values": AB_OPTIONS},
+        {
+            "type": "dynamiclist",
+            "path": "positions",
+            "properties": {"minItems": "1"},
+            "conditional": {"hide": '=variant = "a"'},
+            "components": [
+                {"type": "textfield", "key": "name", "validate": {"required": True}},
+            ],
+        },
+    ],
+}
+
+NESTED_HIDDEN_LIST_FORM = {
+    # The inner list is hidden by a field of the surrounding row, so visibility differs per row.
+    "components": [
+        {
+            "type": "dynamiclist",
+            "path": "outer",
+            "components": [
+                {"type": "select", "key": "kind", "values": AB_OPTIONS},
+                {
+                    "type": "dynamiclist",
+                    "path": "inner",
+                    "conditional": {"hide": '=this.kind = "a"'},
+                    "components": [{"type": "textfield", "key": "note"}],
+                },
+            ],
+        },
+    ],
+}
+
+HIDDEN_ATTACHMENT_FORM = {
+    "components": [
+        {"type": "select", "key": "variant", "values": AB_OPTIONS},
+        {
+            "type": "textfield",
+            "key": "docs",
+            "properties": {"custom_type": "attachment_multi"},
+            "validate": {"required": True},
+            "conditional": {"hide": '=variant = "a"'},
+        },
+    ],
+}
+
+
+def test__hidden_list_does_not_enforce_min_items():
+    result = _validate(HIDDEN_LIST_FORM, {"variant": "a", "positions": []})
+
+    assert not result.error_schema
+    assert "positions" not in result.task_data
+
+
+def test__rows_submitted_for_a_hidden_list_are_stripped_without_error():
+    result = _validate(HIDDEN_LIST_FORM, {"variant": "a", "positions": [{"name": "x"}]})
+
+    assert not result.error_schema
+    assert "positions" not in result.task_data
+
+
+def test__hidden_list_does_not_enforce_required_fields_of_its_rows():
+    result = _validate(HIDDEN_LIST_FORM, {"variant": "a", "positions": [{}]})
+
+    assert not result.error_schema
+    assert "positions" not in result.task_data
+
+
+def test__visible_list_still_enforces_min_items():
+    result = _validate(HIDDEN_LIST_FORM, {"variant": "b", "positions": []})
+
+    assert "positions" in (result.error_schema or {})
+
+
+def test__visible_list_still_enforces_required_fields_of_its_rows():
+    result = _validate(HIDDEN_LIST_FORM, {"variant": "b", "positions": [{}]})
+
+    assert "positions" in (result.error_schema or {})
+
+
+def test__visible_list_keeps_its_rows():
+    result = _validate(HIDDEN_LIST_FORM, {"variant": "b", "positions": [{"name": "x"}]})
+
+    assert not result.error_schema
+    assert result.task_data["positions"] == [{"name": "x"}]
+
+
+def test__nested_hidden_list_is_evaluated_per_row():
+    result = _validate(
+        NESTED_HIDDEN_LIST_FORM,
+        {
+            "outer": [
+                {"kind": "a", "inner": [{"note": "dropped"}]},
+                {"kind": "b", "inner": [{"note": "kept"}]},
+            ]
+        },
+    )
+
+    assert not result.error_schema
+    assert "inner" not in result.task_data["outer"][0]
+    assert result.task_data["outer"][1]["inner"] == [{"note": "kept"}]
+
+
+def test__hidden_attachment_field_is_stripped_without_error():
+    result = _validate(HIDDEN_ATTACHMENT_FORM, {"variant": "a", "docs": []})
+
+    assert not result.error_schema
+    assert "docs" not in result.task_data
+
+
+def test__hidden_list_leaves_no_row_skeleton_in_stored_task_data():
+    # The engine-side cleanup (strip_hidden_field_values) preserves unknown/technical fields
+    # such as the row id. Those must not resurrect the very rows the hide-if just removed.
+    form = transform_camunda_form(HIDDEN_LIST_FORM)
+    stored = {"variant": "a", "positions": [{ROW_ID_KEY: "r1", "name": "x"}]}
+
+    result = validate_task_data(
+        form=form,
+        task_data=stored,
+        options_folder=OPTIONS_FOLDER,
+        functions_env={},
+        preserve_unknown_fields=True,
+    )
+
+    assert "positions" not in result.task_data
+
+
+def test__visible_list_keeps_its_row_ids_during_cleanup():
+    form = transform_camunda_form(HIDDEN_LIST_FORM)
+    stored = {"variant": "b", "positions": [{ROW_ID_KEY: "r1", "name": "x"}]}
+
+    result = validate_task_data(
+        form=form,
+        task_data=stored,
+        options_folder=OPTIONS_FOLDER,
+        functions_env={},
+        preserve_unknown_fields=True,
+    )
+
+    assert result.task_data["positions"] == [{"name": "x", ROW_ID_KEY: "r1"}]

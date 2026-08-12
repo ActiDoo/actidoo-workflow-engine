@@ -143,6 +143,14 @@ export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
       uiPropSchema['ui:required'] = true;
       _.remove(parentProp.required, x => propPath && x === propPath[propPath.length - 1]);
     }
+
+    // An array expresses 'required' as minItems, so the same applies to a hidden dynamic list
+    // or attachment field: it must not block the submit while it is not shown. Moved back by
+    // evaluateHideIfAndFeel as soon as the field becomes visible again.
+    if (hideif !== undefined && typeof curProp?.minItems === 'number') {
+      uiPropSchema['ui:minItems'] = curProp.minItems;
+      delete curProp.minItems;
+    }
   }
 }
 
@@ -220,6 +228,7 @@ export function evaluateHideIfAndFeel(
     // Search for 'hideif' and apply the pre-computed hidden state
     const hideif = fieldSchemaProps['ui:hideif'];
     const required = fieldSchemaProps['ui:required'];
+    const minItems = fieldSchemaProps['ui:minItems'];
 
     if (hideif !== undefined) {
       hide = Boolean(hiddenMap[fieldName]);
@@ -238,6 +247,13 @@ export function evaluateHideIfAndFeel(
         if (!newSchema.required.includes(fieldName)) {
           newSchema.required.push(fieldName);
         }
+      }
+
+      // Counterpart of the minItems move in changeRequiredDefinitionForFieldsWithHideIfDefinition:
+      // a visible list validates (and renders its initial rows) with its minItems again.
+      const fieldSchema = (newSchema as any)?.properties?.[fieldName];
+      if (!hide && typeof minItems === 'number' && fieldSchema) {
+        fieldSchema.minItems = minItems;
       }
     }
   }

@@ -61,6 +61,35 @@
       },
       "id": "Field_0dynli4",
       "path": "employees"
+    },
+    {
+      "label": "Dynamic list (assets)",
+      "components": [
+        {
+          "label": "Asset",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_0dynli6",
+            "columns": 5
+          },
+          "id": "Field_0dynli7",
+          "key": "asset"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_0dynli5",
+        "columns": null
+      },
+      "id": "Field_0dynli8",
+      "path": "assets",
+      "conditional": {
+        "hide": "=textfield1 = \"A\""
+      }
     }
   ],
   "type": "default",
