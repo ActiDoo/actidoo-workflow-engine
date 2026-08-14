@@ -81,12 +81,13 @@ const AdminWorkflowDetails: React.FC = () => {
           <>
             <Button
               disabled={isLoading}
+              className="transparent-button-gray"
               design={ButtonDesign.Transparent}
-              tooltip={t('common.actions.abort')}
+              tooltip={t('admin.keepWorkflowTitle')}
               onClick={() => {
                 setCancelDialogOpen(false);
               }}>
-              {t('common.actions.abort')}
+              {t('admin.keepWorkflowTitle')}
             </Button>
             <Button
               disabled={isLoading}

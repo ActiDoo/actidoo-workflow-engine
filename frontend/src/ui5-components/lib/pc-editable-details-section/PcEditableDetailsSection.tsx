@@ -287,7 +287,7 @@ export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): Re
       <div className={`flex gap-4 justify-end ${isTop ? 'mb-4' : 'mt-4'}`}>
         {props.onCancel ? (
           <Button
-            className="min-w-[100px]"
+            className="min-w-[100px] transparent-button-gray"
             design={ButtonDesign.Transparent}
             disabled={props.loading}
             onClick={handleCancel}>
