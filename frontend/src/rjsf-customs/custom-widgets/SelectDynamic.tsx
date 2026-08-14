@@ -151,6 +151,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
   return (
     <div>
       <WeComboBox
+        inputId={props.id}
         value={selectedOption ?? ''}
         required={props.required}
         isLoading={optionsQuery.isLoading}

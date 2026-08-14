@@ -20,6 +20,7 @@ const CustomCheckbox = (props: WidgetProps): ReactElement => {
         <div>
           {/* we need a div around the input, otherwise the width of the input (the checkbox itself) will be too thin for long labels */}
           <input
+            id={props.id}
             className="mr form-check-input"
             type="checkbox"
             checked={isChecked}
@@ -30,7 +31,9 @@ const CustomCheckbox = (props: WidgetProps): ReactElement => {
             disabled={props.disabled}
           />
         </div>
-        <label className={'ml-2 text-sm' + (props.disabled ? 'opacity-75' : '')}>
+        <label
+          htmlFor={props.id}
+          className={'ml-2 text-sm' + (props.disabled ? 'opacity-75' : '')}>
           {props.required ? props.label + '*' : props.label}
         </label>
       </div>

@@ -6,7 +6,11 @@
   "scripts": {
     "wfe:dev": "vite --host",
     "wfe:build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
   },
   "eslintConfig": {
     "extends": [
@@ -58,6 +62,10 @@
     "redux-saga": "^1.4.2"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/d3": "^7.4.3",
     "@types/eslint": "^8",
     "@types/lodash": "^4.17.24",
@@ -68,6 +76,8 @@
     "@typescript-eslint/eslint-plugin": "^5.48.1",
     "@typescript-eslint/parser": "^5.48.1",
     "@vitejs/plugin-react": "5.1.2",
+    "@vitest/browser-playwright": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10.5.0",
     "eslint": "^8.31.0",
     "eslint-config-prettier": "^8.6.0",
@@ -79,12 +89,15 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-unused-imports": "^2.0.0",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.61.1",
     "postcss": "^8.5.12",
     "prettier": "^2.8.8",
     "sass": "^1.99.0",
     "tailwindcss": "^3.2.4",
     "ts-node": "^10.9.2",
     "typescript": "5.9.3",
-    "vite": "7.3.2"
+    "vite": "7.3.2",
+    "vitest": "^4.1.10"
   }
 }
