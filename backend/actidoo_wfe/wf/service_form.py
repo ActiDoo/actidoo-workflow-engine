@@ -704,6 +704,10 @@ def _filter_template_object(
     kept: dict = {}
     skipped: list[list] = []
     for key, value in data.items():
+        if key == ROW_ID_KEY:
+            # Technical row identity, never template content - dropped without
+            # being reported: it is not a field the user chose to fill in.
+            continue
         field_path = path + [key]
         node = properties.get(key)
         if node is None or not _is_template_eligible(node, mode) or _is_attachment_node(node):

@@ -95,3 +95,18 @@ def test_unknown_field_is_skipped_on_apply():
     )
     assert kept == {"known": "x"}
     assert ["ghost"] in skipped
+
+
+def test_row_ids_are_dropped_silently():
+    schema = _schema(
+        {
+            "my_list": {
+                "type": "array",
+                "items": {"type": "object", "properties": {"text_a": {"type": "string"}}},
+            },
+        }
+    )
+    data = {"my_list": [{"_row_id": "row-1", "text_a": "x"}, {"_row_id": "row-2", "text_a": "y"}]}
+    kept, skipped = filter_template_data(jsonschema=schema, data=data, mode="blacklist", apply_value_rule=True)
+    assert kept == {"my_list": [{"text_a": "x"}, {"text_a": "y"}]}
+    assert skipped == []
