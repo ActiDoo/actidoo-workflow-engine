@@ -11,7 +11,10 @@
       "short_code": {
         "type": "string",
         "title": "Short code",
-        "maxLength": 3
+        "maxLength": 3,
+        "custom_properties": {
+          "template_field": "false"
+        }
       },
       "category": {
         "type": [
@@ -122,6 +125,7 @@
       "ui:path": [
         "trigger_error"
       ]
-    }
+    },
+    "ui:templateMode": "blacklist"
   }
 }
