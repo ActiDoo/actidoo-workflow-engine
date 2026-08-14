@@ -288,12 +288,19 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
     sync_timer_events(db=db, workflow=workflow)
 
 
-def load_workflow_instance(db: Session, workflow_id: uuid.UUID) -> BpmnWorkflow:
-    """Restores a workflow"""
+def load_workflow_instance(db: Session, workflow_id: uuid.UUID, for_update: bool = False) -> BpmnWorkflow:
+    """Restores a workflow.
 
-    db_wf: WorkflowInstance = db.execute(
-        select(WorkflowInstance).where(WorkflowInstance.id == workflow_id),
-    ).scalar_one()
+    ``for_update`` locks the instance row for the rest of the transaction. The
+    whole instance is stored as one blob, so anything that reads, changes and
+    writes it back has to hold that lock - otherwise it overwrites whatever was
+    committed in between."""
+
+    statement = select(WorkflowInstance).where(WorkflowInstance.id == workflow_id)
+    if for_update:
+        statement = statement.with_for_update()
+
+    db_wf: WorkflowInstance = db.execute(statement).scalar_one()
     db.refresh(db_wf)
 
     workflow = restore(serialized_data=db_wf.data)

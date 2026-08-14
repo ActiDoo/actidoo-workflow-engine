@@ -1133,6 +1133,14 @@ def validate_task_data(
             for duplicate_path in duplicate_paths:
                 set_nested_error(error_schema, duplicate_path, "duplicate row id")
 
+        # ... and they must carry the identity the task was handed out with, so
+        # rows are matched by ID instead of by position.
+        id_less_paths = _collect_id_less_dynamic_list_paths(form.uischema, untracked_task_data, authoritative_disabled_values)
+        if id_less_paths:
+            error_schema = error_schema if error_schema is not None else {}
+            for id_less_path in id_less_paths:
+                set_nested_error(error_schema, id_less_path, "dynamic list submitted without row ids")
+
     if preserve_unknown_fields and removed_unknown_fields:
         for path, value in removed_unknown_fields:
             if any(path[: len(removed_path)] == removed_path for removed_path in removed):
@@ -1372,6 +1380,26 @@ def _collect_duplicate_row_id_paths(uischema, data):
                 if row_id in seen:
                     paths.append([*list_path, index, ROW_ID_KEY])
                 seen.add(row_id)
+    return paths
+
+
+def _collect_id_less_dynamic_list_paths(uischema, submitted, stored):
+    """Error paths for every dynamic list that arrives without a single row ID
+    although the stored list has them. Rows are stamped when the task is handed
+    out, so such a submission was built from data the client never loaded -
+    index-matching it would move backend-owned values onto the wrong rows.
+
+    A single row without an ID stays legal: that is how the frontend expresses
+    'this row is new'."""
+    paths = []
+    stored_lists = {path: rows for path, rows in iter_dynamic_lists(uischema, stored)}
+    for list_path, rows in iter_dynamic_lists(uischema, submitted):
+        submitted_rows = [row for row in rows if isinstance(row, dict)]
+        if not submitted_rows or any(get_row_id(row) is not None for row in submitted_rows):
+            continue
+        stored_rows = stored_lists.get(list_path, [])
+        if any(get_row_id(row) is not None for row in stored_rows if isinstance(row, dict)):
+            paths.append(list(list_path))
     return paths
 
 

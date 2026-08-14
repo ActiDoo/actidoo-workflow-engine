@@ -6,13 +6,12 @@
 Persisted form schemas never contain the technical ROW_ID_KEY: submission
 validation admits the submitted IDs through a throwaway validation schema,
 disabled fields resolve to their effective value (stored, else the declared
-default) matched per row, duplicated IDs reject, and the monitored
-``row-id-merge-fallback`` marker fires only for genuine ID-less dynamic-list
-submissions. The merge itself is covered in ``test_task_update.py``.
+default) matched per row, and a submission must carry the identity it was handed:
+duplicated IDs reject, and so does a list that comes back without any. The merge
+itself is covered in ``test_task_update.py``.
 """
 
 import copy
-import logging
 from pathlib import Path
 
 from actidoo_wfe.wf.constants import ROW_ID_KEY
@@ -21,7 +20,6 @@ from actidoo_wfe.wf.service_form import (
     inject_row_ids_into_validation_schema,
     validate_task_data,
 )
-from actidoo_wfe.wf.service_workflow import warn_id_less_dynamic_list_submissions
 
 OPTIONS_FOLDER = Path(__file__).parent / "options"
 
@@ -319,51 +317,34 @@ def test__duplicates_in_a_visible_list_still_reject():
     assert result.error_schema is not None
 
 
-# --- fallback-warning marker ----------------------------------------------------
-
-DYNAMIC_LIST_UISCHEMA = {
-    "ui:field": "layout",
-    "ui:layout": {},
-    "positions": {
-        "items": {"ui:field": "layout", "ui:layout": {}},
-        "ui:label": "Positions",
-    },
-    "uploads": {"ui:field": "AttachmentMulti"},
-}
+# --- submissions must carry the identity they were handed ------------------------
 
 
-def test__update_itself_never_logs_the_fallback_marker(caplog):
-    from actidoo_wfe.wf.service_workflow import update
+def test__list_submitted_without_any_row_id_is_rejected():
+    """Rows are stamped when the task is handed out, so a list that comes back
+    without a single ID was built from data the client never loaded. Matching it
+    by position would move backend-owned values onto the wrong rows."""
+    stored = {"positions": [{"_row_id": "r1", "name": "a", "asset_number": "A-1"}]}
+    submitted = {"positions": [{"name": "a"}]}
 
-    # Attachment arrays and service-task lists flow through update() on every
-    # submission and can never carry IDs - the marker must not fire here.
-    with caplog.at_level(logging.WARNING):
-        update({"uploads": [{"filename": "old.pdf"}]}, {"uploads": [{"filename": "new.pdf"}]})
+    result = _validate(DYNAMIC_LIST_FORM, submitted, stored=stored)
 
-    assert "row-id-merge-fallback" not in caplog.text
-
-
-def test__marker_fires_for_id_less_dynamic_list_submission(caplog):
-    data = {
-        "positions": [{"name": "x"}],
-        "uploads": [{"filename": "new.pdf"}],
-    }
-
-    with caplog.at_level(logging.WARNING):
-        warn_id_less_dynamic_list_submissions(DYNAMIC_LIST_UISCHEMA, data)
-
-    assert "row-id-merge-fallback" in caplog.text
-    assert "positions" in caplog.text
-    assert "uploads" not in caplog.text
+    assert result.error_schema is not None
+    assert "positions" in result.error_schema
 
 
-def test__marker_stays_quiet_for_stamped_submissions(caplog):
-    data = {
-        "positions": [{"_row_id": "r1", "name": "x"}],
-        "uploads": [{"filename": "new.pdf"}],
-    }
+def test__a_single_row_without_an_id_is_a_new_row():
+    stored = {"positions": [{"_row_id": "r1", "name": "a", "asset_number": "A-1"}]}
+    submitted = {"positions": [{"_row_id": "r1", "name": "a"}, {"name": "added"}]}
 
-    with caplog.at_level(logging.WARNING):
-        warn_id_less_dynamic_list_submissions(DYNAMIC_LIST_UISCHEMA, data)
+    result = _validate(DYNAMIC_LIST_FORM, submitted, stored=stored)
 
-    assert "row-id-merge-fallback" not in caplog.text
+    assert not result.error_schema
+    assert result.task_data["positions"][0]["asset_number"] == "A-1"
+    assert "asset_number" not in result.task_data["positions"][1]
+
+
+def test__id_less_list_is_fine_while_nothing_is_stored_yet():
+    result = _validate(DYNAMIC_LIST_FORM, {"positions": [{"name": "a"}]}, stored={})
+
+    assert not result.error_schema

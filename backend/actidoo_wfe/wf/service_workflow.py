@@ -215,8 +215,10 @@ def _merge_list_of_dicts_by_row_id(stored, upd_list):
 
 
 def _merge_list_of_dicts_by_index(dest, k, v):
-    """Legacy index-aligned list merge. Only used as fallback for submissions
-    that carry no row IDs (old frontends, forms opened before the rollout)."""
+    """Index-aligned list merge for lists without row identity - lists a service
+    task writes never carry one. Form dynamic lists do not reach this branch:
+    their rows are stamped when the task is handed out, and a submission whose
+    list carries no identity at all is rejected during validation."""
     if k not in dest or not isinstance(dest[k], list):  # in dest we may not have a list or some other type (see new_list or some_other_list_type_dict)
         dest[k] = [{}] * len(v)  # create an empty list with as many elements as v
     elif len(dest[k]) < len(v):
@@ -224,8 +226,8 @@ def _merge_list_of_dicts_by_index(dest, k, v):
     elif len(dest[k]) > len(v):
         del dest[k][-(len(dest[k]) - len(v)) :]  # if dest[k] is bigger then delete the last items
         # Index alignment cannot express which row was deleted and mixes neighbors
-        # after a middle-row deletion. The row-id merge solves this; this branch
-        # only remains until monitoring shows ID-less submissions no longer happen.
+        # after a middle-row deletion - which is exactly why form rows carry an
+        # identity and are never merged here.
 
     # now we have equally sized lists of the same type on both sides and can safely update each element of dest:
     assert len(v) == len(dest[k])
@@ -302,16 +304,13 @@ def execute_user_task(
     assert not (assigned_delegate_user_id is not None and assigned_user_id == user.id and assigned_delegate_user_id != user.id)
 
     form_spec = get_react_json_schema_form_data(task=task)
-    if form_spec is not None:
-        # Monitored marker for retiring the index fallback: fires only for
-        # dynamic lists submitted without IDs (legacy frontend / stale form).
-        warn_id_less_dynamic_list_submissions(form_spec.uischema, cleaned_task_data)
 
     # Deep-Update task.data with cleaned_task_data
     update(task.data, cleaned_task_data)
 
-    # Rows added by this submission may still lack an ID (old frontend); stamp
-    # them before the engine advances so downstream tasks see stable identities.
+    # Rows the user just added carry the identity the frontend gave them; anything
+    # else that is still id-less gets one here, so downstream tasks see stable
+    # identities even for lists a service task wrote into the form.
     if form_spec is not None:
         stamp_missing_row_ids(form_spec.uischema, task.data)
 
@@ -918,25 +917,37 @@ def strip_hidden_field_values(
     ).task_data
 
 
-def stamp_missing_row_ids(uischema: dict, data) -> None:
+def stamp_missing_row_ids(uischema: dict, data) -> bool:
     """Stamp a ``ROW_ID_KEY`` onto every dynamic-list item that lacks one
-    (ADR 010). Only form dynamic lists are touched - lists written by service
-    tasks stay untouched, and no persisted schema knows the technical field."""
+    (ADR 010) and report whether anything was missing. Only form dynamic lists
+    are touched - lists written by service tasks stay untouched, and no
+    persisted schema knows the technical field."""
+    stamped = False
     for _path, rows in iter_dynamic_lists(uischema, data):
         for row in rows:
             if isinstance(row, dict) and get_row_id(row) is None:
                 row[ROW_ID_KEY] = str(uuid.uuid4())
+                stamped = True
+    return stamped
 
 
-def warn_id_less_dynamic_list_submissions(uischema: dict, data) -> None:
-    """Log the monitored ``row-id-merge-fallback`` marker for every dynamic
-    list whose submitted rows all lack row IDs (legacy frontend, or a form
-    delivered before the rollout). Attachment arrays and service-task lists
-    never pollute the signal."""
-    for path, rows in iter_dynamic_lists(uischema, data):
-        dict_rows = [row for row in rows if isinstance(row, dict)]
-        if dict_rows and all(get_row_id(row) is None for row in dict_rows):
-            log.warning("row-id-merge-fallback: dynamic list %r submitted without %s", path[-1], ROW_ID_KEY)
+def stamp_missing_row_ids_for_ready_tasks(workflow: BpmnWorkflow) -> bool:
+    """Give every open user task's dynamic-list rows an identity and report
+    whether anything was missing. Runs when tasks are handed to the frontend: a
+    form rendered from rows without identity makes the frontend mint its own
+    IDs, and those cannot be matched against the stored rows on submit."""
+    stamped = False
+    for task in get_ready_and_waiting_usertasks(workflow=workflow):
+        form_spec = get_react_json_schema_form_data(task=task)
+        if form_spec is None:
+            continue
+
+        task_data = task.data
+        if not isinstance(task_data, dict) or not task_data:
+            continue
+
+        stamped = stamp_missing_row_ids(form_spec.uischema, task_data) or stamped
+    return stamped
 
 
 def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
@@ -1054,6 +1065,12 @@ def get_options_detailed_for_property(
 def replace_task_data(workflow: BpmnWorkflow, task_id: uuid.UUID, task_data: dict):
     task: Task = workflow.get_task_from_id(task_id)
     task.data = task_data
+
+    # Every write path stamps: replaced rows must not reach a form without
+    # identity, exactly like rows arriving through a submission (ADR 010).
+    form_spec = get_react_json_schema_form_data(task=task)
+    if form_spec is not None and isinstance(task.data, dict):
+        stamp_missing_row_ids(form_spec.uischema, task.data)
 
 
 def execute_erroneous_task(workflow: BpmnWorkflow, task_id: uuid.UUID):

@@ -165,21 +165,22 @@ def test_hideif_or_condition_added_list_item_survives_merge(db_engine_ctx, mock_
                 "globalA": 2,
                 "globalB": 4,
                 "my_list": [
-                    {"number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []},
+                    {"_row_id": "stored-row", "number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []},
                 ],
             }
         )
         repository.store_workflow_instance(db=workflow.db, workflow=stored_workflow)
         workflow.db.commit()
 
-        # The user keeps the existing row and adds a second, fully filled row.
+        # The user keeps the existing row and adds a second, fully filled row -
+        # which the frontend hands its own identity.
         workflow.user("initiator").submit(
             task_data={
                 "globalA": 2,
                 "globalB": 4,
                 "my_list": [
-                    {"number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []},
-                    {"number_a": 8, "number_b": 2, "number_or": 6, "my_list_B": []},
+                    {"_row_id": "stored-row", "number_a": 7, "number_b": 1, "number_or": 5, "my_list_B": []},
+                    {"_row_id": "added-row", "number_a": 8, "number_b": 2, "number_or": 6, "my_list_B": []},
                 ],
             },
             workflow_instance_id=workflow.workflow_instance_id,

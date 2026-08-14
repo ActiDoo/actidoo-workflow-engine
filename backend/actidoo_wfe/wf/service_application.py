@@ -607,6 +607,26 @@ def _get_delegate_targets_for_user(db: Session, user_id: uuid.UUID) -> set[uuid.
     return service_user.get_active_principals_for_delegate(db=db, delegate_user_id=user_id)
 
 
+def _stamp_row_ids_before_handing_out_forms(db: Session, workflow, workflow_instance_id: uuid.UUID):
+    """Make sure every open form's dynamic-list rows carry an identity before the
+    frontend sees them (ADR 010). Without it the frontend mints its own IDs for
+    those rows, and the merge cannot match them against the stored ones.
+
+    Stamping writes, so it is a two-step: the check runs on the instance we
+    already read - and finds nothing once a task has been handed out before, which
+    is the normal case. Only when something is actually missing is the instance
+    re-read under a lock, because storing it writes the whole blob back and would
+    otherwise discard a submission committed in the meantime."""
+
+    if not service_workflow.stamp_missing_row_ids_for_ready_tasks(workflow):
+        return workflow
+
+    workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id, for_update=True)
+    service_workflow.stamp_missing_row_ids_for_ready_tasks(workflow)
+    repository.store_workflow_instance(db=db, workflow=workflow)
+    return workflow
+
+
 def get_usertasks_for_user_id(
     db: Session,
     user_id: uuid.UUID,
@@ -621,6 +641,9 @@ def get_usertasks_for_user_id(
         # user is simply not involved in — the route must not be an existence
         # oracle (and must not 500 on stale deep links).
         return []
+    if state == "ready" and workflow_providers.workflow_definition_available(workflow.spec.name):
+        workflow = _stamp_row_ids_before_handing_out_forms(db=db, workflow=workflow, workflow_instance_id=workflow_instance_id)
+
     delegate_targets = _get_delegate_targets_for_user(db=db, user_id=user_id)
     usertasks = service_workflow.get_usertasks_for_user(
         workflow=workflow,

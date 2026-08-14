@@ -16,7 +16,7 @@ import {
   computeHiddenMap,
 } from '@/services/FeelService';
 import { ROW_ID_KEY } from '@/models/models';
-import { generateRowId, isDynamicListUiItems } from '@/utils/rowIdentity';
+import { adoptServerRowIds, generateRowId, isDynamicListUiItems } from '@/utils/rowIdentity';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
 import { useScrollTop } from '@/utils/hooks/useScrollTop';
 import { WeUploadDialog } from '@/utils/components/WeUploadDialog';
@@ -43,6 +43,8 @@ import {
   saveFormData,
   deleteFormData,
   deleteOldFormData,
+  CURRENT_DRAFT_FORMAT,
+  DRAFT_FORMAT_ROW_IDENTITY,
 } from '@/services/DBService';
 
 interface SingleTaskProps {
@@ -123,19 +125,16 @@ const prepareFormData = (
         let current = row;
         if (isDynamicList) {
           const rowId = current[ROW_ID_KEY];
-          // Missing ID: adopt the stored row's identity at the same position if
-          // there is one (pre-rollout drafts must not mint fresh IDs for rows
-          // that exist server-side - disjoint IDs would delete the stored rows),
-          // else it is a freshly added row. Duplicate ID: rjsf's copy-row button
-          // clones a row verbatim - a copy IS a new row with its own identity,
-          // otherwise the backend rejects the duplicate.
+          // Server rows arrive stamped, legacy drafts and templates get their ids
+          // when they are loaded/applied - a row without an id here was just added
+          // by the user. A duplicate means rjsf's copy-row button cloned a row
+          // verbatim, and a copy IS a new row with its own identity, otherwise the
+          // backend rejects the duplicate. Either way: mint. The backend cannot
+          // take over here - a list whose rows all lack ids is indistinguishable
+          // from one submitted by a client that never loaded the task, which the
+          // submission validation rejects.
           if (typeof rowId !== 'string' || rowId === '' || seenRowIds.has(rowId)) {
-            const serverRowId = serverRows[index]?.[ROW_ID_KEY];
-            const adopted =
-              typeof serverRowId === 'string' && serverRowId !== '' && !seenRowIds.has(serverRowId)
-                ? serverRowId
-                : generateRowId();
-            current = { ...current, [ROW_ID_KEY]: adopted };
+            current = { ...current, [ROW_ID_KEY]: generateRowId() };
             rowsChanged = true;
           }
           seenRowIds.add(current[ROW_ID_KEY]);
@@ -193,6 +192,10 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const submittedTaskIdRef = useRef<string | null>(null);
 
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  // Format the loaded draft was stored in (see CURRENT_DRAFT_FORMAT); undefined
+  // while no draft is loaded. Older formats are brought up to date by the
+  // upgrade effect below once the task context is available.
+  const [draftFormatVersion, setDraftFormatVersion] = useState<number | undefined>(undefined);
 
   const submitRequest = useSelector((state: State) => state.data[WeDataKey.SUBMIT_TASK_DATA]);
   const loadingState = useSelector((state: State) => state.ui.loading);
@@ -246,6 +249,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     setIsDraftLoaded(false);
     setFormData(undefined);
     setErrorSchema(undefined);
+    setDraftFormatVersion(undefined);
   }, [taskId]);
 
   // Debounced draft saver: always saves the data for the taskId provided at call-time (prevents ref races)
@@ -290,12 +294,13 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
         await deleteOldFormData(db);
 
         if (taskId) {
-          const savedFormData = await getFormData(db, taskId);
+          const savedDraft = await getFormData(db, taskId);
           if (isCancelled) return;
 
           // Only set draft here. Server fallback is handled in a separate effect after draft load is completed.
-          if (savedFormData !== undefined && savedFormData !== null) {
-            setFormData(savedFormData);
+          if (savedDraft !== null) {
+            setFormData(savedDraft.formData);
+            setDraftFormatVersion(savedDraft.formatVersion ?? 0);
           }
         }
 
@@ -337,6 +342,31 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
 
     setFormData(task.data ?? {});
   }, [isDraftLoaded, task, taskId, formData]);
+
+  // Bring a draft stored in an older format up to date, once draft and task are
+  // both there. Steps run in version order and each compares against the format
+  // that introduced it - a future format bump appends its step here.
+  useEffect(() => {
+    if (draftFormatVersion === undefined || draftFormatVersion >= CURRENT_DRAFT_FORMAT) return;
+    if (!task || task.id !== taskId) return;
+    if (formData === undefined) return;
+
+    let data: unknown = formData;
+    let changed = false;
+
+    if (draftFormatVersion < DRAFT_FORMAT_ROW_IDENTITY) {
+      // Rows of such a draft carry ids the server never issued. Map them onto the
+      // stored rows - submitting them as-is would make the backend take every row
+      // for a new one and drop the values it owns. Current-format drafts are never
+      // touched: ids the server does not know are rows the user really added.
+      const adopted = adoptServerRowIds(task.uischema, data, task.data);
+      data = adopted.data;
+      changed = changed || adopted.changed;
+    }
+
+    setDraftFormatVersion(CURRENT_DRAFT_FORMAT);
+    if (changed) setFormData(data as object);
+  }, [draftFormatVersion, task, taskId, formData]);
 
   // The form and everything that watches it (hide-if conditions, dynamic selects) must
   // all see the same, already-normalized data from the very first render on.
@@ -489,6 +519,8 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
 
     setFormData(task.data ?? {});
     setErrorSchema(undefined);
+    // The form now shows server data, not a stored draft - nothing left to upgrade.
+    setDraftFormatVersion(undefined);
   };
 
   const renderResetToInitialStateDialog = (): React.ReactElement => {
@@ -543,14 +575,19 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   // Apply a template: replace the controlled formData and remount RJSF so it picks up the new values.
   const handleApplyTemplate = useCallback(
     (data: object) => {
-      const next = _.cloneDeep(data);
+      // Templates never store the technical row id, so their list rows arrive
+      // without identity. Re-link them to the rows currently in the form by
+      // position - the template changes values, not which rows exist. Rows
+      // beyond the current ones are genuinely new and get a fresh id later.
+      const current = formData ?? task?.data ?? {};
+      const next = adoptServerRowIds(task?.uischema, _.cloneDeep(data), current).data as object;
       setFormData(next);
       setFormRenderIndex(index => index + 1);
       if (isDraftLoaded && taskId) {
         void debouncedSaveDraft(taskId, next);
       }
     },
-    [isDraftLoaded, taskId, debouncedSaveDraft]
+    [isDraftLoaded, taskId, debouncedSaveDraft, formData, task]
   );
 
   if (loadingState[WeDataKey.MY_USER_TASKS] || !isDraftLoaded || (task && formData === undefined)) {

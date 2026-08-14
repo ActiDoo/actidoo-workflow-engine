@@ -12,7 +12,7 @@ two submissions with a merge in between - instead of a hand-built stored state.
 """
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.wf import repository, service_workflow
+from actidoo_wfe.wf import repository, service_application, service_workflow
 from actidoo_wfe.wf.constants import ROW_ID_KEY
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
@@ -171,41 +171,126 @@ def test_rows_submitted_without_ids_are_stamped_and_schemas_stay_clean(db_engine
         assert ROW_ID_KEY not in task.uischema["my_list"]["items"]
 
 
-def test_rollout_window_fresh_ids_over_id_less_stored_rows(db_engine_ctx, mock_send_text_mail):
-    """Rollout window: rows stored before the feature existed carry no IDs,
-    while the updated frontend stamps fresh ones at load. Matching must fall
-    back to index alignment - treating every row as new would drop the values
-    the merge is supposed to restore."""
+def _strip_stored_row_ids(workflow):
+    """Turn the instance into what it looked like before row identity existed."""
+    stored_workflow = repository.load_workflow_instance(
+        db=workflow.db,
+        workflow_id=workflow.workflow_instance_id,
+    )
+    for task in service_workflow.get_ready_and_waiting_usertasks(workflow=stored_workflow):
+        for row in task.data.get("my_list", []):
+            row.pop(ROW_ID_KEY, None)
+    repository.store_workflow_instance(db=workflow.db, workflow=stored_workflow)
+    workflow.db.commit()
+
+
+def test_handing_out_a_task_stamps_and_persists_row_ids(db_engine_ctx, mock_send_text_mail):
+    """Rows an instance carries from before row identity existed get their ids
+    when the task is handed out - and keep them, so the next request and the
+    frontend see the same identities."""
     with db_engine_ctx():
         workflow = _start_workflow()
         _capture_three_rows(workflow)
+        _strip_stored_row_ids(workflow)
 
-        # Simulate data written before the rollout: strip the stored identities.
-        stored_workflow = repository.load_workflow_instance(
-            db=workflow.db,
-            workflow_id=workflow.workflow_instance_id,
+        delivered = [row[ROW_ID_KEY] for row in _ready_task(workflow, STEP_2).data["my_list"]]
+        assert len(set(delivered)) == 3
+
+        reloaded = repository.load_workflow_instance(db=workflow.db, workflow_id=workflow.workflow_instance_id)
+        stored_task = next(t for t in service_workflow.get_ready_and_waiting_usertasks(workflow=reloaded) if t.task_spec.name == STEP_2)
+        assert [row[ROW_ID_KEY] for row in stored_task.data["my_list"]] == delivered
+
+
+def test_handing_out_a_stamped_task_again_writes_nothing(db_engine_ctx, mock_send_text_mail, monkeypatch):
+    """Stamping writes, so it must happen once and then never again - a read
+    path that keeps writing would compete with concurrent submissions."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        _capture_three_rows(workflow)
+        _strip_stored_row_ids(workflow)
+
+        _ready_task(workflow, STEP_2)  # stamps
+
+        calls = []
+        original = repository.store_workflow_instance
+        monkeypatch.setattr(repository, "store_workflow_instance", lambda **kwargs: calls.append(kwargs) or original(**kwargs))
+
+        _ready_task(workflow, STEP_2)
+
+        assert calls == []
+
+
+def test_handing_out_a_task_notifies_nobody(db_engine_ctx, mock_send_text_mail, monkeypatch):
+    """Storing an instance is what fires the assignment mails. The stamping
+    write must not look like a task becoming ready."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        _capture_three_rows(workflow)
+        _strip_stored_row_ids(workflow)
+
+        published = []
+        monkeypatch.setattr(repository.events, "publish_event", lambda event: published.append(event))
+
+        _ready_task(workflow, STEP_2)
+
+        assert published == []
+
+
+def test_admin_replace_stamps_replaced_rows(db_engine_ctx, mock_send_text_mail):
+    """Admin replace writes task data wholesale, bypassing submission validation.
+    Its rows must come out stamped like any other write - otherwise the replaced
+    task would be the one path left that hands out rows without identity."""
+    with db_engine_ctx():
+        workflow = WorkflowDummy(
+            db_session=SessionLocal(),
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-user", "wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
         )
-        for task in service_workflow.get_ready_and_waiting_usertasks(workflow=stored_workflow):
-            for row in task.data.get("my_list", []):
-                row.pop(ROW_ID_KEY, None)
-        repository.store_workflow_instance(db=workflow.db, workflow=stored_workflow)
+        _capture_three_rows(workflow)
+        task = _ready_task(workflow, STEP_2)
+
+        service_application.admin_replace_task_data(
+            db=workflow.db,
+            user_id=workflow.user("admin").user.id,
+            task_id=task.id,
+            task_data={"header_text": "replaced", "my_list": [{"text_a": "first"}, {"text_a": "second"}]},
+        )
         workflow.db.commit()
 
-        # Updated frontend: same rows in the same order, freshly stamped IDs,
-        # notes hidden because number_a is 9.
+        reloaded = repository.load_workflow_instance(db=workflow.db, workflow_id=workflow.workflow_instance_id)
+        stored_task = next(t for t in service_workflow.get_ready_and_waiting_usertasks(workflow=reloaded) if t.task_spec.name == STEP_2)
+        row_ids = [row.get(ROW_ID_KEY) for row in stored_task.data["my_list"]]
+        assert all(isinstance(row_id, str) and row_id for row_id in row_ids)
+        assert len(set(row_ids)) == 2
+
+
+def test_deleting_a_middle_row_of_a_legacy_instance_keeps_values_in_place(db_engine_ctx, mock_send_text_mail):
+    """The regression this is all about: rows without identity, the user deletes
+    the middle one. Because the task was stamped when it was handed out, both
+    sides share the same ids and every remaining row keeps its own values."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        _capture_three_rows(workflow)
+        _strip_stored_row_ids(workflow)
+
+        rows = _ready_task(workflow, STEP_2).data["my_list"]
+        first, _middle, third = (row[ROW_ID_KEY] for row in rows)
+
         workflow.user("initiator").submit(
             task_data={
                 "header_text": "outer",
                 "my_list": [
-                    {ROW_ID_KEY: "fresh-1", "text_a": "first", "number_a": 9},
-                    {ROW_ID_KEY: "fresh-2", "text_a": "second", "number_a": 9},
-                    {ROW_ID_KEY: "fresh-3", "text_a": "third", "number_a": 9},
+                    {ROW_ID_KEY: first, "text_a": "first", "number_a": 9},
+                    {ROW_ID_KEY: third, "text_a": "third", "number_a": 9},
                 ],
             },
             workflow_instance_id=workflow.workflow_instance_id,
             task_name=STEP_2,
         )
 
-        result = _ready_task(workflow, STEP_3).data["my_list"]
-        assert [row["hidden_note"] for row in result] == ["note-1", "note-2", "note-3"]
-        assert [row["backend_value"] for row in result] == ["value_2", "value_3", "value_2"]
+        result = _rows_by_id(_ready_task(workflow, STEP_3).data["my_list"])
+        assert set(result) == {first, third}
+        # Index alignment would have restored the deleted row's note onto the third.
+        assert result[first]["hidden_note"] == "note-1"
+        assert result[third]["hidden_note"] == "note-3"

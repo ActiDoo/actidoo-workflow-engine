@@ -1,10 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
+// Format version of stored drafts. Bump it whenever a change alters what a
+// stored draft means, and add an entry here; consumers compare a draft's
+// version against the feature's introduction to decide whether the draft
+// needs an upgrade step when it is loaded. Absent = 0, written before
+// versioning existed. Old drafts expire after 60 days (deleteOldFormData),
+// so upgrade steps retire themselves.
+//
+// 1 - dynamic-list rows carry the identity the server handed out (ADR 010);
+//     older drafts get their rows re-linked to the server rows by position.
+export const DRAFT_FORMAT_ROW_IDENTITY = 1;
+export const CURRENT_DRAFT_FORMAT = DRAFT_FORMAT_ROW_IDENTITY;
+
 export interface StoredFormData {
   taskId: string; // Unique task identifier
   formData: Record<string, any>; // Dynamic form data
   timestamp: number; // Timestamp of when the data was stored
+  formatVersion?: number; // See CURRENT_DRAFT_FORMAT; absent = 0
 }
 
 export interface StoredFileData {
@@ -103,7 +116,12 @@ export const saveFormData = async (
   await new Promise((resolve, reject) => {
     const transaction: IDBTransaction = db.transaction([FORM_STORE], 'readwrite');
     const store: IDBObjectStore = transaction.objectStore(FORM_STORE);
-    const storedData: StoredFormData = { taskId, formData: data, timestamp };
+    const storedData: StoredFormData = {
+      taskId,
+      formData: data,
+      timestamp,
+      formatVersion: CURRENT_DRAFT_FORMAT,
+    };
     const request: IDBRequest<IDBValidKey> = store.put(storedData);
 
     request.onsuccess = () => {
@@ -118,15 +136,15 @@ export const saveFormData = async (
 };
 
 /**
- * Retrieves dynamic form data from the 'forms' object store for a specific task.
+ * Retrieves the stored draft (form data plus its metadata) for a specific task.
  * @param db - The IndexedDB database instance.
  * @param taskId - The unique identifier for the task.
- * @returns {Promise<Record<string, any> | null>}
+ * @returns {Promise<StoredFormData | null>}
  */
 export const getFormData = async (
   db: IDBDatabase,
   taskId: string
-): Promise<Record<string, any> | null> => {
+): Promise<StoredFormData | null> => {
   return await new Promise((resolve, reject) => {
     const transaction: IDBTransaction = db.transaction([FORM_STORE], 'readonly');
     const store: IDBObjectStore = transaction.objectStore(FORM_STORE);
@@ -136,11 +154,7 @@ export const getFormData = async (
       const result: StoredFormData | undefined = (
         event.target as IDBRequest<StoredFormData | undefined>
       ).result;
-      if (result) {
-        resolve(result.formData);
-      } else {
-        resolve(null);
-      }
+      resolve(result ?? null);
     };
 
     request.onerror = (event: Event) => {

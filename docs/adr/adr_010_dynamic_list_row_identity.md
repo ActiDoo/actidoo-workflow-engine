@@ -19,13 +19,13 @@ The loss stays invisible for a long time: disabled fields carry form defaults, s
 1. Row identity must survive the frontend round trip without relying on list order; deleting and reordering must not corrupt neighboring rows.
 2. Ownership must hold per row: backend-owned values return to *their own* row only, and the frontend must not be able to graft foreign data onto a row by forging identity.
 3. What the frontend displays must be what the backend persists - and a user must never be blocked over data they cannot edit.
-4. Running instances and not-yet-updated frontends keep working during the transition.
+4. Running instances keep working without an offline migration.
 
 ## Decision
 
 **1. Rows get a technical identity.** Every dynamic-list row carries a hidden `_row_id` (UUID) in the task data - no stored form schema ever contains the technical field, so it stays renamable and invisible to form authors; the engine admits it transparently during submission validation, and the frontend generates it for new rows. The merge matches rows by ID: IDs only in the submission mean "new row", stored IDs missing from it mean "deleted", and order follows the submission - which makes reordering legal for the first time. Unknown IDs are never matched against stored data, so a forged ID cannot pull another row's values.
 
-Existing instances are stamped lazily as they progress; rows are matched by ID only when both sides carry IDs - a submission or stored list without them falls back to the index merge until monitoring shows this no longer happens. IDs survive completion, so archived instances stay auditable, and they are exposed as a supported row reference for service tasks and API consumers - carried in the task data itself for now.
+Rows are stamped when a task is handed to the frontend, so a form is never rendered from rows without identity and both sides always share the same ids - a submission that comes back without any is rejected rather than guessed at by position. Lists a service task writes carry no identity and keep the index merge. IDs survive completion, so archived instances stay auditable, and they are exposed as a supported row reference for service tasks and API consumers - carried in the task data itself for now.
 
 **2. Defaults on disabled fields are forced assignments.** A disabled field is backend-owned, but the process definition may declare its value: whenever the backend has nothing stored, the schema default becomes the value during the merge. The same resolution feeds hide-if evaluation, so frontend and backend always agree on the effective value - stored value, else default. Every configuration now has a defined meaning: disabled with a default is guaranteed to be filled (the value that necessarily results from the user's action), disabled without a default may stay absent until the backend fills it. Nothing can be misconfigured into an impossible state anymore, so no separate check is needed.
 
@@ -42,4 +42,5 @@ Existing instances are stamped lazily as they progress; rows are matched by ID o
 - Displayed defaults become real values: forms that already declare defaults on disabled fields start behaving correctly without being touched, and previously incomplete rows heal on their next round trip through the merge.
 - Defaults are declared per form, so the forced value depends on the step in which a row is created - authors are responsible for keeping them consistent across steps.
 - A disabled field without a default and without a backend value stays absent, and nothing warns about it; consumers must treat absence as legal.
-- The merge stays as cheap as today, and no offline data migration is needed; regression tests remain the safety net against future stripping defects.
+- The merge stays as cheap as today, and no offline data migration is needed - instead, handing out a task of an instance that predates row identity writes once, under a lock, because the whole instance is stored as one blob.
+- Regression tests remain the safety net against future stripping defects.
