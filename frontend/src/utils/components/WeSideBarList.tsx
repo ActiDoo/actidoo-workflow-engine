@@ -186,10 +186,11 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
               const suffix = taskCount > 1 ? (language === 'de' ? 'n' : 's') : '';
               const taskLabel =
                 taskCount > 1
-                  ? t('sidebar.taskCount', { count: taskCount, suffix })
-                  : `${t('common.labels.task')}:`;
+                  ? `${t('sidebar.taskCount', { count: taskCount, suffix })} `
+                  : `${t('common.labels.task')}: `;
               return (
                 <StandardListItem
+                  data-task-selected={isSelected ? 'true' : undefined}
                   className={` h-auto pc-pl-responsive ${
                     isDelegationHighlight ? 'bg-orange-50' : ''
                   }`}
@@ -197,26 +198,26 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                   onClick={() => {
                     navigate(`${instance.id}`);
                   }}>
-                  <div className="py-2">
-                    <Text className={`${isSelected ? '!font-bold' : ''} ml-1 `}>
+                  <div className="py-2 min-w-0 w-full">
+                    <Text className={`${isSelected ? '!font-bold' : ''} !block ml-1`}>
                       {instance.title}
                     </Text>
-                    {instance.subtitle && (
-                      <Text className={`!text-xs !text-neutral-700  !block ml-1 `}>
-                        {instance.subtitle}
-                      </Text>
-                    )}
                     {tasks && tasks.length > 0 && (
-                      <Text className={`!text-xs !text-neutral-700 !block ml-1 `}>
+                      <Text className="!text-xs !text-brand-primary !block ml-1">
                         <div className="line-clamp-1">
                           {taskLabel}
                           {tasks.map((task, index: number) => (
                             <span key={`taskname-${instance.id}-${index}`}>
                               {task.title}
-                              {tasks && tasks.length > index + 1 ? ', ' : ''}
+                              {tasks.length > index + 1 ? ', ' : ''}
                             </span>
                           ))}
                         </div>
+                      </Text>
+                    )}
+                    {instance.subtitle && (
+                      <Text className="!text-xs !text-neutral-700 !block ml-1 truncate">
+                        {instance.subtitle}
                       </Text>
                     )}
                     {isDelegationHighlight && delegationTask?.assigned_user?.full_name ? (
