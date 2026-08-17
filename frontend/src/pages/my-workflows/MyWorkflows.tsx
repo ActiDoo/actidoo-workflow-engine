@@ -3,7 +3,7 @@
 
 import React, { Suspense } from 'react';
 
-import { PcDetailsPage } from '@/ui5-components';
+import { PcDetailsPage, useEmphasizedObjectPageTabs } from '@/ui5-components';
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@/i18n';
@@ -14,12 +14,12 @@ const MyWorkflows: React.FC = () => {
   const path = window.location.pathname;
   const selectedTab = path.includes('completed') ? 'completed' : 'progress';
 
+  useEmphasizedObjectPageTabs('pc-my-workflows', selectedTab);
   return (
     <PcDetailsPage
+      id="pc-my-workflows"
       mode={ObjectPageMode.IconTabBar}
-      header={{
-        title: t('myWorkflows.title'),
-      }}
+      headerTitle={undefined}
       selectedSectionId={selectedTab}
       onSelectedSectionChange={event => {
         navigate(`${event.detail.selectedSectionId}`);
