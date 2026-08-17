@@ -24,6 +24,7 @@ import {
   Switch,
 } from '@ui5/webcomponents-react';
 import moment from 'moment';
+import '@ui5/webcomponents-icons/dist/save.js';
 import WeUserAutocomplete from '@/utils/components/WeUserAutocomplete';
 import { UserDelegation } from '@/models/models';
 import { handleResponse } from '@/services/HelperService';
@@ -264,170 +265,179 @@ const UserSettings: React.FC = () => {
 
   return (
     <PcPage header={{ title: t('userSettings.title') }}>
-      <div className="bg-white rounded-lg shadow-sm p-6 space-y-4 mb-8">
-        <Label className="font-semibold block mb-1">{t('userSettings.localeLabel')}</Label>
-        <FlexBox
-          className="items-center mb-4 flex-wrap gap-2"
-          alignItems={FlexBoxAlignItems.Center}>
-          <Select
-            className="w-48"
-            onChange={e => {
-              const nextLocale = e.detail.selectedOption.getAttribute('data-key') ?? '';
-              setLocale(nextLocale);
-              changeLanguage(nextLocale);
-            }}>
-            {options.map(({ key, label }) => (
-              <Option key={key} data-key={key} selected={key === locale}>
-                {label}
-              </Option>
-            ))}
-          </Select>
-        </FlexBox>
-        <div>
-          <Text className="mr-2 text-sm text-neutral-700">{t('userSettings.localeHint')}</Text>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm p-6 space-y-4 mb-8">
-        <div>
-          <Label className="font-semibold block mb-1">
-            {t('userSettings.errorReminder.title')}
-          </Label>
-          <Text className="text-sm text-neutral-700">{t('userSettings.errorReminder.hint')}</Text>
-        </div>
-        <FlexBox className="items-center gap-2" alignItems={FlexBoxAlignItems.Center}>
-          <Switch
-            checked={receiveErrorTaskReminder}
-            onChange={event => {
-              setReceiveErrorTaskReminder(event.target.checked);
-            }}
-          />
-          <Text>{t('userSettings.errorReminder.label')}</Text>
-        </FlexBox>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
-        <div>
-          <Label className="font-semibold block mb-1">{t('userSettings.delegations.title')}</Label>
-          <Text className="text-sm text-neutral-700">{t('userSettings.delegations.hint')}</Text>
-        </div>
-
-        <div className="space-y-4">
-          {delegations.length === 0 ? (
-            <Text className="text-sm text-neutral-500">{t('userSettings.delegations.empty')}</Text>
-          ) : (
-            delegations.map(entry => (
-              <div
-                key={entry.delegate_user_id}
-                className="border border-neutral-200 rounded-lg p-4 flex flex-col gap-3 bg-neutral-50/40">
-                <div className="flex flex-wrap justify-between gap-4">
-                  <div>
-                    <Text className="font-semibold block">
-                      {entry.delegate?.full_name ?? entry.delegate_user_id}
-                    </Text>
-                    {entry.delegate?.email ? (
-                      <Text className="text-sm text-neutral-600">
-                        &nbsp;({entry.delegate.email})
-                      </Text>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-3 items-end">
-                  <div className="flex flex-col gap-1">
-                    <Label>{t('userSettings.delegations.validUntil')}</Label>
-                    <DateTimePicker
-                      className="w-64"
-                      formatPattern={DATE_TIME_PATTERN}
-                      value={toPickerValue(entry.valid_until)}
-                      onChange={event => {
-                        handleDelegationDateChange(
-                          entry.delegate_user_id,
-                          toIsoDateTimeValue(event.detail.value)
-                        );
-                      }}
-                    />
-                  </div>
-                  <Button
-                    design={ButtonDesign.Transparent}
-                    disabled={!entry.valid_until}
-                    onClick={() => {
-                      handleDelegationDateChange(entry.delegate_user_id, null);
-                    }}>
-                    {t('userSettings.delegations.clearDeadline')}
-                  </Button>
-                  <Button
-                    design={ButtonDesign.Negative}
-                    icon="decline"
-                    onClick={() => {
-                      handleRemoveDelegation(entry.delegate_user_id);
-                    }}>
-                    {t('userSettings.delegations.remove')}
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-
-          {isDirty ? (
-            <MessageStrip design={MessageStripDesign.Warning} hideCloseButton className="block">
-              {t('common.unsavedChanges.hint')}
-            </MessageStrip>
-          ) : null}
-        </div>
-
-        <div className="border-t border-neutral-200 pt-4 space-y-3">
-          <Label className="font-semibold block">
-            {t('userSettings.delegations.add')} {t('common.delegations.addHint')}
-          </Label>
-          <WeUserAutocomplete
-            key={delegateInputResetKey}
-            excludeUserIds={excludedDelegateIds}
-            onSelectUser={(userId, label) => {
-              setPendingDelegate({ id: userId, label });
-            }}
-          />
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex flex-col gap-1">
-              <Label>{t('userSettings.delegations.validUntil')}</Label>
-              <DateTimePicker
-                className="w-64"
-                formatPattern={DATE_TIME_PATTERN}
-                value={toPickerValue(pendingValidUntil)}
-                onChange={event => {
-                  setPendingValidUntil(toIsoDateTimeValue(event.detail.value) ?? '');
-                }}
-              />
-            </div>
-            <Button
-              design={ButtonDesign.Transparent}
-              disabled={!pendingValidUntil}
-              onClick={() => {
-                setPendingValidUntil('');
+      {/* Bottom padding keeps the last card clear of the fixed save footer. */}
+      <div style={{ paddingBottom: '98px' }}>
+        <div className="bg-white rounded-lg shadow-sm p-6 space-y-4 mb-8">
+          <Label className="font-semibold block mb-1">{t('userSettings.localeLabel')}</Label>
+          <FlexBox
+            className="items-center mb-4 flex-wrap gap-2"
+            alignItems={FlexBoxAlignItems.Center}>
+            <Select
+              className="w-48"
+              onChange={e => {
+                const nextLocale = e.detail.selectedOption.getAttribute('data-key') ?? '';
+                setLocale(nextLocale);
+                changeLanguage(nextLocale);
               }}>
-              {t('userSettings.delegations.clearDeadline')}
-            </Button>
-            <Button
-              design={ButtonDesign.Emphasized}
-              disabled={!pendingDelegate.id || isDuplicatePendingDelegate}
-              onClick={handleAddDelegation}>
-              {t('userSettings.delegations.add')}
-            </Button>
+              {options.map(({ key, label }) => (
+                <Option key={key} data-key={key} selected={key === locale}>
+                  {label}
+                </Option>
+              ))}
+            </Select>
+          </FlexBox>
+          <div>
+            <Text className="mr-2 text-sm text-neutral-700">{t('userSettings.localeHint')}</Text>
           </div>
-          {isDuplicatePendingDelegate ? (
-            <Text className="text-xs text-red-500">
-              {t('userSettings.delegations.duplicateWarning')}
-            </Text>
-          ) : null}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 space-y-4 mb-8">
+          <div>
+            <Label className="font-semibold block mb-1">
+              {t('userSettings.errorReminder.title')}
+            </Label>
+            <Text className="text-sm text-neutral-700">{t('userSettings.errorReminder.hint')}</Text>
+          </div>
+          <FlexBox className="items-center gap-2" alignItems={FlexBoxAlignItems.Center}>
+            <Switch
+              checked={receiveErrorTaskReminder}
+              onChange={event => {
+                setReceiveErrorTaskReminder(event.target.checked);
+              }}
+            />
+            <Text>{t('userSettings.errorReminder.label')}</Text>
+          </FlexBox>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
+          <div>
+            <Label className="font-semibold block mb-1">
+              {t('userSettings.delegations.title')}
+            </Label>
+            <Text className="text-sm text-neutral-700">{t('userSettings.delegations.hint')}</Text>
+          </div>
+
+          <div className="space-y-4">
+            {delegations.length === 0 ? (
+              <Text className="text-sm text-neutral-500">
+                {t('userSettings.delegations.empty')}
+              </Text>
+            ) : (
+              delegations.map(entry => (
+                <div
+                  key={entry.delegate_user_id}
+                  className="border border-neutral-200 rounded-lg p-4 flex flex-col gap-3 bg-neutral-50/40">
+                  <div className="flex flex-wrap justify-between gap-4">
+                    <div>
+                      <Text className="font-semibold block">
+                        {entry.delegate?.full_name ?? entry.delegate_user_id}
+                      </Text>
+                      {entry.delegate?.email ? (
+                        <Text className="text-sm text-neutral-600">
+                          &nbsp;({entry.delegate.email})
+                        </Text>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3 items-end">
+                    <div className="flex flex-col gap-1">
+                      <Label>{t('userSettings.delegations.validUntil')}</Label>
+                      <DateTimePicker
+                        className="w-64"
+                        formatPattern={DATE_TIME_PATTERN}
+                        value={toPickerValue(entry.valid_until)}
+                        onChange={event => {
+                          handleDelegationDateChange(
+                            entry.delegate_user_id,
+                            toIsoDateTimeValue(event.detail.value)
+                          );
+                        }}
+                      />
+                    </div>
+                    <Button
+                      design={ButtonDesign.Transparent}
+                      disabled={!entry.valid_until}
+                      onClick={() => {
+                        handleDelegationDateChange(entry.delegate_user_id, null);
+                      }}>
+                      {t('userSettings.delegations.clearDeadline')}
+                    </Button>
+                    <Button
+                      design={ButtonDesign.Negative}
+                      icon="decline"
+                      onClick={() => {
+                        handleRemoveDelegation(entry.delegate_user_id);
+                      }}>
+                      {t('userSettings.delegations.remove')}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {isDirty ? (
+              <MessageStrip design={MessageStripDesign.Warning} hideCloseButton className="block">
+                {t('common.unsavedChanges.hint')}
+              </MessageStrip>
+            ) : null}
+          </div>
+
+          <div className="border-t border-neutral-200 pt-4 space-y-3">
+            <Label className="font-semibold block">
+              {t('userSettings.delegations.add')} {t('common.delegations.addHint')}
+            </Label>
+            <WeUserAutocomplete
+              key={delegateInputResetKey}
+              excludeUserIds={excludedDelegateIds}
+              onSelectUser={(userId, label) => {
+                setPendingDelegate({ id: userId, label });
+              }}
+            />
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex flex-col gap-1">
+                <Label>{t('userSettings.delegations.validUntil')}</Label>
+                <DateTimePicker
+                  className="w-64"
+                  formatPattern={DATE_TIME_PATTERN}
+                  value={toPickerValue(pendingValidUntil)}
+                  onChange={event => {
+                    setPendingValidUntil(toIsoDateTimeValue(event.detail.value) ?? '');
+                  }}
+                />
+              </div>
+              <Button
+                design={ButtonDesign.Transparent}
+                disabled={!pendingValidUntil}
+                onClick={() => {
+                  setPendingValidUntil('');
+                }}>
+                {t('userSettings.delegations.clearDeadline')}
+              </Button>
+              <Button
+                design={ButtonDesign.Emphasized}
+                disabled={!pendingDelegate.id || isDuplicatePendingDelegate}
+                onClick={handleAddDelegation}>
+                {t('userSettings.delegations.add')}
+              </Button>
+            </div>
+            {isDuplicatePendingDelegate ? (
+              <Text className="text-xs text-red-500">
+                {t('userSettings.delegations.duplicateWarning')}
+              </Text>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <Button
-        className="mt-6"
-        design={ButtonDesign.Emphasized}
-        disabled={!isDirty || !!saving}
-        onClick={handleSave}>
-        {t('userSettings.save')}
-      </Button>
+      <div className="footer-base fixed px-[6]">
+        <Button
+          icon="save"
+          design={ButtonDesign.Emphasized}
+          disabled={!isDirty || !!saving}
+          onClick={handleSave}>
+          {t('userSettings.save')}
+        </Button>
+      </div>
 
       {renderUnsavedChangesDialog()}
     </PcPage>

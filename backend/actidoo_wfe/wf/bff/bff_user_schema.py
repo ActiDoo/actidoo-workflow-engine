@@ -51,6 +51,16 @@ class SubmitTaskDataErrorResponse(BaseModel):
     error_schema: dict
 
 
+class WorkflowDeadlineResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    urgency_days: int | None = None
+    critical_days: int | None = None
+    urgency_at: datetime.datetime | None = None
+    critical_at: datetime.datetime | None = None
+    level: str = "normal"
+
+
 class GetUserTasksResponseWorkflowInstance(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,6 +69,7 @@ class GetUserTasksResponseWorkflowInstance(BaseModel):
     subtitle: Optional[str] = None
     is_completed: bool
     is_readonly: bool = False
+    deadline: WorkflowDeadlineResponse | None = None
 
 
 class GetUserTasksResponse(BaseModel):
@@ -94,6 +105,7 @@ class GetUserTasksResponseUserTasks(BaseModel):
     completed_by_delegate_user: Optional["InlineUserResponse"]
     delegate_submit_comment: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
+    deadline: WorkflowDeadlineResponse | None = None
 
 
 class StartWorkflowWithDataResponse(BaseModel):
@@ -118,6 +130,7 @@ class GetWorkflowInstancesResponseItemTask(BaseModel):
     delegate_submit_comment: str | None = Field(default=None)
     can_be_assigned_as_delegate: bool
     is_readonly: bool = Field(default=False)
+    deadline: WorkflowDeadlineResponse | None = None
 
 
 class GetWorkflowInstancesResponseItem(BaseModel):
@@ -137,6 +150,7 @@ class GetWorkflowInstancesResponseItem(BaseModel):
         default_factory=lambda: [],
     )
     is_readonly: bool = Field(default=False)
+    deadline: WorkflowDeadlineResponse | None = None
 
 
 GetWorkflowInstancesResponse = PaginatedDataSchema[GetWorkflowInstancesResponseItem]

@@ -63,6 +63,15 @@ class InlineUserRepresentation(BaseModel):
         else:
             return self.email
 
+class TaskDeadlineRepresentation(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    urgency_days: int | None = Field(default=None)
+    critical_days: int | None = Field(default=None)
+    urgency_at: datetime.datetime | None = Field(default=None)
+    critical_at: datetime.datetime | None = Field(default=None)
+    level: Literal["normal", "urgency", "critical"] = Field(default="normal")
+    
 
 class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -88,6 +97,7 @@ class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     completed_by_delegate_user_id: uuid.UUID | None = Field(default=None)
     delegate_submit_comment: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
+    deadline: TaskDeadlineRepresentation | None = Field(default=None)
 
 
 class UserTaskRepresentation(UserTaskWithoutNestedAssignedUserRepresentation):
@@ -116,6 +126,8 @@ class WorkflowInstanceTaskInlineRepresentation(BaseModel):
     delegate_submit_comment: str | None = Field(default=None)
     can_be_assigned_as_delegate: bool = Field(default=False)
     is_readonly: bool = Field(default=False)
+    deadline: TaskDeadlineRepresentation | None = Field(default=None)
+
 
 
 class WorkflowInstanceRepresentation(BaseModel):
@@ -137,6 +149,7 @@ class WorkflowInstanceRepresentation(BaseModel):
     created_by: InlineUserRepresentation
     has_task_in_error_state: bool
     is_readonly: bool = Field(default=False)
+    deadline: TaskDeadlineRepresentation | None = Field(default=None)
 
 
 class WorkflowInstanceWithoutTasksRepresentation(BaseModel):
@@ -152,6 +165,7 @@ class WorkflowInstanceWithoutTasksRepresentation(BaseModel):
     created_by: InlineUserRepresentation
     has_task_in_error_state: bool
     is_readonly: bool = Field(default=False)
+    deadline: TaskDeadlineRepresentation | None = Field(default=None)
 
 
 class WorkflowRepresentation(BaseModel):
@@ -237,11 +251,12 @@ class WorkflowInstanceTaskAdminRepresentation(BaseModel):
     state_completed: bool
     state_error: bool
     state_cancelled: bool
-    created_at: datetime.datetime = Field(default=None)
+    created_at: datetime.datetime | None = Field(default=None)
     completed_at: datetime.datetime | None = Field(default=None)
     workflow_instance: WorkflowInstanceWithoutTasksRepresentation  # new
     error_stacktrace: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
+    deadline: TaskDeadlineRepresentation | None = Field(default=None)
 
 
 TaskToUserMapping = dict[Task, uuid.UUID]
