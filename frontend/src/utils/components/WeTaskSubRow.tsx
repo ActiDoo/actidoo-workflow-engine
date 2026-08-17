@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { TaskItem } from '@/models/models';
+import { ActiveTaskInstance, TaskItem } from '@/models/models';
 import { Button, Text, Title, TitleLevel } from '@ui5/webcomponents-react';
 import { Link } from 'react-router-dom';
 import React from 'react';
@@ -10,7 +10,7 @@ import '@ui5/webcomponents-icons/dist/edit';
 
 export const WeTaskSubRow: React.FC<{
   title: string;
-  tasks: TaskItem[];
+  tasks: Array<TaskItem | ActiveTaskInstance>;
   userId: string | undefined;
   workflowId: string;
 }> = props => {
