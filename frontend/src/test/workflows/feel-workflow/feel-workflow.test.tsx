@@ -13,12 +13,10 @@
 import { renderTaskForm } from '@/test/workflows/support/renderTaskForm';
 import feelForm from './feel-form.fixture.json';
 
-vi.mock('@/ui5-components/services/FetchService', async importOriginal => ({
-  ...(await importOriginal<object>()),
-  fetchPost: vi.fn(async (url: string) => {
-    throw new Error(`Unexpected fetchPost in test: ${url}`);
-  }),
-}));
+// FeelForm makes no requests; the mock only turns an unexpected one into a test failure.
+vi.mock('@/ui5-components/services/FetchService', async () =>
+  (await import('@/test/support/fakeFetchService')).mockedFetchService()
+);
 
 const NUMBER_A = 'my_list_0_number_a';
 const NUMBER_C = 'my_list_0_my_list_B_0_number_c';
@@ -28,9 +26,8 @@ const NUMBER_D = 'my_list_0_my_list_B_0_number_d';
 // After that only the inner row (my_list_B's default row) can still block the submit.
 const addOuterRow = async (form: ReturnType<typeof renderTaskForm>): Promise<void> => {
   await form.addListRow('Dynamic list (my_list)');
-  await form.waitForField(NUMBER_A);
-  await form.replaceValue(NUMBER_A, '9');
-  await form.waitForField(NUMBER_D);
+  await form.field(NUMBER_A).fill('9');
+  await expect.element(form.field(NUMBER_D)).toBeVisible();
 };
 
 describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
@@ -38,11 +35,11 @@ describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
     const form = renderTaskForm(feelForm);
     await addOuterRow(form);
 
-    await form.replaceValue(NUMBER_C, '33');
-    await form.waitForFieldHidden(NUMBER_D);
+    await form.field(NUMBER_C).fill('33');
+    await expect.element(form.field(NUMBER_D)).not.toBeVisible();
 
-    await form.replaceValue(NUMBER_C, '34');
-    await form.waitForField(NUMBER_D);
+    await form.field(NUMBER_C).fill('34');
+    await expect.element(form.field(NUMBER_D)).toBeVisible();
   });
 
   it('does not submit while the inner required field is visible and empty', async () => {
@@ -58,9 +55,9 @@ describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
     const form = renderTaskForm(feelForm);
     await addOuterRow(form);
 
-    await form.replaceValue(NUMBER_D, '4');
-    await form.replaceValue(NUMBER_C, '33');
-    await form.waitForFieldHidden(NUMBER_D);
+    await form.field(NUMBER_D).fill('4');
+    await form.field(NUMBER_C).fill('33');
+    await expect.element(form.field(NUMBER_D)).not.toBeVisible();
 
     await form.submit();
 
@@ -75,8 +72,8 @@ describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
     const form = renderTaskForm(feelForm);
     await addOuterRow(form);
 
-    await form.replaceValue(NUMBER_C, '33');
-    await form.waitForFieldHidden(NUMBER_D);
+    await form.field(NUMBER_C).fill('33');
+    await expect.element(form.field(NUMBER_D)).not.toBeVisible();
 
     await form.submit();
 
@@ -86,10 +83,10 @@ describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
   it('hides an inner field through a parent. reference', async () => {
     const form = renderTaskForm(feelForm);
     await addOuterRow(form);
-    expect(form.isFieldVisible(NUMBER_C)).toBe(true);
+    await expect.element(form.field(NUMBER_C)).toBeVisible();
 
-    await form.replaceValue(NUMBER_A, '7');
+    await form.field(NUMBER_A).fill('7');
 
-    await form.waitForFieldHidden(NUMBER_C);
+    await expect.element(form.field(NUMBER_C)).not.toBeVisible();
   });
 });

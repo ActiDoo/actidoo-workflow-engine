@@ -7,16 +7,20 @@
 // is a router because the dynamic-list template only adds its default rows under /tasks/open/.
 // The captured formData equals the request body of POST user/submit_task_data:
 // SingleTask.submitData sends it unchanged.
+//
+// Interaction goes through Vitest's browser locators (real input, shadow DOM included, retry
+// until the test times out), so tests do not need to wait for anything themselves.
 
 import { useState } from 'react';
 import _ from 'lodash';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render } from '@testing-library/react';
+import { page, type Locator } from 'vitest/browser';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { legacy_createStore } from 'redux';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ThemeProvider } from '@ui5/webcomponents-react';
+import type { IChangeEvent } from '@rjsf/core';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 import TaskForm from '@/rjsf-customs/components/TaskForm';
@@ -49,11 +53,11 @@ const TaskFormHarness = ({
       uiSchema={uiSchema}
       showErrorList={false}
       noHtml5Validate={false}
-      onChange={(data: any) => {
-        setFormData(_.cloneDeep(data.formData ?? {}));
+      onChange={(event: IChangeEvent) => {
+        setFormData(_.cloneDeep(event.formData ?? {}));
       }}
-      onSubmit={(data: any) => {
-        onSubmit(data.formData);
+      onSubmit={(event: IChangeEvent) => {
+        onSubmit(event.formData);
       }}
       formContext={{
         formData,
@@ -67,7 +71,6 @@ const TaskFormHarness = ({
 };
 
 export const renderTaskForm = (fixture: WorkflowFormFixture) => {
-  const user = userEvent.setup();
   const submitted = vi.fn();
   const store = legacy_createStore(() => ({}));
   const queryClient = new QueryClient({
@@ -86,113 +89,37 @@ export const renderTaskForm = (fixture: WorkflowFormFixture) => {
     </Provider>
   );
 
-  // Selects by RJSF field id ("root_<key>", inside lists "root_<list>_<index>_<key>") —
-  // stable, unlike display labels.
-  const field = (key: string): HTMLElement => {
-    const id = `root_${key}`;
-    const element = document.getElementById(id);
-    if (!element) {
-      throw new Error(`No form field with id "${id}" found`);
-    }
-    return element;
-  };
-  // A field hidden by hide-if is still in the DOM as <input type="hidden"> under the same
-  // id, so a field counts as visible only if it exists and is not a hidden input.
-  const isFieldVisible = (key: string): boolean => {
-    const element = document.getElementById(`root_${key}`);
-    return element !== null && (element as HTMLInputElement).type !== 'hidden';
-  };
+  // A form field by its rjsf id ("root_<key>", inside lists "root_<list>_<index>_<key>") —
+  // stable, unlike display labels. A field hidden by hide-if is still in the DOM as
+  // <input type="hidden"> under the same id, so `expect.element(field(key)).toBeVisible()`
+  // tells visible from hidden.
+  const field = (key: string): Locator => page.getById(`root_${key}`);
 
-  // Rows and visibility do not update synchronously: the list template adds default rows on
-  // a timer (one per nesting level), and hide-if is re-evaluated with a throttle while the
-  // user types. Wait for the expected state instead of asserting right after an action.
-  const waitForField = async (key: string): Promise<HTMLElement> =>
-    await waitFor(
-      () => {
-        if (!isFieldVisible(key)) {
-          throw new Error(`Form field "root_${key}" is not visible`);
-        }
-        return field(key);
-      },
-      { timeout: 3000 }
-    );
-  const waitForFieldHidden = async (key: string): Promise<void> => {
-    await waitFor(() => {
-      if (isFieldVisible(key)) {
-        throw new Error(`Form field "root_${key}" is still visible`);
-      }
-    });
-  };
-
-  // Replaces the value of a text or number input. user.clear() is not enough for fields
-  // with a schema default: RJSF puts the default back the moment the field is empty, so
-  // the typed value would be appended to it.
-  const replaceValue = async (key: string, value: string): Promise<void> => {
-    await user.tripleClick(field(key));
-    await user.keyboard(value);
-  };
-
-  // Clicks "Add" on the dynamic list with the given label (ui:label in the uischema).
+  // Clicks "Add" on the dynamic list with the given label (ui:label in the uischema). The
+  // template has no id and the label no htmlFor, so the list is found from the label's
+  // parent; nested lists have their own "Add" inside the rows, the list's own comes last.
   const addListRow = async (listLabel: string): Promise<void> => {
-    const label = Array.from(document.querySelectorAll('label.form-label')).find(
-      element => element.textContent === listLabel
-    );
-    const addButton = Array.from(label?.parentElement?.querySelectorAll('ui5-button') ?? []).find(
-      button => button.textContent === 'Add'
-    );
-    if (!addButton) {
-      throw new Error(`No "Add" button for dynamic list "${listLabel}" found`);
-    }
-    await user.click(addButton);
+    const label = await page.getByText(listLabel, { exact: true }).findElement();
+    const list = page.elementLocator(label.parentElement as HTMLElement);
+    await list.getByRole('button', { name: 'Add', exact: true }).last().click();
   };
 
-  // The FileUploader's native input lives in its shadow root, out of userEvent's reach.
+  // The native file input sits in the shadow root of ui5-file-uploader without role or
+  // label — the one place where a CSS locator is needed.
   const uploadFile = async (key: string, file: File): Promise<void> => {
-    const uploader = field(key).querySelector('ui5-file-uploader');
-    if (!uploader) {
-      throw new Error(`No ui5-file-uploader found inside field "${key}"`);
-    }
-    const input = await waitFor(() => {
-      const candidate = uploader.shadowRoot?.querySelector<HTMLInputElement>('input[type="file"]');
-      if (!candidate) {
-        throw new Error(`File input of field "${key}" not rendered yet`);
-      }
-      return candidate;
-    });
-
-    const transfer = new DataTransfer();
-    transfer.items.add(file);
-    input.files = transfer.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-
-    await waitFor(() => {
-      if (!screen.queryByText(file.name)) {
-        throw new Error(`File "${file.name}" not shown in the form yet`);
-      }
-    });
+    await field(key).getByCss('input[type="file"]').upload(file);
+    await expect.element(page.getByText(file.name, { exact: true })).toBeVisible();
   };
 
   // Opens a react-select based combobox and picks an option once it is loaded.
   const selectOption = async (key: string, label: string): Promise<void> => {
-    await user.click(field(key));
-    await user.click(await screen.findByText(label));
+    await field(key).click();
+    await page.getByRole('option', { name: label, exact: true }).click();
   };
 
   const submit = async (): Promise<void> => {
-    await user.click(screen.getByRole('button', { name: 'Absenden' }));
+    await page.getByRole('button', { name: 'Absenden' }).click();
   };
 
-  return {
-    user,
-    submitted,
-    field,
-    isFieldVisible,
-    waitForField,
-    waitForFieldHidden,
-    replaceValue,
-    addListRow,
-    submit,
-    uploadFile,
-    selectOption,
-  };
+  return { submitted, field, addListRow, uploadFile, selectOption, submit };
 };

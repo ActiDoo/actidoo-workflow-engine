@@ -40,18 +40,26 @@ export default defineConfig({
           name: 'unit',
           environment: 'jsdom',
           include: ['src/**/*.test.{ts,tsx}'],
-          exclude: [...configDefaults.exclude, 'src/test/workflows/**'],
+          exclude: [...configDefaults.exclude, 'src/test/**'],
         },
       },
       {
         extends: true,
         test: {
-          name: 'workflows',
-          include: ['src/test/workflows/**/*.test.{ts,tsx}'],
+          name: 'browser',
+          include: ['src/test/**/*.test.{ts,tsx}'],
+          setupFiles: ['./src/test/setup.ts', './src/test/setup.browser.ts'],
+          // Locator actions and expect.element retry until the test times out; expect.poll
+          // (used for non-DOM conditions such as "the fake backend got the call") has its
+          // own default.
+          testTimeout: 15000,
+          expect: { poll: { timeout: 5000 } },
           browser: {
             enabled: true,
             headless: true,
-            provider: playwright(),
+            // Fixed locale so the app's language (navigator.language) does not depend on
+            // the machine running the tests.
+            provider: playwright({ contextOptions: { locale: 'en-US' } }),
             instances: [{ browser: 'chromium' }],
           },
         },

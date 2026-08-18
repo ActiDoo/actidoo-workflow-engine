@@ -4,27 +4,29 @@
 // Workflow: backend/actidoo_wfe/wf/testdata/processes/TestFlowBff — see ../README.md.
 
 import { renderTaskForm } from '@/test/workflows/support/renderTaskForm';
+import { useFakeBackend } from '@/test/support/fakeFetchService';
 import form1 from './form1.fixture.json';
+import categoryOptions from './form1.category-options.fixture.json';
 
-vi.mock('@/ui5-components/services/FetchService', async importOriginal => ({
-  ...(await importOriginal<object>()),
-  fetchPost: vi.fn(async (url: string) => {
-    if (url.endsWith('user/search_property_options')) {
-      return { data: (await import('./form1.category-options.fixture.json')).default };
-    }
-    throw new Error(`Unexpected fetchPost in test: ${url}`);
-  }),
-}));
+vi.mock('@/ui5-components/services/FetchService', async () =>
+  (await import('@/test/support/fakeFetchService')).mockedFetchService()
+);
+
+// The dynamic select loads its options from the BFF; everything else is unexpected.
+useFakeBackend(({ url }) => {
+  if (url.endsWith('user/search_property_options')) return { data: categoryOptions };
+  throw new Error(`Unexpected request in test: ${url}`);
+});
 
 describe('Test Flow BFF — Form1', () => {
   it('submits a consistent payload after filling the form', async () => {
-    const { user, submitted, field, submit, uploadFile, selectOption } = renderTaskForm(form1);
+    const { submitted, field, submit, uploadFile, selectOption } = renderTaskForm(form1);
 
-    await user.type(field('required_text'), 'Hello BFF');
-    await user.type(field('short_code'), 'ABC');
+    await field('required_text').fill('Hello BFF');
+    await field('short_code').fill('ABC');
     await selectOption('category', 'Beta Category');
     await uploadFile('attachment', new File(['Hallo'], 'note.txt', { type: 'text/plain' }));
-    await user.click(field('trigger_error'));
+    await field('trigger_error').click();
     await submit();
 
     expect(submitted).toHaveBeenCalledTimes(1);
@@ -42,9 +44,9 @@ describe('Test Flow BFF — Form1', () => {
   });
 
   it('defaults the untouched checkbox to false and omits all untouched fields', async () => {
-    const { user, submitted, field, submit } = renderTaskForm(form1);
+    const { submitted, field, submit } = renderTaskForm(form1);
 
-    await user.type(field('required_text'), 'Hello BFF');
+    await field('required_text').fill('Hello BFF');
     await submit();
 
     expect(submitted).toHaveBeenCalledTimes(1);
@@ -68,9 +70,9 @@ describe('Test Flow BFF — Form1', () => {
   });
 
   it('blocks submission when minLength is violated', async () => {
-    const { user, submitted, field, submit } = renderTaskForm(form1);
+    const { submitted, field, submit } = renderTaskForm(form1);
 
-    await user.type(field('required_text'), 'H');
+    await field('required_text').fill('H');
     await submit();
 
     expect(submitted).not.toHaveBeenCalled();
