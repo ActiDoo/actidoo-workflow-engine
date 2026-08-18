@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { isEqual, omit } from 'lodash';
 import { CursorItemsResponse, GenericRequestSignature, StringDict } from '@/ui5-components';
@@ -77,6 +77,19 @@ export const useInfiniteWorkflowInstances = (
       dispatch(postRequest(dataKey, {}, params, queryParams));
     }
   }, [dispatch, dataKey, params, queryParams, entry?.requestSignature]);
+
+  // Revalidate on mount: the store still holds the list from the last visit, but
+  // tasks may have changed in the meantime (admin area, other pages). The old
+  // items stay visible while page 1 reloads. When the signature does not match,
+  // the effect above already requests - do not fire twice.
+  const revalidated = useRef(false);
+  useEffect(() => {
+    if (revalidated.current) return;
+    revalidated.current = true;
+    if (matchesQuery(entry?.requestSignature, params, queryParams)) {
+      dispatch(postRequest(dataKey, {}, params, queryParams));
+    }
+  }, []);
 
   // Never render data of a different query (e.g. completed items while the open
   // list is still loading after a state switch).
