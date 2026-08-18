@@ -1,0 +1,283 @@
+{
+  "jsonschema": {
+    "definitions": {},
+    "type": "object",
+    "properties": {
+      "globalA": {
+        "type": "number",
+        "title": "Number globalA",
+        "default": 2
+      },
+      "globalB": {
+        "type": "number",
+        "title": "Number globalB",
+        "default": 4,
+        "hideif": "=globalA=1"
+      },
+      "Field_1aff9sg": {
+        "type": "null",
+        "title": ""
+      },
+      "my_list": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "number_a": {
+              "type": "number",
+              "title": "number_a Label",
+              "default": 8,
+              "hideif": "=globalA=3"
+            },
+            "number_b": {
+              "type": "number",
+              "title": "number_b Label",
+              "hideif": "=this.number_a=9"
+            },
+            "number_or": {
+              "type": "number",
+              "title": "number_or Label (hidden if number_a=9 or number_a=null)",
+              "hideif": "=this.number_a=9\nor this.number_a=null"
+            },
+            "Field_13cwx6x": {
+              "type": "null",
+              "title": ""
+            },
+            "my_list_B": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "number_c": {
+                    "type": "number",
+                    "title": "number_c label",
+                    "default": 32,
+                    "hideif": "=parent.number_a=7"
+                  },
+                  "number_d": {
+                    "type": "number",
+                    "title": "number_d label",
+                    "hideif": "=this.number_c=33"
+                  },
+                  "Field_0jqepgf": {
+                    "type": "null",
+                    "title": ""
+                  }
+                },
+                "required": [
+                  "number_d"
+                ]
+              },
+              "title": "Dynamic list (my_list_B)"
+            }
+          },
+          "required": [
+            "number_b"
+          ]
+        },
+        "title": "Dynamic list (my_list)"
+      },
+      "Field_0ik1grh": {
+        "type": "null",
+        "title": ""
+      },
+      "hidden_list": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "number_e": {
+              "type": "number",
+              "title": "number_e Label"
+            }
+          }
+        },
+        "title": "Dynamic list (hidden_list, hidden if globalA=1)",
+        "hideif": "=globalA=1"
+      }
+    },
+    "required": [
+      "globalB"
+    ]
+  },
+  "uischema": {
+    "ui:field": "layout",
+    "ui:layout": {
+      "Row_1ljibiq": [
+        "globalA",
+        "globalB"
+      ],
+      "Row_1p1s2g4": [
+        "Field_1aff9sg"
+      ],
+      "my_list": [
+        "my_list"
+      ],
+      "Row_0bd5l2h": [
+        "Field_0ik1grh"
+      ],
+      "hidden_list": [
+        "hidden_list"
+      ]
+    },
+    "globalA": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "globalA"
+      ]
+    },
+    "globalB": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "globalB"
+      ],
+      "ui:hideif": "=globalA=1"
+    },
+    "Field_1aff9sg": {
+      "ui:description": "Product of globalA*globalB is easy: {{ globalA * globalB }}",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_1aff9sg"
+      ]
+    },
+    "my_list": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_0r35sy1": [
+            "number_a",
+            "number_b",
+            "number_or",
+            "Field_13cwx6x"
+          ],
+          "my_list_B": [
+            "my_list_B"
+          ]
+        },
+        "number_a": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "my_list",
+            "number_a"
+          ],
+          "ui:hideif": "=globalA=3"
+        },
+        "number_b": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "my_list",
+            "number_b"
+          ],
+          "ui:hideif": "=this.number_a=9"
+        },
+        "number_or": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "my_list",
+            "number_or"
+          ],
+          "ui:hideif": "=this.number_a=9\nor this.number_a=null"
+        },
+        "Field_13cwx6x": {
+          "ui:description": "globalA={{ globalA }}\n\na*b = {{this.number_a * this.number_b}}\n\nSum for inner my_list_B: {{sum(for elem in this.my_list_B return elem.number_c * elem.number_d)}}",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "my_list",
+            "Field_13cwx6x"
+          ]
+        },
+        "my_list_B": {
+          "items": {
+            "ui:field": "layout",
+            "ui:layout": {
+              "Row_18vxy5a": [
+                "number_c",
+                "number_d",
+                "Field_0jqepgf"
+              ]
+            },
+            "number_c": {
+              "ui:description": "",
+              "ui:enableMarkdownInDescription": true,
+              "ui:path": [
+                "my_list",
+                "my_list_B",
+                "number_c"
+              ],
+              "ui:hideif": "=parent.number_a=7"
+            },
+            "number_d": {
+              "ui:description": "",
+              "ui:enableMarkdownInDescription": true,
+              "ui:path": [
+                "my_list",
+                "my_list_B",
+                "number_d"
+              ],
+              "ui:hideif": "=this.number_c=33"
+            },
+            "Field_0jqepgf": {
+              "ui:description": "globalA={{ globalA }}\n\nparent.number_a = {{ parent.number_a}}\n\nthis.number_c = {{ this.number_c }}\n\nc*d = {{ this.number_c * this.number_d }}\n",
+              "ui:enableMarkdownInDescription": true,
+              "ui:path": [
+                "my_list",
+                "my_list_B",
+                "Field_0jqepgf"
+              ]
+            }
+          },
+          "ui:arrayAddButtonText": "Add",
+          "ui:arrayAllowAddRemove": "True",
+          "ui:arrayOverviewButtonText": "Overview",
+          "ui:defaultRepetitions": 1,
+          "ui:label": "Dynamic list (my_list_B)",
+          "ui:copyable": true
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "True",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": null,
+      "ui:label": "Dynamic list (my_list)",
+      "ui:copyable": true
+    },
+    "Field_0ik1grh": {
+      "ui:description": "https://camunda.com/blog/2024/01/camunda-forms-features-you-dont-know/\n\nhttps://docs.camunda.io/docs/components/modeler/forms/form-element-library/forms-element-library-text/",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_0ik1grh"
+      ]
+    },
+    "hidden_list": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_0hidlst1": [
+            "number_e"
+          ]
+        },
+        "number_e": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "hidden_list",
+            "number_e"
+          ]
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "True",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": 1,
+      "ui:label": "Dynamic list (hidden_list, hidden if globalA=1)",
+      "ui:copyable": true,
+      "ui:hideif": "=globalA=1"
+    },
+    "ui:templateMode": "blacklist"
+  }
+}

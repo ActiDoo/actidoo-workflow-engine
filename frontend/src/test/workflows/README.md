@@ -14,11 +14,14 @@ via `transform_camunda_form_from_file()` (`backend/actidoo_wfe/wf/form_transform
 option fixtures for dynamic selects via `get_options()` (`backend/actidoo_wfe/wf/service_form.py`).
 Regenerate them whenever the workflow's `.form` file, its options, or those functions change.
 
-Adding a test for another workflow:
+## Adding a test for another workflow
 
 1. Create `workflows/<flow-name>/` and generate the fixture(s).
 2. Copy the `vi.mock` block for `FetchService` from an existing flow test — it answers
    the option requests of dynamic selects from the fixture instead of the live API.
-3. Use `renderTaskForm(fixture)` with `field(key)`, `selectOption(key, label)`,
-   `uploadFile(key, file)` and `submit()`, then assert the submit payload — it equals
-   the request body of `POST user/submit_task_data`.
+3. Use `renderTaskForm(fixture)`; it renders the form the way `SingleTask` does. The
+   returned helpers fill fields (`field`, `replaceValue`, `selectOption`, `uploadFile`,
+   `addListRow`), submit (`submit`, `submitted`) and check hide-if (`isFieldVisible`,
+   `waitForField`, `waitForFieldHidden`). Field keys inside lists follow rjsf, e.g.
+   `my_list_0_number_a`. The submit payload equals the request body of
+   `POST user/submit_task_data`.
