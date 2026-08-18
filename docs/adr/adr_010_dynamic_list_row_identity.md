@@ -1,6 +1,6 @@
 # ADR 010: Row Identity and Data Ownership in Dynamic Lists
 
-**Status:** To be implemented
+**Status:** Implemented
 **Date:** 2026-08-09
 
 ## Context
@@ -37,10 +37,8 @@ Rows are stamped when a task is handed to the frontend, so a form is never rende
 
 ## Consequences
 
-- Added rows keep what the user submitted; deleting and reordering are safe; the long-standing TODO in the merge is resolved.
-- `_row_id` becomes part of task data and exports and may be relied on downstream - moving it elsewhere later is a breaking change.
-- Displayed defaults become real values: forms that already declare defaults on disabled fields start behaving correctly without being touched, and previously incomplete rows heal on their next round trip through the merge.
-- Defaults are declared per form, so the forced value depends on the step in which a row is created - authors are responsible for keeping them consistent across steps.
-- A disabled field without a default and without a backend value stays absent, and nothing warns about it; consumers must treat absence as legal.
-- The merge stays as cheap as today, and no offline data migration is needed - instead, handing out a task of an instance that predates row identity writes once, under a lock, because the whole instance is stored as one blob.
-- Regression tests remain the safety net against future stripping defects.
+- Dynamic lists behave as users expect: what a row shows is what gets stored, and deleting or reordering rows no longer corrupts their neighbors.
+- Forms that already declare defaults on disabled fields start working correctly without being touched; rows that are already incomplete heal on their next submission.
+- `_row_id` is a public part of task data and exports and may be relied on downstream - relocating it later is a breaking change.
+- Form authors own consistency: the forced default depends on the step that creates the row, and a disabled field without a default may legitimately stay empty - consumers must accept absence.
+- Running instances need no one-time migration; it is achieved on-the-fly.
