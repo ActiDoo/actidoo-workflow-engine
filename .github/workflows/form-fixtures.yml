@@ -1,0 +1,43 @@
+name: Form Fixtures
+
+# The frontend's workflow-form tests run against fixtures that the backend generates
+# (frontend/src/test/workflows/fixtures.json). This job fails when the committed files
+# are out of date - i.e. someone changed a test form or the form transformation without
+# running `yarn fixtures` (frontend/) or `python -m actidoo_wfe.cli export-form-fixtures`.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/actidoo_wfe/wf/form_transformation.py'
+      - 'backend/actidoo_wfe/wf/form_fixtures.py'
+      - 'backend/actidoo_wfe/wf/service_form.py'
+      - 'backend/actidoo_wfe/wf/testdata/processes/**'
+      - 'frontend/src/test/workflows/**'
+      - '.github/workflows/form-fixtures.yml'
+  pull_request:
+    paths:
+      - 'backend/actidoo_wfe/wf/form_transformation.py'
+      - 'backend/actidoo_wfe/wf/form_fixtures.py'
+      - 'backend/actidoo_wfe/wf/service_form.py'
+      - 'backend/actidoo_wfe/wf/testdata/processes/**'
+      - 'frontend/src/test/workflows/**'
+      - '.github/workflows/form-fixtures.yml'
+
+jobs:
+  in-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend
+        run: pip install -r backend/requirements.txt && pip install --no-deps -e backend
+
+      - name: Check fixtures
+        run: python -m actidoo_wfe.cli export-form-fixtures --check

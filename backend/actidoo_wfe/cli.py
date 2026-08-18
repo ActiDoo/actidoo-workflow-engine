@@ -7,12 +7,15 @@ import sys
 import zlib
 from asyncio import run
 from functools import wraps
+from pathlib import Path
+from typing import Annotated
 
 import typer
 from sqlalchemy import text
 
 import actidoo_wfe.database as database
 from actidoo_wfe.settings import settings
+from actidoo_wfe.wf.form_fixtures import DEFAULT_MANIFEST, REPO_ROOT, export_form_fixtures
 
 logging.basicConfig(
     stream=sys.stderr,
@@ -66,6 +69,39 @@ async def run_migrations():
 @app.async_command()
 async def create_revision(message: str):
     database.create_revision(settings, message)
+
+
+@app.command("export-form-fixtures")
+def export_form_fixtures_command(
+    manifest: Annotated[Path, typer.Argument(help="Fixture manifest (fixtures.json).")] = DEFAULT_MANIFEST,
+    check: Annotated[bool, typer.Option("--check", help="Only report stale fixtures, write nothing; exit 1 if any.")] = False,
+):
+    """Regenerate the frontend's workflow-form fixtures (see wf/form_fixtures.py)."""
+    if not manifest.exists():
+        typer.echo(f"no fixture manifest at {manifest}", err=True)
+        raise typer.Exit(2)
+
+    # Developer tool: the transformation's debug logging would drown the per-file report.
+    logging.getLogger("actidoo_wfe.wf").setLevel(logging.WARNING)
+    result = export_form_fixtures(manifest, check=check)
+
+    def show(path: Path) -> str:
+        return str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
+
+    for path in result.updated:
+        typer.echo(f"updated    {show(path)}")
+    for path in result.stale:
+        typer.echo(f"stale      {show(path)}")
+    for path in result.unchanged:
+        typer.echo(f"unchanged  {show(path)}")
+
+    if result.stale:
+        typer.echo(
+            f"{len(result.stale)} fixture(s) out of date - run `yarn fixtures` (frontend/) or `python -m actidoo_wfe.cli export-form-fixtures`",
+            err=True,
+        )
+        raise typer.Exit(1)
+    typer.echo(f"{len(result.updated)} updated, {len(result.unchanged)} unchanged")
 
 
 def compress_json(json_text: str) -> bytes:

@@ -1,0 +1,12 @@
+{
+  "test-flow-bff/form1.fixture.json": {
+    "form": "TestFlowBff/Form1.form"
+  },
+  "test-flow-bff/form1.category-options.fixture.json": {
+    "form": "TestFlowBff/Form1.form",
+    "options": "category"
+  },
+  "feel-workflow/feel-form.fixture.json": {
+    "form": "FeelWorkflow/FeelForm.form"
+  }
+}

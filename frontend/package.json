@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "fixtures": "python -m actidoo_wfe.cli export-form-fixtures",
+    "fixtures:check": "python -m actidoo_wfe.cli export-form-fixtures --check"
   },
   "eslintConfig": {
     "extends": [
