@@ -269,5 +269,5 @@ webcolors==25.10.0
     # via jsonschema
 websockets==16.0
     # via uvicorn
-wrapt==2.1.2
+wrapt==2.3.0
     # via actidoo-wfe (pyproject.toml)
