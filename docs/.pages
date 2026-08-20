@@ -1,6 +1,10 @@
 nav:
   - index.md
   - architecture.md
-  - development.md
+  - workflow-project.md
+  - workflows.md
+  - data-models.md
+  - connectors.md
+  - operations.md
   - adr
-  - ...
+  - glossary.md
