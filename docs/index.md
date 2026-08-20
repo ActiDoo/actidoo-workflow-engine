@@ -19,3 +19,17 @@ This handbook is for the people who build and operate such a project. It is shor
 ## The short version
 
 A workflow is a folder of BPMN, form and (optional) Python files inside your workflow project. The engine parses the BPMN once per workflow instance, shows user tasks with their forms in the web UI, runs your Python service functions between them, and stores everything in MySQL. Your project registers itself with the engine through an entry point and is shipped as a Docker image built on top of the engine's base image. Start with [Architecture](architecture.md) for the mental model, then [Workflow project](workflow-project.md) to set one up.
+
+```{toctree}
+:hidden:
+:maxdepth: 2
+
+architecture
+workflow-project
+workflows
+data-models
+connectors
+operations
+adr/index
+glossary
+```

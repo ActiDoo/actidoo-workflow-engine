@@ -27,15 +27,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: docs/requirements.txt
 
-      - name: Install MkDocs
+      - name: Install Sphinx
         run: pip install -r docs/requirements.txt
 
       - name: Build site
-        run: mkdocs build --strict
+        run: sphinx-build -b dirhtml -W docs docs/_build
 
       - name: Setup Pages
         if: github.event_name != 'pull_request'
@@ -46,7 +46,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: docs/_build
 
   deploy:
     if: github.event_name != 'pull_request'

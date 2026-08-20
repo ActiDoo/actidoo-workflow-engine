@@ -67,8 +67,9 @@ To brand the application, set `BRAND_PRIMARY_COLOR`, `APP_TITLE` and `ENVIRONMEN
 
 Several containers can share one database. Sessions, the scheduler queue, messages and timers live in MySQL, so any container serves any user; one process is elected to schedule the cron jobs and every process works the queue. Migrations run under a database lock, so containers may start in parallel.
 
-!!! warning
-    Storage mode `LOCAL` writes attachments into the container's own file system and is **not shared** between containers. The expense receipts are attachments, so run more than one container only with an Azure Blob mode.
+:::{warning}
+Storage mode `LOCAL` writes attachments into the container's own file system and is **not shared** between containers. The expense receipts are attachments, so run more than one container only with an Azure Blob mode.
+:::
 
 There is no dedicated health endpoint. `GET <API_PATH>/version` needs no login, returns JSON and answers only once the backend has finished its startup, so it works as a readiness probe. `GET <FRONTEND_PATH>` is answered by nginx alone and says nothing about the backend.
 

@@ -24,8 +24,9 @@ The engine treats every subfolder that directly contains a `.bpmn` file as a wor
 
 When a user starts the workflow, the engine runs a [workflow instance](glossary.md#workflow-instance). One run executes every automatic task it can (gateways, service tasks, script and rule tasks, events), then stops at the first user task or waiting event and stores the instance. The user submits the task, and the next run advances from there. In the example the first run stops at `EnterExpense`; the employee's submit lets the next run continue through the policy check and approval gateway. This repeats until no task is ready or waiting; then the instance is completed. Service functions run synchronously inside the request that triggered the run, so a slow function delays the user's response.
 
-!!! warning
-    A running workflow instance keeps the BPMN and forms it was started with; changing those files affects only new instances. Changed Python code in the workflow module takes effect immediately, because the engine looks the functions up by name every time it loads an instance. After changing BPMN, forms or the activation setting, restart the backend: it caches the transformed forms and a few BPMN properties until it restarts.
+:::{warning}
+A running workflow instance keeps the BPMN and forms it was started with; changing those files affects only new instances. Changed Python code in the workflow module takes effect immediately, because the engine looks the functions up by name every time it loads an instance. After changing BPMN, forms or the activation setting, restart the backend: it caches the transformed forms and a few BPMN properties until it restarts.
+:::
 
 ## Modelling the process
 
@@ -75,8 +76,9 @@ The first lane in the file that carries the property decides the start permissio
 
 The engine evaluates expressions in sequence-flow conditions, timer definitions, multi-instance collections and message correlation keys. In the example, the exclusive gateway after the policy check routes on the amount: the flow to `ApproveExpense` carries the condition `=amount > 1000`, and the default flow auto-approves everything else.
 
-!!! warning
-    An expression with a leading `=` is rewritten to Python by text replacement — not run by a real FEEL engine — and everything without `=` is plain Python. So a numeric comparison like `=amount > 1000` is correct here. Keep to simple comparisons and boolean logic, for example `=approve="yes"` or `=amount>1000 and category="Travel"`. A single `=` is equality; use `None`, not `null`. A reference to a missing variable, or an exclusive gateway with no matching flow and no default, puts the task into state error.
+:::{warning}
+An expression with a leading `=` is rewritten to Python by text replacement — not run by a real FEEL engine — and everything without `=` is plain Python. So a numeric comparison like `=amount > 1000` is correct here. Keep to simple comparisons and boolean logic, for example `=approve="yes"` or `=amount>1000 and category="Travel"`. A single `=` is equality; use `None`, not `null`. A reference to a missing variable, or an exclusive gateway with no matching flow and no default, puts the task into state error.
+:::
 
 Remember this contrast for the next section: `=` expressions on gateways and flows are Python and may use `<`, `>`, `<=`, `>=`; form hide-if expressions may not.
 
@@ -116,8 +118,9 @@ A dynamic list stores an array of row objects; the fields inside it are the row'
 
 Set a component's "Hide if" condition to an expression starting with `=`. The browser hides the field while the condition is true and re-evaluates on every change; the server drops the values of hidden fields on submit, so a hidden field never reaches the task data and never blocks the submit. In `EnterExpense`, `travel_details` is shown only for travel expenses, with the hide-if `=category != "Travel"`; in `ApproveExpense`, `reason` is shown only for a rejection, with `=decision != "reject"`.
 
-!!! warning
-    The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, references with `this.` and `parent.`, and string, number, boolean and `null` literals. The browser evaluates full FEEL. Keep hide-if expressions inside the subset, otherwise browser and server disagree. This is the contrast with gateway expressions: a gateway may write `=amount > 1000`, but a form hide-if must stick to equality and boolean logic — never `<`, `>`, `<=`, `>=`. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row.
+:::{warning}
+The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, references with `this.` and `parent.`, and string, number, boolean and `null` literals. The browser evaluates full FEEL. Keep hide-if expressions inside the subset, otherwise browser and server disagree. This is the contrast with gateway expressions: a gateway may write `=amount > 1000`, but a form hide-if must stick to equality and boolean logic — never `<`, `>`, `<=`, `>=`. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row.
+:::
 
 How the field-level flags interact with hide-if:
 
@@ -244,8 +247,9 @@ python -m actidoo_wfe.wf.cli_i18n compile-all
 
 `extract` reads the workflow's `.bpmn` and `.form` files and writes the template `i18n/ExpenseApproval.pot`. `update` creates or merges `i18n/locales/de/LC_MESSAGES/ExpenseApproval.po` for a locale folder — new texts are added untranslated, a changed text keeps its old translation marked `fuzzy` for review. Fill in each `msgstr`, remove the `fuzzy` marker once checked, and commit the `.pot` and `.po` files. Name locale folders with hyphens (`de`, `de-CH`); a user with `de-DE` is served by the `de` folder through base-language matching.
 
-!!! warning
-    The engine reads only compiled `.mo` files and never compiles `.po` at build or start. Run `compile-all` and ship the resulting `.mo` files, or translations are simply absent in the deployment. Make it part of your build.
+:::{warning}
+The engine reads only compiled `.mo` files and never compiles `.po` at build or start. Run `compile-all` and ship the resulting `.mo` files, or translations are simply absent in the deployment. Make it part of your build.
+:::
 
 ## Testing a workflow
 
