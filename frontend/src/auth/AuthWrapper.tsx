@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '@ui5/webcomponents-icons/dist/navigation-right-arrow';
 import { Outlet } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -11,6 +11,11 @@ import { BusyIndicator, IllustrationMessageType } from '@ui5/webcomponents-react
 import { login, logout } from '@/services/AuthService';
 import { PcErrorView } from '@/ui5-components';
 import { interceptFetch } from '@/auth/AuthFetchInterceptor';
+import {
+  isClientOutdated,
+  startClientVersionPolling,
+  subscribeClientOutdated,
+} from '@/auth/clientVersion';
 import { getRequest, postRequest } from '@/store/generic-data/actions';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { useTranslation } from '@/i18n';
@@ -21,6 +26,7 @@ export const AuthWrapper: React.FC = _props => {
   const userSettings = useSelector((state: State) => state.data[WeDataKey.USER_SETTINGS]);
   const dispatch = useDispatch();
   const [retries, setRetries] = useState(0);
+  const clientOutdated = useSyncExternalStore(subscribeClientOutdated, isClientOutdated);
   const userSettingsRequested = useRef(false);
   const userSettingsBootstrapped = useRef(false);
 
@@ -35,6 +41,7 @@ export const AuthWrapper: React.FC = _props => {
 
   useEffect(() => {
     interceptFetch();
+    startClientVersionPolling();
     dispatch(getLoginState());
   }, []);
 
@@ -65,6 +72,19 @@ export const AuthWrapper: React.FC = _props => {
       userSettingsBootstrapped.current = true;
     }
   }, [userSettings?.response]);
+
+  // Before everything else, including the login() side effect below: a bundle that
+  // no longer matches the backend must not be sent into a login redirect, and it
+  // must not sit on a spinner either. Reloading is the only way out (ADR 011).
+  if (clientOutdated)
+    return (
+      <PcErrorView
+        showReload={true}
+        showHome={false}
+        titleText={t('auth.clientVersionMismatchTitle')}
+        subtitleText={t('auth.clientVersionMismatchSubtitle')}
+      />
+    );
 
   if (loginState.data && !loginState.data?.is_logged_in) {
     login();

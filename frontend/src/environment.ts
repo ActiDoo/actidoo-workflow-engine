@@ -110,6 +110,7 @@ export const environment = {
   apiUrl: `${apiBaseUrl}wfe/bff/`, // BFF endpoint for user routes.
   apiUrlAdmin: `${apiBaseUrl}wfe_admin/bff/`, // BFF endpoint for admin routes.
   authApiUrl: `${apiBaseUrl}auth/`, // Auth endpoints (Keycloak etc.).
+  versionUrl: `${apiBaseUrl}version`, // Unauthenticated build/contract info; polled for the client-version gate.
   tableCount: import.meta.env.VITE_TABLE_COUNT,
   urlPrefix, // Path prefix for router/assets.
   buildNumber: import.meta.env.VITE_BUILD_NUMBER,

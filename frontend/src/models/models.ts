@@ -89,6 +89,17 @@ export type FormTemplateMode = 'off' | 'blacklist' | 'whitelist';
 export const ROW_ID_KEY = '_row_id';
 export const UI_FIELD_LAYOUT = 'layout';
 
+// Mirrors BFF_CONTRACT_VERSION / BFF_CLIENT_VERSION_HEADER in backend
+// wf/constants.py (ADR 011). Every BFF request carries this number; the backend
+// serves only an exact match and refuses everything else, so a tab that survived
+// a deploy cannot keep submitting against a contract it no longer speaks.
+//
+// Bump BOTH constants IN THE SAME COMMIT as the breaking change. Deliberately a
+// source constant and not a VITE_* variable: it has to be baked into the bundle
+// and reviewed together with the change that makes it necessary.
+export const BFF_CONTRACT_VERSION = 1;
+export const BFF_CLIENT_VERSION_HEADER = 'X-WFE-Client-Version';
+
 export interface FormTemplateSummary {
   id: string;
   name: string;

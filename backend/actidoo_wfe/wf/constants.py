@@ -31,6 +31,25 @@ ROW_ID_KEY = "_row_id"
 # it, service_form detects it, the frontend mirrors it in models.ts).
 UI_FIELD_LAYOUT = "layout"
 
+# Wire contract between this backend and the SPA bundle. Every BFF request has to
+# carry the client's contract version; the backend serves only an exact match.
+#
+# Bump this together with BFF_CONTRACT_VERSION in frontend/src/models/models.ts
+# IN THE SAME COMMIT whenever a change makes an already-loaded bundle unsafe -
+# row identity (ADR 010) was such a change: a bundle that predates it submits
+# dynamic lists without _row_id, which falls back to the index merge and moves
+# backend-owned values onto the wrong rows.
+#
+# Exact match rather than a minimum, so a bundle that is *newer* than the backend
+# is refused too - that is the rollback case. The bump deliberately locks out every
+# tab that is still open, which is the whole point (see ADR 011).
+BFF_CONTRACT_VERSION = 1
+
+# Hyphens, never underscores: nginx drops request headers containing underscores
+# by default (underscores_in_headers off), which would lock out every client that
+# reaches the backend through the proxy.
+BFF_CLIENT_VERSION_HEADER = "X-WFE-Client-Version"
+
 # Form template modes (see ADR-008). Single source for transform, services and BFF schema.
 class TemplateMode(StrEnum):
     OFF = "off"

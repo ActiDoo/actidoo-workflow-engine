@@ -30,6 +30,9 @@ export const de = {
       'Beim Verbinden mit dem Server ist etwas schiefgelaufen. Bitte versuche es erneut.',
     notFoundTitle: 'Seite nicht gefunden',
     notFoundSubtitle: 'Diese Seite scheint nicht zu existieren.',
+    clientVersionMismatchTitle: 'Diese Seite ist nicht mehr aktuell',
+    clientVersionMismatchSubtitle:
+      'Die Anwendung wurde aktualisiert, während dieser Tab offen war. Bitte lade die Seite neu, um weiterzuarbeiten. Bereits eingegebene Entwürfe bleiben erhalten.',
   },
   errorView: {
     defaultTitle: 'Seitenfehler',

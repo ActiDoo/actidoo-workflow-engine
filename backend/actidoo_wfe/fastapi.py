@@ -31,7 +31,8 @@ from actidoo_wfe.settings import settings
 from actidoo_wfe.storage import setup_storage
 from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.venusian_scan import run_venusian_scan
-from actidoo_wfe.wf.exceptions import WorkflowDefinitionMissingError
+from actidoo_wfe.wf.constants import BFF_CONTRACT_VERSION
+from actidoo_wfe.wf.exceptions import ClientVersionMismatchError, WorkflowDefinitionMissingError
 from actidoo_wfe.wf.fastapi import router as router_wf
 
 print(f"Setting Log-Level to {settings.log_level}")
@@ -155,6 +156,22 @@ async def _workflow_definition_missing_handler(_request: Request, exc: WorkflowD
         },
     )
 
+
+@app.exception_handler(ClientVersionMismatchError)
+async def _client_version_mismatch_handler(_request: Request, exc: ClientVersionMismatchError) -> JSONResponse:
+    # 426 Upgrade Required: the client bundle does not speak this backend's BFF
+    # contract (ADR 011). Deliberately not 401 - that would make the SPA start a
+    # login redirect instead of telling the user to reload.
+    return JSONResponse(
+        status_code=426,
+        content={
+            "detail": str(exc),
+            "client_version": exc.client_version,
+            "server_contract_version": BFF_CONTRACT_VERSION,
+            "code": "client_version_mismatch",
+        },
+    )
+
 # For local develoment, we need to support CORS. CORS settings can be made in the application settings.
 if settings.cors_origins is not None and len(settings.cors_origins) > 0:
     app.add_middleware(
@@ -202,12 +219,19 @@ app.include_router(prefix=PATH_PREFIX + "/wfe", router=router_wf)
 
 class VersionResponse(BaseModel):
     git_commit_sha: str
+    bff_contract_version: int
 
 
 @app.router.get(PATH_PREFIX + "/version", name="app_version", response_model=VersionResponse)
 def api_version_endpoint(request: Request):
-    """The endpoint outputs the git commit of the server build."""
+    """The endpoint outputs the git commit of the server build.
+
+    Also carries the BFF contract version, and is deliberately unauthenticated and
+    ungated: it is what the SPA polls to notice that its own bundle no longer
+    matches the deployed backend (ADR 011). Gating it would make a blocked client
+    unable to find out why it is blocked.
+    """
     import os
 
     git_commit_sha = os.environ.get("CI_COMMIT_SHA", "-")
-    return VersionResponse(git_commit_sha=git_commit_sha)
+    return VersionResponse(git_commit_sha=git_commit_sha, bff_contract_version=BFF_CONTRACT_VERSION)

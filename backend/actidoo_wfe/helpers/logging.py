@@ -19,9 +19,10 @@ class HTTPAccessLogMiddleware:
         else:
             request = Request(scope)
 
-        if request.url.path.endswith("/docs") or request.url.path.endswith(
-            "/openapi.json",
-        ):
+        # /version is polled by every visible SPA tab every few seconds to detect a
+        # client/backend contract mismatch (ADR 011) - logging it would drown the
+        # access log.
+        if request.url.path.endswith(("/docs", "/openapi.json", "/version")):
             await self.app(scope, receive, send)
             return
 

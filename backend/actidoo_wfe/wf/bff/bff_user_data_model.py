@@ -37,7 +37,7 @@ from actidoo_wfe.helpers.bff_table import (
 from actidoo_wfe.helpers.http import HTTPException, streaming_response_with_filecontent
 from actidoo_wfe.wf.bff.bff_user_data_model_schema import StartWorkflowForExistingDataModelRequest
 from actidoo_wfe.wf.bff.bff_user_schema import StartWorkflowResponse
-from actidoo_wfe.wf.bff.deps import get_data_model, get_user
+from actidoo_wfe.wf.bff.deps import get_data_model, get_user, require_matching_client_version
 from actidoo_wfe.wf.cross_context.imports import require_realm_role
 from actidoo_wfe.wf.exceptions import (
     DataModelForbiddenError,
@@ -78,7 +78,13 @@ def _map_domain_errors():
 workflow_data_router = APIRouter(
     prefix="/workflow-data",
     tags=["workflow-data"],
-    dependencies=[Depends(require_realm_role("wf-user")), Depends(_map_domain_errors)],
+    # Version check first: a stale tab whose session also expired must see the
+    # version error, not a 401 that sends it into a login redirect (ADR 011).
+    dependencies=[
+        Depends(require_matching_client_version),
+        Depends(require_realm_role("wf-user")),
+        Depends(_map_domain_errors),
+    ],
 )
 
 

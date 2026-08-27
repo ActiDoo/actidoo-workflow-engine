@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+from actidoo_wfe.wf.constants import BFF_CONTRACT_VERSION
+
 
 class WorkflowSpecNotFoundException(Exception):
     pass
@@ -92,6 +94,19 @@ class WorkflowDefinitionMissingError(Exception):
     def __init__(self, workflow_name: str):
         self.workflow_name = workflow_name
         super().__init__(f"Workflow definition '{workflow_name}' is not available from any provider")
+
+
+class ClientVersionMismatchError(Exception):
+    """Raised when a BFF request does not carry exactly the backend's BFF contract
+    version - the client is either a stale tab that survived a deploy or a bundle
+    newer than a rolled-back backend. Either way it may speak a different data
+    contract, so all BFF access is refused (ADR 011).
+    """
+
+    def __init__(self, client_version: int | None):
+        self.client_version = client_version
+        seen = "none" if client_version is None else str(client_version)
+        super().__init__(f"Client BFF contract version {seen} does not match the server's {BFF_CONTRACT_VERSION}")
 
 
 class TaskNotAccessibleException(Exception):

@@ -138,5 +138,23 @@ server {
         alias /srv/frontend/;
         try_files $uri $uri/ /__WFE_FRONTEND__/index.html;
         access_log off;
+
+        # index.html names the current hashed bundle, and env.js/branding.css are
+        # rewritten on every container start - none of them are content-hashed, so
+        # without this they get heuristic freshness from Last-Modified and a reload
+        # can be answered from the browser's disk cache. That matters beyond the usual
+        # staleness: a client blocked by the version gate is told to reload, and coming
+        # back to the very same outdated bundle would make the gate a trap (ADR 011).
+        location ~ ^/__WFE_FRONTEND__/(index\.html|env\.js|branding\.css)$ {
+            alias /srv/frontend/$1;
+            add_header Cache-Control "no-cache";
+        }
+
+        # Content-hashed by the build: a changed file gets a new name, so the old one
+        # can be cached indefinitely and a new one is never masked by a cached copy.
+        location ^~ /__WFE_FRONTEND__/assets/ {
+            alias /srv/frontend/assets/;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
     }
 }

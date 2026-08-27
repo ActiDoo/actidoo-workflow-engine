@@ -34,7 +34,7 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     SetUserDelegationsRequest,
     UnassignUserRequest,
 )
-from actidoo_wfe.wf.bff.deps import get_user
+from actidoo_wfe.wf.bff.deps import get_user, require_matching_client_version
 from actidoo_wfe.wf.cross_context.imports import require_realm_role
 from actidoo_wfe.wf.exceptions import UserMayNotAdministrateThisWorkflowException, UserMayNotAdministrateUsersException
 from actidoo_wfe.wf.models import WorkflowUser
@@ -45,7 +45,9 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(
     # fine-grained authorization in functions
-    dependencies=[Depends(require_realm_role("wf-user"))],
+    # Version check first: a stale tab whose session also expired must see the
+    # version error, not a 401 that sends it into a login redirect (ADR 011).
+    dependencies=[Depends(require_matching_client_version), Depends(require_realm_role("wf-user"))],
     tags=["wfe-bff-admin"],
 )
 

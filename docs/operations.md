@@ -71,7 +71,23 @@ Several containers can share one database. Sessions, the scheduler queue, messag
 Storage mode `LOCAL` writes attachments into the container's own file system and is **not shared** between containers. The expense receipts are attachments, so run more than one container only with an Azure Blob mode.
 :::
 
-There is no dedicated health endpoint. `GET <API_PATH>/version` needs no login, returns JSON and answers only once the backend has finished its startup, so it works as a readiness probe. `GET <FRONTEND_PATH>` is answered by nginx alone and says nothing about the backend.
+There is no dedicated health endpoint. `GET <API_PATH>/version` needs no login, returns JSON and answers only once the backend has finished its startup, so it works as a readiness probe. It also reports the BFF contract version (see below). `GET <FRONTEND_PATH>` is answered by nginx alone and says nothing about the backend.
+
+### Deploy a breaking change
+
+A browser tab keeps running the bundle it loaded until someone reloads it, so a deploy does not reach the tabs that are already open. To stop a stale tab from writing against a contract it no longer speaks, frontend and backend each carry a **BFF contract version**, and the backend serves only an exact match — everything else is refused across the whole BFF with `426 Upgrade Required`, and the application shows a full-page prompt to reload. The reasoning is in [ADR 011](adr/adr_011_bff_contract_version.md).
+
+Raising the number is a deliberate act, not something a build does:
+
+- Raise it whenever a change makes an already-loaded bundle unsafe — a different shape of submitted data, a field the backend now requires, a meaning that changed.
+- Raise it **in the same commit** in both places: `BFF_CONTRACT_VERSION` in the backend's `wf/constants.py` and in the frontend's `src/models/models.ts`. Raising only the backend locks out the bundle shipping with it; raising only the frontend disables the protection.
+- Leave it alone otherwise. A version bump is not a release marker — use the git commit for that.
+
+:::{warning}
+Bumping the version logs nobody out, but it does stop every open tab: users see the reload prompt and continue after reloading. Entered drafts are kept in the browser. While a bumped deploy rolls out, containers of both versions are live and clients are refused by some and served by others until it finishes — expect reload prompts for the duration. Plan a bumped deploy accordingly; deploys that do not change the number are unaffected.
+:::
+
+Do not roll the backend back across a version bump. Old containers refuse the newer bundle browsers already hold, which is intended — but a rollback to a version from before this mechanism existed restores the old, unprotected behaviour.
 
 ## Settings
 
@@ -288,3 +304,4 @@ When a service function raises — say `post_expense` cannot reach O365 — its 
 - [Workflow project](workflow-project.md) — create the extension and its image
 - [Architecture](architecture.md) — the components and the startup sequence
 - [ADR 002](adr/adr_002_extension_architecture.md) — why a deployment is an image built on the runtime image
+- [ADR 011](adr/adr_011_bff_contract_version.md) — why a deploy can stop open browser tabs

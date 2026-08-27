@@ -29,6 +29,9 @@ export const en = {
     connectionErrorSubtitle: 'Something went wrong while connecting the server. Please try again.',
     notFoundTitle: 'Page not found',
     notFoundSubtitle: "Seems like this page doesn't exist.",
+    clientVersionMismatchTitle: 'This page is out of date',
+    clientVersionMismatchSubtitle:
+      'The application was updated while this tab was open. Please reload to continue working. Drafts you have entered are kept.',
   },
   errorView: {
     defaultTitle: 'Page Error',
