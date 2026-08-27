@@ -2,7 +2,7 @@
 
 This page is for the operator who puts a finished workflow project in front of real users: build the Docker image, run the container, set the backend settings, and connect the identity provider, storage and mail. The mental model behind the components is on [Architecture](architecture.md); how the project itself is built is on [Workflow project](workflow-project.md).
 
-This handbook illustrates everything with one running example, an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, larger ones go to a finance approver, and the approved expense is stored and recorded for finance. Nothing here is specific to it; the same steps ship any workflow project. The example just keeps the names concrete: package `expenses`, workflow `ExpenseApproval`, the finance role `expense-approver`, an `o365` connector that writes approved expenses to an Excel workbook.
+The running example is an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, larger ones go to a finance approver, and the approved expense is stored and recorded for finance. Nothing here is specific to it; the same steps ship any workflow project. The example just keeps the names concrete: package `acme`, workflow `ExpenseApproval`, the finance role `expense-approver`, an `o365` connector that writes approved expenses to an Excel workbook.
 
 ## Build the Docker image
 
@@ -16,7 +16,7 @@ RUN pip install /src
 ```
 
 ```
-docker build -f docker/Dockerfile -t expenses:1.0 .
+docker build -f docker/Dockerfile -t acme:1.0 .
 ```
 
 The engine base image is published as `ghcr.io/actidoo/actidoo-workflow-engine:<tag>`. Pin an explicit tag, not `latest`: the tag decides the engine version your workflows run on, and upgrading the engine means changing the tag and rebuilding. The template keeps the tag in `workflow-engine.version`, the Dockerfile build argument `BASE_IMAGE` and the devcontainer compose file in sync (see [Workflow project](workflow-project.md)).
@@ -39,7 +39,7 @@ docker run -p 8080:8080 \
   -e DB_HOST=... -e DB_USER=... -e DB_PASSWORD=... \
   -e OIDC_DISCOVERY_URL=... -e OIDC_CLIENT_ID=... -e OIDC_CLIENT_SECRET=... \
   -e WORKFLOWS='["ExpenseApproval"]' \
-  expenses:1.0
+  acme:1.0
 ```
 
 The `WORKFLOWS` list is what makes `ExpenseApproval` appear in the start list and be startable; a workflow the image ships but the list omits stays installed and invisible. At start the container:
@@ -232,7 +232,7 @@ These are read by the container's start script when it renders the browser appli
 
 ## Connect the identity provider
 
-The engine has no users or roles of its own. It logs users in through an [IdP](glossary.md#idp) (OpenID Connect) and reads their roles from the token claims. For the expense project you create these roles in the IdP and assign them:
+The engine mirrors users and roles in its own database, but the IdP is the source of truth: it logs users in through an [IdP](glossary.md#idp) (OpenID Connect) and refreshes the mirrored record and its roles from the token claims on every login. Nobody is created or granted a role in the engine itself. For the expense project you create these roles in the IdP and assign them:
 
 | Role | Who gets it | Effect |
 |---|---|---|

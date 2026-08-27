@@ -1,15 +1,15 @@
 # Workflows
 
-This is the central page for building a workflow inside a workflow project: modelling the BPMN process, writing forms, adding automated steps with service tasks, reacting to messages and timers, translating the workflow and testing it. It is long on purpose; use the section headings to jump.
+This is the central page for building a workflow inside a workflow project: modelling the BPMN process, writing forms, adding automated steps with service tasks, reacting to messages and timers, translating the workflow and testing it.
 
-This handbook illustrates everything with one running example, an **expense-approval** workflow, and this page follows it end to end: an employee submits an expense; small amounts are auto-approved, larger ones go to a finance approver; the approved expense is stored and recorded for finance. The workflow is called `ExpenseApproval`, its employee submit form is `EnterExpense`, and its approver form is `ApproveExpense`. It only illustrates — every fact, table and code block below stands on its own. The mental model of the engine is on [architecture.md](architecture.md); how to create and run the project around the workflow is on [workflow-project.md](workflow-project.md).
+The running example is an **expense-approval** workflow, and this page follows it end to end: an employee submits an expense; small amounts are auto-approved, larger ones go to a finance approver; the approved expense is stored and recorded for finance. The workflow is called `ExpenseApproval`, its employee submit form is `EnterExpense`, and its approver form is `ApproveExpense`. The mental model of the engine is on [architecture.md](architecture.md); how to create and run the project around the workflow is on [workflow-project.md](workflow-project.md).
 
 ## A workflow at a glance
 
 A [workflow](glossary.md#workflow) lives in one folder, the [workflow directory](glossary.md#workflow-directory). The folder name is the workflow name and must equal the BPMN process id. Only the `.bpmn` file and one form per user task are required; everything else is optional.
 
 ```
-expenses/workflows/ExpenseApproval/
+acme/workflows/ExpenseApproval/
 ├── ExpenseApproval.bpmn      process id = ExpenseApproval; file name is free
 ├── EnterExpense.form         one <task id>.form per user task
 ├── ApproveExpense.form

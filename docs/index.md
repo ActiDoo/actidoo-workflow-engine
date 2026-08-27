@@ -2,19 +2,16 @@
 
 The Actidoo Workflow Engine runs BPMN workflows with user tasks, forms, service functions and mail notifications. You build your own workflows in a *workflow project* — a Python package that layers on top of the engine — and deploy it as a single Docker image.
 
-This handbook is for the people who build and operate such a project. It is short on purpose: how to use the engine, not how it works inside. Terms are used as defined in the [glossary](glossary.md).
+## Contents
 
-## Where to go
-
-| I want to … | Page |
-|---|---|
-| understand how the engine is put together | [Architecture](architecture.md) |
-| create a workflow project and run it locally | [Workflow project](workflow-project.md) |
-| model processes, build forms, write service tasks and tests | [Developing workflows](workflows.md) |
-| store and query structured data | [Data models](data-models.md) |
-| integrate an external system | [Connectors](connectors.md) |
-| build the Docker image, deploy, configure settings, identity provider and storage | [Operations](operations.md) |
-| know why something is built the way it is | the [ADRs](adr/adr_002_extension_architecture.md) |
+1. [Architecture](architecture.md) — the parts of the engine, where state lives, and how a workflow reaches the user.
+2. [Workflow project](workflow-project.md) — create a workflow project and run it locally.
+3. [Workflows](workflows.md) — model the BPMN process, build forms, write service tasks, react to messages and timers, translate and test.
+4. [Data models](data-models.md) — define, expose and migrate records that outlive a workflow instance.
+5. [Connectors](connectors.md) — connect workflows to external systems.
+6. [Operations](operations.md) — build the Docker image, deploy it, and configure settings, identity provider, storage and mail.
+7. [ADRs](adr/index.md) — the architecture decisions behind the engine.
+8. [Glossary](glossary.md) — the terms used throughout.
 
 ## The short version
 

@@ -1,22 +1,22 @@
 # Data models
 
-A workflow instance is temporary: it runs, finishes, and its task data is history. But the record it produced often has to outlive it. This handbook illustrates everything with one running example, an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, larger ones go to a finance approver, and the approved result is filed for finance. That approved expense is exactly such a record — finance still needs to see, correct, and export it long after the `ExpenseApproval` instance is gone. The engine's answer is a data model: a database table your project defines and the engine hosts in its own database, written from service functions and, when you want, shown to users on the Data page. This page shows how to define the `Expense` model, use it from a service function, expose it, and ship its table with a migration.
+A workflow instance is temporary: it runs, finishes, and its task data is history. But the record it produced often has to outlive it. The running example is an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, larger ones go to a finance approver, and the approved result is filed for finance. That approved expense is exactly such a record — finance still needs to see, correct, and export it long after the `ExpenseApproval` instance is gone. The engine's answer is a data model: a database table your project defines and the engine hosts in its own database, written from service functions and, when you want, shown to users on the Data page. This page shows how to define the `Expense` model, use it from a service function, expose it, and ship its table with a migration.
 
 ![An exposed data model on the Data page, shown as a table of records with columns for id, version, title, amount, category, status and a per-row action.](img/data-model-list.png)
 
 *The `Expense` model on the Data page. Each row is the current version of a record; the amount uses a currency format, the version column tracks history, and the row action starts a follow-up workflow.*
 
-Every table name carries the prefix `ext_<namespace>_`, where the namespace is your project's own short prefix — `expenses` here, so the table is `ext_expenses_expense`. Tables of different projects never collide with each other or with engine tables. Workflow writes share the engine's transaction: when a service function fails, its data model writes are rolled back with the task, so a half-approved expense is never left behind.
+Every table name carries the prefix `ext_<namespace>_`, where the namespace is your project's own short prefix — `acme` here, so the table is `ext_acme_expense`. Tables of different projects never collide with each other or with engine tables. Workflow writes share the engine's transaction: when a service function fails, its data model writes are rolled back with the task, so a half-approved expense is never left behind.
 
 ## Three tiers
 
-The engine offers three tiers that build on each other, and this handbook builds on the top one: workflow-managed. It is the tier for records that workflows create and users see, the only tier that can be exposed via the API, and what a record like an approved expense uses. On top of a stable `id` it adds the workflow instance that wrote each version, an action label, and a reserved `title` — the record's human-readable name, which the workflow writes like any column and the API always delivers, searchable and sortable. It never updates a row in place: a write with no id creates a new record, a write that reuses an existing id adds the next version and makes it current.
+The engine offers three tiers that build on each other; the top one is workflow-managed. It is the tier for records that workflows create and users see, the only tier that can be exposed via the API, and what a record like an approved expense uses. On top of a stable `id` it adds the workflow instance that wrote each version, an action label, and a reserved `title` — the record's human-readable name, which the workflow writes like any column and the API always delivers, searchable and sortable. It never updates a row in place: a write with no id creates a new record, a write that reuses an existing id adds the next version and makes it current.
 
 The two lower tiers are not exposable and are not the subject of this page. A *plain* model gives each record a stable `id` and one row, for lookup and configuration tables edited in place; a *versioned* model adds a version number, a current flag and a creation time, keeping every change as a new row, for internal data whose history matters.
 
 ## Define the model
 
-Base the class on the tier you need. `Expense` extends the project's own model base — which fixes the `ext_expenses_` prefix — and the workflow-managed mixin, which contributes the stable `id`, the version columns, the `workflow_instance_id` provenance, and the reserved `title`. You add only the business columns, and you never declare a `title` column of your own — the mixin's would be shadowed and registration would fail.
+Base the class on the tier you need. `Expense` extends the project's own model base — which fixes the `ext_acme_` prefix — and the workflow-managed mixin, which contributes the stable `id`, the version columns, the `workflow_instance_id` provenance, and the reserved `title`. You add only the business columns, and you never declare a `title` column of your own — the mixin's would be shadowed and registration would fail.
 
 ```python
 from decimal import Decimal
@@ -26,11 +26,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from actidoo_wfe.wf.models import WorkflowManagedMixin, extension_model_base
 
-Base = extension_model_base("expenses")
+Base = extension_model_base("acme")
 
 
 class Expense(Base, WorkflowManagedMixin):
-    _ext_table = "expense"  # -> table ext_expenses_expense
+    _ext_table = "expense"  # -> table ext_acme_expense
 
     amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -161,7 +161,7 @@ To set up the chain:
 
    ```toml
    [project.entry-points."actidoo_wfe.alembic"]
-   expenses = "expenses.alembic"
+   acme = "acme.alembic"
    ```
 
 4. Start the backend or run `run-migrations` to apply it. Each chain records its revisions in its own `alembic_version_<namespace>` table; your revisions never appear in the engine's.

@@ -2,7 +2,7 @@
 
 This page is for extension developers who connect workflows to an external system (a cloud spreadsheet, an ERP, a data warehouse) and for operators who configure those connections per deployment. A [connector](glossary.md#connector) is code plus configuration: an extension registers a connector type, a deployment configures instances of it, and a service function opens a connection at run time. The engine ships no connector types of its own.
 
-This handbook illustrates everything with one running example, an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, and larger ones go to a finance approver. Its last step is a service task `post_expense` that, once an expense is approved, records it for the finance team as a new row in a shared Excel workbook in Microsoft 365. Reaching that workbook (the Excel API in Microsoft 365) from workflow code is exactly what a connector is for, so O365 is this page's illustration throughout.
+The running example is an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, and larger ones go to a finance approver. Its last step is a service task `post_expense` that, once an expense is approved, records it for the finance team as a new row in a shared Excel workbook in Microsoft 365. Reaching that workbook (the Excel API in Microsoft 365) from workflow code is exactly what a connector is for, so O365 runs as the example throughout.
 
 ## Type and instance
 
@@ -14,7 +14,7 @@ A connector type is code; a connector instance is configuration. They are joined
 | Consists of | A name, a config schema and a factory | Values for the schema fields, under a type and instance name |
 | How many | One per name across the engine and all extensions | Any number per type, for example one per tenant |
 
-Splitting the two keeps credentials out of code and lets one type serve several systems of the same kind. See [ADR 003](adr/adr_003_connector_registry.md).
+Splitting the two keeps credentials out of code and lets one type serve several systems of the same kind. A type registered in your project is available to every workflow in it, so the O365 code is written once and reused by every process that talks to the Excel API. See [ADR 003](adr/adr_003_connector_registry.md).
 
 ## Register a connector type
 

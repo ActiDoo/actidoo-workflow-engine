@@ -1,10 +1,10 @@
 # Architecture
 
-This page gives architects and new workflow-project developers the mental model of the engine: which parts exist, where state lives, and how a workflow becomes something a user fills in. This handbook illustrates everything with one running example, an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, larger ones go to a finance approver. Each part below carries its own explanation and has its own page under Related; this one is the map.
+This page gives architects and new workflow-project developers the mental model of the engine: which parts exist, where state lives, and how a workflow becomes something a user fills in. The running example is an expense-approval workflow: an employee submits an expense, small amounts are auto-approved, larger ones go to a finance approver. Each part below carries its own explanation and has its own page under Related.
 
 ## The pieces
 
-The engine ships as one Docker image, the runtime image: a web server that serves the browser application and the backend that runs the workflows. A workflow project — the `expenses` project in our example — is a Python package installed on top of that image (see below).
+The engine ships as one Docker image, the runtime image: a web server that serves the browser application and the backend that runs the workflows. A workflow project — `acme` in our example — is a Python package installed on top of that image; one such package holds all of an organisation's processes (see below).
 
 ```mermaid
 flowchart TB
@@ -30,11 +30,11 @@ flowchart TB
     SPA -.login.-> IDP
 ```
 
-When the employee opens the Enter-Expense form, the browser SPA (React with the UI5 component set) is talking to the BFF: endpoints protected by the session cookie and the role `wf-user`. A separate machine-to-machine surface, API v1, is protected by a bearer token and the role `wf-api`; external systems use it to send messages to workflows — the browser never touches it. The engine has no users of its own; the employee's login goes through an external IdP (see [operations.md](operations.md)).
+When the employee opens the Enter-Expense form, the browser SPA (React with the UI5 component set) is talking to the BFF: endpoints protected by the session cookie and the role `wf-user`. A separate machine-to-machine surface, API v1, is protected by a bearer token and the role `wf-api`; external systems use it to send messages to workflows — the browser never touches it. The engine keeps user records of its own, but the [IdP](glossary.md#idp) is the source of truth: the employee logs in through it, and every login refreshes the record's name, e-mail and roles from the token. The engine only adds what the IdP does not know — locale, delegates, pinned workflows and saved form templates (see [operations.md](operations.md)).
 
 ## State and storage
 
-Every submit lands in MySQL, the single state store. Each workflow instance — one run of the expense workflow — is written whole as one serialized blob that holds the parsed workflow and all task data; next to it the engine keeps one row per task with the fields the UI queries (state, lane, assignee), plus users, sessions, messages, timers and migration state. The engine writes the whole blob back on every change, so if the employee and the approver were to submit on the same workflow instance at once, one write could overwrite the other. The uploaded receipt is the one exception: attachment file content lives in separate storage, a local directory or Azure Blob (see [operations.md](operations.md) and [data-models.md](data-models.md)).
+Every submit lands in MySQL, the single state store. Each workflow instance — one run of the expense workflow — is written whole as one serialized blob that holds the parsed workflow and all task data; next to it the engine keeps one row per task with the fields the UI queries (state, lane, assignee), plus users, sessions, messages, timers and migration state. The engine writes the whole blob back on every change, so every change locks the instance row first: if the employee and the approver submit on the same workflow instance at once, the second submission waits for the first instead of overwriting it. The uploaded receipt is the one exception: attachment file content lives in separate storage, a local directory or Azure Blob (see [operations.md](operations.md) and [data-models.md](data-models.md)).
 
 ## The engine
 
@@ -48,7 +48,7 @@ Conditional field visibility (hide-if) — for example a travel-details field sh
 
 ## Workflow projects
 
-The `expenses` project is a Python package layered on top of the engine image. It adds workflows, connectors ([connectors.md](connectors.md)), data models ([data-models.md](data-models.md)) and more; the engine finds it through packaging entry points at startup, with no engine-side configuration. Creating one is on [workflow-project.md](workflow-project.md); building and running the image is on [operations.md](operations.md).
+The `acme` project is a Python package layered on top of the engine image. It adds workflows, connectors ([connectors.md](connectors.md)), data models ([data-models.md](data-models.md)) and more; the engine finds it through packaging entry points at startup, with no engine-side configuration. Creating one is on [workflow-project.md](workflow-project.md); building and running the image is on [operations.md](operations.md).
 
 ## Related
 
