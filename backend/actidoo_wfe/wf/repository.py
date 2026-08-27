@@ -301,7 +301,10 @@ def load_workflow_instance(db: Session, workflow_id: uuid.UUID, for_update: bool
         statement = statement.with_for_update()
 
     db_wf: WorkflowInstance = db.execute(statement).scalar_one()
-    db.refresh(db_wf)
+    # The refresh busts the identity-map cache. When locking it must lock too:
+    # a plain refresh reads from the transaction's REPEATABLE-READ snapshot and
+    # would overwrite the locking read's fresh row with pre-lock stale data.
+    db.refresh(db_wf, with_for_update=True if for_update else None)
 
     workflow = restore(serialized_data=db_wf.data)
 
@@ -350,14 +353,18 @@ def get_workflow_instance_names_by_task_ids(db: Session, task_ids: set[uuid.UUID
     return {row[0]: row[1] for row in rows}
 
 
-def load_workflow_instance_by_task_id(db: Session, task_id: uuid.UUID) -> BpmnWorkflow:
-    """Restores a workflow by task_id"""
+def load_workflow_instance_by_task_id(db: Session, task_id: uuid.UUID, for_update: bool = False) -> BpmnWorkflow:
+    """Restores a workflow by task_id.
 
-    db_task: WorkflowInstanceTask = db.execute(
-        select(WorkflowInstanceTask).where(WorkflowInstanceTask.id == task_id),
+    ``for_update`` locks the instance row (not the task row) for the rest of the
+    transaction - see ``load_workflow_instance``. Every caller that stores or
+    deletes the instance afterwards has to pass it."""
+
+    workflow_instance_id: uuid.UUID = db.execute(
+        select(WorkflowInstanceTask.workflow_instance_id).where(WorkflowInstanceTask.id == task_id),
     ).scalar_one()
 
-    return restore(serialized_data=db_task.workflow_instance.data)
+    return load_workflow_instance(db=db, workflow_id=workflow_instance_id, for_update=for_update)
 
 
 def persist_workflow_spec(db: Session, name: str):
