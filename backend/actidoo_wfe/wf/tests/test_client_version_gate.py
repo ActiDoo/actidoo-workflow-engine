@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 from actidoo_wfe.fastapi import app as root_app
-from actidoo_wfe.wf.constants import BFF_CLIENT_VERSION_HEADER, BFF_CONTRACT_VERSION
+from actidoo_wfe.wf.constants import BFF_CLIENT_VERSION_HEADER, BFF_CLIENT_VERSION_IGNORE, BFF_CONTRACT_VERSION
 from actidoo_wfe.wf.tests.helpers.client import Client
 
 # A representative route from each of the three gated BFF routers, with the method
@@ -91,6 +91,40 @@ def test_version_check_runs_before_the_role_check():
     """A stale tab whose session also expired must see the version error, not a 401
     that would send the SPA into a login redirect."""
     response = _call(Client(client_version=BFF_CONTRACT_VERSION - 1), "get_my_wfe_user", "POST")
+
+    assert response.status_code == 426
+
+
+@pytest.mark.parametrize("router,route_name,method", BFF_ROUTES)
+def test_the_ignore_sentinel_opts_out_of_the_check(router, route_name, method):
+    """Reaching the auth check is the proof the request got past the gate."""
+    client = Client(client_version=None)
+    client.root_client.headers[BFF_CLIENT_VERSION_HEADER] = BFF_CLIENT_VERSION_IGNORE
+
+    response = _call(client, route_name, method)
+
+    assert response.status_code != 426
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.parametrize("sent", ["IGNORE", "Ignore", "  ignore  "])
+def test_the_ignore_sentinel_is_case_insensitive_and_trimmed(sent):
+    """A hand-configured header should not fail over capitalisation or a stray space."""
+    client = Client(client_version=None)
+    client.root_client.headers[BFF_CLIENT_VERSION_HEADER] = sent
+
+    response = _call(client, "get_my_wfe_user", "POST")
+
+    assert response.status_code != 426
+
+
+@pytest.mark.parametrize("sent", ["ignored", "ignore-me", "please ignore", ""])
+def test_values_that_only_look_like_the_sentinel_are_still_refused(sent):
+    """The opt-out is one exact word - anything else is a malformed version."""
+    client = Client(client_version=None)
+    client.root_client.headers[BFF_CLIENT_VERSION_HEADER] = sent
+
+    response = _call(client, "get_my_wfe_user", "POST")
 
     assert response.status_code == 426
 

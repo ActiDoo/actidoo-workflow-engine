@@ -50,6 +50,9 @@ BFF_CONTRACT_VERSION = 1
 # reaches the backend through the proxy.
 BFF_CLIENT_VERSION_HEADER = "X-WFE-Client-Version"
 
+# Sent instead of a version number, this opts out of the check.
+BFF_CLIENT_VERSION_IGNORE = "ignore"
+
 # Form template modes (see ADR-008). Single source for transform, services and BFF schema.
 class TemplateMode(StrEnum):
     OFF = "off"

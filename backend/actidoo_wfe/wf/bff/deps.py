@@ -8,7 +8,7 @@ from actidoo_wfe.database import get_db_contextmanager
 from actidoo_wfe.helpers.http import HTTPException
 from actidoo_wfe.i18n import extract_primary_locale
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf.constants import BFF_CLIENT_VERSION_HEADER, BFF_CONTRACT_VERSION
+from actidoo_wfe.wf.constants import BFF_CLIENT_VERSION_HEADER, BFF_CLIENT_VERSION_IGNORE, BFF_CONTRACT_VERSION
 from actidoo_wfe.wf.cross_context.imports import get_login_state
 from actidoo_wfe.wf.exceptions import ClientVersionMismatchError, DataModelNotFoundError
 from actidoo_wfe.wf.registry_data_model import DataModelDescriptor, data_model_registry
@@ -24,6 +24,9 @@ def require_matching_client_version(request: Request):
     see the version error, not a 401 that sends it into a login redirect.
     """
     raw = request.headers.get(BFF_CLIENT_VERSION_HEADER)
+    if isinstance(raw, str) and raw.strip().lower() == BFF_CLIENT_VERSION_IGNORE:
+        return
+
     try:
         client_version = int(raw)
     except (TypeError, ValueError):
