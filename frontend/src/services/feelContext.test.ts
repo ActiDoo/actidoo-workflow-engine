@@ -25,7 +25,22 @@ describe('resolveHiddenFields', () => {
     const { hiddenFields, maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
 
     expect(hiddenFields).toEqual(new Set(['secret']));
-    expect(maskedContext).toMatchObject({ x: true, secret: undefined });
+    expect(maskedContext).toEqual({ x: true });
+    expect(maskedContext).not.toHaveProperty('secret');
+  });
+
+  it('removes hidden fields, so a comparison with null matches them', () => {
+    // A key left in place with undefined would not: FEEL only reads an absent name as null.
+    const uiSchema: any = {
+      a: { 'ui:hideif': '=x = true' },
+      b: { 'ui:hideif': '=a = null' },
+    };
+    const data = { x: true, a: 'stale value', b: 1 };
+
+    const { hiddenFields, maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
+
+    expect(hiddenFields).toEqual(new Set(['a', 'b']));
+    expect(maskedContext).toEqual({ x: true });
   });
 
   it('keeps fields visible when the condition does not match', () => {
@@ -51,7 +66,7 @@ describe('resolveHiddenFields', () => {
     const { hiddenFields, maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
 
     expect(hiddenFields).toEqual(new Set(['a']));
-    expect(maskedContext).toMatchObject({ a: undefined, b: 1 });
+    expect(maskedContext).toEqual({ x: true, b: 1 });
   });
 
   it('mirrors masked fields into the this context', () => {
@@ -64,8 +79,8 @@ describe('resolveHiddenFields', () => {
 
     const { maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
 
-    expect((maskedContext?.this as InterpreterContext).secret).toBeUndefined();
-    expect((maskedContext?.this as InterpreterContext).x).toBe(true);
+    expect(maskedContext?.this).toEqual({ x: true });
+    expect(maskedContext?.this).not.toHaveProperty('secret');
   });
 
   it('returns the context unchanged without a uiSchema', () => {

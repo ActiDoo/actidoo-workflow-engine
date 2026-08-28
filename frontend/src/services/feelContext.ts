@@ -10,7 +10,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 // - buildParentContext -> lets you use "parent" and "parent.parent" inside list items
 // - buildThisContext -> adds "parent" to the current item (so "this.parent" works)
 // - buildEvaluationContext -> merges root + current item + parent chain into one FEEL context
-// - resolveHiddenFields/applyHiddenMask -> hides values by setting them to undefined
+// - resolveHiddenFields/applyHiddenMask -> removes hidden values so FEEL sees them as null
 // - buildMaskedParentContext -> like buildParentContext, but it walks each list level,
 //   applies hide-if masking per item, and then rebuilds the parent chain from those masked items
 
@@ -126,7 +126,7 @@ function buildThisContext(formData: any, parentContext: any): any {
   return formData;
 }
 
-function applyHiddenMask(
+export function applyHiddenMask(
   orgFormData: InterpreterContext | undefined,
   hiddenFields: Set<string>
 ): InterpreterContext | undefined {
@@ -134,20 +134,19 @@ function applyHiddenMask(
     return orgFormData;
   }
 
-  // "Mask" means we keep the object but overwrite hidden fields with undefined
-  // so FEEL evaluations treat them as not present while preserving other values.
-  const masked: InterpreterContext = { ...orgFormData };
-  for (const field of hiddenFields) {
-    masked[field] = undefined;
-  }
+  // "Mask" means we keep the object but remove its hidden fields. Removed, not set to
+  // undefined: FEEL only treats an absent name as null (`x = null` holds), a key that is
+  // present with undefined does not. Absent is also what the backend sees - it strips
+  // hidden values before it evaluates the conditions that depend on them.
+  const withoutHidden = (context: InterpreterContext): InterpreterContext =>
+    Object.fromEntries(Object.entries(context).filter(([field]) => !hiddenFields.has(field)));
+
+  const masked = withoutHidden(orgFormData);
 
   const thisContext = masked.this;
   if (thisContext && typeof thisContext === 'object' && !Array.isArray(thisContext)) {
     // Mirror masked fields into "this" so hide-if in list items behaves the same as root context.
-    masked.this = { ...thisContext };
-    for (const field of hiddenFields) {
-      (masked.this as InterpreterContext)[field] = undefined;
-    }
+    masked.this = withoutHidden(thisContext as InterpreterContext);
   }
 
   return masked;

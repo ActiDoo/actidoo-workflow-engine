@@ -38,6 +38,7 @@ const SelectStatic = (props: WidgetProps): ReactElement => {
 
   return (
     <WeComboBox
+      inputId={props.id}
       isClearable={props.schema.default !== selectedOption?.value}
       isSearchable={enumOptions ? enumOptions.length > 9 : false}
       value={selectedOption}

@@ -111,9 +111,13 @@ export const renderTaskForm = (fixture: WorkflowFormFixture) => {
     await expect.element(page.getByText(file.name, { exact: true })).toBeVisible();
   };
 
-  // Opens a react-select based combobox and picks an option once it is loaded.
+  // Opens a react-select based combobox and picks an option once it is loaded. The input
+  // carrying the id is a scaled-down dummy when the select is not searchable (few
+  // options) and cannot be clicked, so the menu is opened from the control around it.
   const selectOption = async (key: string, label: string): Promise<void> => {
-    await field(key).click();
+    const input = await field(key).findElement();
+    const control = input.closest('[class*="-control"]') ?? input;
+    await page.elementLocator(control as HTMLElement).click();
     await page.getByRole('option', { name: label, exact: true }).click();
   };
 

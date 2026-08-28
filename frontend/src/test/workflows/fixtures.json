@@ -8,5 +8,8 @@
   },
   "feel-workflow/feel-form.fixture.json": {
     "form": "FeelWorkflow/FeelForm.form"
+  },
+  "test-flow-dynamic-list-hidden/form010-fill.fixture.json": {
+    "form": "TestFlow_DynamicListHidden/Form010_Fill.form"
   }
 }

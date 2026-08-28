@@ -31,6 +31,7 @@ import MultiSelectDynamic from '@/rjsf-customs/custom-widgets/MultiSelectDynamic
 import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
+import { collectHiddenPaths, dropErrorsOfHiddenFields } from '@/services/FeelService';
 
 const validator = customizeValidator();
 
@@ -85,22 +86,39 @@ const TaskForm: React.FC<TaskFormProps> = ({
   widgets,
   showErrorList,
   experimental_defaultFormStateBehavior: providedDefaultFormStateBehavior,
+  transformErrors: providedTransformErrors,
   children,
   ...rest
-}) => (
-  <Form
-    {...rest}
-    validator={providedValidator ?? validator}
-    templates={templates ?? customTemplates}
-    fields={fields ?? customFields}
-    widgets={widgets ?? customWidgets}
-    experimental_defaultFormStateBehavior={
-      providedDefaultFormStateBehavior ?? defaultFormStateBehavior
-    }
-    showErrorList={showErrorList ?? false}>
-    {children ?? <></>}
-  </Form>
-);
+}) => {
+  // Errors of fields the form does not show must not block the submit: the backend treats
+  // a hidden field and everything below it as absent, and so does this filter. Visibility
+  // is read from the same data the hide-if rendering uses (formContext.formData).
+  const transformErrors: NonNullable<BaseFormProps['transformErrors']> = (errors, uiSchema) => {
+    const formData =
+      (rest.formContext as { formData?: unknown } | undefined)?.formData ?? rest.formData;
+    const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
+    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths);
+    return providedTransformErrors
+      ? providedTransformErrors(visibleErrors, uiSchema)
+      : visibleErrors;
+  };
+
+  return (
+    <Form
+      {...rest}
+      validator={providedValidator ?? validator}
+      transformErrors={transformErrors}
+      templates={templates ?? customTemplates}
+      fields={fields ?? customFields}
+      widgets={widgets ?? customWidgets}
+      experimental_defaultFormStateBehavior={
+        providedDefaultFormStateBehavior ?? defaultFormStateBehavior
+      }
+      showErrorList={showErrorList ?? false}>
+      {children ?? <></>}
+    </Form>
+  );
+};
 
 export { validator as taskFormValidator, customFields, customWidgets, customTemplates };
 export default TaskForm;

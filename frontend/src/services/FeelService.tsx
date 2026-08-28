@@ -5,6 +5,13 @@ import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { evaluate, InterpreterContext, unaryTest } from 'feelin';
 import _ from 'lodash';
 
+import {
+  applyHiddenMask,
+  buildEvaluationContext,
+  HideIfEvaluator,
+  resolveHiddenFields,
+} from '@/services/feelContext';
+
 // ============================================================================
 // Internal Helpers
 // ============================================================================
@@ -37,7 +44,8 @@ function safeUnaryTest(expr: string, ctx: Record<string, any>): boolean {
  *
  * Semantics:
  * - Visible-but-missing booleans are treated as `false` in the evaluation context
- * - Hidden fields are treated as `undefined` (removed from context)
+ * - Hidden fields are removed from the context, so FEEL sees them as null - both as bare
+ *   names and inside `this`, the row's own data in a list item
  *
  * The fixpoint iteration continues until the hidden map stabilizes or
  * max iterations are reached (prevents infinite loops).
@@ -59,11 +67,14 @@ export function computeHiddenMap(
   // Iterate until fixpoint is reached
   const maxIterations = Math.max(1, uiKeys.length + 2);
   for (let iter = 0; iter < maxIterations; iter++) {
-    // Build context excluding hidden fields (they should be treated as undefined)
+    // Build context excluding hidden fields (they should be treated as null)
     const hiddenKeys = new Set(uiKeys.filter(k => hiddenMap[k]));
     const ctx: Record<string, any> = Object.fromEntries(
       Object.entries(formData).filter(([k]) => !hiddenKeys.has(k))
     );
+    if (ctx.this && typeof ctx.this === 'object' && !Array.isArray(ctx.this)) {
+      ctx.this = Object.fromEntries(Object.entries(ctx.this).filter(([k]) => !hiddenKeys.has(k)));
+    }
 
     // Visible-but-missing booleans default to false
     for (const k of booleanKeys) {
@@ -259,4 +270,120 @@ export function evaluateHideIfAndFeel(
   }
 
   return { newUiSchema, newSchema, hide };
+}
+
+// ============================================================================
+// Hidden paths - what the form currently does not show
+// ============================================================================
+
+/** A path into the form data: property names, list indexes for rows. */
+export type FormPath = Array<string | number>;
+
+const evaluateHideIfForMasking: HideIfEvaluator = (expression, context) => {
+  try {
+    return unaryTest(expression, { ...(context ?? {}) });
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Collects the paths of every field the form currently hides.
+ *
+ * Each level is evaluated the way it is rendered: root fields against the form data
+ * (as the root SchemaField does), list rows against the context CustomArraySchemaField
+ * builds for them - the root data with its hidden fields masked, the row itself as `this`,
+ * the enclosing rows as the `parent` chain. A hidden field ends the descent: whatever
+ * lies below it is hidden with it and needs no path of its own.
+ */
+export function collectHiddenPaths(
+  uiSchema: UiSchema<any, RJSFSchema, any> | undefined,
+  schema: RJSFSchema | undefined,
+  formData: unknown
+): FormPath[] {
+  const hiddenPaths: FormPath[] = [];
+  if (!uiSchema || !schema) {
+    return hiddenPaths;
+  }
+
+  const rootData: Record<string, any> =
+    formData && typeof formData === 'object' && !Array.isArray(formData)
+      ? (formData as Record<string, any>)
+      : {};
+  const maskedRoot =
+    resolveHiddenFields(uiSchema, rootData, evaluateHideIfForMasking).maskedContext ?? rootData;
+
+  const walk = (
+    levelUiSchema: Record<string, any>,
+    levelSchema: Record<string, any>,
+    levelData: Record<string, any>,
+    path: FormPath,
+    evaluationContext: Record<string, any>,
+    parentContext: InterpreterContext | undefined
+  ): void => {
+    const properties: Record<string, any> = levelSchema?.properties ?? {};
+    const hiddenMap = computeHiddenMap(levelUiSchema, properties, evaluationContext);
+
+    for (const key of Object.keys(levelUiSchema)) {
+      if (key.startsWith('ui:')) continue;
+      if (hiddenMap[key]) {
+        hiddenPaths.push([...path, key]);
+        continue;
+      }
+
+      // Descend into the rows of a visible dynamic list.
+      const itemUiSchema = levelUiSchema[key]?.items;
+      const itemSchema = properties[key]?.items;
+      const rows = levelData?.[key];
+      if (!itemUiSchema || !itemSchema?.properties || !Array.isArray(rows)) continue;
+
+      rows.forEach((row, index) => {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) return;
+        const rowContext = buildEvaluationContext(maskedRoot, row, parentContext);
+        const { hiddenFields } = resolveHiddenFields(
+          itemUiSchema,
+          rowContext,
+          evaluateHideIfForMasking
+        );
+        const maskedRow = applyHiddenMask(row, hiddenFields) ?? row;
+        walk(itemUiSchema, itemSchema, row, [...path, key, index], rowContext, {
+          ...maskedRow,
+          parent: parentContext,
+        });
+      });
+    }
+  };
+
+  walk(uiSchema, schema, rootData, [], rootData, maskedRoot);
+  return hiddenPaths;
+}
+
+/** Whether an rjsf error `property` ("root_key", ".list.0.key" ...) lies on or below one of the paths. */
+export function isOnOrBelowPath(property: string | undefined, paths: FormPath[]): boolean {
+  if (!property) {
+    return false;
+  }
+  // rjsf writes the AJV instance path with dots; a required error on the root level
+  // has no leading dot, one inside the data has.
+  const segments = property.replace(/^\./, '').split('.');
+  return paths.some(
+    path =>
+      path.length <= segments.length && path.every((segment, i) => String(segment) === segments[i])
+  );
+}
+
+/**
+ * Drops validation errors of fields the form does not show. Mirrors what the backend does
+ * with the submitted data: a hidden field, and everything below it, is treated as absent,
+ * so an empty required field in a hidden list row must not block the submission. Errors of
+ * visible fields pass through untouched.
+ */
+export function dropErrorsOfHiddenFields<T extends { property?: string }>(
+  errors: T[],
+  hiddenPaths: FormPath[]
+): T[] {
+  if (hiddenPaths.length === 0) {
+    return errors;
+  }
+  return errors.filter(error => !isOnOrBelowPath(error.property, hiddenPaths));
 }
