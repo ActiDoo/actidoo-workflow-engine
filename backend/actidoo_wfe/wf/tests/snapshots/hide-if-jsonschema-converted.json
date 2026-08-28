@@ -48,7 +48,10 @@
                                     "const": "A",
                                     "default": ""
                                 }
-                            }
+                            },
+                            "required": [
+                                "textfield1"
+                            ]
                         },
                         {
                             "type": "object",
@@ -57,7 +60,10 @@
                                     "const": "B",
                                     "default": ""
                                 }
-                            }
+                            },
+                            "required": [
+                                "textfield1"
+                            ]
                         }
                     ]
                 }
@@ -98,7 +104,10 @@
                                                     "const": "intern",
                                                     "default": ""
                                                 }
-                                            }
+                                            },
+                                            "required": [
+                                                "employee"
+                                            ]
                                         },
                                         {
                                             "type": "object",
@@ -159,7 +168,10 @@
                             "const": "A",
                             "default": ""
                         }
-                    }
+                    },
+                    "required": [
+                        "textfield1"
+                    ]
                 }
             },
             "then": {

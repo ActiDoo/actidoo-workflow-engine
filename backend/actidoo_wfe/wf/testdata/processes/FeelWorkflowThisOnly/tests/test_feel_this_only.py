@@ -7,7 +7,8 @@ WF_NAME = "FeelWorkflowThisOnly"
 
 log = logging.getLogger(__name__)
 
-FORM_DATA = {}
+# globalA = 1 hides the required globalB - an empty submission would be rejected, as in the browser.
+FORM_DATA = {"globalA": 1}
 
 
 def _start_workflow():
