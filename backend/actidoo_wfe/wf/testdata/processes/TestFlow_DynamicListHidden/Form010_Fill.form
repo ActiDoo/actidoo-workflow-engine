@@ -1,0 +1,139 @@
+{
+  "components": [
+    {
+      "text": "## Required field inside a hidden nested dynamic list\n\nChoose **yes**: the outer list is shown, its inner list stays hidden, the other list is shown. Submit without touching the lists.\n\nChoose **no**: the inner list is shown and its required field must be filled; the other list is hidden.",
+      "type": "text",
+      "layout": {
+        "row": "Row_intro",
+        "columns": null
+      },
+      "id": "Field_intro"
+    },
+    {
+      "label": "Create a set?",
+      "values": [
+        {
+          "label": "yes",
+          "value": "yes"
+        },
+        {
+          "label": "no",
+          "value": "no"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_select",
+        "columns": 9
+      },
+      "id": "Field_create_set",
+      "key": "create_set",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "label": "Outer list",
+      "components": [
+        {
+          "label": "Text (outer list)",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_outer_text",
+            "columns": null
+          },
+          "id": "Field_outer_text",
+          "key": "outer_text"
+        },
+        {
+          "label": "Inner list (hidden while yes)",
+          "components": [
+            {
+              "label": "Required text (inner list)",
+              "type": "textfield",
+              "layout": {
+                "row": "Row_inner_required",
+                "columns": null
+              },
+              "id": "Field_inner_required",
+              "key": "inner_required",
+              "validate": {
+                "required": true
+              }
+            }
+          ],
+          "showOutline": true,
+          "isRepeating": true,
+          "allowAddRemove": true,
+          "defaultRepetitions": 1,
+          "type": "dynamiclist",
+          "layout": {
+            "row": "Row_inner_list",
+            "columns": null
+          },
+          "id": "Field_inner_list",
+          "path": "inner_list",
+          "conditional": {
+            "hide": "=create_set=\"yes\" or create_set=null"
+          }
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_outer_list",
+        "columns": 16
+      },
+      "id": "Field_outer_list",
+      "path": "outer_list",
+      "disableCollapse": true,
+      "properties": {},
+      "conditional": {
+        "hide": "=create_set=null"
+      }
+    },
+    {
+      "label": "Other list (hidden while no)",
+      "components": [
+        {
+          "label": "Text (other list)",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_other_text",
+            "columns": null
+          },
+          "id": "Field_other_text",
+          "key": "other_text"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_other_list",
+        "columns": 16
+      },
+      "id": "Field_other_list",
+      "path": "other_list",
+      "nonCollapsedItems": 1,
+      "disableCollapse": true,
+      "conditional": {
+        "hide": "=create_set=null or create_set=\"no\""
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form010_Fill",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.6.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.38.1"
+  },
+  "schemaVersion": 19
+}
