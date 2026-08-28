@@ -306,21 +306,11 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             found_path = starting_path if property in _get_subschema(global_jsonschema, starting_path).get("properties", {}) else None
         else:
             found_path = _find_property_upwards(global_jsonschema, starting_path, property)
-        reference_missing = found_path is None
-        if reference_missing:
+        if found_path is None:
             # Field isn't declared in the schema (hide-if references a removed field): anchor the
-            # condition at the field's own level and treat the reference as unset (FEEL null).
+            # condition at the field's own level; the absent reference is FEEL null.
             found_path = starting_path
-            left_node = None
-        else:
-            left_node = _get_subschema(
-                global_jsonschema=global_jsonschema,
-                path=found_path,
-            )["properties"][property]
-        property_type = left_node["type"] if isinstance(left_node, dict) else None
-        # property_type can be a single string like "boolean" or "string" or a list of strings like: ["string", "null"]
         value_type = type(value)
-        is_bool_type = property_type == "boolean" or value_type == bool
 
         if_schema = {
             "type": "object",
@@ -335,19 +325,11 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         # A hide-if comparison may only match when the referenced field actually holds a value:
         # a hidden, disabled, unset, or entirely absent reference is treated as FEEL null
         # (null = x is false, null != x is true). Comparing against the null literal is the one
-        # case that is meant to match the unset field.
-        requires_reference = (
-            is_bool_type
-            or reference_missing
-            or left_node is True
-            or (isinstance(left_node, dict) and (left_node.get("hideif") is not None or left_node.get("disabled", False)))
-            or isinstance(op, ast.NotEq)
-        )
-        if value is None:
-            requires_reference = False
+        # case that is meant to match the unset field - JSON Schema's 'properties' is satisfied
+        # vacuously by an absent key, which is exactly that match.
+        requires_reference = value is not None
 
         if requires_reference and "required" not in if_schema:
-            # Missing values must not satisfy hide-if comparisons for hidden/boolean fields.
             if_schema["required"] = [property]
 
         if isinstance(op, ast.NotEq):

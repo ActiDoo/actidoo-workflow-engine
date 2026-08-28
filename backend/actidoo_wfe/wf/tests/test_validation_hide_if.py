@@ -83,6 +83,21 @@ NOT_NULL_FORM = {
 }
 
 
+EQUALITY_REFERENCE_FORM = {
+    # An equality against a plain optional reference: an unset reference is FEEL null,
+    # and null = "a" is false - so the dependent field stays visible and required.
+    "components": [
+        {"type": "select", "key": "category", "values": AB_OPTIONS},
+        {
+            "type": "textfield",
+            "key": "detail",
+            "validate": {"required": True},
+            "conditional": {"hide": '=category = "a"'},
+        },
+    ],
+}
+
+
 def _validate(form: dict, task_data: dict, stored: dict | None = None):
     """Validate ``task_data`` as an untrusted submission; ``stored`` holds the
     task's authoritative data for disabled fields (default: nothing stored)."""
@@ -456,3 +471,23 @@ def test__visible_list_keeps_its_row_ids_during_cleanup():
     )
 
     assert result.task_data["positions"] == [{"name": "x", ROW_ID_KEY: "r1"}]
+
+
+def test__equality_against_unset_reference_leaves_field_visible_and_required():
+    result = _validate(EQUALITY_REFERENCE_FORM, {})
+
+    assert "detail" in (result.error_schema or {})
+
+
+def test__equality_against_unset_reference_keeps_the_submitted_value():
+    result = _validate(EQUALITY_REFERENCE_FORM, {"detail": "b"})
+
+    assert not result.error_schema
+    assert result.task_data["detail"] == "b"
+
+
+def test__equality_against_matching_reference_hides_the_field():
+    result = _validate(EQUALITY_REFERENCE_FORM, {"category": "a", "detail": "b"})
+
+    assert not result.error_schema
+    assert "detail" not in result.task_data
