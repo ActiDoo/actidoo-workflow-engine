@@ -4,6 +4,7 @@
 import pytest
 
 from actidoo_wfe.database import SessionLocal
+from actidoo_wfe.wf import repository, service_application
 from actidoo_wfe.wf.exceptions import ValidationResultContainsErrors
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
@@ -54,6 +55,40 @@ def test_submit_fails_forEmptyTaskDataWhenRequired(db_engine_ctx):
 
         # afterwards the user still has this task:
         workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
+
+
+@pytest.mark.parametrize("blank", ["", "   ", "\n\t", None])
+def test_submit_fails_forBlankTaskDataWhenRequired(db_engine_ctx, blank):
+    """A blank is not a value: null, an empty or a whitespace-only string does not
+    satisfy 'required' - on the server as well, which also serves API clients."""
+    with db_engine_ctx():
+        workflow, db_session = start_my_workflow()
+
+        with pytest.raises(ValidationResultContainsErrors):
+            workflow.user("initiator").submit(
+                task_data={"text1": blank},
+                workflow_instance_id=workflow.workflow_instance_id,
+            )
+
+        workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
+
+
+def test_cleaning_without_raising_returns_the_cleaned_data(db_engine_ctx):
+    """Stored data of a task being copied lands in a form the user edits again, so
+    it is cleaned like a submission but must not be rejected."""
+    with db_engine_ctx():
+        workflow, db_session = start_my_workflow()
+        stored_workflow = repository.load_workflow_instance(db=workflow.db, workflow_id=workflow.workflow_instance_id)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        cleaned = service_application._clean_submitted_task_data(
+            workflow=stored_workflow,
+            task=task,
+            submitted_data={"text1": "   "},
+            raise_on_errors=False,
+        )
+
+        assert cleaned == {}
 
 
 def test_submit_fails_forWrongTaskDataWhenRequired(db_engine_ctx):

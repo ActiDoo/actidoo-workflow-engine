@@ -3,7 +3,10 @@
     "type": "object",
     "properties": {
         "textfield1": {
-            "type": "string",
+            "type": [
+                "string",
+                "null"
+            ],
             "title": "Text field 1"
         },
         "textfield_with_condition": true,
@@ -13,7 +16,10 @@
                 "type": "object",
                 "properties": {
                     "employee": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "title": "Employee"
                     },
                     "region": true
@@ -27,7 +33,10 @@
                 "type": "object",
                 "properties": {
                     "asset": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "title": "Asset"
                     }
                 }
@@ -72,7 +81,10 @@
                 "type": "object",
                 "properties": {
                     "textfield_with_condition": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "title": "Text field 2"
                     }
                 }
@@ -125,7 +137,10 @@
                                 "type": "object",
                                 "properties": {
                                     "region": {
-                                        "type": "string",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
                                         "title": "Region"
                                     }
                                 }

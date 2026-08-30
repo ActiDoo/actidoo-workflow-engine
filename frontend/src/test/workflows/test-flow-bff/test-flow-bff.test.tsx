@@ -3,6 +3,8 @@
 
 // Workflow: backend/actidoo_wfe/wf/testdata/processes/TestFlowBff — see ../README.md.
 
+import { page } from 'vitest/browser';
+
 import { renderTaskForm } from '@/test/workflows/support/renderTaskForm';
 import { useFakeBackend } from '@/test/support/fakeFetchService';
 import form1 from './form1.fixture.json';
@@ -67,6 +69,28 @@ describe('Test Flow BFF — Form1', () => {
     await submit();
 
     expect(submitted).not.toHaveBeenCalled();
+  });
+
+  it('blocks submission when the required field holds only whitespace', async () => {
+    const { submitted, field, submit } = renderTaskForm(form1);
+
+    await field('required_text').fill('   ');
+    await submit();
+
+    expect(submitted).not.toHaveBeenCalled();
+    await expect.element(page.getByText('This field is required')).toBeVisible();
+  });
+
+  it('sends an emptied optional field as null, so the stored value is cleared', async () => {
+    const { submitted, field, submit } = renderTaskForm(form1);
+
+    await field('required_text').fill('Hello BFF');
+    await field('optional_note').fill('draft');
+    await field('optional_note').fill('');
+    await submit();
+
+    expect(submitted).toHaveBeenCalledTimes(1);
+    expect(submitted.mock.calls[0][0]).toMatchObject({ optional_note: null });
   });
 
   it('blocks submission when minLength is violated', async () => {

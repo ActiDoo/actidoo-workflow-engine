@@ -67,29 +67,35 @@
         },
         "dynamiclist_outer": {
             "type": "array",
-            "title": "Outer Dynamic list",
             "items": {
                 "type": "object",
                 "properties": {
                     "textfield_outer": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "title": "Text Field in Outer Dynamic List"
                     },
                     "dynamiclist_inner": {
                         "type": "array",
-                        "title": "Inner Dynamic List",
                         "items": {
                             "type": "object",
                             "properties": {
                                 "textfield_inner": {
-                                    "type": "string",
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
                                     "title": "Text Field in Inner Dynamic List"
                                 }
                             }
-                        }
+                        },
+                        "title": "Inner Dynamic List"
                     }
                 }
             },
+            "title": "Outer Dynamic list",
             "minItems": 1
         }
     },

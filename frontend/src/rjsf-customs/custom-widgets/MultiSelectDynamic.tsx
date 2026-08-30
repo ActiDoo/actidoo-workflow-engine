@@ -139,7 +139,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
         setOptionsLoaded(false);
         setSearch('');
         setOptions([]);
-        props.onChange('');
+        props.onChange([]);
       }
     }, effectDeps);
   }

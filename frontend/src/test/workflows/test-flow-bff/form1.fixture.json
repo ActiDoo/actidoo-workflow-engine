@@ -4,12 +4,18 @@
     "type": "object",
     "properties": {
       "required_text": {
-        "type": "string",
+        "type": [
+          "string",
+          "null"
+        ],
         "title": "Required text",
         "minLength": 2
       },
       "short_code": {
-        "type": "string",
+        "type": [
+          "string",
+          "null"
+        ],
         "title": "Short code",
         "maxLength": 3,
         "custom_properties": {
@@ -49,7 +55,10 @@
         }
       },
       "optional_note": {
-        "type": "string",
+        "type": [
+          "string",
+          "null"
+        ],
         "title": "Optional note"
       },
       "trigger_error": {
@@ -88,14 +97,16 @@
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "required_text"
-      ]
+      ],
+      "ui:emptyValue": null
     },
     "short_code": {
       "ui:description": "",
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "short_code"
-      ]
+      ],
+      "ui:emptyValue": null
     },
     "category": {
       "ui:description": "",
@@ -117,7 +128,8 @@
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "optional_note"
-      ]
+      ],
+      "ui:emptyValue": null
     },
     "trigger_error": {
       "ui:description": "",

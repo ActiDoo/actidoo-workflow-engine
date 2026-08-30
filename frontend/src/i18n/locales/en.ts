@@ -178,6 +178,9 @@ export const en = {
     submit: 'Submit',
     delete: 'Delete',
   },
+  validation: {
+    required: 'This field is required',
+  },
   formTemplates: {
     saveAction: 'Save as template',
     applyAction: 'Apply template',
