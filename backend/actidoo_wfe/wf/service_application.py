@@ -295,6 +295,7 @@ def get_workflow_copy_data(
             task=t_new,
             submitted_data=matching_original_task.data,
             locale=user_rep.locale,
+            raise_on_errors=False,  # edited and validated again in the form
         )
 
         if idx == 0:
@@ -687,12 +688,14 @@ def get_usertasks_for_user_id(
     return usertasks
 
 
-def _clean_submitted_task_data(workflow, task, submitted_data, locale: str):
+def _clean_submitted_task_data(workflow, task, submitted_data, locale: str, raise_on_errors: bool = True):
     """Validate and clean a payload from a user form submission.
 
     The payload typically only contains the fields the frontend knows about.
     Unknown / technical properties are removed deliberately and hidden fields
-    are stripped."""
+    are stripped. With ``raise_on_errors=False`` the cleaned data is returned even
+    when it does not validate - for data that lands in a form to be edited anyway,
+    such as the stored data of a task being copied."""
 
     assert task.uischema and task.jsonschema
     form = ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema)
@@ -717,7 +720,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data, locale: str):
         locale=locale,
     )
 
-    if validation_result.error_schema:
+    if validation_result.error_schema and raise_on_errors:
         log.error("Errors during validation of submitted task data" + str(validation_result.error_schema))
         raise ValidationResultContainsErrors(message="Errors during validation of submitted task data", error_schema=validation_result.error_schema)
 

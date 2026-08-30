@@ -11,6 +11,7 @@ import {
   HideIfEvaluator,
   resolveHiddenFields,
 } from '@/services/feelContext';
+import { isBlank } from '@/services/emptyValues';
 
 // ============================================================================
 // Internal Helpers
@@ -68,12 +69,15 @@ export function computeHiddenMap(
   const maxIterations = Math.max(1, uiKeys.length + 2);
   for (let iter = 0; iter < maxIterations; iter++) {
     // Build context excluding hidden fields (they should be treated as null)
+    // Hidden and blank fields both read as null - the server drops hidden values and
+    // stores a blank as null before it evaluates the conditions that depend on them.
     const hiddenKeys = new Set(uiKeys.filter(k => hiddenMap[k]));
+    const isInContext = ([k, v]: [string, unknown]): boolean => !hiddenKeys.has(k) && !isBlank(v);
     const ctx: Record<string, any> = Object.fromEntries(
-      Object.entries(formData).filter(([k]) => !hiddenKeys.has(k))
+      Object.entries(formData).filter(isInContext)
     );
     if (ctx.this && typeof ctx.this === 'object' && !Array.isArray(ctx.this)) {
-      ctx.this = Object.fromEntries(Object.entries(ctx.this).filter(([k]) => !hiddenKeys.has(k)));
+      ctx.this = Object.fromEntries(Object.entries(ctx.this).filter(isInContext));
     }
 
     // Visible-but-missing booleans default to false
@@ -358,6 +362,15 @@ export function collectHiddenPaths(
   return hiddenPaths;
 }
 
+/** Whether `path` equals one of `paths` or lies below it. */
+export function isPathOnOrBelow(path: FormPath, paths: FormPath[]): boolean {
+  return paths.some(
+    prefix =>
+      prefix.length <= path.length &&
+      prefix.every((segment, i) => String(segment) === String(path[i]))
+  );
+}
+
 /** Whether an rjsf error `property` ("root_key", ".list.0.key" ...) lies on or below one of the paths. */
 export function isOnOrBelowPath(property: string | undefined, paths: FormPath[]): boolean {
   if (!property) {
@@ -365,11 +378,7 @@ export function isOnOrBelowPath(property: string | undefined, paths: FormPath[])
   }
   // rjsf writes the AJV instance path with dots; a required error on the root level
   // has no leading dot, one inside the data has.
-  const segments = property.replace(/^\./, '').split('.');
-  return paths.some(
-    path =>
-      path.length <= segments.length && path.every((segment, i) => String(segment) === segments[i])
-  );
+  return isPathOnOrBelow(property.replace(/^\./, '').split('.'), paths);
 }
 
 /**

@@ -8,13 +8,18 @@ const CustomTextWidget = (props: WidgetProps): ReactElement => {
   const [cleared, setCleared] = useState(false);
   const BaseInputTemplate = getTemplate('BaseInputTemplate', props.registry, props.options);
 
-  if (props.schema.type !== 'number' && props.schema.type !== 'integer') {
+  // An optional number field admits null: its type is ['number', 'null'].
+  const type = Array.isArray(props.schema.type)
+    ? props.schema.type.find(t => t !== 'null')
+    : props.schema.type;
+  if (type !== 'number' && type !== 'integer') {
     return <BaseInputTemplate {...props} />;
   }
 
   return (
     <BaseInputTemplate
       {...props}
+      schema={{ ...props.schema, type }}
       value={cleared ? '' : props.value}
       onChange={(value, ...rest) => {
         setCleared(value === '' || value === undefined || value === null);

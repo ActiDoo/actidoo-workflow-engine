@@ -95,7 +95,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
         setOptionsLoaded(false);
         setSearch('');
         clear();
-        props.onChange('');
+        props.onChange(null);
       }
     }, effectDeps);
   }

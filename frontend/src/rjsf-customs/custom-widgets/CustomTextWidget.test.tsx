@@ -64,4 +64,23 @@ describe('CustomTextWidget', () => {
 
     expect(input).toHaveValue('xy');
   });
+
+  it('treats an optional number field, whose type admits null, as a number', async () => {
+    const onChange = vi.fn();
+    renderForm({
+      onChange,
+      schema: {
+        type: 'object',
+        properties: { amount: { type: ['number', 'null'], title: 'Menge' } },
+      },
+      formData: { amount: 5 },
+    });
+    const input = screen.getByLabelText('Menge');
+
+    await userEvent.click(input);
+    await userEvent.keyboard('42');
+
+    expect(input).toHaveAttribute('type', 'number');
+    expect(lastFormData(onChange)).toEqual({ amount: 42 });
+  });
 });
