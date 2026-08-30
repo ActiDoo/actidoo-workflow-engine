@@ -21,7 +21,7 @@ import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 import CustomArraySchemaField from '@/rjsf-customs/custom-fields/CustomArraySchemaField';
 import CustomMultiFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomMultiFileField';
 import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomSingleFileField';
-import { isAttachmentMultiSchema } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
+import { skipMinItemsPopulation } from '@/rjsf-customs/arrayDefaults';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
@@ -42,9 +42,9 @@ const validator = customizeValidator();
 const defaultFormStateBehavior: Experimental_DefaultFormStateBehavior = {
   constAsDefaults: 'never',
   arrayMinItems: {
-    // Never pre-fill attachment arrays with an empty item: an "empty" upload would
-    // satisfy the required-check without being a file. Empty stays empty.
-    computeSkipPopulate: (_validator, schema) => isAttachmentMultiSchema(schema),
+    // Only dynamic lists get placeholder rows; a multi-select or attachment list must
+    // stay empty until the user picks something (see skipMinItemsPopulation).
+    computeSkipPopulate: (_validator, schema) => skipMinItemsPopulation(schema),
   },
 };
 
