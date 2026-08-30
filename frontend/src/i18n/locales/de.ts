@@ -183,6 +183,9 @@ export const de = {
     submit: 'Absenden',
     delete: 'Löschen',
   },
+  validation: {
+    required: 'Dieses Feld ist ein Pflichtfeld',
+  },
   formTemplates: {
     saveAction: 'Als Vorlage speichern',
     applyAction: 'Vorlage anwenden',

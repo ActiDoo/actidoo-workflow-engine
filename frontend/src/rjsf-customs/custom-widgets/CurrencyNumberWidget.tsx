@@ -2,8 +2,8 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 // Storage contract — stable, do not break:
-//   - props.value is a JSON number (or undefined for empty); never a formatted string.
-//   - props.onChange(value) is called with the parsed number or undefined.
+//   - props.value is a JSON number (or null for empty); never a formatted string.
+//   - props.onChange(value) is called with the parsed number or null (an emptied field is null).
 //   - The currency symbol comes from props.uiSchema and is purely a display hint;
 //     it is NOT persisted with the value.
 //   - parseInput accepts both DE ("1.234,56") and EN ("1,234.56" / "1234.56") inputs,
@@ -34,9 +34,9 @@ const localeDecimalSeparator = (locale: string): ',' | '.' => {
 //   "1234<thouSep>56"   → 1234.56              (opposite-locale decimal — heuristic)
 //   "1<thouSep>234"     → 1234                 (locale's thousands grouping)
 //   "1<thouSep>50"      → 1.50                 (not 3 digits after — opposite-locale decimal)
-const parseInput = (raw: string, locale: string): number | undefined => {
+const parseInput = (raw: string, locale: string): number | null => {
   const trimmed = raw.trim();
-  if (trimmed === '') return undefined;
+  if (trimmed === '') return null;
 
   const decSep = localeDecimalSeparator(locale);
   const thouSep = decSep === ',' ? '.' : ',';
@@ -71,7 +71,7 @@ const parseInput = (raw: string, locale: string): number | undefined => {
   }
 
   const num = Number(normalized);
-  return Number.isNaN(num) ? undefined : num;
+  return Number.isNaN(num) ? null : num;
 };
 
 const CurrencyNumberWidget = (props: WidgetProps): ReactElement => {

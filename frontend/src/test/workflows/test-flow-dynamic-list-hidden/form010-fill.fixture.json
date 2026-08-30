@@ -34,7 +34,10 @@
           "type": "object",
           "properties": {
             "outer_text": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "title": "Text (outer list)"
             },
             "inner_list": {
@@ -43,7 +46,10 @@
                 "type": "object",
                 "properties": {
                   "inner_required": {
-                    "type": "string",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "title": "Required text (inner list)"
                   }
                 },
@@ -65,7 +71,10 @@
           "type": "object",
           "properties": {
             "other_text": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "title": "Text (other list)"
             }
           }
@@ -124,7 +133,8 @@
           "ui:path": [
             "outer_list",
             "outer_text"
-          ]
+          ],
+          "ui:emptyValue": null
         },
         "inner_list": {
           "items": {
@@ -141,7 +151,8 @@
                 "outer_list",
                 "inner_list",
                 "inner_required"
-              ]
+              ],
+              "ui:emptyValue": null
             }
           },
           "ui:arrayAddButtonText": "Add",
@@ -175,7 +186,8 @@
           "ui:path": [
             "other_list",
             "other_text"
-          ]
+          ],
+          "ui:emptyValue": null
         }
       },
       "ui:arrayAddButtonText": "Add",

@@ -102,6 +102,8 @@ Supported field types: text field, text area, text view (static text), single an
 
 Patterns use Python regular-expression syntax and are checked by the server when the form is submitted. Typing remains unrestricted. Invalid patterns fail to load with the field name and a description of the problem. Pattern errors use the user's language and show the translated `pattern_message` or a generic format message.
 
+An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared and for a cleared select, and the task data stores it - so clearing a field in a later task really removes the earlier value. `required` therefore means that a value was entered: `null`, an empty string and a whitespace-only string do not satisfy it, in the browser and on the server alike. A checkbox is always `true` or `false` while it is shown.
+
 ### Custom properties
 
 Set these in the Modeler's "Custom properties" panel of a field or list. In `EnterExpense` the `receipt` field carries `custom_type: attachment_single` to become a file upload, and `amount` carries `currency: EUR`.

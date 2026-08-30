@@ -19,7 +19,8 @@
         "ui:enableMarkdownInDescription": true,
         "ui:path": [
             "textfield1"
-        ]
+        ],
+        "ui:emptyValue": null
     },
     "textfield_with_condition": {
         "ui:description": "",
@@ -27,7 +28,8 @@
         "ui:path": [
             "textfield_with_condition"
         ],
-        "ui:hideif": "=textfield1 = \"A\" or textfield1 = \"B\""
+        "ui:hideif": "=textfield1 = \"A\" or textfield1 = \"B\"",
+        "ui:emptyValue": null
     },
     "employees": {
         "items": {
@@ -45,7 +47,8 @@
                     "employees",
                     "employee"
                 ],
-                "ui:columns": 5
+                "ui:columns": 5,
+                "ui:emptyValue": null
             },
             "region": {
                 "ui:description": "",
@@ -55,7 +58,8 @@
                     "region"
                 ],
                 "ui:columns": 5,
-                "ui:hideif": "=this.employee=\"intern\"\nor this.employee = null"
+                "ui:hideif": "=this.employee=\"intern\"\nor this.employee = null",
+                "ui:emptyValue": null
             }
         },
         "ui:arrayAddButtonText": "Add",
@@ -80,7 +84,8 @@
                     "assets",
                     "asset"
                 ],
-                "ui:columns": 5
+                "ui:columns": 5,
+                "ui:emptyValue": null
             }
         },
         "ui:arrayAddButtonText": "Add",

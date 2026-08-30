@@ -80,6 +80,18 @@ describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
     expect(form.submitted).toHaveBeenCalledTimes(1);
   });
 
+  it('does not submit while the required globalB is emptied - its default does not return', async () => {
+    const form = renderTaskForm(feelForm);
+    await addOuterRow(form);
+    await form.field(NUMBER_C).fill('33');
+    await expect.element(form.field(NUMBER_D)).not.toBeVisible();
+
+    await form.field('globalB').fill('');
+    await form.submit();
+
+    expect(form.submitted).not.toHaveBeenCalled();
+  });
+
   it('hides an inner field through a parent. reference', async () => {
     const form = renderTaskForm(feelForm);
     await addOuterRow(form);
