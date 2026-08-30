@@ -171,6 +171,9 @@ export const de = {
     reset: 'Auf Anfangszustand zurücksetzen',
     submit: 'Absenden',
   },
+  validation: {
+    required: 'Dieses Feld ist ein Pflichtfeld',
+  },
   formTemplates: {
     saveAction: 'Als Vorlage speichern',
     applyAction: 'Vorlage anwenden',

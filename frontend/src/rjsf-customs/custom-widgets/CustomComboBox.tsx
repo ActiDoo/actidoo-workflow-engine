@@ -137,7 +137,7 @@ const CustomComboBox = (props: WidgetProps): ReactElement => {
         setOptionsLoaded(false);
         setSearch('');
         setOptions([]);
-        props.onChange('');
+        props.onChange(isMultiple ? [] : null);
       }
     }, effectDeps);
   }

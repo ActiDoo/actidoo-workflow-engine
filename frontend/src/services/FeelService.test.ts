@@ -118,6 +118,20 @@ describe('evaluateHideIfAndFeel', () => {
     expect(newUiSchema?.b['ui:widget']).toBe('hidden');
   });
 
+  it('reads a blank or null field as null, as the server does', () => {
+    const uiSchema = { b: { 'ui:hideif': '=a = null' }, c: { 'ui:hideif': '=this.a = null' } };
+    const schema: RJSFSchema = {
+      type: 'object',
+      properties: { a: { type: 'string' }, b: { type: 'string' }, c: { type: 'string' } },
+    };
+
+    for (const a of ['   ', null]) {
+      const { newUiSchema } = evaluateHideIfAndFeel({ a, this: { a } }, uiSchema, schema);
+      expect(newUiSchema?.b['ui:widget']).toBe('hidden');
+      expect(newUiSchema?.c['ui:widget']).toBe('hidden');
+    }
+  });
+
   it('evaluates FEEL expressions in ui:description', () => {
     const uiSchema = { a: { 'ui:description': 'Summe: {{ numberA * numberB }} Euro' } };
     const schema: RJSFSchema = { type: 'object', properties: { a: { type: 'string' } } };

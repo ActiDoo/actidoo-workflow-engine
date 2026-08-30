@@ -3,11 +3,17 @@
     "type": "object",
     "properties": {
         "textfield1": {
-            "type": "string",
+            "type": [
+                "string",
+                "null"
+            ],
             "title": "Text field 1"
         },
         "textfield_with_condition": {
-            "type": "string",
+            "type": [
+                "string",
+                "null"
+            ],
             "title": "Text field 2",
             "hideif": "=textfield1 = \"A\" or textfield1 = \"B\""
         },
@@ -17,11 +23,17 @@
                 "type": "object",
                 "properties": {
                     "employee": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "title": "Employee"
                     },
                     "region": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "title": "Region",
                         "hideif": "=this.employee=\"intern\"\nor this.employee = null"
                     }
@@ -35,7 +47,10 @@
                 "type": "object",
                 "properties": {
                     "asset": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "title": "Asset"
                     }
                 }

@@ -279,13 +279,14 @@ def _insert_single_component(
             },
         )
     elif component["type"] == "textfield":
-        pass
+        _handle_empty_value(uischema, jsonschema, key)
     elif component["type"] == "textarea":
         uischema[key].update(
             {
                 "ui:widget": "textarea",  # TODO no custom behaviour for 'textarea' in Frontend code??
             },
         )
+        _handle_empty_value(uischema, jsonschema, key)
     elif component["type"] == "select" and custom_properties.get("custom_type", "") == "select_multi":
         jsonschema["properties"][key].update(
             {
@@ -345,6 +346,7 @@ def _insert_single_component(
                 "type": "number",
             },
         )
+        _handle_empty_value(uischema, jsonschema, key)
         if component.get("appearance", None) and component["appearance"].get("suffixAdorner", None):
             if component["appearance"]["suffixAdorner"] == "€":
                 uischema[key].update({"ui:widget": "CurrencyNumberWidget"})
@@ -358,6 +360,7 @@ def _insert_single_component(
         jsonschema["properties"][key].update(
             {"title": component["dateLabel"], "type": "string", "format": "date"},
         )
+        _handle_empty_value(uischema, jsonschema, key)
     elif component["type"] == "checkbox":
         jsonschema["properties"][key].update(
             {
@@ -375,6 +378,7 @@ def _insert_single_component(
         jsonschema["properties"][key].update(
             {"title": component["dateLabel"], "type": "string", "format": "date"},
         )
+        _handle_empty_value(uischema, jsonschema, key)
     # The code for the time field works and a time field gets correctly rendered.
     # However, the validation of the time field fails, therefore I leave this code still as comment
     # elif component["type"] == "datetime" and component.get("subtype", None) == "time":
@@ -388,6 +392,7 @@ def _insert_single_component(
         jsonschema["properties"][key].update(
             {"title": component["dateLabel"], "type": "string", "format": "datetime"},
         )
+        _handle_empty_value(uischema, jsonschema, key)
 
 
 def _handle_custom_properties(component, jsonschema, key):
@@ -398,6 +403,16 @@ def _handle_custom_properties(component, jsonschema, key):
         )
 
     return custom_properties
+
+
+def _handle_empty_value(uischema, jsonschema, key):
+    """An emptied field is null, in the form data as in the task data: the browser sends
+    null when the user clears the field (``ui:emptyValue``), the schema admits it, and
+    the merge into the stored data overwrites the old value with it. Absent would keep
+    the old value."""
+    base_type = jsonschema["properties"][key]["type"]
+    jsonschema["properties"][key]["type"] = [base_type, "null"]
+    uischema[key]["ui:emptyValue"] = None
 
 
 def _handle_label(component, jsonschema, key):

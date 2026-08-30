@@ -4,12 +4,18 @@
     "type": "object",
     "properties": {
       "globalA": {
-        "type": "number",
+        "type": [
+          "number",
+          "null"
+        ],
         "title": "Number globalA",
         "default": 2
       },
       "globalB": {
-        "type": "number",
+        "type": [
+          "number",
+          "null"
+        ],
         "title": "Number globalB",
         "default": 4,
         "hideif": "=globalA=1"
@@ -24,18 +30,27 @@
           "type": "object",
           "properties": {
             "number_a": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "title": "number_a Label",
               "default": 8,
               "hideif": "=globalA=3"
             },
             "number_b": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "title": "number_b Label",
               "hideif": "=this.number_a=9"
             },
             "number_or": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "title": "number_or Label (hidden if number_a=9 or number_a=null)",
               "hideif": "=this.number_a=9\nor this.number_a=null"
             },
@@ -49,13 +64,19 @@
                 "type": "object",
                 "properties": {
                   "number_c": {
-                    "type": "number",
+                    "type": [
+                      "number",
+                      "null"
+                    ],
                     "title": "number_c label",
                     "default": 32,
                     "hideif": "=parent.number_a=7"
                   },
                   "number_d": {
-                    "type": "number",
+                    "type": [
+                      "number",
+                      "null"
+                    ],
                     "title": "number_d label",
                     "hideif": "=this.number_c=33"
                   },
@@ -87,7 +108,10 @@
           "type": "object",
           "properties": {
             "number_e": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "title": "number_e Label"
             }
           }
@@ -125,7 +149,8 @@
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "globalA"
-      ]
+      ],
+      "ui:emptyValue": null
     },
     "globalB": {
       "ui:description": "",
@@ -133,7 +158,8 @@
       "ui:path": [
         "globalB"
       ],
-      "ui:hideif": "=globalA=1"
+      "ui:hideif": "=globalA=1",
+      "ui:emptyValue": null
     },
     "Field_1aff9sg": {
       "ui:description": "Product of globalA*globalB is easy: {{ globalA * globalB }}",
@@ -163,7 +189,8 @@
             "my_list",
             "number_a"
           ],
-          "ui:hideif": "=globalA=3"
+          "ui:hideif": "=globalA=3",
+          "ui:emptyValue": null
         },
         "number_b": {
           "ui:description": "",
@@ -172,7 +199,8 @@
             "my_list",
             "number_b"
           ],
-          "ui:hideif": "=this.number_a=9"
+          "ui:hideif": "=this.number_a=9",
+          "ui:emptyValue": null
         },
         "number_or": {
           "ui:description": "",
@@ -181,7 +209,8 @@
             "my_list",
             "number_or"
           ],
-          "ui:hideif": "=this.number_a=9\nor this.number_a=null"
+          "ui:hideif": "=this.number_a=9\nor this.number_a=null",
+          "ui:emptyValue": null
         },
         "Field_13cwx6x": {
           "ui:description": "globalA={{ globalA }}\n\na*b = {{this.number_a * this.number_b}}\n\nSum for inner my_list_B: {{sum(for elem in this.my_list_B return elem.number_c * elem.number_d)}}",
@@ -209,7 +238,8 @@
                 "my_list_B",
                 "number_c"
               ],
-              "ui:hideif": "=parent.number_a=7"
+              "ui:hideif": "=parent.number_a=7",
+              "ui:emptyValue": null
             },
             "number_d": {
               "ui:description": "",
@@ -219,7 +249,8 @@
                 "my_list_B",
                 "number_d"
               ],
-              "ui:hideif": "=this.number_c=33"
+              "ui:hideif": "=this.number_c=33",
+              "ui:emptyValue": null
             },
             "Field_0jqepgf": {
               "ui:description": "globalA={{ globalA }}\n\nparent.number_a = {{ parent.number_a}}\n\nthis.number_c = {{ this.number_c }}\n\nc*d = {{ this.number_c * this.number_d }}\n",
@@ -267,7 +298,8 @@
           "ui:path": [
             "hidden_list",
             "number_e"
-          ]
+          ],
+          "ui:emptyValue": null
         }
       },
       "ui:arrayAddButtonText": "Add",

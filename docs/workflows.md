@@ -94,6 +94,8 @@ The example has two forms. `EnterExpense` collects `title` (text, required), `am
 
 Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, single and multi attachment, and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
 
+An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared and for a cleared select, and the task data stores it - so clearing a field in a later task really removes the earlier value. `required` therefore means that a value was entered: `null`, an empty string and a whitespace-only string do not satisfy it, in the browser and on the server alike. A checkbox is always `true` or `false` while it is shown.
+
 ### Custom properties
 
 Set these in the Modeler's "Custom properties" panel of a field or list. In `EnterExpense` the `receipt` field carries `custom_type: attachment_single` to become a file upload, and `amount` carries `currency: EUR`.

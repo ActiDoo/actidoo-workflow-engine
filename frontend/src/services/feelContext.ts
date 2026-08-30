@@ -4,6 +4,8 @@
 import type { InterpreterContext } from 'feelin';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
+import { isBlank } from '@/services/emptyValues';
+
 // FEEL context helpers overview (example):
 // Given root data { listA: [{ a: 1, listB: [{ b: 2 }] }], x: 5 } and id "root_listA_0_listB_0":
 // - parseListSegments -> breaks "root_listA_0_listB_0" into [{ listA, 0 }, { listB, 0 }]
@@ -138,8 +140,13 @@ export function applyHiddenMask(
   // undefined: FEEL only treats an absent name as null (`x = null` holds), a key that is
   // present with undefined does not. Absent is also what the backend sees - it strips
   // hidden values before it evaluates the conditions that depend on them.
+  // Blank values go the same way: they read as null, on the server as well.
   const withoutHidden = (context: InterpreterContext): InterpreterContext =>
-    Object.fromEntries(Object.entries(context).filter(([field]) => !hiddenFields.has(field)));
+    Object.fromEntries(
+      Object.entries(context).filter(
+        ([field, value]) => !hiddenFields.has(field) && !isBlank(value)
+      )
+    );
 
   const masked = withoutHidden(orgFormData);
 

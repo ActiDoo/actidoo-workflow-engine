@@ -107,7 +107,8 @@
                 "ui:path": [
                     "dynamiclist_outer",
                     "textfield_outer"
-                ]
+                ],
+                "ui:emptyValue": null
             },
             "dynamiclist_inner": {
                 "items": {
@@ -124,7 +125,8 @@
                             "dynamiclist_outer",
                             "dynamiclist_inner",
                             "textfield_inner"
-                        ]
+                        ],
+                        "ui:emptyValue": null
                     }
                 },
                 "ui:arrayAddButtonText": "Add",

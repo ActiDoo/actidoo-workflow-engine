@@ -676,6 +676,36 @@ def _drop_template_value(value: Any) -> bool:
     return False
 
 
+def is_blank_value(value: Any) -> bool:
+    """``None`` and strings without content carry no value. Everything else does -
+    ``False``, ``0`` and ``[]`` are values."""
+    return value is None or (isinstance(value, str) and value.strip() == "")
+
+
+def normalize_blank_values(data: dict, jsonschema: dict) -> None:
+    """A submitted blank (null, empty or whitespace-only string) is null - or, where the
+    field is required or its schema admits no null, absent, so that ``required`` and the
+    type check say what is wrong. Walks the form schema, not the data: only declared
+    fields are touched, dynamic-list rows are entered, attachment objects are left alone."""
+    if not isinstance(data, dict):
+        return
+    required = jsonschema.get("required", [])
+    for key, node in jsonschema.get("properties", {}).items():
+        if key not in data or not isinstance(node, dict) or _is_attachment_node(node):
+            continue
+        value = data[key]
+        if _is_array_of_objects(node) and isinstance(value, list):
+            for row in value:
+                normalize_blank_values(row, node["items"])
+        elif is_blank_value(value):
+            node_type = node.get("type")
+            nullable = node_type == "null" or (isinstance(node_type, list) and "null" in node_type)
+            if key in required or not nullable:
+                del data[key]
+            else:
+                data[key] = None
+
+
 def _filter_template_object(
     properties: dict,
     data: dict,
@@ -1040,6 +1070,10 @@ def validate_task_data(
 
     log.debug("> validate_task_data")
 
+    # Cleaning mutates: work on a copy so the caller's data (a stored task's data in
+    # the copy-workflow case) stays what it was.
+    task_data = copy.deepcopy(task_data)
+
     removed_unknown_fields: list[tuple[list, Any]] = []
 
     def _collect_unknown_field(path: list, value: Any):
@@ -1054,6 +1088,9 @@ def validate_task_data(
                 disabled_path,
                 default=default,
             )
+        # A submission is user input: a blank means "nothing entered". Trusted engine
+        # data is not touched.
+        normalize_blank_values(task_data, form.jsonschema)
 
     validation_schema = get_jsonschema_for_validation(
         form,

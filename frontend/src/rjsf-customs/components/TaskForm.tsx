@@ -32,6 +32,8 @@ import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
 import { collectHiddenPaths, dropErrorsOfHiddenFields } from '@/services/FeelService';
+import { collectBlankRequiredPaths } from '@/services/emptyValues';
+import { useTranslation } from '@/i18n';
 
 const validator = customizeValidator();
 
@@ -87,9 +89,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
   showErrorList,
   experimental_defaultFormStateBehavior: providedDefaultFormStateBehavior,
   transformErrors: providedTransformErrors,
+  customValidate: providedCustomValidate,
   children,
   ...rest
 }) => {
+  const { t } = useTranslation();
+
   // Errors of fields the form does not show must not block the submit: the backend treats
   // a hidden field and everything below it as absent, and so does this filter. Visibility
   // is read from the same data the hide-if rendering uses (formContext.formData).
@@ -103,11 +108,28 @@ const TaskForm: React.FC<TaskFormProps> = ({
       : visibleErrors;
   };
 
+  // 'required' means a value was entered: an emptied field is null (ui:emptyValue) and a
+  // whitespace-only one a string, and both pass AJV's presence check - they are reported
+  // here instead. Custom errors bypass transformErrors, so hidden fields are skipped up front.
+  const customValidate: NonNullable<BaseFormProps['customValidate']> = (
+    formData,
+    errors,
+    uiSchema
+  ) => {
+    const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
+    for (const path of collectBlankRequiredPaths(rest.schema, uiSchema, formData, hiddenPaths)) {
+      const handler = path.reduce((current: any, segment) => current?.[segment], errors);
+      handler?.addError?.(t('validation.required'));
+    }
+    return providedCustomValidate ? providedCustomValidate(formData, errors, uiSchema) : errors;
+  };
+
   return (
     <Form
       {...rest}
       validator={providedValidator ?? validator}
       transformErrors={transformErrors}
+      customValidate={customValidate}
       templates={templates ?? customTemplates}
       fields={fields ?? customFields}
       widgets={widgets ?? customWidgets}

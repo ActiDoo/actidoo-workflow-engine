@@ -24,6 +24,7 @@ import type { IChangeEvent } from '@rjsf/core';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 import TaskForm from '@/rjsf-customs/components/TaskForm';
+import { I18nProvider } from '@/i18n';
 import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
 
 export const TEST_TASK_ID = 'workflow-test-task';
@@ -81,9 +82,11 @@ export const renderTaskForm = (fixture: WorkflowFormFixture) => {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <MemoryRouter initialEntries={[`/tasks/open/${TEST_TASK_ID}`]}>
-            <TaskFormHarness fixture={fixture} onSubmit={submitted} />
-          </MemoryRouter>
+          <I18nProvider>
+            <MemoryRouter initialEntries={[`/tasks/open/${TEST_TASK_ID}`]}>
+              <TaskFormHarness fixture={fixture} onSubmit={submitted} />
+            </MemoryRouter>
+          </I18nProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </Provider>

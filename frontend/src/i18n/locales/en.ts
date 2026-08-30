@@ -170,6 +170,9 @@ export const en = {
     reset: 'Reset To Initial State',
     submit: 'Submit',
   },
+  validation: {
+    required: 'This field is required',
+  },
   formTemplates: {
     saveAction: 'Save as template',
     applyAction: 'Apply template',
