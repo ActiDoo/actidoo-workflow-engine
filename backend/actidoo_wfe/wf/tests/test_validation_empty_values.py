@@ -59,6 +59,21 @@ LIST_FORM = {
 }
 
 
+MULTI_SELECT_FORM = {
+    "components": [
+        {"type": "checkbox", "key": "flag"},
+        {
+            "type": "select",
+            "key": "tags",
+            "values": AB_OPTIONS,
+            "properties": {"custom_type": "select_multi"},
+            "validate": {"required": True},
+            "conditional": {"hide": "=flag = true"},
+        },
+    ],
+}
+
+
 def _required_errors(result) -> set[str]:
     """Names of the fields reported as missing (the error dict nests required errors)."""
     return set(re.findall(r"'([^']+)' is a required property", json.dumps(result.error_schema or {})))
@@ -179,3 +194,17 @@ def test__attachment_objects_are_left_alone():
     normalize_blank_values(data, schema)
 
     assert data == {"file": reference, "name": None, "technical": ""}
+
+
+def test__required_multi_select_needs_at_least_one_item():
+    # [] is a value (the list exists), so 'required' alone would let it pass.
+    assert "tags" in json.dumps(_submit(MULTI_SELECT_FORM, {"flag": False, "tags": []}).error_schema)
+    assert "tags" in json.dumps(_submit(MULTI_SELECT_FORM, {"flag": False}).error_schema)
+    assert not _submit(MULTI_SELECT_FORM, {"flag": False, "tags": ["a"]}).error_schema
+
+
+def test__hidden_required_multi_select_may_be_empty():
+    result = _submit(MULTI_SELECT_FORM, {"flag": True, "tags": []})
+
+    assert not result.error_schema
+    assert "tags" not in result.task_data
