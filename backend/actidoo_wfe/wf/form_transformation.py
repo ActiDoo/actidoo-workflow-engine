@@ -296,6 +296,10 @@ def _insert_single_component(
                 },
             }
         )
+        # An array is present even when nothing is selected, so 'required' alone would be
+        # satisfied by []: at least one item is what required means for a multi-select.
+        if _is_required(component):
+            jsonschema["properties"][key]["minItems"] = 1
         if not custom_properties.get("options_file") and not custom_properties.get("options_function"):
             # static values configured
             uischema[key].update({"ui:widget": "MultiSelectStatic"})
