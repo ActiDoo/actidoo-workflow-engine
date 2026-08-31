@@ -79,6 +79,10 @@ def _insert_component(component: dict, global_jsonschema: dict, jsonschemapath: 
         except ValueError:
             min_items = 0  # just in case someone configured a string
 
+        # 'required' on a list means at least one row, like on a multi-select.
+        if _is_required(component) and min_items < 1:
+            min_items = 1
+
         default_repetitions = component.get("defaultRepetitions", 0)
         label = component.get("label", "")
         _insert_array_component(
@@ -141,6 +145,7 @@ def _insert_array_component(
     if itemgroup not in uischema["ui:layout"]:
         uischema["ui:layout"][itemgroup] = [itemgroup]
 
+    _handle_disable(component, uischema, jsonschema, itemgroup)
     _handle_conditional_hide(component, uischema, jsonschema, itemgroup)
 
     for component in all_itemgroup_components:
@@ -442,7 +447,9 @@ def _handle_disable(component, uischema, jsonschema, key):
 
 
 def _is_disabled(component):
-    return component.get("disabled", False)
+    # readonly and disabled mean the same to the engine: the user cannot change the value,
+    # so the server owns it (see the disabled handling in validate_task_data).
+    return bool(component.get("disabled", False) or component.get("readonly", False))
 
 
 def _handle_conditional_hide(component, uischema, jsonschema, key):

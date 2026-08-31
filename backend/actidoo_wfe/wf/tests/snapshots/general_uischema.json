@@ -29,7 +29,8 @@
         "ui:enableMarkdownInDescription": true,
         "ui:path": [
             "checkbox1"
-        ]
+        ],
+        "ui:disabled": true
     },
     "select_flu4so": {
         "ui:description": "I confirm!",
@@ -37,6 +38,7 @@
         "ui:path": [
             "select_flu4so"
         ],
+        "ui:disabled": true,
         "ui:widget": "SelectStatic"
     },
     "Field_0em8zpa": {
@@ -59,7 +61,8 @@
         "ui:enableMarkdownInDescription": true,
         "ui:path": [
             "checkbox3"
-        ]
+        ],
+        "ui:disabled": true
     },
     "checkbox4": {
         "ui:description": "",
@@ -73,7 +76,8 @@
         "ui:enableMarkdownInDescription": true,
         "ui:path": [
             "checkbox4_have_done"
-        ]
+        ],
+        "ui:disabled": true
     },
     "checkbox5": {
         "ui:description": "",

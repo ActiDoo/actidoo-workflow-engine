@@ -98,9 +98,5 @@
             "title": "Outer Dynamic list",
             "minItems": 1
         }
-    },
-    "required": [
-        "select_flu4so",
-        "checkbox4_have_done"
-    ]
+    }
 }
