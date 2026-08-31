@@ -31,6 +31,8 @@ class WorkflowDummy:
         service_users_with_roles: Dict[str, List["str"]] | None = None,
         workflow_name: str | None = None,
         start_user: str | None = None,
+        initial_task_data: dict | None = None,
+        trusted_seed: bool = False
     ):
         """Inititializes and (if `workflow_name` and `start_user` is given) starts a workflow
 
@@ -59,6 +61,8 @@ class WorkflowDummy:
                 db=self.db,
                 name=workflow_name,
                 user_id=start_user_id,
+                initial_task_data = initial_task_data,
+                trusted_seed = trusted_seed
             )
         else:
             self.workflow_instance_id = None
