@@ -1,13 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
+// One module on purpose: every detail rule about form visibility (hide-if / FEEL) and
+// empty values lives here, next to its neighbours - see the matching backend module
+// backend/actidoo_wfe/wf/tests/test_form_semantics.py.
+
+import { unaryTest, InterpreterContext } from 'feelin';
+import type { RJSFSchema } from '@rjsf/utils';
+
 import {
   changeRequiredDefinitionForFieldsWithHideIfDefinition,
   collectHiddenPaths,
   dropErrorsOfHiddenFields,
   evaluateHideIfAndFeel,
 } from './FeelService';
-import type { RJSFSchema } from '@rjsf/utils';
+import {
+  buildEvaluationContext,
+  buildMaskedParentContext,
+  resolveHiddenFields,
+  HideIfEvaluator,
+} from './feelContext';
+import { collectBlankRequiredPaths, isBlank } from './emptyValues';
 import form010Fixture from '@/test/workflows/test-flow-dynamic-list-hidden/form010-fill.fixture.json';
 
 describe('evaluateHideIfAndFeel', () => {
@@ -618,5 +631,277 @@ describe('dropErrorsOfHiddenFields', () => {
     const errors = [error(undefined), error('')];
 
     expect(dropErrorsOfHiddenFields(errors, [['a']])).toEqual(errors);
+  });
+});
+
+// ----------------------------------------------------------------------------
+// FEEL context helpers (feelContext.ts)
+
+const evaluateHideIf: HideIfEvaluator = (expression, context) => {
+  try {
+    return unaryTest(expression, { ...(context ?? {}) });
+  } catch {
+    return false;
+  }
+};
+
+describe('resolveHiddenFields', () => {
+  it('collects fields whose hideif matches and masks them in the context', () => {
+    const uiSchema: any = { secret: { 'ui:hideif': '=x = true' } };
+    const data = { x: true, secret: 'value' };
+
+    const { hiddenFields, maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
+
+    expect(hiddenFields).toEqual(new Set(['secret']));
+    expect(maskedContext).toEqual({ x: true });
+    expect(maskedContext).not.toHaveProperty('secret');
+  });
+
+  it('removes hidden fields, so a comparison with null matches them', () => {
+    // A key left in place with undefined would not: FEEL only reads an absent name as null.
+    const uiSchema: any = {
+      a: { 'ui:hideif': '=x = true' },
+      b: { 'ui:hideif': '=a = null' },
+    };
+    const data = { x: true, a: 'stale value', b: 1 };
+
+    const { hiddenFields, maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
+
+    expect(hiddenFields).toEqual(new Set(['a', 'b']));
+    expect(maskedContext).toEqual({ x: true });
+  });
+
+  it('keeps fields visible when the condition does not match', () => {
+    const uiSchema: any = { secret: { 'ui:hideif': '=x = true' } };
+
+    const { hiddenFields, maskedContext } = resolveHiddenFields(
+      uiSchema,
+      { x: false, secret: 'value' },
+      evaluateHideIf
+    );
+
+    expect(hiddenFields.size).toBe(0);
+    expect(maskedContext?.secret).toBe('value');
+  });
+
+  it('evaluates dependent hide-ifs against the masked value of hidden fields', () => {
+    const uiSchema: any = {
+      a: { 'ui:hideif': '=x = true' },
+      b: { 'ui:hideif': '=a = 5' },
+    };
+    const data = { x: true, a: 5, b: 1 };
+
+    const { hiddenFields, maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
+
+    expect(hiddenFields).toEqual(new Set(['a']));
+    expect(maskedContext).toEqual({ x: true, b: 1 });
+  });
+
+  it('mirrors masked fields into the this context', () => {
+    const uiSchema: any = { secret: { 'ui:hideif': '=x = true' } };
+    const data: InterpreterContext = {
+      x: true,
+      secret: 'value',
+      this: { x: true, secret: 'value' },
+    };
+
+    const { maskedContext } = resolveHiddenFields(uiSchema, data, evaluateHideIf);
+
+    expect(maskedContext?.this).toEqual({ x: true });
+    expect(maskedContext?.this).not.toHaveProperty('secret');
+  });
+
+  it('returns the context unchanged without a uiSchema', () => {
+    const data = { x: 1 };
+
+    const { hiddenFields, maskedContext } = resolveHiddenFields(undefined, data, evaluateHideIf);
+
+    expect(hiddenFields.size).toBe(0);
+    expect(maskedContext).toBe(data);
+  });
+});
+
+describe('buildEvaluationContext', () => {
+  it('merges root context, item data and parent chain', () => {
+    const root = { rootValue: 1 };
+    const item = { itemValue: 2 };
+    const parent = { parentValue: 3 };
+
+    const ctx = buildEvaluationContext(root, item, parent);
+
+    expect(ctx.rootValue).toBe(1);
+    expect(ctx.itemValue).toBe(2);
+    expect(ctx.parent).toBe(parent);
+    expect(ctx.this).toEqual({ itemValue: 2, parent });
+  });
+
+  it('passes non-object item data through as this', () => {
+    const ctx = buildEvaluationContext({ rootValue: 1 }, 'plain', undefined);
+
+    expect(ctx.this).toBe('plain');
+  });
+});
+
+describe('buildMaskedParentContext', () => {
+  const rootData = {
+    hideMe: true,
+    listA: [
+      {
+        hideMe: true,
+        secret: 'inner-secret',
+        keep: 'kept',
+        listB: [{ b: 2 }],
+      },
+    ],
+  };
+  const rootUiSchema: any = {
+    listA: {
+      items: {
+        secret: { 'ui:hideif': '=hideMe = true' },
+        listB: { items: {} },
+      },
+    },
+  };
+
+  it('returns the masked root context for top-level ids', () => {
+    const masked = { hideMe: true, listA: rootData.listA };
+
+    const result = buildMaskedParentContext(
+      rootData,
+      rootUiSchema,
+      'root_listA_0',
+      masked,
+      evaluateHideIf
+    );
+
+    expect(result).toBe(masked);
+  });
+
+  it('masks hidden fields of each parent level for nested list items', () => {
+    const result = buildMaskedParentContext(
+      rootData,
+      rootUiSchema,
+      'root_listA_0_listB_0',
+      rootData,
+      evaluateHideIf
+    );
+
+    expect(result?.secret).toBeUndefined();
+    expect(result?.keep).toBe('kept');
+    expect((result?.parent as InterpreterContext)?.listA).toBe(rootData.listA);
+  });
+
+  it('falls back to the plain parent chain when schema and data do not align', () => {
+    const result = buildMaskedParentContext(
+      rootData,
+      { otherList: { items: {} } } as any,
+      'root_listA_0_listB_0',
+      rootData,
+      evaluateHideIf
+    );
+
+    expect(result?.keep).toBe('kept');
+    expect(result?.secret).toBe('inner-secret');
+  });
+
+  it('returns the root context for ids without list segments', () => {
+    const result = buildMaskedParentContext(
+      rootData,
+      rootUiSchema,
+      'root_someField',
+      rootData,
+      evaluateHideIf
+    );
+
+    expect(result).toBe(rootData);
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Empty values (emptyValues.ts)
+
+describe('isBlank', () => {
+  it('treats nothing, null and whitespace-only strings as blank', () => {
+    expect(isBlank(undefined)).toBe(true);
+    expect(isBlank(null)).toBe(true);
+    expect(isBlank('')).toBe(true);
+    expect(isBlank('   ')).toBe(true);
+    expect(isBlank('\n\t')).toBe(true);
+  });
+
+  it('treats every other value as a value', () => {
+    expect(isBlank('a')).toBe(false);
+    expect(isBlank(' a ')).toBe(false);
+    expect(isBlank(false)).toBe(false);
+    expect(isBlank(0)).toBe(false);
+    expect(isBlank([])).toBe(false);
+    expect(isBlank({})).toBe(false);
+  });
+});
+
+describe('collectBlankRequiredPaths', () => {
+  const schema: RJSFSchema = {
+    type: 'object',
+    required: ['name', 'choice'],
+    properties: {
+      name: { type: 'string' },
+      choice: { type: ['string', 'null'] },
+      note: { type: 'string' },
+      rows: {
+        type: 'array',
+        items: { type: 'object', required: ['label'], properties: { label: { type: 'string' } } },
+      },
+    },
+  };
+
+  it('reports required fields that are present but blank', () => {
+    expect(collectBlankRequiredPaths(schema, {}, { name: '   ', choice: null }, [])).toEqual([
+      ['name'],
+      ['choice'],
+    ]);
+  });
+
+  it('leaves absent required fields to the schema validation', () => {
+    expect(collectBlankRequiredPaths(schema, {}, {}, [])).toEqual([]);
+  });
+
+  it('ignores keys that are present as undefined - rjsf hands the data over that way', () => {
+    expect(collectBlankRequiredPaths(schema, {}, { name: undefined, choice: 'a' }, [])).toEqual([]);
+  });
+
+  it('leaves object-typed (attachment) fields to the schema validation', () => {
+    const withFile: RJSFSchema = {
+      type: 'object',
+      required: ['file'],
+      properties: { file: { type: 'object', properties: { datauri: { type: 'string' } } } },
+    };
+
+    expect(collectBlankRequiredPaths(withFile, {}, { file: null }, [])).toEqual([]);
+  });
+
+  it('ignores blank optional fields and filled required ones', () => {
+    expect(
+      collectBlankRequiredPaths(schema, {}, { name: 'x', choice: 'a', note: ' ' }, [])
+    ).toEqual([]);
+  });
+
+  it('walks list rows', () => {
+    const data = { name: 'x', choice: 'a', rows: [{ label: 'ok' }, { label: ' ' }, {}] };
+
+    expect(collectBlankRequiredPaths(schema, {}, data, [])).toEqual([['rows', 1, 'label']]);
+  });
+
+  it('skips fields on or below a hidden path', () => {
+    const data = { name: ' ', choice: 'a', rows: [{ label: ' ' }] };
+
+    expect(collectBlankRequiredPaths(schema, {}, data, [['rows']])).toEqual([['name']]);
+    expect(collectBlankRequiredPaths(schema, {}, data, [['name'], ['rows', 0, 'label']])).toEqual(
+      []
+    );
+  });
+
+  it('tolerates data that is not an object', () => {
+    expect(collectBlankRequiredPaths(schema, {}, undefined, [])).toEqual([]);
+    expect(collectBlankRequiredPaths(schema, {}, 'junk', [])).toEqual([]);
   });
 });
