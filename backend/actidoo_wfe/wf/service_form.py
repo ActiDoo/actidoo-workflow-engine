@@ -377,6 +377,10 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             return None, []
         return node.id, []
     elif isinstance(node, ast.Constant):  # Constant
+        if node.value == "":
+            # An empty field is null, never "" - forms comparing against "" mean "empty",
+            # so the comparison is read as one against null. Keeps old forms working.
+            return None, []
         if isinstance(node.value, (int, float, bool, str)) or node.value is None:
             # None: some forms write 'somefield != None' instead of the FEEL null literal.
             return node.value, []

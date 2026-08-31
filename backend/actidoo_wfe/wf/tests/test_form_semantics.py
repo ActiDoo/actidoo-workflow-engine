@@ -97,6 +97,16 @@ NOT_NULL_FORM = {
 }
 
 
+EMPTY_STRING_FORM = {
+    # Older forms compare against "" to mean "empty". An empty field is null, never "",
+    # so both sides read such a comparison as one against null.
+    "components": [
+        {"type": "textfield", "key": "comment", "disabled": True},
+        {"type": "textfield", "key": "note", "conditional": {"hide": '=comment = ""'}},
+        {"type": "textfield", "key": "reminder", "validate": {"required": True}, "conditional": {"hide": '=comment != ""'}},
+    ],
+}
+
 EQUALITY_REFERENCE_FORM = {
     # An equality against a plain optional reference: an unset reference is FEEL null,
     # and null = "a" is false - so the dependent field stays visible and required.
@@ -485,6 +495,22 @@ def test__visible_list_keeps_its_row_ids_during_cleanup():
     )
 
     assert result.task_data["positions"] == [{"name": "x", ROW_ID_KEY: "r1"}]
+
+
+def test__comparison_against_the_empty_string_reads_as_null():
+    # comment is unset: '= ""' matches (note hidden), '!= ""' does not (reminder visible).
+    result = _validate(EMPTY_STRING_FORM, {"note": "n"}, stored={})
+
+    assert "note" not in result.task_data
+    assert "reminder" in (result.error_schema or {})
+
+
+def test__comparison_against_the_empty_string_with_a_value_set():
+    # comment holds a value: '= ""' does not match (note visible), '!= ""' does (reminder hidden).
+    result = _validate(EMPTY_STRING_FORM, {"note": "n"}, stored={"comment": "x"})
+
+    assert not result.error_schema
+    assert result.task_data["note"] == "n"
 
 
 def test__equality_against_unset_reference_leaves_field_visible_and_required():
