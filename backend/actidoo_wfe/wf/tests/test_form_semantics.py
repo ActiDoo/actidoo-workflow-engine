@@ -97,6 +97,36 @@ NOT_NULL_FORM = {
 }
 
 
+MIXED_OR_FORM = {
+    # One operand lives on the row, the other on the root: each level gets its own
+    # condition in the converted schema. Hidden as soon as either holds.
+    "components": [
+        {"type": "select", "key": "rootflag", "values": AB_OPTIONS},
+        {
+            "type": "dynamiclist",
+            "path": "rows",
+            "components": [
+                {"type": "number", "key": "n"},
+                {"type": "textfield", "key": "note", "validate": {"required": True}, "conditional": {"hide": '=this.n = 9 or rootflag = "a"'}},
+            ],
+        },
+    ],
+}
+
+MIXED_AND_FORM = {
+    "components": [
+        {"type": "select", "key": "rootflag", "values": AB_OPTIONS},
+        {
+            "type": "dynamiclist",
+            "path": "rows",
+            "components": [
+                {"type": "number", "key": "n"},
+                {"type": "textfield", "key": "note", "conditional": {"hide": '=this.n = 9 and rootflag = "a"'}},
+            ],
+        },
+    ],
+}
+
 EMPTY_STRING_FORM = {
     # Older forms compare against "" to mean "empty". An empty field is null, never "",
     # so both sides read such a comparison as one against null.
@@ -495,6 +525,37 @@ def test__visible_list_keeps_its_row_ids_during_cleanup():
     )
 
     assert result.task_data["positions"] == [{"name": "x", ROW_ID_KEY: "r1"}]
+
+
+def test__or_across_levels_hides_when_the_root_operand_holds():
+    result = _validate(MIXED_OR_FORM, {"rootflag": "a", "rows": [{"n": 1, "note": "dropped"}]})
+
+    assert not result.error_schema
+    assert "note" not in result.task_data["rows"][0]
+
+
+def test__or_across_levels_hides_per_row_when_the_row_operand_holds():
+    result = _validate(MIXED_OR_FORM, {"rootflag": "b", "rows": [{"n": 9, "note": "dropped"}, {"n": 1, "note": "kept"}]})
+
+    assert not result.error_schema
+    assert "note" not in result.task_data["rows"][0]
+    assert result.task_data["rows"][1]["note"] == "kept"
+
+
+def test__or_across_levels_requires_the_field_when_neither_operand_holds():
+    result = _validate(MIXED_OR_FORM, {"rootflag": "b", "rows": [{"n": 1}]})
+
+    assert "note" in json.dumps(result.error_schema)
+
+
+def test__and_across_levels_hides_only_when_both_operands_hold():
+    both = _validate(MIXED_AND_FORM, {"rootflag": "a", "rows": [{"n": 9, "note": "dropped"}]})
+    only_root = _validate(MIXED_AND_FORM, {"rootflag": "a", "rows": [{"n": 1, "note": "kept"}]})
+    only_row = _validate(MIXED_AND_FORM, {"rootflag": "b", "rows": [{"n": 9, "note": "kept"}]})
+
+    assert "note" not in both.task_data["rows"][0]
+    assert only_root.task_data["rows"][0]["note"] == "kept"
+    assert only_row.task_data["rows"][0]["note"] == "kept"
 
 
 def test__comparison_against_the_empty_string_reads_as_null():
