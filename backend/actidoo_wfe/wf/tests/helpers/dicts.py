@@ -3,6 +3,7 @@
 
 import json
 
+from actidoo_wfe.testing.utils import strip_row_ids
 from actidoo_wfe.wf import service_form
 from actidoo_wfe.wf.form_transformation import transform_camunda_form
 
@@ -18,7 +19,12 @@ def are_dicts_equal(dict1, dict2, shall_assert_if_unequal=False):
 
     Returns:
         bool: True if the dictionaries are equal, False otherwise.
+
+    Technical row ids (ADR 010) are ignored: the engine stamps them onto
+    dynamic-list rows, hand-written expectations never contain them.
     """
+    dict1 = strip_row_ids(dict1)
+    dict2 = strip_row_ids(dict2)
     if dict1 == dict2:
         return True
     else:

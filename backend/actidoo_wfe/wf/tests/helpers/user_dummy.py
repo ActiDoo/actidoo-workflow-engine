@@ -7,6 +7,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from actidoo_wfe.testing.utils import _adopt_row_ids
 from actidoo_wfe.wf import service_application, service_user
 
 log: logging.Logger = logging.getLogger(__name__)
@@ -39,9 +40,18 @@ class UserDummy:
 
         return user_tasks
 
-    def submit(self, task_data, workflow_instance_id, task_name=None, task_id=None):
-        """is analogue to /submit_task_data, which is called after sending a form"""
+    def submit(self, task_data, workflow_instance_id, task_name=None, task_id=None, carry_row_ids=True):
+        """is analogue to /submit_task_data, which is called after sending a form
 
+        ``carry_row_ids=True`` makes the dummy behave like a browser client that
+        loaded the form: id-less dynamic-list rows adopt the row ids the task was
+        handed out with (by position, so the payload literal needs no ids of its
+        own). Lists that grew or shrank cannot be mapped that way and raise a
+        RowIdCarryError explaining the options. Pass ``carry_row_ids=False`` to
+        send the payload untouched - e.g. to test the id-less rejection itself.
+        With an explicit ``task_id`` the payload is always sent untouched."""
+
+        usertask = None
         if task_id is None:
             # if no task_id is given, we expect that there's only one ready task (or one ready task with the given name)
             usertasks = []
@@ -57,13 +67,18 @@ class UserDummy:
                         usertasks.append(t)
                 assert len(usertasks) == 1  # we expect only one ready instance of a task with the same name
 
-            task_id = usertasks[0].id
+            usertask = usertasks[0]
+            task_id = usertask.id
+
+        task_data = copy.deepcopy(task_data)
+        if carry_row_ids and usertask is not None:
+            _adopt_row_ids(usertask.data, task_data)
 
         (success, workflow_instance_id) = service_application.submit_task_data(
             db=self.db,
             task_id=task_id,
             user_id=self.user.id,
-            task_data=copy.deepcopy(task_data),
+            task_data=task_data,
         )
 
         self.db.commit()
