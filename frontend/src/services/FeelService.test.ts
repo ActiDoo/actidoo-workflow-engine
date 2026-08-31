@@ -9,6 +9,7 @@ import { unaryTest, InterpreterContext } from 'feelin';
 import type { RJSFSchema } from '@rjsf/utils';
 
 import {
+  normalizeEmptyStringComparisons,
   changeRequiredDefinitionForFieldsWithHideIfDefinition,
   collectHiddenPaths,
   dropErrorsOfHiddenFields,
@@ -221,6 +222,39 @@ describe('changeRequiredDefinitionForFieldsWithHideIfDefinition', () => {
 
     expect(schema.required).toEqual(['a']);
     expect(uiSchema.a['ui:required']).toBeUndefined();
+  });
+});
+
+describe('normalizeEmptyStringComparisons', () => {
+  // An empty field is null, never "" - see the matching backend conversion.
+  it('reads comparisons against "" as comparisons against null', () => {
+    const uiSchema = {
+      note: { 'ui:hideif': '=comment = ""' },
+      reminder: { 'ui:hideif': '=comment != ""' },
+      reversed: { 'ui:hideif': '="" = comment' },
+    };
+    const schema: RJSFSchema = {
+      type: 'object',
+      properties: {
+        comment: { type: 'string' },
+        note: { type: 'string' },
+        reminder: { type: 'string' },
+        reversed: { type: 'string' },
+      },
+    };
+
+    const unset = evaluateHideIfAndFeel({}, uiSchema, schema).newUiSchema;
+    expect(unset?.note['ui:widget']).toBe('hidden');
+    expect(unset?.reversed['ui:widget']).toBe('hidden');
+    expect(unset?.reminder['ui:widget']).toBeUndefined();
+
+    const set = evaluateHideIfAndFeel({ comment: 'x' }, uiSchema, schema).newUiSchema;
+    expect(set?.note['ui:widget']).toBeUndefined();
+    expect(set?.reminder['ui:widget']).toBe('hidden');
+  });
+
+  it('leaves other string literals alone', () => {
+    expect(normalizeEmptyStringComparisons('x = "a" or y != ""')).toBe('x = "a" or y != null');
   });
 });
 
