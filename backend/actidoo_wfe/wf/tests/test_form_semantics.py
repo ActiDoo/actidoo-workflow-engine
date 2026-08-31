@@ -14,6 +14,9 @@ next to its neighbours. Sections:
    required fields stay required.
 2. Empty values - an emptied field is null, a blank never satisfies ``required``,
    and values are never trimmed.
+
+Forms used by a single test are defined inside it; only the widely shared ones are
+module constants.
 """
 
 import copy
@@ -45,45 +48,6 @@ DISABLED_REFERENCE_FORM = {
     ],
 }
 
-UNSET_REFERENCE_FORM = {
-    # The hide-if reference is a regular optional select the user may leave
-    # empty — its key is then absent from the submission entirely.
-    "components": [
-        {"type": "select", "key": "category", "values": AB_OPTIONS},
-        {
-            "type": "select",
-            "key": "detail",
-            "validate": {"required": True},
-            "conditional": {"hide": '=category != "a"'},
-            "values": AB_OPTIONS,
-        },
-    ],
-}
-
-NULL_LITERAL_FORM = {
-    "components": [
-        {"type": "select", "key": "kind", "values": AB_OPTIONS},
-        {
-            "type": "textfield",
-            "key": "company_name",
-            "validate": {"required": True},
-            "conditional": {"hide": '=kind = "a" or kind = null'},
-        },
-    ],
-}
-
-NOT_NULL_FORM = {
-    "components": [
-        {"type": "select", "key": "kind", "values": AB_OPTIONS},
-        {
-            "type": "textfield",
-            "key": "person_name",
-            "validate": {"required": True},
-            "conditional": {"hide": '=kind != null and kind = "b"'},
-        },
-    ],
-}
-
 MIXED_OR_FORM = {
     # One operand lives on the row, the other on the root: each level gets its own
     # condition in the converted schema. Hidden as soon as either holds.
@@ -100,30 +64,6 @@ MIXED_OR_FORM = {
     ],
 }
 
-MIXED_AND_FORM = {
-    "components": [
-        {"type": "select", "key": "rootflag", "values": AB_OPTIONS},
-        {
-            "type": "dynamiclist",
-            "path": "rows",
-            "components": [
-                {"type": "number", "key": "n"},
-                {"type": "textfield", "key": "note", "conditional": {"hide": '=this.n = 9 and rootflag = "a"'}},
-            ],
-        },
-    ],
-}
-
-EMPTY_STRING_FORM = {
-    # Older forms compare against "" to mean "empty". An empty field is null, never "",
-    # so both sides read such a comparison as one against null.
-    "components": [
-        {"type": "textfield", "key": "comment", "disabled": True},
-        {"type": "textfield", "key": "note", "conditional": {"hide": '=comment = ""'}},
-        {"type": "textfield", "key": "reminder", "validate": {"required": True}, "conditional": {"hide": '=comment != ""'}},
-    ],
-}
-
 EQUALITY_REFERENCE_FORM = {
     "components": [
         {"type": "select", "key": "category", "values": AB_OPTIONS},
@@ -132,6 +72,21 @@ EQUALITY_REFERENCE_FORM = {
             "key": "detail",
             "validate": {"required": True},
             "conditional": {"hide": '=category = "a"'},
+        },
+    ],
+}
+
+HIDDEN_LIST_FORM = {
+    "components": [
+        {"type": "select", "key": "variant", "values": AB_OPTIONS},
+        {
+            "type": "dynamiclist",
+            "path": "positions",
+            "properties": {"minItems": "1"},
+            "conditional": {"hide": '=variant = "a"'},
+            "components": [
+                {"type": "textfield", "key": "name", "validate": {"required": True}},
+            ],
         },
     ],
 }
@@ -217,10 +172,26 @@ def test__unset_disabled_reference_behaves_like_feel_null():
     assert "approval" not in result.task_data
 
 
+def _unset_reference_form() -> dict:
+    """An optional select guarding a required one via ``category != "a"``."""
+    return {
+        "components": [
+            {"type": "select", "key": "category", "values": AB_OPTIONS},
+            {
+                "type": "select",
+                "key": "detail",
+                "validate": {"required": True},
+                "conditional": {"hide": '=category != "a"'},
+                "values": AB_OPTIONS,
+            },
+        ],
+    }
+
+
 def test__required_field_hidden_behind_unset_optional_reference_may_be_absent():
     """The reference was never filled: ``null != "a"`` is true, the dependent
     field is hidden and its required rule does not apply."""
-    result = _validate(UNSET_REFERENCE_FORM, {})
+    result = _validate(_unset_reference_form(), {})
 
     assert not result.error_schema
 
@@ -228,15 +199,30 @@ def test__required_field_hidden_behind_unset_optional_reference_may_be_absent():
 def test__required_field_visible_behind_set_reference_is_required():
     """The reference is set to the showing value: the dependent field appears
     and its required rule applies again."""
-    result = _validate(UNSET_REFERENCE_FORM, {"category": "a"})
+    result = _validate(_unset_reference_form(), {"category": "a"})
 
     assert "detail" in (result.error_schema or {})
+
+
+def _null_literal_form() -> dict:
+    """A guard that covers the unset case explicitly: ``kind = "a" or kind = null``."""
+    return {
+        "components": [
+            {"type": "select", "key": "kind", "values": AB_OPTIONS},
+            {
+                "type": "textfield",
+                "key": "company_name",
+                "validate": {"required": True},
+                "conditional": {"hide": '=kind = "a" or kind = null'},
+            },
+        ],
+    }
 
 
 def test__comparison_against_null_literal_matches_unset_reference():
     """``kind = null`` matches exactly when kind was never filled - the one
     comparison that is meant to hit the unset case."""
-    result = _validate(NULL_LITERAL_FORM, {})
+    result = _validate(_null_literal_form(), {})
 
     assert not result.error_schema
 
@@ -244,86 +230,87 @@ def test__comparison_against_null_literal_matches_unset_reference():
 def test__comparison_against_null_literal_does_not_match_set_reference():
     """Once kind holds a value, ``kind = null`` no longer matches - the
     dependent field is shown and required."""
-    result = _validate(NULL_LITERAL_FORM, {"kind": "b"})
+    result = _validate(_null_literal_form(), {"kind": "b"})
 
     assert "company_name" in (result.error_schema or {})
 
 
+def _not_null_form() -> dict:
+    """The inverse guard: ``kind != null and kind = "b"``."""
+    return {
+        "components": [
+            {"type": "select", "key": "kind", "values": AB_OPTIONS},
+            {
+                "type": "textfield",
+                "key": "person_name",
+                "validate": {"required": True},
+                "conditional": {"hide": '=kind != null and kind = "b"'},
+            },
+        ],
+    }
+
+
 def test__not_null_conjunction_leaves_field_visible_for_unset_reference():
-    """The guard ``kind != null and kind = "b"``: with kind unset the first part
-    is already false (``null != null``), so the field stays visible."""
-    result = _validate(NOT_NULL_FORM, {})
+    """With kind unset the first part is already false (``null != null``),
+    so the field stays visible."""
+    result = _validate(_not_null_form(), {})
 
     assert "person_name" in (result.error_schema or {})
 
 
 def test__not_null_conjunction_hides_field_for_matching_reference():
     """The same guard with kind = "b": both parts hold, the field is hidden."""
-    result = _validate(NOT_NULL_FORM, {"kind": "b"})
+    result = _validate(_not_null_form(), {"kind": "b"})
 
     assert not result.error_schema
-
-
-NONE_SPELLING_FORM = {
-    "components": [
-        {"type": "select", "key": "kind", "values": AB_OPTIONS},
-        {
-            "type": "select",
-            "key": "detail",
-            "validate": {"required": True},
-            "conditional": {"hide": "=kind != None"},
-            "values": AB_OPTIONS,
-        },
-    ],
-}
 
 
 def test__none_spelling_behaves_like_null_literal():
     """Some forms spell the null literal the Python way, ``!= None``. It behaves
     exactly like ``!= null`` and must not crash the expression conversion."""
-    unset = _validate(NONE_SPELLING_FORM, {})
-    hidden = _validate(NONE_SPELLING_FORM, {"kind": "a"})
+    form = {
+        "components": [
+            {"type": "select", "key": "kind", "values": AB_OPTIONS},
+            {
+                "type": "select",
+                "key": "detail",
+                "validate": {"required": True},
+                "conditional": {"hide": "=kind != None"},
+                "values": AB_OPTIONS,
+            },
+        ],
+    }
+
+    unset = _validate(form, {})
+    hidden = _validate(form, {"kind": "a"})
 
     assert "detail" in (unset.error_schema or {})  # kind unset -> detail visible
     assert not hidden.error_schema  # kind set -> detail hidden, may be absent
 
 
-LIST_OR_CONDITION_FORM = {
-    "components": [
-        {
-            "type": "dynamiclist",
-            "path": "employees",
-            "isRepeating": True,
-            "components": [
-                {"type": "textfield", "key": "employee"},
-                {
-                    "type": "textfield",
-                    "key": "region",
-                    "conditional": {"hide": '=this.employee="intern"\nor this.employee = null'},
-                },
-            ],
-        },
-    ],
-}
-
-MISSING_REFERENCE_FORM = {
-    "components": [
-        {
-            "type": "select",
-            "key": "subarea",
-            "validate": {"required": True},
-            "conditional": {"hide": "=missing_checkbox = false"},
-            "values": AB_OPTIONS,
-        },
-    ],
-}
-
-
 def test__list_or_condition_is_evaluated_per_item():
     """A hide-if inside a dynamic list is decided row by row: the same condition
     hides the field in one row and shows it in the next."""
+    form = {
+        "components": [
+            {
+                "type": "dynamiclist",
+                "path": "employees",
+                "isRepeating": True,
+                "components": [
+                    {"type": "textfield", "key": "employee"},
+                    {
+                        "type": "textfield",
+                        "key": "region",
+                        "conditional": {"hide": '=this.employee="intern"\nor this.employee = null'},
+                    },
+                ],
+            },
+        ],
+    }
+
     result = _validate(
-        LIST_OR_CONDITION_FORM,
+        form,
         {
             "employees": [
                 {"employee": "manager", "region": "west"},
@@ -343,36 +330,46 @@ def test__missing_hide_if_reference_is_treated_as_unset_and_does_not_crash():
     """A hide-if pointing at a field that no longer exists in the form (it was
     removed from the modeler) counts as null instead of crashing the request:
     ``null = false`` is false, so the field stays visible and required."""
-    result = _validate(MISSING_REFERENCE_FORM, {})
+    form = {
+        "components": [
+            {
+                "type": "select",
+                "key": "subarea",
+                "validate": {"required": True},
+                "conditional": {"hide": "=missing_checkbox = false"},
+                "values": AB_OPTIONS,
+            },
+        ],
+    }
+
+    result = _validate(form, {})
 
     assert "subarea" in (result.error_schema or {})
-
-
-SCOPED_REFERENCE_FORM = {
-    "components": [
-        {
-            "type": "dynamiclist",
-            "path": "outer",
-            "components": [
-                {"type": "checkbox", "key": "flag"},
-                {
-                    "type": "dynamiclist",
-                    "path": "inner",
-                    "components": [
-                        {"type": "textfield", "key": "note", "conditional": {"hide": "=this.flag = false"}},
-                        {"type": "textfield", "key": "scoped_note", "conditional": {"hide": "=parent.flag = false"}},
-                    ],
-                },
-            ],
-        },
-    ],
-}
 
 
 def test__this_reference_does_not_reach_into_an_outer_row():
     """``this.`` names the row the field itself lives in - nothing else. flag
     sits one level up, so ``this.flag`` is unset and the field stays visible."""
-    result = _validate(SCOPED_REFERENCE_FORM, {"outer": [{"flag": False, "inner": [{"note": "kept"}]}]})
+    form = {
+        "components": [
+            {
+                "type": "dynamiclist",
+                "path": "outer",
+                "components": [
+                    {"type": "checkbox", "key": "flag"},
+                    {
+                        "type": "dynamiclist",
+                        "path": "inner",
+                        "components": [
+                            {"type": "textfield", "key": "note", "conditional": {"hide": "=this.flag = false"}},
+                        ],
+                    },
+                ],
+            },
+        ],
+    }
+
+    result = _validate(form, {"outer": [{"flag": False, "inner": [{"note": "kept"}]}]})
 
     assert not result.error_schema
     assert result.task_data["outer"][0]["inner"][0]["note"] == "kept"
@@ -381,59 +378,32 @@ def test__this_reference_does_not_reach_into_an_outer_row():
 def test__parent_reference_addresses_the_surrounding_row():
     """``parent.`` names the surrounding row: its flag is false, the condition
     matches and the field is hidden (its value is dropped)."""
-    result = _validate(SCOPED_REFERENCE_FORM, {"outer": [{"flag": False, "inner": [{"scoped_note": "dropped"}]}]})
+    form = {
+        "components": [
+            {
+                "type": "dynamiclist",
+                "path": "outer",
+                "components": [
+                    {"type": "checkbox", "key": "flag"},
+                    {
+                        "type": "dynamiclist",
+                        "path": "inner",
+                        "components": [
+                            {"type": "textfield", "key": "scoped_note", "conditional": {"hide": "=parent.flag = false"}},
+                        ],
+                    },
+                ],
+            },
+        ],
+    }
+
+    result = _validate(form, {"outer": [{"flag": False, "inner": [{"scoped_note": "dropped"}]}]})
 
     assert not result.error_schema
     assert "scoped_note" not in result.task_data["outer"][0]["inner"][0]
 
 
 # --- hide-if on the dynamic list itself -----------------------------------------
-
-HIDDEN_LIST_FORM = {
-    "components": [
-        {"type": "select", "key": "variant", "values": AB_OPTIONS},
-        {
-            "type": "dynamiclist",
-            "path": "positions",
-            "properties": {"minItems": "1"},
-            "conditional": {"hide": '=variant = "a"'},
-            "components": [
-                {"type": "textfield", "key": "name", "validate": {"required": True}},
-            ],
-        },
-    ],
-}
-
-NESTED_HIDDEN_LIST_FORM = {
-    "components": [
-        {
-            "type": "dynamiclist",
-            "path": "outer",
-            "components": [
-                {"type": "select", "key": "kind", "values": AB_OPTIONS},
-                {
-                    "type": "dynamiclist",
-                    "path": "inner",
-                    "conditional": {"hide": '=this.kind = "a"'},
-                    "components": [{"type": "textfield", "key": "note"}],
-                },
-            ],
-        },
-    ],
-}
-
-HIDDEN_ATTACHMENT_FORM = {
-    "components": [
-        {"type": "select", "key": "variant", "values": AB_OPTIONS},
-        {
-            "type": "textfield",
-            "key": "docs",
-            "properties": {"custom_type": "attachment_multi"},
-            "validate": {"required": True},
-            "conditional": {"hide": '=variant = "a"'},
-        },
-    ],
-}
 
 
 def test__hidden_list_does_not_enforce_min_items():
@@ -486,8 +456,26 @@ def test__visible_list_keeps_its_rows():
 def test__nested_hidden_list_is_evaluated_per_row():
     """An inner list hidden by a field of its surrounding row: one row keeps its
     inner rows, the other loses them - visibility differs per row."""
+    form = {
+        "components": [
+            {
+                "type": "dynamiclist",
+                "path": "outer",
+                "components": [
+                    {"type": "select", "key": "kind", "values": AB_OPTIONS},
+                    {
+                        "type": "dynamiclist",
+                        "path": "inner",
+                        "conditional": {"hide": '=this.kind = "a"'},
+                        "components": [{"type": "textfield", "key": "note"}],
+                    },
+                ],
+            },
+        ],
+    }
+
     result = _validate(
-        NESTED_HIDDEN_LIST_FORM,
+        form,
         {
             "outer": [
                 {"kind": "a", "inner": [{"note": "dropped"}]},
@@ -503,7 +491,20 @@ def test__nested_hidden_list_is_evaluated_per_row():
 
 def test__hidden_attachment_field_is_stripped_without_error():
     """A hidden attachment list behaves like any hidden field: dropped, no error."""
-    result = _validate(HIDDEN_ATTACHMENT_FORM, {"variant": "a", "docs": []})
+    form = {
+        "components": [
+            {"type": "select", "key": "variant", "values": AB_OPTIONS},
+            {
+                "type": "textfield",
+                "key": "docs",
+                "properties": {"custom_type": "attachment_multi"},
+                "validate": {"required": True},
+                "conditional": {"hide": '=variant = "a"'},
+            },
+        ],
+    }
+
+    result = _validate(form, {"variant": "a", "docs": []})
 
     assert not result.error_schema
     assert "docs" not in result.task_data
@@ -571,19 +572,45 @@ def test__or_across_levels_requires_the_field_when_neither_operand_holds():
 def test__and_across_levels_hides_only_when_both_operands_hold():
     """``this.n = 9 and rootflag = "a"``: hidden only when the row AND the root
     operand hold; either one alone leaves the field visible."""
-    both = _validate(MIXED_AND_FORM, {"rootflag": "a", "rows": [{"n": 9, "note": "dropped"}]})
-    only_root = _validate(MIXED_AND_FORM, {"rootflag": "a", "rows": [{"n": 1, "note": "kept"}]})
-    only_row = _validate(MIXED_AND_FORM, {"rootflag": "b", "rows": [{"n": 9, "note": "kept"}]})
+    form = {
+        "components": [
+            {"type": "select", "key": "rootflag", "values": AB_OPTIONS},
+            {
+                "type": "dynamiclist",
+                "path": "rows",
+                "components": [
+                    {"type": "number", "key": "n"},
+                    {"type": "textfield", "key": "note", "conditional": {"hide": '=this.n = 9 and rootflag = "a"'}},
+                ],
+            },
+        ],
+    }
+
+    both = _validate(form, {"rootflag": "a", "rows": [{"n": 9, "note": "dropped"}]})
+    only_root = _validate(form, {"rootflag": "a", "rows": [{"n": 1, "note": "kept"}]})
+    only_row = _validate(form, {"rootflag": "b", "rows": [{"n": 9, "note": "kept"}]})
 
     assert "note" not in both.task_data["rows"][0]
     assert only_root.task_data["rows"][0]["note"] == "kept"
     assert only_row.task_data["rows"][0]["note"] == "kept"
 
 
+def _empty_string_form() -> dict:
+    """Older forms compare against "" to mean "empty". An empty field is null,
+    never "", so both sides read such a comparison as one against null."""
+    return {
+        "components": [
+            {"type": "textfield", "key": "comment", "disabled": True},
+            {"type": "textfield", "key": "note", "conditional": {"hide": '=comment = ""'}},
+            {"type": "textfield", "key": "reminder", "validate": {"required": True}, "conditional": {"hide": '=comment != ""'}},
+        ],
+    }
+
+
 def test__comparison_against_the_empty_string_reads_as_null():
     """comment is unset: ``= ""`` matches like ``= null`` (note hidden) and
     ``!= ""`` does not (reminder visible and required)."""
-    result = _validate(EMPTY_STRING_FORM, {"note": "n"}, stored={})
+    result = _validate(_empty_string_form(), {"note": "n"}, stored={})
 
     assert "note" not in result.task_data
     assert "reminder" in (result.error_schema or {})
@@ -592,7 +619,7 @@ def test__comparison_against_the_empty_string_reads_as_null():
 def test__comparison_against_the_empty_string_with_a_value_set():
     """comment holds a value: ``= ""`` does not match (note visible) and
     ``!= ""`` does (reminder hidden)."""
-    result = _validate(EMPTY_STRING_FORM, {"note": "n"}, stored={"comment": "x"})
+    result = _validate(_empty_string_form(), {"note": "n"}, stored={"comment": "x"})
 
     assert not result.error_schema
     assert result.task_data["note"] == "n"
@@ -652,33 +679,6 @@ OPTIONAL_FIELDS_FORM = {
         {"type": "number", "key": "amount"},
         {"type": "select", "key": "choice", "values": AB_OPTIONS},
         {"type": "radio", "key": "kind", "values": AB_OPTIONS},
-    ],
-}
-
-LIST_FORM = {
-    "components": [
-        {
-            "type": "dynamiclist",
-            "path": "rows",
-            "components": [
-                {"type": "textfield", "key": "label", "validate": {"required": True}},
-                {"type": "textfield", "key": "remark"},
-            ],
-        },
-    ],
-}
-
-MULTI_SELECT_FORM = {
-    "components": [
-        {"type": "checkbox", "key": "flag"},
-        {
-            "type": "select",
-            "key": "tags",
-            "values": AB_OPTIONS,
-            "properties": {"custom_type": "select_multi"},
-            "validate": {"required": True},
-            "conditional": {"hide": "=flag = true"},
-        },
     ],
 }
 
@@ -743,7 +743,20 @@ def test__values_are_never_trimmed():
 def test__blanks_inside_list_rows():
     """The blank rules apply inside dynamic-list rows exactly as at the root:
     a blank required field is missing, a blank optional one becomes null."""
-    result = _validate(LIST_FORM, {"rows": [{"label": "ok", "remark": "  "}, {"label": " ", "remark": "kept"}]})
+    form = {
+        "components": [
+            {
+                "type": "dynamiclist",
+                "path": "rows",
+                "components": [
+                    {"type": "textfield", "key": "label", "validate": {"required": True}},
+                    {"type": "textfield", "key": "remark"},
+                ],
+            },
+        ],
+    }
+
+    result = _validate(form, {"rows": [{"label": "ok", "remark": "  "}, {"label": " ", "remark": "kept"}]})
 
     assert _required_errors(result) == {"label"}
     assert result.task_data["rows"][0] == {"label": "ok", "remark": None}
@@ -808,17 +821,36 @@ def test__attachment_objects_are_left_alone():
     assert data == {"file": reference, "name": None, "technical": ""}
 
 
+def _multi_select_form() -> dict:
+    """A required multi-select that a checkbox can hide."""
+    return {
+        "components": [
+            {"type": "checkbox", "key": "flag"},
+            {
+                "type": "select",
+                "key": "tags",
+                "values": AB_OPTIONS,
+                "properties": {"custom_type": "select_multi"},
+                "validate": {"required": True},
+                "conditional": {"hide": "=flag = true"},
+            },
+        ],
+    }
+
+
 def test__required_multi_select_needs_at_least_one_item():
     """For a multi-select, required means at least one chosen entry - an empty
     list is present in the data but carries no choice."""
-    assert "tags" in json.dumps(_validate(MULTI_SELECT_FORM, {"flag": False, "tags": []}).error_schema)
-    assert "tags" in json.dumps(_validate(MULTI_SELECT_FORM, {"flag": False}).error_schema)
-    assert not _validate(MULTI_SELECT_FORM, {"flag": False, "tags": ["a"]}).error_schema
+    form = _multi_select_form()
+
+    assert "tags" in json.dumps(_validate(form, {"flag": False, "tags": []}).error_schema)
+    assert "tags" in json.dumps(_validate(form, {"flag": False}).error_schema)
+    assert not _validate(form, {"flag": False, "tags": ["a"]}).error_schema
 
 
 def test__hidden_required_multi_select_may_be_empty():
     """The same multi-select, hidden: its minimum does not apply."""
-    result = _validate(MULTI_SELECT_FORM, {"flag": True, "tags": []})
+    result = _validate(_multi_select_form(), {"flag": True, "tags": []})
 
     assert not result.error_schema
     assert "tags" not in result.task_data
