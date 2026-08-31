@@ -94,7 +94,7 @@ The example has two forms. `EnterExpense` collects `title` (text, required), `am
 
 Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, single and multi attachment, and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
 
-An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared and for a cleared select, and the task data stores it - so clearing a field in a later task really removes the earlier value. `required` therefore means that a value was entered: `null`, an empty string and a whitespace-only string do not satisfy it, in the browser and on the server alike. A checkbox is always `true` or `false` while it is shown.
+An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared and for a cleared select, and the task data stores it - so clearing a field in a later task really removes the earlier value. `required` therefore means that a value was entered: `null`, an empty string and a whitespace-only string do not satisfy it, in the browser and on the server alike - and for a multi select or a dynamic list it means at least one entry. A checkbox is always `true` or `false` while it is shown.
 
 ### Custom properties
 
@@ -129,9 +129,9 @@ How the field-level flags interact with hide-if:
 | Flag | While the field is hidden | On submit |
 |---|---|---|
 | `required` / `minItems` | suspended; an empty hidden field does not block the submit | enforced only if the field is visible |
-| `disabled` | shown read-only; the value is owned by the server | the browser's value is ignored; the stored value wins, else the field's default |
+| `disabled` / `readonly` | shown read-only; the value is owned by the server | the browser's value is ignored; the stored value wins, else the field's default |
 
-A `disabled` field therefore shows a backend-owned value the user may not change. This is exactly how `ApproveExpense` shows `title`, `amount`, `category` and `description`: they are marked `disabled`, so the approver sees what the employee entered but cannot edit it, and on submit the engine keeps the stored values. A hidden disabled value is dropped like any hidden value.
+A `disabled` field therefore shows a backend-owned value the user may not change (`readonly` means the same to the engine). This is exactly how `ApproveExpense` shows `title`, `amount`, `category` and `description`: they are marked `disabled`, so the approver sees what the employee entered but cannot edit it, and on submit the engine keeps the stored values. A hidden disabled value is dropped like any hidden value.
 
 ### Options
 
