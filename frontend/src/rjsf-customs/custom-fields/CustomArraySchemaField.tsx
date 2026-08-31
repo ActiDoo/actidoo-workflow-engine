@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { ReactElement } from 'react';
-import { evaluateHideIfAndFeel } from '@/services/FeelService';
+import { evaluateHideIfAndFeel, normalizeEmptyStringComparisons } from '@/services/FeelService';
 import {
   buildEvaluationContext,
   buildMaskedParentContext,
@@ -19,7 +19,7 @@ import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 
 const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
   try {
-    return memoizedUnaryTest(expression, { ...(context ?? {}) });
+    return memoizedUnaryTest(normalizeEmptyStringComparisons(expression), { ...(context ?? {}) });
   } catch {
     return false;
   }

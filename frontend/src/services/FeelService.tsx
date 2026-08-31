@@ -32,10 +32,19 @@ function safeUnaryTest(expr: string, ctx: Record<string, any>): boolean {
   try {
     const trimmed = expr.trim();
     const normalized = trimmed.startsWith('=') ? trimmed.slice(1) : trimmed;
-    return memoizedUnaryTest(normalized, { ...ctx });
+    return memoizedUnaryTest(normalizeEmptyStringComparisons(normalized), { ...ctx });
   } catch {
     return false;
   }
+}
+
+/**
+ * An empty field is null, never "" - forms comparing against "" mean "empty", so the
+ * comparison is read as one against null. Keeps old forms working; the server converts
+ * such comparisons the same way.
+ */
+export function normalizeEmptyStringComparisons(expression: string): string {
+  return expression.replace(/(!?=)\s*""/g, '$1 null').replace(/""\s*(!?=)/g, 'null $1');
 }
 
 /**
@@ -286,7 +295,7 @@ export type FormPath = Array<string | number>;
 
 const evaluateHideIfForMasking: HideIfEvaluator = (expression, context) => {
   try {
-    return memoizedUnaryTest(expression, { ...(context ?? {}) });
+    return memoizedUnaryTest(normalizeEmptyStringComparisons(expression), { ...(context ?? {}) });
   } catch {
     return false;
   }
