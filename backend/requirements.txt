@@ -34,7 +34,7 @@ attrs==26.1.0
     #   referencing
 authlib==1.7.1
     # via actidoo-wfe (pyproject.toml)
-babel==2.17.0
+babel==2.18.0
     # via actidoo-wfe (pyproject.toml)
 certifi==2026.4.22
     # via
