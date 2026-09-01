@@ -24,41 +24,14 @@ releases correspond to the git tags of this repository.
   and Furo.
 - UI: secondary buttons use a gray design, and the abort action is
   labelled "Cancel".
-- Engine: a submitted file is stored only once the submission has been
-  accepted. Files sent into a field that is disabled, hidden, or unknown to
-  the form, and files from a submission that fails validation, are no longer
-  kept — relevant only for clients that build payloads by hand; browsers send
-  the stored reference rather than the file.
+- Engine: a file is saved only if the form has a place for it and the
+  submission is accepted. Files sent into a field that is disabled, hidden or
+  unknown, and files sent with a submission that is then rejected, are no
+  longer saved at all. This closes a way to put arbitrary files into an
+  instance's attachment list.
 
 
 ### Fixed
-
-- Engine: a rejected submission kept the file it carried. Files were stored
-  before the payload was validated, and the endpoint answers a validation
-  error from inside the request — so the transaction committed and the file
-  stayed attached to the instance, visible in its attachment list and
-  repeatable at will. Files are now stored after validation, so a rejected
-  submission leaves nothing behind. Regression test:
-  `test_bff_user.py::test_submit_400_does_not_persist_the_submitted_file`.
-
-- Engine: echoing a file into a `disabled` upload field added a second entry
-  to the instance's attachment list. The file was stored before validation,
-  and the cleaning then replaced the submitted reference by the server-side
-  value — leaving the entry the upload had already created. Same cause, same
-  fix as above. Regression test:
-  `test_upload7.py::test__echoing_a_datauri_into_a_disabled_field_leaves_no_duplicate`.
-
-- Engine: a file whose data URI the server cannot read is now reported as a
-  validation error. It used to be dropped silently: the submission answered
-  200, the previously stored file stayed in place, and the new file name was
-  merged onto it - so the form showed the old file under the new name. A data
-  URI that is not a string no longer causes a server error either.
-
-- Engine: a submission from someone who may not act on the task is now
-  rejected before its payload is validated, so it can no longer change
-  anything on its way to being refused. Such a request - and likewise a request
-  for a task the caller may not access at all - now answers 403 with a
-  `task_not_submittable` code instead of a 500.
 
 - Engine: dynamic-list rows could pick up values that belong to other rows.
   On submission the server merges stored, server-owned values (for example
@@ -114,6 +87,20 @@ releases correspond to the git tags of this repository.
   the old entries on screen until the fresh ones arrive. Regression test:
   `task-list-after-admin-change.test.tsx` — "shows a task the admin
   assigned to themselves after returning to the list".
+
+- Engine: files were saved before the submission was checked. A rejected
+  submission therefore left its file attached to the instance, where it stayed
+  until that task was submitted successfully — the cleanup that would have
+  removed it runs after the check the submission failed. A file sent into a
+  field that the current step only displays turned up twice in the attachment
+  list. Files are now saved after the submission is accepted. A file whose
+  data URI the engine cannot read is reported as an error as well — it used to
+  be dropped in silence, which left the old file in place under the new file's
+  name. Regression tests: `test_upload7.py`, `test_bff_user.py`.
+
+- Engine: a submission from someone who may not work on the task — like any
+  request for a task the caller cannot access — now answers 403 instead of a
+  server error. Such a request is also refused before its payload is read.
 
 ### Security
 
