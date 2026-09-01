@@ -27,16 +27,6 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
-- Engine: echoing a file as a data-URI into a `disabled` upload field no
-  longer adds a duplicate entry to the instance's attachment list. Uploads
-  happen before validation; since the row-identity release the cleaning keeps
-  disabled fields (with their server-side value), so the hash-based cleanup no
-  longer removed the link such an upload had already created. Fresh links that
-  duplicate an existing attachment entry are now removed after cleaning.
-  Browsers are unaffected - they send the stored reference, not the file;
-  only clients that build payloads by hand hit this. Regression test:
-  `test_upload7.py::test__echoing_a_datauri_into_a_disabled_field_leaves_no_duplicate`.
-
 - Engine: dynamic-list rows could pick up values that belong to other rows.
   On submission the server merges stored, server-owned values (for example
   disabled fields) back into the submitted rows — and it matched rows by

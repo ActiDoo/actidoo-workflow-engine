@@ -762,10 +762,6 @@ def submit_task_data(
         raise TaskIsNotInReadyUsertasksException()
 
     # process attachments START
-    instance_task_links_before_uploads = repository.find_task_attachments_by_worfklow_instance_id(db=db, workflow_instance_id=workflow.task_tree.id)
-    task_link_ids_before_uploads = {link.id for link in instance_task_links_before_uploads if link.workflow_instance_task_id == task_id}
-    instance_link_pairs_before_uploads = {(link.workflow_attachment_id, link.filename) for link in instance_task_links_before_uploads}
-
     def process_uploads(datauri):
         obj = _upload_attachment(db=db, task_id=task_id, datauri=datauri)  # datauri = e.g. 'data:image/png;name=example1.png;base64,B64_ENCODED_CONTENTS'
         return obj.model_dump()  # model_dump creates a dict from the obj (which is a 'UplaodedAttachmentRepresentation)
@@ -787,12 +783,6 @@ def submit_task_data(
     # Now, we are going to extract all attachments, and cleanup the remaining
     # If illegal attachments had been attached before, they will be cleaned up here.
     attachements = get_attachments(cleaned_task_data)
-    _delete_fresh_duplicate_upload_links(
-        db=db,
-        task_id=task.id,
-        task_link_ids_before=task_link_ids_before_uploads,
-        instance_pairs_before=instance_link_pairs_before_uploads,
-    )
     _delete_unused_attachments(db, workflow.task_tree.id, task.id, attachements)
     # process attachments END
 
@@ -1060,26 +1050,6 @@ def _upload_attachment(
         id=attachment.id,
         mimetype=mimetype,
     )
-
-
-def _delete_fresh_duplicate_upload_links(
-    db: Session,
-    task_id: uuid.UUID,
-    task_link_ids_before: set[uuid.UUID],
-    instance_pairs_before: set[tuple[uuid.UUID, str]],
-):
-    """Uploads happen before validation, so a datauri echoed into a disabled
-    field is uploaded first and only then replaced by the authoritative stored
-    reference during cleaning. The upload has linked the (hash-deduplicated)
-    attachment to the submitting task by then - a second listing entry for a
-    file the instance already shows. Such a fresh link duplicating a
-    pre-existing (attachment, filename) link is removed again; downloads
-    resolve by hash, so nothing is lost. Links from earlier submissions are
-    never touched."""
-    for link in repository.find_task_attachments_by_task_id(db=db, task_id=task_id):
-        if link.id not in task_link_ids_before and (link.workflow_attachment_id, link.filename) in instance_pairs_before:
-            db.delete(link)
-    db.flush()
 
 
 def _delete_unused_attachments(
