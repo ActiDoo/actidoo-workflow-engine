@@ -4,11 +4,13 @@
 import type { ReactElement } from 'react';
 import React from 'react';
 import { ArrayFieldItemTemplateProps, getUiOptions } from '@rjsf/utils';
-import { Button, ButtonDesign } from '@ui5/webcomponents-react';
+import { PcIconButton } from '@/ui5-components';
+import { useTranslation } from '@/i18n';
 import '@ui5/webcomponents-icons/dist/duplicate';
 import '@ui5/webcomponents-icons/dist/navigation-up-arrow';
 
 const CustomArrayFieldItemTemplate = (props: ArrayFieldItemTemplateProps): ReactElement => {
+  const { t } = useTranslation();
   const { buttonsProps, children, className, disabled, index, parentUiSchema } = props;
 
   const uiOptions = getUiOptions(parentUiSchema);
@@ -23,32 +25,37 @@ const CustomArrayFieldItemTemplate = (props: ArrayFieldItemTemplateProps): React
           </div>
         </div>
         {allowAddRemove && buttonsProps.hasMoveDown && (
-          <Button
+          <PcIconButton
             icon="navigation-down-arrow"
+            tooltip={t('common.actions.moveDown')}
             onClick={buttonsProps.onMoveDownItem}
-            design={ButtonDesign.Transparent}
-            disabled={disabled}></Button>
+            disabled={disabled}
+          />
         )}
         {allowAddRemove && buttonsProps.hasMoveUp && (
-          <Button
+          <PcIconButton
             icon="navigation-up-arrow"
-            design={ButtonDesign.Transparent}
+            tooltip={t('common.actions.moveUp')}
             onClick={buttonsProps.onMoveUpItem}
-            disabled={disabled}></Button>
+            disabled={disabled}
+          />
         )}
         {allowAddRemove && buttonsProps.hasCopy && (
-          <Button
+          <PcIconButton
             icon="duplicate"
-            design={ButtonDesign.Transparent}
+            tooltip={t('common.actions.duplicate')}
             onClick={buttonsProps.onCopyItem}
-            disabled={disabled}></Button>
+            disabled={disabled}
+          />
         )}
         {allowAddRemove && buttonsProps.hasRemove && (
-          <Button
+          <PcIconButton
             icon="delete"
-            design={ButtonDesign.Negative}
+            negative={true}
+            tooltip={t('common.actions.delete')}
             onClick={buttonsProps.onRemoveItem}
-            disabled={disabled}></Button>
+            disabled={disabled}
+          />
         )}
       </div>
       <div className="pt-4 pl-8">{children}</div>

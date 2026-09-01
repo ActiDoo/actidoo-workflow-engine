@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { BusyIndicator, BusyIndicatorSize, Button, ButtonDesign } from '@ui5/webcomponents-react';
+import { PcIconButton } from '@/ui5-components';
 import '@ui5/webcomponents-icons/dist/synchronize';
 import '@ui5/webcomponents-icons/dist/begin';
 import '@ui5/webcomponents-icons/dist/cancel';
@@ -153,10 +154,9 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
 
   return (
     <>
-      <div className="flex gap-3">
-        <Button
+      <div className="flex gap-2">
+        <PcIconButton
           icon="user-edit"
-          design={ButtonDesign.Transparent}
           tooltip={t('admin.assignUserTooltip')}
           disabled={isReadonly}
           onClick={() => {
@@ -165,9 +165,8 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
         />
 
         <BusyIndicator active={false} delay={0} size={BusyIndicatorSize.Small}>
-          <Button
+          <PcIconButton
             icon="begin"
-            design={ButtonDesign.Transparent}
             tooltip={t('admin.skipTasksTooltip')}
             disabled={isReadonly}
             onClick={() => {
@@ -180,9 +179,8 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
           active={executeErroneousTaskLoadState}
           delay={0}
           size={BusyIndicatorSize.Small}>
-          <Button
+          <PcIconButton
             icon="synchronize"
-            design={ButtonDesign.Transparent}
             tooltip={t('admin.tryAgainTooltip')}
             disabled={!props.data?.state_error || isReadonly}
             onClick={() => {

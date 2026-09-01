@@ -2,7 +2,8 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import { ActiveTaskInstance, TaskItem } from '@/models/models';
-import { Button, Text, Title, TitleLevel } from '@ui5/webcomponents-react';
+import { Text, Title, TitleLevel } from '@ui5/webcomponents-react';
+import { PcIconButton } from '@/ui5-components';
 import { Link } from 'react-router-dom';
 import React from 'react';
 import { useTranslation } from '@/i18n';
@@ -41,7 +42,7 @@ export const WeTaskSubRow: React.FC<{
               <td className="p-2 py-1 text-right">
                 {task.assigned_user?.id === props.userId ? (
                   <Link to={`/tasks/completed/${props.workflowId}/${task.id}`}>
-                    <Button icon="edit" />
+                    <PcIconButton icon="edit" tooltip={t('common.actions.openTask')} />
                   </Link>
                 ) : null}
               </td>

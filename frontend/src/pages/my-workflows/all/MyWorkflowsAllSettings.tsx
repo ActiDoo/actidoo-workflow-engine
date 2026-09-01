@@ -6,9 +6,8 @@ import {
   Icon,
   IconDesign,
   TextAlign,
-  Button,
 } from '@ui5/webcomponents-react';
-import { PcDateColumn, PcInputColumn, PcTableData } from '@/ui5-components';
+import { PcDateColumn, PcIconButton, PcInputColumn, PcTableData } from '@/ui5-components';
 import { Link } from 'react-router-dom';
 import { type useTranslation } from '@/i18n';
 import '@ui5/webcomponents-icons/dist/status-negative';
@@ -77,7 +76,7 @@ export const myWorkflowsAllColumns = (
             <Link
               to={`/tasks/completed/${data.id}/${data.completed_tasks[0].id}`}
               className="w-full text-center">
-              <Button icon="document-text" className="bg-brand-primary border-brand-primary" />
+              <PcIconButton icon="document-text" tooltip={t('common.actions.showSubmittedForm')} />
             </Link>
           );
         }
@@ -93,9 +92,9 @@ export const myWorkflowsAllColumns = (
         <Link
           to={`/tasks/open/${data.id}/${data.active_tasks[0].id}`}
           className="w-full text-center">
-          <Button
+          <PcIconButton
             icon={isReadonly ? 'show' : 'edit'}
-            className="bg-brand-primary border-brand-primary"
+            tooltip={t(isReadonly ? 'common.actions.showDetails' : 'common.actions.openTask')}
           />
         </Link>
       );

@@ -85,7 +85,7 @@ export const PcAnalyticalTable: React.FC<PhAnalyticalTableProps> = props => {
         {tableData.loading ? <div className="bg-white/50 absolute inset-0" /> : null}
       </div>
       {hasPagination ? (
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 mt-2">
           <Text>
             {t('table.items')}: {itemsCount}
           </Text>
