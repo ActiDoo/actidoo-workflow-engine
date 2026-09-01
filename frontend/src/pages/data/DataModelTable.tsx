@@ -23,6 +23,7 @@ import {
   calculateInitialPage,
   getQueryParamsFromTableData,
   getTableDataFromQueryParams,
+  PcActionBar,
   PcAnalyticalTable,
   PcDynamicPage,
   PcSearch,
@@ -62,7 +63,6 @@ const DataModelTableInner: React.FC<{ modelName: string }> = ({ modelName }) => 
   const startData = useSelector((state: State) => state.data[startKey]);
   const loadingState = useSelectUiLoading(key); // GET flow keys loading on the bare key
   const actionLoading = useSelectUiLoading(startKey, 'POST');
-
   const modelLabel = data?.data?.model?.label ?? modelName;
 
   // The URL is the source of truth for the table state (search/filter/sort/page):
@@ -205,11 +205,14 @@ const DataModelTableInner: React.FC<{ modelName: string }> = ({ modelName }) => 
 
   return (
     <PcDynamicPage
-      header={{
-        title: modelLabel,
-        showBack: true,
-        forceBackTo: '/data',
-        actionSection: (
+      headerTitle={undefined}
+      showHideHeaderButton={false}
+      headerContentPinnable={false}>
+      <PcActionBar
+        showBack={true}
+        forceBackTo="/data"
+        title={modelLabel}
+        actions={
           <div className="flex gap-2">
             <Button icon="org-chart" design={ButtonDesign.Transparent} onClick={openProcesses}>
               {t('data.processes')}
@@ -221,10 +224,8 @@ const DataModelTableInner: React.FC<{ modelName: string }> = ({ modelName }) => 
               {t('data.exportCsv')}
             </Button>
           </div>
-        ),
-      }}
-      showHideHeaderButton={false}
-      headerContentPinnable={false}>
+        }
+      />
       <div className="flex items-center justify-end w-100 mb-4 gap-2">
         <PcSearch initialSearch={tableData.search} searchInput={tableData.onSearch} />
       </div>

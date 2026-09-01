@@ -21,7 +21,7 @@ import '@ui5/webcomponents-icons/dist/history';
 import { State } from '@/store';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { getRequest, postRequest, resetStateForKey } from '@/store/generic-data/actions';
-import { PcDynamicPage } from '@/ui5-components';
+import { PcActionBar, PcDynamicPage } from '@/ui5-components';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
@@ -82,7 +82,7 @@ const DataModelDetail: React.FC = () => {
   const selected = versions[idx];
   const isHead = idx === headIndex;
 
-  // Record identity in the header — from the head version, so the page title does
+  // Record identity in the action bar — from the head version, so the label does
   // not jump while browsing the history. Falls back to the short id when the
   // record carries no title.
   const head = versions[headIndex];
@@ -145,11 +145,14 @@ const DataModelDetail: React.FC = () => {
 
   return (
     <PcDynamicPage
-      header={{
-        title: pageTitle,
-        showBack: true,
-        forceBackTo: `/data/${encodeURIComponent(modelName)}`,
-        actionSection: (
+      headerTitle={undefined}
+      showHideHeaderButton={false}
+      headerContentPinnable={false}>
+      <PcActionBar
+        showBack={true}
+        forceBackTo={`/data/${encodeURIComponent(modelName)}`}
+        title={pageTitle}
+        actions={
           <div className="flex gap-2">
             {headActions.map(action => (
               <Button
@@ -165,10 +168,8 @@ const DataModelDetail: React.FC = () => {
               </Button>
             )}
           </div>
-        ),
-      }}
-      showHideHeaderButton={false}
-      headerContentPinnable={false}>
+        }
+      />
       {loading || !loaded ? (
         <BusyIndicator active className="self-center mt-8" />
       ) : chainState?.response !== 200 ? (

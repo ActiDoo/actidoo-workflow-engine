@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React from 'react';
-import { PcPage } from '@/ui5-components';
+import { PcActionBar, PcPage } from '@/ui5-components';
 import { WeBpmnViewer } from '@/utils/components/WeBpmnViewer';
 import { useParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -20,23 +20,21 @@ const WorkflowDiagram: React.FC = () => {
   const { dataWorkflowSpec, dataWorkflowSpecItem, loadStateWorkflowSpec } = useWorkflowSpec(name);
 
   return (
-    <PcPage
-      header={{
-        title: t('workflowDiagram.workflowTitle', {
-          name: dataWorkflowSpec ? dataWorkflowSpec.name : '',
-        }),
-        showBack: true,
-        actionSection: (
-          <Button
-            design={ButtonDesign.Emphasized}
-            onClick={() => {
-              dispatch(postRequest(WeDataKey.START_WORKFLOW, { name }));
-            }}>
-            {t('workflowDiagram.startThisWorkflow')}
-          </Button>
-        ),
-      }}
-      innerSpacing={false}>
+    <PcPage innerSpacing={false}>
+      <div className="pc-px-responsive pt-6">
+        <PcActionBar
+          showBack={true}
+          actions={
+            <Button
+              design={ButtonDesign.Emphasized}
+              onClick={() => {
+                dispatch(postRequest(WeDataKey.START_WORKFLOW, { name }));
+              }}>
+              {t('workflowDiagram.startThisWorkflow')}
+            </Button>
+          }
+        />
+      </div>
       {loadStateWorkflowSpec ? (
         <BusyIndicator />
       ) : dataWorkflowSpecItem ? (

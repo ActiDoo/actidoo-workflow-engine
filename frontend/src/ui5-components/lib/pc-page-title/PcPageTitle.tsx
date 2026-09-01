@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { useNavigate } from 'react-router-dom';
+import { useBackNavigation } from '@/ui5-components/hooks/useBackNavigation';
 import {
   DynamicPageTitle,
   Icon,
@@ -29,12 +29,12 @@ export interface PcPageTitleProps {
  * (`py-6`) gap of PcPage's header.
  */
 export const PcPageTitle = React.forwardRef<HTMLDivElement, PcPageTitleProps>((props, ref) => {
-  const navigate = useNavigate();
   // DynamicPage/ObjectPage clone their headerTitle element and inject props into
   // it (data-not-clickable, the header-toggle handler, ...). They must reach the
   // inner DynamicPageTitle, otherwise the title shows a hover/pointer although
   // there is no header content to toggle.
   const { header, ...injected } = props;
+  const navigateBack = useBackNavigation(header?.forceBackTo);
   return (
     <DynamicPageTitle
       {...injected}
@@ -46,13 +46,7 @@ export const PcPageTitle = React.forwardRef<HTMLDivElement, PcPageTitleProps>((p
           {header?.showBack ? (
             <Link
               onClick={() => {
-                // Prefer real history navigation so query state (filters, version)
-                // of the previous page is restored and the browser history stays
-                // clean; forceBackTo only catches deep-link entries with no
-                // in-app history (react-router writes idx into history.state).
-                const hasInAppHistory = (window.history.state?.idx ?? 0) > 0;
-                if (hasInAppHistory || !header?.forceBackTo) navigate(-1);
-                else navigate(header.forceBackTo);
+                navigateBack();
               }}>
               <Icon name="nav-back" className="w-8 h-full -ml-2" />
             </Link>
