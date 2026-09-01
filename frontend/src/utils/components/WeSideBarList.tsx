@@ -329,8 +329,8 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                         </div>
 
                         {instance.subtitle && (
-                          <Text className="!text-xs !text-neutral-700 !block break-words">
-                            {instance.subtitle}
+                          <Text className="!text-xs !text-neutral-700 !block">
+                            <div className="line-clamp-2 break-words">{instance.subtitle}</div>
                           </Text>
                         )}
                       </div>

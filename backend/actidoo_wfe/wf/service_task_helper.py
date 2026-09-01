@@ -32,6 +32,7 @@ from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import repository
 from actidoo_wfe.wf.constants import (
     DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE,
+    WORKFLOW_INSTANCE_SUBTITLE_MAX_LENGTH,
 )
 from actidoo_wfe.wf.exceptions import AttachmentNotFoundException, TaskNotFoundException
 from actidoo_wfe.wf.models import WorkflowInstanceTask, WorkflowInstanceTaskAttachment
@@ -263,8 +264,8 @@ class ServiceTaskHelper:
         record_file_intent(self.db, row, field_name, [])
 
     def set_workflow_instance_subtitle(self, subtitle):
-        if subtitle and len(subtitle) > 50:
-            subtitle = subtitle[:47] + "..."
+        if subtitle and len(subtitle) > WORKFLOW_INSTANCE_SUBTITLE_MAX_LENGTH:
+            subtitle = subtitle[: WORKFLOW_INSTANCE_SUBTITLE_MAX_LENGTH - 3] + "..."
         self.workflow.set_data(**{DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE: subtitle})
 
     def set_data(self, key_value_dict: dict) -> None:

@@ -12,6 +12,11 @@ def service_extend_data(sth: ServiceTaskHelper):
     sth.set_data({"extended": "Hier ist was neues!"})  # das landet unter sth.workflow.data und ist NICHT im Formular abrufbar
     sth.task_data["extended"] = "HALLO!"  # Das...
     sth.update_task_data({"extended": "Hallo2!"})  # ...bzw das hier landet unter sth.task_data und ist im nächsten Formular als key 'extended' darstellbar.
+    entered = str(sth.task_data.get("textfield_1") or "").strip()
+    sth.set_workflow_instance_subtitle(
+        f"{entered} – Beispiel-Untertitel zum Testen langer Werte: Position 7, "
+        "Kostenstelle 4711, Referenz A-2026-000123, Bearbeitung dringend",
+    )
     pass
 
 

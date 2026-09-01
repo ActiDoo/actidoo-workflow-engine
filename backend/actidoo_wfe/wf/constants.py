@@ -22,6 +22,11 @@ INTERNAL_DATA_KEY_DELEGATE_COMMENT = "delegate_submit_comment"
 DATA_KEY_CREATED_BY = "_created_by_id"
 DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE = "_subtitle"
 
+# Upper bound for a workflow instance subtitle: the width of the DB column it is
+# stored in (WorkflowInstance.subtitle). Longer values are truncated when set;
+# shortening for display is the frontend's job.
+WORKFLOW_INSTANCE_SUBTITLE_MAX_LENGTH = 255
+
 # Technical row identity of dynamic-list items (ADR 010). Part of the task data
 # contract: exposed to service tasks and API consumers, survives workflow completion.
 ROW_ID_KEY = "_row_id"
