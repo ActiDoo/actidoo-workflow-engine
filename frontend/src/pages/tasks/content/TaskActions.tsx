@@ -23,18 +23,6 @@ export const TaskActions: React.FC<TaskActionsProps> = props => {
   return (
     <>
       <div className="flex flex-row flex-wrap gap-2 w-full">
-        <div className="flex flex-column gap-2">
-          {/* The action bar lives outside the RJSF <form>; the form attribute ties
-              the submit button to it so validation and onSubmit still run. */}
-          <button
-            disabled={!!props.disabled}
-            type="submit"
-            form="single-task-form"
-            className="btn btn-primary m-0 max-h-[38px]">
-            {t('taskActions.submit')}
-          </button>
-        </div>
-        <div className="flex-1"></div>
         <Button disabled={!!props.disabled} className="btn btn-secondary" onClick={props.onReset}>
           {t('taskActions.reset')}
         </Button>
@@ -48,6 +36,18 @@ export const TaskActions: React.FC<TaskActionsProps> = props => {
             </Button>
           </BusyIndicator>
         ) : null}
+        <div className="flex-1"></div>
+        <div className="flex flex-column gap-2">
+          {/* The action bar lives outside the RJSF <form>; the form attribute ties
+              the submit button to it so validation and onSubmit still run. */}
+          <button
+            disabled={!!props.disabled}
+            type="submit"
+            form="single-task-form"
+            className="btn btn-primary m-0 max-h-[38px]">
+            {t('taskActions.submit')}
+          </button>
+        </div>
       </div>
     </>
   );
