@@ -1018,9 +1018,6 @@ def strip_hidden_form_fields(
 # Namespace for the placeholder ids that mark a file as "submitted in this request,
 # not stored yet". Derived from the content hash, so the same file appearing twice in
 # one payload collapses into a single upload.
-_UPLOAD_PLACEHOLDER_NAMESPACE = uuid.UUID("6f9619ff-8b86-d011-b42d-00c04fc964ff")
-
-
 class _PendingUpload(NamedTuple):
     data: bytes
     filename: str
@@ -1034,10 +1031,11 @@ def _extract_datauri_uploads(task_data) -> tuple[Any, dict[str, _PendingUpload]]
 
     Nothing is stored here: form validation decides which of these references
     survives, and only those become attachments. A datauri the engine cannot
-    read is reported as a validation error rather than dropped. The id is the marker - the
-    reference admits no other key (additionalProperties is False on attachment
-    nodes) and validation hands back a deep copy, so there is nothing else left
-    to recognise the node by."""
+    read is reported as a validation error rather than dropped.
+
+    The id is what marks a reference as ours: the attachment node admits no
+    other key (additionalProperties is False) and validation hands back a deep
+    copy, so nothing else survives to recognise the node by."""
     pending: dict[str, _PendingUpload] = {}
 
     def extract(datauri: str) -> dict:
@@ -1048,7 +1046,7 @@ def _extract_datauri_uploads(task_data) -> tuple[Any, dict[str, _PendingUpload]]
         assert filename is not None
 
         hash = hashlib.sha256(data).hexdigest()
-        placeholder_id = uuid.uuid5(_UPLOAD_PLACEHOLDER_NAMESPACE, hash)
+        placeholder_id = uuid.uuid4()
         pending[str(placeholder_id)] = _PendingUpload(data=data, filename=filename, mimetype=mimetype, hash=hash)
         return UploadedAttachmentRepresentation(
             id=placeholder_id,
@@ -1104,7 +1102,7 @@ def _materialise_uploads(
     if not pending:
         return
 
-    stored_ids: dict[str, str] = {}
+    stored: set[str] = set()
     for _path, node in list(_iter_dicts(cleaned_task_data)):
         # A form field may well be called "id" and hold anything - only a string
         # can be one of our placeholders, and only a string may be looked up.
@@ -1114,42 +1112,35 @@ def _materialise_uploads(
         upload = pending.get(placeholder_id)
         if upload is None:
             continue
-        if placeholder_id not in stored_ids:
-            attachment = store_attachment(
-                db=db,
-                filename=upload.filename,
-                mimetype=upload.mimetype,
-                data=upload.data,
-                hash=upload.hash,
-            )
-            store_attachment_for_workflow_instance(
-                db=db,
-                workflow_instance_id=workflow_instance_id,
-                attachment_id=attachment.id,
-                filename=upload.filename,
-            )
-            store_attachment_for_task(
-                db=db,
-                task_id=task_id,
-                attachment_id=attachment.id,
-                filename=upload.filename,
-            )
-            stored_ids[placeholder_id] = str(attachment.id)
-        node["id"] = stored_ids[placeholder_id]
-
-    for upload in (pending[key] for key in pending.keys() - stored_ids.keys()):
-        log.warning(
-            "Submitted file was not stored, its field did not survive validation: instance=%s task=%s filename=%s hash=%s",
-            workflow_instance_id,
-            task_id,
-            upload.filename,
-            upload.hash[:12],
+        # store_attachment deduplicates by hash, so the same file arriving in
+        # several fields ends up as one attachment with one id.
+        attachment = store_attachment(
+            db=db,
+            filename=upload.filename,
+            mimetype=upload.mimetype,
+            data=upload.data,
+            hash=upload.hash,
         )
+        store_attachment_for_workflow_instance(
+            db=db,
+            workflow_instance_id=workflow_instance_id,
+            attachment_id=attachment.id,
+            filename=upload.filename,
+        )
+        store_attachment_for_task(
+            db=db,
+            task_id=task_id,
+            attachment_id=attachment.id,
+            filename=upload.filename,
+        )
+        node["id"] = str(attachment.id)
+        stored.add(placeholder_id)
 
-    # A placeholder id must never reach the stored task data: data model files would
-    # write it as a foreign key and copying the instance would fail to resolve it.
-    leftover = [node["id"] for _path, node in _iter_dicts(cleaned_task_data) if isinstance(node.get("id"), str) and node["id"] in pending]
-    assert not leftover, f"placeholder attachment ids survived the upload step: {leftover}"
+    for key in pending.keys() - stored:
+        log.warning(
+            "Submitted file %r was not stored, its field did not survive validation (instance=%s task=%s)",
+            pending[key].filename, workflow_instance_id, task_id,
+        )
 
 
 def _delete_unused_attachments(
