@@ -6,7 +6,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '@/pages/tasks/Tasks.scss';
 
 import { ObjectPageMode, ObjectPageSection } from '@ui5/webcomponents-react';
-import { PcDetailsPage, useEmphasizedObjectPageTabs } from '@/ui5-components';
+import { PcDetailsPage } from '@/ui5-components';
 import { useTranslation } from '@/i18n';
 
 const Tasks: React.FC = () => {
@@ -17,8 +17,6 @@ const Tasks: React.FC = () => {
   // A task is open when the route carries a segment beyond /tasks/open|completed.
   // Used to hide the page header + tab bar on mobile (see Tasks.scss).
   const isDetail = /\/tasks\/(open|completed)\/.+/.test(pathname);
-
-  useEmphasizedObjectPageTabs('pc-tasks', selectedTab);
 
   return (
     <PcDetailsPage
