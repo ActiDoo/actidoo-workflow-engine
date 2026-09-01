@@ -1086,10 +1086,14 @@ def _materialise_uploads(
 
     stored_ids: dict[str, str] = {}
     for node in list(_iter_dicts(cleaned_task_data)):
-        upload = pending.get(node.get("id"))
+        # A form field may well be called "id" and hold anything - only a string
+        # can be one of our placeholders, and only a string may be looked up.
+        placeholder_id = node.get("id")
+        if not isinstance(placeholder_id, str):
+            continue
+        upload = pending.get(placeholder_id)
         if upload is None:
             continue
-        placeholder_id = node["id"]
         if placeholder_id not in stored_ids:
             attachment = store_attachment(
                 db=db,
@@ -1124,7 +1128,7 @@ def _materialise_uploads(
 
     # A placeholder id must never reach the stored task data: data model files would
     # write it as a foreign key and copying the instance would fail to resolve it.
-    leftover = [node["id"] for node in _iter_dicts(cleaned_task_data) if node.get("id") in pending]
+    leftover = [node["id"] for node in _iter_dicts(cleaned_task_data) if isinstance(node.get("id"), str) and node["id"] in pending]
     assert not leftover, f"placeholder attachment ids survived the upload step: {leftover}"
 
 

@@ -2,6 +2,7 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 import base64
+import uuid
 import copy
 import logging
 from pathlib import Path
@@ -157,6 +158,26 @@ def test__several_files_in_one_multi_field_are_all_stored(db_engine_ctx, mock_se
             "test.png",
             "second.txt",
         }
+
+
+def test__a_field_called_id_does_not_disturb_the_upload_step():
+    """Nothing says a form field cannot be called "id". Looking for the upload
+    placeholders must cope with whatever such a field holds instead of tripping
+    over an unhashable value."""
+    from actidoo_wfe.wf.service_application import _materialise_uploads, _PendingUpload
+
+    task_data = {"id": ["one", "two"], "group": {"id": {"nested": True}}}
+    pending = {"a-placeholder": _PendingUpload(data=b"x", filename="x.txt", mimetype="text/plain", hash="h")}
+
+    _materialise_uploads(
+        db=None,
+        workflow_instance_id=uuid.uuid4(),
+        task_id=uuid.uuid4(),
+        cleaned_task_data=task_data,
+        pending=pending,
+    )
+
+    assert task_data == {"id": ["one", "two"], "group": {"id": {"nested": True}}}
 
 
 PATH_FORM = Path(__file__).parent / "../test_upload.form"

@@ -481,7 +481,9 @@ class ServiceTaskHelper:
         return descriptor.model_class
 
     def _upload_attachment(self, datauri: str) -> UploadedAttachmentRepresentation:
-        # TODO see service_application for the same implementation. Move to repository.py?
+        # A service task builds its own files, so there is no form validation to wait
+        # for - unlike a submission, where the file is stored only after the payload
+        # was accepted (see service_application._materialise_uploads).
 
         db = self.db
 
