@@ -173,7 +173,7 @@ const MyWorkflowsAll: React.FC = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between w-100 mb-4 gap-2 -mt-4">
+      <div className="flex items-center justify-between w-100 mb-4 gap-2">
         <CheckBox
           text={t('myWorkflows.showInstanceId')}
           checked={showInstanceID}
