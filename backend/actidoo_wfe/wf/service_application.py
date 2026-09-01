@@ -10,7 +10,7 @@ import hashlib
 import logging
 import uuid
 from copy import deepcopy
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
@@ -762,23 +762,30 @@ def submit_task_data(
         raise TaskIsNotInReadyUsertasksException()
 
     # process attachments START
-    def process_uploads(datauri):
-        obj = _upload_attachment(db=db, task_id=task_id, datauri=datauri)  # datauri = e.g. 'data:image/png;name=example1.png;base64,B64_ENCODED_CONTENTS'
-        return obj.model_dump()  # model_dump creates a dict from the obj (which is a 'UplaodedAttachmentRepresentation)
-
-    # We will process all uploads, also those that should not be accepted according to the json schema
-    # Validating the JSON schema including the datauri fields would be just too slow...
-    task_data: Any = iterate_and_replace_datauri(task_data, process_uploads)  # type: ignore
+    # Files are taken out of the payload before validation and stored only afterwards.
+    # Replacing them by their reference here is not an optimisation but a requirement:
+    # the validation schema has no 'datauri' property (remove_data_uri_fields) and sets
+    # additionalProperties=False, so a raw datauri node would not survive the cleaning.
+    task_data, pending_uploads = _extract_datauri_uploads(task_data)
 
     task = next(t for t in usertasks if t.id == task_id)
     assert task.uischema and task.jsonschema
-    # Now the JSON is much smaller. We validate the new JSON which just contains the references to the uploaded files.
-    # Afterwards, only allowed uploads will be referenced in the json
+    # Now the JSON is much smaller. We validate the new JSON which just contains the references to the files.
     cleaned_task_data = _clean_submitted_task_data(
         workflow=workflow,
         task=task,
         submitted_data=task_data,
-    )  # may raise ValidationResultContainsErrors
+    )  # may raise ValidationResultContainsErrors - nothing has been stored at this point
+
+    # Only now, for the references the cleaning kept: a file whose field is disabled,
+    # hidden or unknown never reaches the database.
+    _materialise_uploads(
+        db=db,
+        workflow_instance_id=workflow.task_tree.id,
+        task_id=task.id,
+        cleaned_task_data=cleaned_task_data,
+        pending=pending_uploads,
+    )
 
     # Now, we are going to extract all attachments, and cleanup the remaining
     # If illegal attachments had been attached before, they will be cleaned up here.
@@ -1005,51 +1012,120 @@ def strip_hidden_form_fields(
     return service_workflow.strip_hidden_field_values(workflow.spec.name, form_spec, form_data)
 
 
-def _upload_attachment(
+# Namespace for the placeholder ids that mark a file as "submitted in this request,
+# not stored yet". Derived from the content hash, so the same file appearing twice in
+# one payload collapses into a single upload.
+_UPLOAD_PLACEHOLDER_NAMESPACE = uuid.UUID("6f9619ff-8b86-d011-b42d-00c04fc964ff")
+
+
+class _PendingUpload(NamedTuple):
+    data: bytes
+    filename: str
+    mimetype: str | None
+    hash: str
+
+
+def _extract_datauri_uploads(task_data) -> tuple[Any, dict[str, _PendingUpload]]:
+    """Replace every datauri in the payload by an attachment reference and return
+    the file contents keyed by the reference's id.
+
+    Nothing is stored here: form validation decides which of these references
+    survives, and only those become attachments. The id is the marker - the
+    reference admits no other key (additionalProperties is False on attachment
+    nodes) and validation hands back a deep copy, so there is nothing else left
+    to recognise the node by."""
+    pending: dict[str, _PendingUpload] = {}
+
+    def extract(datauri: str) -> dict:
+        # One parse: DataURI re-runs the regex and the base64 decode on every
+        # property access, which is expensive for multi-megabyte payloads.
+        mimetype, filename, _charset, _is_base64, data = DataURI(datauri)._parse
+
+        assert filename is not None
+
+        hash = hashlib.sha256(data).hexdigest()
+        placeholder_id = uuid.uuid5(_UPLOAD_PLACEHOLDER_NAMESPACE, hash)
+        pending[str(placeholder_id)] = _PendingUpload(data=data, filename=filename, mimetype=mimetype, hash=hash)
+        return UploadedAttachmentRepresentation(
+            id=placeholder_id,
+            hash=hash,
+            filename=filename,
+            mimetype=mimetype,
+        ).model_dump()
+
+    return iterate_and_replace_datauri(task_data, extract), pending
+
+
+def _iter_dicts(node):
+    """Yield every dict inside a JSON structure - the live objects, so callers
+    can rewrite them in place."""
+    if isinstance(node, dict):
+        yield node
+        for value in node.values():
+            yield from _iter_dicts(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _iter_dicts(value)
+
+
+def _materialise_uploads(
     db: Session,
+    workflow_instance_id: uuid.UUID,
     task_id: uuid.UUID,
-    datauri: str,
-) -> UploadedAttachmentRepresentation:
-    workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id)
+    cleaned_task_data,
+    pending: dict[str, _PendingUpload],
+) -> None:
+    """Store the files whose reference survived validation, link them to the
+    instance and to the task, and replace the placeholder ids by the ids storage
+    assigned - store_attachment deduplicates by hash and hands back a row that
+    may already exist. References the cleaning dropped (hidden, unknown) or
+    replaced by the authoritative value (disabled) are gone by now, so their
+    files are never stored."""
+    if not pending:
+        return
 
-    datauri = DataURI(datauri)
+    stored_ids: dict[str, str] = {}
+    for node in list(_iter_dicts(cleaned_task_data)):
+        upload = pending.get(node.get("id"))
+        if upload is None:
+            continue
+        placeholder_id = node["id"]
+        if placeholder_id not in stored_ids:
+            attachment = store_attachment(
+                db=db,
+                filename=upload.filename,
+                mimetype=upload.mimetype,
+                data=upload.data,
+                hash=upload.hash,
+            )
+            store_attachment_for_workflow_instance(
+                db=db,
+                workflow_instance_id=workflow_instance_id,
+                attachment_id=attachment.id,
+                filename=upload.filename,
+            )
+            store_attachment_for_task(
+                db=db,
+                task_id=task_id,
+                attachment_id=attachment.id,
+                filename=upload.filename,
+            )
+            stored_ids[placeholder_id] = str(attachment.id)
+        node["id"] = stored_ids[placeholder_id]
 
-    data = datauri.data
-    mimetype = datauri.mimetype
-    filename = datauri.name
+    for upload in (pending[key] for key in pending.keys() - stored_ids.keys()):
+        log.warning(
+            "Submitted file was not stored, its field did not survive validation: instance=%s task=%s filename=%s hash=%s",
+            workflow_instance_id,
+            task_id,
+            upload.filename,
+            upload.hash[:12],
+        )
 
-    assert filename is not None
-
-    hasher = hashlib.sha256()
-    hasher.update(data)
-    hash = hasher.hexdigest()
-
-    attachment = store_attachment(
-        db=db,
-        filename=filename,
-        mimetype=mimetype,
-        data=data,
-        hash=hash,
-    )
-    store_attachment_for_workflow_instance(
-        db=db,
-        workflow_instance_id=workflow.task_tree.id,
-        attachment_id=attachment.id,
-        filename=filename,
-    )
-    store_attachment_for_task(
-        db=db,
-        task_id=task_id,
-        attachment_id=attachment.id,
-        filename=filename,
-    )
-
-    return UploadedAttachmentRepresentation(
-        hash=hash,
-        filename=filename,
-        id=attachment.id,
-        mimetype=mimetype,
-    )
+    # A placeholder id must never reach the stored task data: data model files would
+    # write it as a foreign key and copying the instance would fail to resolve it.
+    leftover = [node["id"] for node in _iter_dicts(cleaned_task_data) if node.get("id") in pending]
+    assert not leftover, f"placeholder attachment ids survived the upload step: {leftover}"
 
 
 def _delete_unused_attachments(

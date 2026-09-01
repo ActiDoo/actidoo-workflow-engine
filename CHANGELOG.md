@@ -24,8 +24,29 @@ releases correspond to the git tags of this repository.
   and Furo.
 - UI: secondary buttons use a gray design, and the abort action is
   labelled "Cancel".
+- Engine: a submitted file is stored only once the submission has been
+  accepted. Files sent into a field that is disabled, hidden, or unknown to
+  the form, and files from a submission that fails validation, are no longer
+  kept — relevant only for clients that build payloads by hand; browsers send
+  the stored reference rather than the file.
+
 
 ### Fixed
+
+- Engine: a rejected submission kept the file it carried. Files were stored
+  before the payload was validated, and the endpoint answers a validation
+  error from inside the request — so the transaction committed and the file
+  stayed attached to the instance, visible in its attachment list and
+  repeatable at will. Files are now stored after validation, so a rejected
+  submission leaves nothing behind. Regression test:
+  `test_bff_user.py::test_submit_400_does_not_persist_the_submitted_file`.
+
+- Engine: echoing a file into a `disabled` upload field added a second entry
+  to the instance's attachment list. The file was stored before validation,
+  and the cleaning then replaced the submitted reference by the server-side
+  value — leaving the entry the upload had already created. Same cause, same
+  fix as above. Regression test:
+  `test_upload7.py::test__echoing_a_datauri_into_a_disabled_field_leaves_no_duplicate`.
 
 - Engine: dynamic-list rows could pick up values that belong to other rows.
   On submission the server merges stored, server-owned values (for example

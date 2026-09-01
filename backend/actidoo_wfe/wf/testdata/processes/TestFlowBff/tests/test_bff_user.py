@@ -345,6 +345,38 @@ def test_submit_400_required_missing(db_engine_ctx):
         assert "error_schema" in response.json()
 
 
+def test_submit_400_does_not_persist_the_submitted_file(db_engine_ctx):
+    """A rejected submission must not leave its file behind.
+
+    The endpoint answers 400 from inside the request, so the transaction
+    commits - whatever the submission stored before the validation failed
+    stays in the database, visible in the instance's attachment list and
+    repeatable at will."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            url = client.root_client.app.url_path_for("submit_task_data")
+            response = client.root_client.post(
+                url,
+                params={"task_id": str(task.id)},
+                # carries a file, but "required_text" is missing
+                json={"trigger_error": False, "attachment": _png_attachment()},
+            )
+
+        assert response.status_code == 400
+        # The request ran in its own session and committed; end this session's
+        # transaction so the assertion below sees a fresh snapshot.
+        db.rollback()
+        attachments = service_application.find_all_workflow_attachments(
+            db=db, workflow_instance_id=workflow.workflow_instance_id,
+        )
+        assert attachments == [], f"the rejected submission left {len(attachments)} attachment(s) behind"
+
+
 def test_submit_400_required_too_short(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()

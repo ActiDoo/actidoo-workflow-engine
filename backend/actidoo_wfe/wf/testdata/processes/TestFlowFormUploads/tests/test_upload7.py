@@ -70,6 +70,95 @@ def test_happy(db_engine_ctx, mock_send_text_mail):
         pass
 
 
+def test__echoing_a_datauri_into_a_disabled_field_leaves_no_duplicate(db_engine_ctx, mock_send_text_mail):
+    """A hand-built client may echo the original datauri into a field that is
+    disabled in the current step (a browser would send the stored reference
+    instead). Cleaning replaces the fresh upload with the authoritative stored
+    reference - the fresh blob must then be removed again, otherwise every such
+    submission grows the instance's attachment list by a duplicate."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        workflow.user("initiator").submit(
+            task_data=FORM_DATA,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+        before = len(workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id))
+
+        # step 2: every field is disabled - echo the original datauri anyway
+        workflow.user("initiator").submit(
+            task_data={"uploadFieldSingle": ATTACHMENTS[0]},
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        attachments = workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id)
+        assert len(attachments) == before
+
+
+def test__a_file_for_a_disabled_field_is_never_stored(db_engine_ctx, mock_send_text_mail):
+    """A file the client sends into a field that is disabled in this step does
+    not reach the database at all - not even as an unreferenced blob. The
+    cleaning replaces the reference by the stored value, so there is nothing
+    left to store."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        workflow.user("initiator").submit(
+            task_data=FORM_DATA,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+        before = {a.hash for a in workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id)}
+
+        # step 2: all fields are disabled - send a file the instance has never seen
+        other_file = {"datauri": "data:text/plain;name=other.txt;base64,dGhlIG90aGVyIGZpbGU="}
+        workflow.user("initiator").submit(
+            task_data={"uploadFieldSingle": other_file},
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        after = workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id)
+        assert {a.hash for a in after} == before
+        assert all(a.filename != "other.txt" for a in after)
+
+
+def test__the_same_file_in_several_fields_is_stored_once(db_engine_ctx, mock_send_text_mail):
+    """FORM_DATA puts the same file into all eight upload fields. They share one
+    attachment, and every reference carries the same stored id - the id the
+    extraction minted is replaced by the one storage assigned."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        workflow.user("initiator").submit(
+            task_data=FORM_DATA,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        data = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0].data
+        ids = {data["uploadFieldSingle"]["id"], data["uploadFieldSingleRequired"]["id"], data["uploadFieldMulti"][0]["id"]}
+        assert len(ids) == 1
+        attachments = workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id)
+        assert len(attachments) == 1
+        assert str(attachments[0].hash) and data["uploadFieldSingle"]["hash"] == attachments[0].hash
+
+
+def test__several_files_in_one_multi_field_are_all_stored(db_engine_ctx, mock_send_text_mail):
+    """A multi upload arrives as a list. Every entry is stored and keeps its own
+    reference; a reference the client sends back unchanged is not a datauri and
+    passes through the extraction untouched."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        second_file = {"datauri": "data:text/plain;name=second.txt;base64,dGhlIHNlY29uZCBmaWxl"}
+        workflow.user("initiator").submit(
+            task_data={**FORM_DATA, "uploadFieldMulti": [ATTACHMENTS[0], second_file]},
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        refs = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0].data["uploadFieldMulti"]
+        assert [r["filename"] for r in refs] == ["test.png", "second.txt"]
+        assert refs[0]["id"] != refs[1]["id"]
+        assert {a.filename for a in workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id)} == {
+            "test.png",
+            "second.txt",
+        }
+
+
 PATH_FORM = Path(__file__).parent / "../test_upload.form"
 PATH_SNAPSHOT_JSONSCHEMA = Path(__file__).parent / "snapshot_jsonschema.json"
 PATH_SNAPSHOT_UISCHEMA = Path(__file__).parent / "snapshot_uischema.json"
