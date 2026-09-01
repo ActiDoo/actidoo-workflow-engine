@@ -70,6 +70,30 @@ def test_happy(db_engine_ctx, mock_send_text_mail):
         pass
 
 
+def test__echoing_a_datauri_into_a_disabled_field_leaves_no_duplicate(db_engine_ctx, mock_send_text_mail):
+    """A hand-built client may echo the original datauri into a field that is
+    disabled in the current step (a browser would send the stored reference
+    instead). Cleaning replaces the fresh upload with the authoritative stored
+    reference - the fresh blob must then be removed again, otherwise every such
+    submission grows the instance's attachment list by a duplicate."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        workflow.user("initiator").submit(
+            task_data=FORM_DATA,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+        before = len(workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id))
+
+        # step 2: every field is disabled - echo the original datauri anyway
+        workflow.user("initiator").submit(
+            task_data={"uploadFieldSingle": ATTACHMENTS[0]},
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        attachments = workflow.get_attachments(workflow_instance_id=workflow.workflow_instance_id)
+        assert len(attachments) == before
+
+
 PATH_FORM = Path(__file__).parent / "../test_upload.form"
 PATH_SNAPSHOT_JSONSCHEMA = Path(__file__).parent / "snapshot_jsonschema.json"
 PATH_SNAPSHOT_UISCHEMA = Path(__file__).parent / "snapshot_uischema.json"
