@@ -305,9 +305,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
               return (
                 <StandardListItem
                   data-task-selected={isSelected ? 'true' : undefined}
-                  className={` h-auto pc-pl-responsive ${
-                    isDelegationHighlight ? 'bg-orange-50' : ''
-                  }`}
+                  className={` h-auto !pl-[15px] ${isDelegationHighlight ? 'bg-orange-50' : ''}`}
                   key={`task-item-${instance.id}`}
                   onClick={() => {
                     navigate(`${instance.id}`);
