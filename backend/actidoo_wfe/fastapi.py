@@ -32,7 +32,7 @@ from actidoo_wfe.storage import setup_storage
 from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.venusian_scan import run_venusian_scan
 from actidoo_wfe.wf.constants import BFF_CONTRACT_VERSION
-from actidoo_wfe.wf.exceptions import ClientVersionMismatchError, WorkflowDefinitionMissingError
+from actidoo_wfe.wf.exceptions import ClientVersionMismatchError, TaskIsNotInReadyUsertasksException, WorkflowDefinitionMissingError
 from actidoo_wfe.wf.fastapi import router as router_wf
 
 print(f"Setting Log-Level to {settings.log_level}")
@@ -153,6 +153,20 @@ async def _workflow_definition_missing_handler(_request: Request, exc: WorkflowD
             "detail": str(exc),
             "workflow_name": exc.workflow_name,
             "code": "workflow_definition_missing",
+        },
+    )
+
+
+@app.exception_handler(TaskIsNotInReadyUsertasksException)
+async def _task_not_submittable_handler(_request: Request, _exc: TaskIsNotInReadyUsertasksException) -> JSONResponse:
+    # 403 Forbidden: the task is not one this user may act on right now - it is not
+    # ready, not theirs, or theirs only through a delegation they are not using.
+    # Deliberately not 404: the caller knows the task exists, they just may not submit it.
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": "This task cannot be submitted by you.",
+            "code": "task_not_submittable",
         },
     )
 

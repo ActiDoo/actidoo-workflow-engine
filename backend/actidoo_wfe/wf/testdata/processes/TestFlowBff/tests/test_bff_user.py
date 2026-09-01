@@ -377,6 +377,33 @@ def test_submit_400_does_not_persist_the_submitted_file(db_engine_ctx):
         assert attachments == [], f"the rejected submission left {len(attachments)} attachment(s) behind"
 
 
+def test_submit_by_someone_else_is_403_and_stores_nothing(db_engine_ctx):
+    """Someone who may not submit this task is turned away before the payload is
+    looked at - so a file they sent along is not stored either. Answering 403
+    rather than 500 also keeps the reason readable for API clients."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db, extra_users={"outsider": ["wf-user"]})
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+        workflow.user("initiator").assign_task(task_id=task.id)
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("outsider").user), disable_role_check(client):
+            url = client.root_client.app.url_path_for("submit_task_data")
+            response = client.root_client.post(
+                url,
+                params={"task_id": str(task.id)},
+                json={**FORM1_DATA_MIN, "attachment": _png_attachment()},
+            )
+
+        assert response.status_code == 403
+        assert response.json()["code"] == "task_not_submittable"
+        db.rollback()
+        assert service_application.find_all_workflow_attachments(
+            db=db, workflow_instance_id=workflow.workflow_instance_id,
+        ) == []
+
+
 def test_submit_400_required_too_short(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()

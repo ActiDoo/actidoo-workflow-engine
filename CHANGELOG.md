@@ -48,6 +48,11 @@ releases correspond to the git tags of this repository.
   fix as above. Regression test:
   `test_upload7.py::test__echoing_a_datauri_into_a_disabled_field_leaves_no_duplicate`.
 
+- Engine: a submission from someone who may not act on the task is now
+  rejected before its payload is validated, so it can no longer change
+  anything on its way to being refused. Such a request answers 403 with a
+  `task_not_submittable` code instead of a 500.
+
 - Engine: dynamic-list rows could pick up values that belong to other rows.
   On submission the server merges stored, server-owned values (for example
   disabled fields) back into the submitted rows — and it matched rows by

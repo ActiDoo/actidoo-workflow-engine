@@ -761,6 +761,28 @@ def submit_task_data(
     if task_id not in [t.id for t in usertasks]:
         raise TaskIsNotInReadyUsertasksException()
 
+    # Decide who may submit before anything is written: a rejected submission
+    # must not have stored a file or removed an attachment on its way here.
+    assigned_delegate_user_id = service_workflow.get_assigned_delegate_user(
+        workflow=workflow,
+        task_id=task_id,
+    )
+    assigned_user_id = service_workflow.get_assigned_user(
+        workflow=workflow,
+        task_id=task_id,
+    )
+
+    if assigned_delegate_user_id is not None and assigned_user_id == user.id and assigned_delegate_user_id != user.id:
+        raise TaskIsNotInReadyUsertasksException()
+
+    acting_user_id: uuid.UUID | None = None
+    comment_to_store: str | None = None
+    if assigned_user_id is not None and assigned_user_id != user.id:
+        if assigned_delegate_user_id != user.id:
+            raise TaskIsNotInReadyUsertasksException()
+        acting_user_id = assigned_user_id
+        comment_to_store = delegate_comment
+
     # process attachments START
     # Files are taken out of the payload before validation and stored only afterwards.
     # Replacing them by their reference here is not an optimisation but a requirement:
@@ -792,26 +814,6 @@ def submit_task_data(
     attachements = get_attachments(cleaned_task_data)
     _delete_unused_attachments(db, workflow.task_tree.id, task.id, attachements)
     # process attachments END
-
-    assigned_delegate_user_id = service_workflow.get_assigned_delegate_user(
-        workflow=workflow,
-        task_id=task_id,
-    )
-    assigned_user_id = service_workflow.get_assigned_user(
-        workflow=workflow,
-        task_id=task_id,
-    )
-
-    if assigned_delegate_user_id is not None and assigned_user_id == user.id and assigned_delegate_user_id != user.id:
-        raise TaskIsNotInReadyUsertasksException()
-
-    acting_user_id: uuid.UUID | None = None
-    comment_to_store: str | None = None
-    if assigned_user_id is not None and assigned_user_id != user.id:
-        if assigned_delegate_user_id != user.id:
-            raise TaskIsNotInReadyUsertasksException()
-        acting_user_id = assigned_user_id
-        comment_to_store = delegate_comment
 
     result = service_workflow.execute_user_task(
         workflow,
