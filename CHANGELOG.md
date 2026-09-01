@@ -27,6 +27,9 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
+- Admin UI: the "Skip tasks" button in the task details header did nothing —
+  no task was skipped and no request was sent. The button was removed.
+
 - Engine: dynamic-list rows could pick up values that belong to other rows.
   On submission the server merges stored, server-owned values (for example
   disabled fields) back into the submitted rows — and it matched rows by

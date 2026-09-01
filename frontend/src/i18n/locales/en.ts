@@ -69,7 +69,6 @@ export const en = {
       unassignFromMe: 'Unassign from me',
       assignUser: 'Assign User',
       unassignUser: 'Unassign User',
-      skipTasks: 'Skip tasks',
       saveSettings: 'Save Settings',
       resetToInitial: 'Reset To Initial State',
       submit: 'Submit',
@@ -311,7 +310,6 @@ export const en = {
     unassignUser: 'Unassign User',
     assignUserTooltip: 'Assign user',
     unassignUserTooltip: 'Unassign User',
-    skipTasksTooltip: 'Skip tasks',
     tryAgainTooltip: 'Try again',
   },
   adminTables: {

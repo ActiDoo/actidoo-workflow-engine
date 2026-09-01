@@ -70,7 +70,6 @@ export const de = {
       unassignFromMe: 'Zuweisung aufheben',
       assignUser: 'Nutzer zuweisen',
       unassignUser: 'Nutzerzuweisung entfernen',
-      skipTasks: 'Aufgaben überspringen',
       saveSettings: 'Einstellungen speichern',
       resetToInitial: 'Auf Anfangszustand zurücksetzen',
       submit: 'Absenden',
@@ -313,7 +312,6 @@ export const de = {
     unassignUser: 'Nutzerzuweisung entfernen',
     assignUserTooltip: 'Nutzer zuweisen',
     unassignUserTooltip: 'Zuweisung aufheben',
-    skipTasksTooltip: 'Aufgaben überspringen',
     tryAgainTooltip: 'Erneut versuchen',
   },
   adminTables: {
