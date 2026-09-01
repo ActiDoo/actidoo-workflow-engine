@@ -314,7 +314,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                   }}>
                   <div className="py-3 min-w-0 w-full">
                     <div className="flex items-start justify-between gap-2 ml-1 pr-5">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 min-w-0">
                           <Text className={`${isSelected ? '!font-bold' : ''} !mb-0`}>
                             {instance.title}
@@ -329,7 +329,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                         </div>
 
                         {instance.subtitle && (
-                          <Text className="!text-xs !text-neutral-700 !block ml-1">
+                          <Text className="!text-xs !text-neutral-700 !block break-words">
                             {instance.subtitle}
                           </Text>
                         )}
@@ -337,7 +337,9 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                       <Icon
                         name="message-information"
                         accessibleName={t('sidebar.moreInformation')}
-                        className="!w-4 !h-4 relative top-2"
+                        interactive={true}
+                        showTooltip={true}
+                        className="!w-4 !h-4 shrink-0 mt-0.5"
                         onClick={event => {
                           event.stopPropagation();
                           setInfoContent({
