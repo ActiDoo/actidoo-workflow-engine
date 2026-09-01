@@ -23,6 +23,7 @@ from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf import repository, service_form, service_i18n, service_user, service_workflow, views
+from actidoo_wfe.wf.error_schema import set_nested_error
 from actidoo_wfe.wf.exceptions import (
     AttachmentNotFoundException,
     InvalidWorkflowSpecException,
@@ -1032,7 +1033,8 @@ def _extract_datauri_uploads(task_data) -> tuple[Any, dict[str, _PendingUpload]]
     the file contents keyed by the reference's id.
 
     Nothing is stored here: form validation decides which of these references
-    survives, and only those become attachments. The id is the marker - the
+    survives, and only those become attachments. A datauri the engine cannot
+    read is reported as a validation error rather than dropped. The id is the marker - the
     reference admits no other key (additionalProperties is False on attachment
     nodes) and validation hands back a deep copy, so there is nothing else left
     to recognise the node by."""
@@ -1055,19 +1057,35 @@ def _extract_datauri_uploads(task_data) -> tuple[Any, dict[str, _PendingUpload]]
             mimetype=mimetype,
         ).model_dump()
 
-    return iterate_and_replace_datauri(task_data, extract), pending
+    task_data = iterate_and_replace_datauri(task_data, extract)
+
+    # Whatever still carries a "datauri" here could not be read. Saying so is the
+    # point: the cleaning would drop the key as unknown, the merge would put the
+    # submitted file name onto the reference that is already stored, and the
+    # client would get a 200 showing the previous file under the new name.
+    unreadable = [path for path, node in _iter_dicts(task_data) if "datauri" in node]
+    if unreadable:
+        error_schema: dict = {}
+        for path in unreadable:
+            set_nested_error(error_schema, path, "The file could not be read.")
+        raise ValidationResultContainsErrors(
+            message="Errors during validation of submitted task data",
+            error_schema=error_schema,
+        )
+
+    return task_data, pending
 
 
-def _iter_dicts(node):
-    """Yield every dict inside a JSON structure - the live objects, so callers
-    can rewrite them in place."""
+def _iter_dicts(node, path=()):
+    """Yield ``(path, dict)`` for every dict inside a JSON structure - the live
+    objects, so callers can rewrite them in place."""
     if isinstance(node, dict):
-        yield node
-        for value in node.values():
-            yield from _iter_dicts(value)
+        yield list(path), node
+        for key, value in node.items():
+            yield from _iter_dicts(value, (*path, key))
     elif isinstance(node, list):
-        for value in node:
-            yield from _iter_dicts(value)
+        for index, value in enumerate(node):
+            yield from _iter_dicts(value, (*path, index))
 
 
 def _materialise_uploads(
@@ -1087,7 +1105,7 @@ def _materialise_uploads(
         return
 
     stored_ids: dict[str, str] = {}
-    for node in list(_iter_dicts(cleaned_task_data)):
+    for _path, node in list(_iter_dicts(cleaned_task_data)):
         # A form field may well be called "id" and hold anything - only a string
         # can be one of our placeholders, and only a string may be looked up.
         placeholder_id = node.get("id")
@@ -1130,7 +1148,7 @@ def _materialise_uploads(
 
     # A placeholder id must never reach the stored task data: data model files would
     # write it as a foreign key and copying the instance would fail to resolve it.
-    leftover = [node["id"] for node in _iter_dicts(cleaned_task_data) if isinstance(node.get("id"), str) and node["id"] in pending]
+    leftover = [node["id"] for _path, node in _iter_dicts(cleaned_task_data) if isinstance(node.get("id"), str) and node["id"] in pending]
     assert not leftover, f"placeholder attachment ids survived the upload step: {leftover}"
 
 

@@ -1179,7 +1179,7 @@ def iterate_and_replace_datauri(json_data, replace_function):
       The modified json structure.
     """
     if isinstance(json_data, dict):
-        if "datauri" in json_data and DATA_URI_RE.match(json_data["datauri"]):
+        if "datauri" in json_data and isinstance(json_data["datauri"], str) and DATA_URI_RE.match(json_data["datauri"]):
             new_data = replace_function(json_data["datauri"])
             json_data.clear()
             json_data.update(new_data)

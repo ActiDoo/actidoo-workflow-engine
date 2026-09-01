@@ -2,12 +2,14 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 import base64
+import pytest
 import uuid
 import copy
 import logging
 from pathlib import Path
 
 from actidoo_wfe.database import SessionLocal
+from actidoo_wfe.wf.exceptions import ValidationResultContainsErrors
 from actidoo_wfe.wf.service_form import remove_data_uri_fields
 from actidoo_wfe.wf.tests.helpers.dicts import are_dicts_equal, load_dict_from_file, read_and_transform, save_dict_to_file
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
@@ -158,6 +160,33 @@ def test__several_files_in_one_multi_field_are_all_stored(db_engine_ctx, mock_se
             "test.png",
             "second.txt",
         }
+
+
+UNREADABLE_ATTACHMENTS = [
+    # a data URI is only recognised with "name" before "charset"
+    {"datauri": f"data:text/plain;charset=utf-8;name=note.txt;base64,{content_as_b64}"},
+    # an unencoded space in the file name
+    {"datauri": f"data:image/png;name=my file.png;base64,{content_as_b64}"},
+    {"datauri": None},
+    {"datauri": 42},
+]
+
+
+@pytest.mark.parametrize("broken", UNREADABLE_ATTACHMENTS)
+def test__an_unreadable_datauri_is_rejected(db_engine_ctx, mock_send_text_mail, broken):
+    """A file the server cannot read must be reported, not silently dropped.
+
+    Dropping it leaves the stored reference of the previous file in place while
+    the submitted file name is merged over it - the client gets 200 OK and finds
+    the old file under the new name."""
+    with db_engine_ctx():
+        workflow = _start_workflow()
+
+        with pytest.raises(ValidationResultContainsErrors):
+            workflow.user("initiator").submit(
+                task_data={**FORM_DATA, "uploadFieldSingle": broken},
+                workflow_instance_id=workflow.workflow_instance_id,
+            )
 
 
 def test__a_field_called_id_does_not_disturb_the_upload_step():
