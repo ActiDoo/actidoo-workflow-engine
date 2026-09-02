@@ -4,7 +4,7 @@
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Back navigation shared by the page containers (PcPageTitle, PcActionBar).
+ * Back navigation of the page header (PcPageTitle).
  *
  * Prefer real history navigation so query state (filters, version) of the
  * previous page is restored and the browser history stays clean; forceBackTo
