@@ -26,10 +26,9 @@ from actidoo_wfe.wf.registry_data_model import (
 
 
 @pytest.fixture(autouse=True)
-def _clean_registry():
-    data_model_registry.clear()
-    yield
-    data_model_registry.clear()
+def _clean_registry(isolated_data_model_registry):
+    """Empty registry for this module, restored afterwards - the models
+    registered at import time must survive for the rest of the session."""
 
 
 # ---------------------------------------------------------------------------

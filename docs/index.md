@@ -8,10 +8,11 @@ The Actidoo Workflow Engine runs BPMN workflows with user tasks, forms, service 
 2. [Workflow project](workflow-project.md) — create a workflow project and run it locally.
 3. [Workflows](workflows.md) — model the BPMN process, build forms, write service tasks, react to messages and timers, translate and test.
 4. [Data models](data-models.md) — define, expose and migrate records that outlive a workflow instance.
-5. [Connectors](connectors.md) — connect workflows to external systems.
-6. [Operations](operations.md) — build the Docker image, deploy it, and configure settings, identity provider, storage and mail.
-7. [ADRs](adr/index.md) — the architecture decisions behind the engine.
-8. [Glossary](glossary.md) — the terms used throughout.
+5. [Number ranges](number-ranges.md) — issue running business numbers from a workflow.
+6. [Connectors](connectors.md) — connect workflows to external systems.
+7. [Operations](operations.md) — build the Docker image, deploy it, and configure settings, identity provider, storage and mail.
+8. [ADRs](adr/index.md) — the architecture decisions behind the engine.
+9. [Glossary](glossary.md) — the terms used throughout.
 
 ## The short version
 
@@ -25,6 +26,7 @@ architecture
 workflow-project
 workflows
 data-models
+number-ranges
 connectors
 operations
 adr/index

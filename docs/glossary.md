@@ -118,6 +118,10 @@ The record that a workflow instance waits for a message: message name plus corre
 
 The ordered list of Alembic database revisions of one package. The engine has its own chain; each extension with data models has a separate chain announced by the entry point `actidoo_wfe.alembic`. The engine runs all chains at startup, its own first. See [ADR 005](adr/adr_005_extension_database_migrations.md).
 
+## number range
+
+A data model whose rows are the running business numbers it has issued — there is no separate counter. A service function draws one with the task helper; the same row records which workflow instance and which step received it, so the range is its own allocation log. The numbering scheme (scope, next candidate, rendering) is expressed as overridable methods on the model, while uniqueness is enforced by the engine. See [Number ranges](number-ranges.md).
+
 ## options
 
 The choices of a select field. Static options are listed in the form file; dynamic options come from a CSV file in the `options/` folder of the workflow directory (custom property `options_file`) or from a function in the workflow module (custom property `options_function`) and are loaded while the user fills the form. Also called select values, choices, lookup values (avoid).

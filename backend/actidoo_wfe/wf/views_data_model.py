@@ -17,6 +17,7 @@ import io
 import json
 import logging
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -34,13 +35,15 @@ from actidoo_wfe.helpers.bff_table import (
     DatetimeSearchFilterField,
     FilterField,
     IntegerSearchFilterField,
+    PaginatedData,
     TextSearchFilterField,
     UUidSearchFilterField,
 )
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf.config_data_model import DisplayType, FieldDef
-from actidoo_wfe.wf.models import _MIXIN_SYSTEM_COLUMNS, WorkflowUser
-from actidoo_wfe.wf.registry_data_model import DataModelDescriptor
+from actidoo_wfe.wf.exceptions import DataModelForbiddenError, DataModelNotFoundError
+from actidoo_wfe.wf.models import _MIXIN_SYSTEM_COLUMNS, NumberRangeMixin, WorkflowUser
+from actidoo_wfe.wf.registry_data_model import DataModelDescriptor, data_model_registry
 from actidoo_wfe.wf.types_data_model import (
     ActionSchema,
     DataModelSchema,
@@ -657,3 +660,94 @@ def rows_to_csv(data_model: DataModelDescriptor, rows: list, *, db: Session, loc
         data = serialize_row(row, data_model, _file_refs_for(files_map, row), context="csv")
         writer.writerow([_csv_cell(data.get(field.name)) for field in fields])
     return output.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Number ranges (ADR 012): read model for the administrative view
+#
+# Queries only; who may see which range is decided in ``service_application``
+# and passed in as the set of workflow names the user administrates (``None``
+# for a global admin, who sees every range - including one no workflow
+# declares yet).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ScopeStatus:
+    scope_key: str
+    count: int
+    highest_value: int
+    last_formatted: str
+    last_issued_at: dt.datetime | None
+
+
+@dataclass(frozen=True)
+class NumberRangeSummary:
+    name: str
+    table: str
+    workflows: list[str]
+    scopes: list[ScopeStatus]
+
+
+def registered_number_ranges() -> list[DataModelDescriptor]:
+    return sorted(
+        (d for d in data_model_registry.list_models() if issubclass(d.model_class, NumberRangeMixin)),
+        key=lambda d: d.name,
+    )
+
+
+def is_visible(descriptor: DataModelDescriptor, allowed_workflow_names: set[str] | None) -> bool:
+    if allowed_workflow_names is None:
+        return True
+    from actidoo_wfe.wf.service_data_model import workflows_using_model  # lazy: service_data_model imports this module
+
+    return bool(allowed_workflow_names & set(workflows_using_model(descriptor.name)))
+
+
+def get_visible_number_range(range_name: str, allowed_workflow_names: set[str] | None) -> DataModelDescriptor:
+    """Raises ``DataModelNotFoundError`` for an unknown or non-range name, ``DataModelForbiddenError`` when hidden."""
+    descriptor = data_model_registry.get(range_name)
+    if not issubclass(descriptor.model_class, NumberRangeMixin):
+        raise DataModelNotFoundError(f"Data model '{range_name}' is not a number range.")
+    if not is_visible(descriptor, allowed_workflow_names):
+        raise DataModelForbiddenError(f"User may not view number range '{range_name}'.")
+    return descriptor
+
+
+def scope_statuses(db: Session, model: type) -> list[ScopeStatus]:
+    aggregates = db.execute(
+        select(model.scope_key, func.count(), func.max(model.value), func.max(model.created_at))
+        .group_by(model.scope_key)
+        .order_by(model.scope_key),
+    ).all()
+    statuses = []
+    for scope_key, count, highest, last_issued_at in aggregates:
+        last_formatted = db.scalar(select(model.formatted).where(model.scope_key == scope_key, model.value == highest))
+        statuses.append(ScopeStatus(scope_key, count, highest, last_formatted or "", last_issued_at))
+    return statuses
+
+
+def number_range_summaries(db: Session, allowed_workflow_names: set[str] | None) -> list[NumberRangeSummary]:
+    from actidoo_wfe.wf.service_data_model import workflows_using_model  # lazy, see is_visible
+
+    return [
+        NumberRangeSummary(
+            name=d.name,
+            table=d.model_class.__tablename__,
+            workflows=sorted(workflows_using_model(d.name)),
+            scopes=scope_statuses(db, d.model_class),
+        )
+        for d in registered_number_ranges()
+        if is_visible(d, allowed_workflow_names)
+    ]
+
+
+def number_range_allocations(db: Session, model: type, bff_table_request_params: BffTableQuerySchemaBase) -> PaginatedData:
+    """The allocation log of one range as a BFF table page, newest number first by default."""
+    return BFFTable(
+        db=db,
+        request_params=bff_table_request_params,
+        query=select(model),
+        field_to_dbfield_map={},
+        default_order_by=[model.scope_key, model.value.desc()],
+    ).get_paginated_data()

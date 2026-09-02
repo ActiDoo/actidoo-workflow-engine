@@ -26,6 +26,9 @@ import Statistics from '@/pages/statistics/Statistics';
 import AdminInfo from '@/pages/admin/info/AdminInfo';
 import UserSettings from '@/pages/user-settings/UserSettings';
 import { useTranslation } from '@/i18n';
+const AdminNumberRanges = React.lazy(
+  async () => await import('@/pages/admin/number-ranges/AdminNumberRanges')
+);
 
 // Actually lazy loading is not necessary, but it will help to keep the initial JS file(s) smaller and speed up the initial loading
 // To omit lazy loading you'd have to use normal imports like `import { Tasks } from ...`
@@ -125,6 +128,7 @@ const Wrapper: React.FC = () => {
       { title: t('navigation.adminTasks'), to: '/admin/all-tasks' },
       { title: t('navigation.adminErroneousTasks'), to: '/admin/erroneous-tasks' },
       { title: t('navigation.adminUsers'), to: '/admin/all-users' },
+      { title: t('navigation.numberRanges'), to: '/admin/number-ranges' },
     ];
 
     if (loginState?.can_access_wf_admin) {
@@ -309,6 +313,11 @@ const router = createBrowserRouter(
           errorElement={<PcErrorView />}
         />
         <Route path="/admin/sysinfo" element={<AdminInfo />} errorElement={<PcErrorView />} />
+        <Route
+          path="/admin/number-ranges"
+          element={<AdminNumberRanges />}
+          errorElement={<PcErrorView />}
+        />
         <Route
           path="/workflow-diagram/:name"
           element={<WorkflowDiagram />}

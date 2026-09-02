@@ -880,6 +880,149 @@ class WorkflowManagedMixin(VersionedMixin):
     )
 
 
+class NumberRangeMixin:
+    """A data-model tier whose rows are issued numbers, plus the allocator.
+
+    Used on a project's model base::
+
+        class CaseNumber(Base, NumberRangeMixin):
+            _ext_table = "case_number"
+
+    A sibling of the plain, versioned and workflow-managed tiers, with the
+    natural primary key ``(scope_key, value)`` and no surrogate ``id`` (a random
+    key scatters InnoDB's gap locks and deadlocks concurrent allocations - ADR
+    012). Register a range **without** ``api=``; it is numbering machinery, not a
+    Data page record, and has its own administrative view. No user column on
+    purpose: the issuing step may run from cron without a request user, and the
+    instance creator is reachable through ``workflow_instance_id``.
+
+    This class is the schema and the scheme (the four hooks below); the allocation
+    itself is ``service_task_helper.allocate_number``, reached through
+    ``sth.next_number``.
+
+    A subclass that declares its own ``__table_args__`` replaces the constraints
+    below and has to repeat them.
+    """
+
+    #: Candidate attempts before giving up. Each attempt costs one reference read
+    #: and one insert, so this bounds the work a pathological scheme can do.
+    _number_max_attempts: int = 5
+
+    #: Per-range ``innodb_lock_wait_timeout`` in seconds, or ``None`` to leave the
+    #: session default alone (the default - see ``database.session_lock_wait_timeout``).
+    _number_lock_wait_timeout: int | None = None
+
+    #: Which rows compete for one sequence; ``""`` means one global sequence. First
+    #: half of the primary key, so a scope is a contiguous stretch of the clustered
+    #: index and its allocations queue at one end instead of scattering.
+    scope_key: Mapped[str] = mapped_column(ty.String(64), primary_key=True, default="", sort_order=-94)
+
+    #: The dense ordering key, and the rest of the primary key. Always an integer:
+    #: the engine only ever compares and orders it, and a string column would order
+    #: lexicographically, which breaks quietly and late (``"9" > "10"``; a letter
+    #: block rolling over ``Z999 -> AA001`` would stick on ``"Z999"`` forever).
+    #: Letters, check digits and grouped blocks are presentation and belong in
+    #: ``format_number``.
+    value: Mapped[int] = mapped_column(ty.BigInteger, primary_key=True, sort_order=-93)
+
+    #: The business number as people see it, rendered from ``value``.
+    formatted: Mapped[str] = mapped_column(ty.String(200), nullable=False, sort_order=-92)
+
+    #: The task occurrence that issued this number - ``sth.task_uuid``, which is the
+    #: key of the ``workflow_instance_tasks`` row. Half of the idempotency key.
+    workflow_instance_task_id: Mapped[uuid.UUID] = mapped_column(FlexibleUuid, nullable=False, sort_order=-90)
+
+    #: Which draw within that task occurrence. The task helper fills this in.
+    alloc_key: Mapped[str] = mapped_column(ty.String(100), nullable=False, default="", sort_order=-89)
+
+    #: Which workflow instance received the number. Provenance, declared here
+    #: rather than inherited: a range needs it, but not the versioning that carries
+    #: it in the workflow-managed tier.
+    workflow_instance_id: Mapped[uuid.UUID] = mapped_column(FlexibleUuid, nullable=False, sort_order=-88)
+
+    #: When the number was issued.
+    created_at: Mapped[datetime.datetime | None] = mapped_column(
+        ty.DateTime, nullable=True, default=dt_now_naive, sort_order=-87,
+    )
+
+    @declared_attr.directive
+    def __table_args__(cls):
+        return (
+            # The guarantee. Not a lock: a concurrent issue that picks the same
+            # value is refused here and retried with the next candidate.
+            # Scope-relative on purpose. A ``format_number`` that leaves the scope
+            # out (e.g. plain padding with a per-year scope) would otherwise collide
+            # across scope boundaries by construction, and no retry could resolve
+            # that - it would only burn the attempt budget. Numbers that must be
+            # unique across scopes are ``format_number``'s job, not an index's.
+            UniqueConstraint("scope_key", "formatted", name=f"uq_{cls.__tablename__}_scope_formatted"),
+            # Idempotency: same task occurrence, same draw -> same number.
+            UniqueConstraint("workflow_instance_task_id", "alloc_key", name=f"uq_{cls.__tablename__}_claim"),
+        )
+
+    # --- The four hooks -----------------------------------------------------
+    #
+    # All four are safe to override because neither of them carries the uniqueness
+    # guarantee. ``number_scope`` and ``reference_value`` may touch the database;
+    # ``next_value`` and ``format_number`` are pure and are the ones most schemes
+    # need. They stay separate so the common case - an arithmetic rule - never has
+    # to write a query.
+
+    @classmethod
+    def number_scope(cls, sth) -> str:
+        """Which rows compete for one sequence. Default: one global sequence.
+
+        Return e.g. the year for a yearly reset, or a value from ``sth.task_data``
+        for one sequence per site or category. The result is stored on the row and
+        enters both scope-relative unique constraints.
+        """
+        return ""
+
+    @classmethod
+    def reference_value(cls, db: Session, scope_key: str) -> int | None:
+        """The value ``next_value`` starts from, or ``None`` when the scope is empty.
+
+        Default: the highest ``value`` in the scope as *this transaction* sees it -
+        its snapshot plus the rows it has issued itself and not yet committed.
+
+        That is the whole contract for an override: return what your session can
+        see. Do not go looking for what other transactions committed in the
+        meantime - the engine does that itself, on a separate connection, and only
+        after a collision has shown that somebody else is active (see
+        ``allocate_number``). The two are merged by taking the higher, so a custom
+        reference must be one that a higher committed value may legitimately
+        override: a floor, a maximum, ``None``. Do not reach for
+        ``with_for_update`` to see fresh data yourself: on a scope with no rows yet
+        it takes a gap lock, and two concurrent first allocations then deadlock on
+        their inserts (MySQL 1213) - the first two numbers of every new scope.
+
+        A scheme that needs no reference at all (a scattered or random one) returns
+        ``None`` here.
+        """
+        statement = select(cls.value).where(cls.scope_key == scope_key).order_by(cls.value.desc()).limit(1)
+        return db.scalars(statement).first()
+
+    @classmethod
+    def next_value(cls, previous: int | None) -> int:
+        """The next candidate. Pure arithmetic, no database access.
+
+        Default: ``previous + 1``, starting at 1. This is where a start value, a
+        step, reserved bands or skip rules live - and a scattered scheme, which
+        simply ignores ``previous``. A poor candidate only costs a retry.
+        """
+        return 1 if previous is None else previous + 1
+
+    @classmethod
+    def format_number(cls, value: int, scope_key: str) -> str:
+        """The business number. Pure, no database access. Default: the plain value.
+
+        Padding, prefixes, check digits, base conversion and letter blocks belong
+        here, derived from the dense ``value``. Include the scope if numbers have to
+        be unique across scopes.
+        """
+        return str(value)
+
+
 @event.listens_for(Session, "before_flush")
 def _assign_versions(session: Session, flush_context, instances) -> None:
     """Maintain ``version``/``is_current`` for newly added versioned rows.

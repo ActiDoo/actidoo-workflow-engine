@@ -22,7 +22,6 @@ from sqlalchemy import select
 
 from actidoo_wfe.database import SessionLocal, SessionMaker, setup_db
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf.registry_data_model import data_model_registry
 from actidoo_wfe.wf.testdata.datamodels.demo_expense_model import DemoExpense, register_demo_expense
 from actidoo_wfe.wf.tests.helpers.client import Client
 from actidoo_wfe.wf.tests.helpers.overrides import disable_role_check, override_get_user
@@ -36,10 +35,9 @@ _RECEIPT = {"datauri": f"data:image/png;name=receipt.png;base64,{_PNG_B64}"}
 
 
 @pytest.fixture(autouse=True)
-def _isolate_registry():
-    data_model_registry.clear()
-    yield
-    data_model_registry.clear()
+def _isolate_registry(isolated_data_model_registry):
+    """Empty registry for this module, restored afterwards - the models
+    registered at import time must survive for the rest of the session."""
 
 
 def _setup(db):

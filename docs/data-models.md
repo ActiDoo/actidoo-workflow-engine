@@ -6,7 +6,7 @@ A workflow instance is temporary: it runs, finishes, and its task data is histor
 
 *The `Expense` model on the Data page. Each row is the current version of a record; the amount uses a currency format, the version column tracks history, and the row action starts a follow-up workflow.*
 
-Every table name carries the prefix `ext_<namespace>_`, where the namespace is your project's own short prefix — `acme` here, so the table is `ext_acme_expense`. Tables of different projects never collide with each other or with engine tables. Workflow writes share the engine's transaction: when a service function fails, its data model writes are rolled back with the task, so a half-approved expense is never left behind.
+Every table name carries the prefix `ext_<namespace>_`, where the namespace is your project's own short prefix — `acme` here, so the table is `ext_acme_expense`. Tables of different projects never collide with each other or with engine tables. Workflow writes share the engine's transaction, so a data model write and the instance it belongs to are committed together. A service function that *raises* is a different matter: the engine catches the exception, marks the task erroneous and commits the request anyway, so writes made before the failure stay. Write them so that a retry from the admin area — which re-runs the function from the start — is safe to repeat.
 
 ## Three tiers
 
@@ -176,6 +176,7 @@ New databases are built from the models, so the models and the sum of the revisi
 
 ## Related
 
+- [Number ranges](number-ranges.md) — a data model whose rows are running business numbers
 - [Developing workflows](workflows.md) — the task helper, service functions and translations
 - [Operations](operations.md) — settings, storage and running the image
 - [Architecture](architecture.md) — how the engine hosts projects and their data

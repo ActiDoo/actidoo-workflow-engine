@@ -20,6 +20,8 @@ import {
   AdminWorkflowInstance,
   ExecuteErroneousTaskRequestData,
   GetSystemInformationResponse,
+  GetNumberRangesResponse,
+  NumberRangeAllocation,
   GetUserDetailResponse,
   GetUserTasksResponse,
   GetWorkflowResponse,
@@ -86,6 +88,8 @@ export enum WeDataKey {
   ADMIN_SEARCH_WF_USERS = 'admin_search_wf_users',
   ADMIN_CANCEL_WORKFLOW_INSTANCE = 'admin_cancel_workflow_instance',
   ADMIN_GET_SYSTEM_INFORMATION = 'admin_get_system_information',
+  ADMIN_GET_NUMBER_RANGES = 'admin_get_number_ranges',
+  ADMIN_GET_NUMBER_RANGE_ALLOCATIONS = 'admin_get_number_range_allocations',
   ADMIN_GET_TASK_STATES_PER_WORKFLOW = 'admin_get_task_states_per_workflow',
   FORM_TEMPLATES_LIST = 'form_templates_list',
   FORM_TEMPLATE_SAVE = 'form_template_save',
@@ -105,6 +109,7 @@ interface MyInitiatedWorkflowInstanceTable
   extends ItemsAndCountResponse<MyInitiatedWorkflowInstance> {}
 
 interface AllTasksTable extends ItemsAndCountResponse<TaskItem> {}
+interface NumberRangeAllocationsTable extends ItemsAndCountResponse<NumberRangeAllocation> {}
 
 interface AllWorkflowsTable extends ItemsAndCountResponse<AdminWorkflowInstance> {}
 
@@ -151,6 +156,8 @@ export interface WeDataState {
   [WeDataKey.ADMIN_SEARCH_WF_USERS]: GenericDataEntry<SearchWfUsersResponse> | null;
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: GenericDataEntry<object> | null;
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: GenericDataEntry<GetSystemInformationResponse> | null;
+  [WeDataKey.ADMIN_GET_NUMBER_RANGES]: GenericDataEntry<GetNumberRangesResponse> | null;
+  [WeDataKey.ADMIN_GET_NUMBER_RANGE_ALLOCATIONS]: GenericDataEntry<NumberRangeAllocationsTable> | null;
   [WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW]: GenericDataEntry<GetTaskStatesPerWorkflowResponse> | null;
   [WeDataKey.FORM_TEMPLATES_LIST]: GenericDataEntry<FormTemplateListResponse> | null;
   [WeDataKey.FORM_TEMPLATE_SAVE]: GenericDataEntry<FormTemplateSummary> | null;
@@ -238,6 +245,10 @@ export const WeApiUrl = (
       return 'admin/cancel_workflow_instance';
     case WeDataKey.ADMIN_GET_SYSTEM_INFORMATION:
       return 'admin/system_information';
+    case WeDataKey.ADMIN_GET_NUMBER_RANGES:
+      return 'admin/number_ranges';
+    case WeDataKey.ADMIN_GET_NUMBER_RANGE_ALLOCATIONS:
+      return 'admin/number_range_allocations';
     case WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW:
       return `admin/get_task_states_per_workflow?wf_name=${params?.wf_name}`;
     case WeDataKey.FORM_TEMPLATES_LIST:
@@ -300,6 +311,8 @@ export const initState: WeDataState = {
   [WeDataKey.ADMIN_SEARCH_WF_USERS]: null,
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: null,
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: null,
+  [WeDataKey.ADMIN_GET_NUMBER_RANGES]: null,
+  [WeDataKey.ADMIN_GET_NUMBER_RANGE_ALLOCATIONS]: null,
   [WeDataKey.ADMIN_GET_TASK_STATES_PER_WORKFLOW]: null,
   [WeDataKey.FORM_TEMPLATES_LIST]: null,
   [WeDataKey.FORM_TEMPLATE_SAVE]: null,

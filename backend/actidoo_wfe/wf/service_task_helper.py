@@ -12,6 +12,7 @@ import io
 import json
 import logging
 import re
+from collections import defaultdict
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Callable
@@ -21,19 +22,20 @@ from zoneinfo import ZoneInfo
 from SpiffWorkflow.bpmn.specs.bpmn_task_spec import BpmnTaskSpec
 from SpiffWorkflow.bpmn.workflow import BpmnWorkflow, Task
 from SpiffWorkflow.task import TaskState
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, NoResultFound, OperationalError
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from sqlalchemy.orm import Session
 
 import actidoo_wfe.helpers.mail as mail_helpers
-from actidoo_wfe.database import SessionLocal
+from actidoo_wfe.database import SessionLocal, committed_read, session_lock_wait_timeout
 from actidoo_wfe.helpers.datauri import DataURI
 from actidoo_wfe.helpers.string import get_boxed_text
 from actidoo_wfe.storage import get_file_content
-from actidoo_wfe.wf import repository
 from actidoo_wfe.wf.constants import (
     DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE,
 )
-from actidoo_wfe.wf.exceptions import AttachmentNotFoundException, TaskNotFoundException
+from actidoo_wfe.wf.exceptions import AttachmentNotFoundException, NumberAllocationFailedError, TaskNotFoundException
 from actidoo_wfe.wf.models import WorkflowInstanceTask, WorkflowInstanceTaskAttachment
 from actidoo_wfe.wf.types import Attachment, TaskToUserMapping, UploadedAttachmentRepresentation, UserRepresentation
 from actidoo_wfe.wf.views import get_single_task
@@ -64,6 +66,10 @@ class ServiceTaskHelper:
         self.task_to_user_mapping = task_to_user_mapping
         self.task_uuid = task_uuid
         self._allowed_data_models: set[str] = allowed_data_models or set()
+        # Per (task occurrence, number range) draw counter, see next_number(). The
+        # helper is built fresh for every call_service, so the count covers exactly
+        # one execution of one step - which is what makes a retry replay it.
+        self._number_calls: dict[str, int] = defaultdict(int)
 
     def pretty_log(self, json_data: dict, boxed=True):
         """
@@ -143,6 +149,7 @@ class ServiceTaskHelper:
         )
 
     def get_user_by_id(self, user_id):
+        from actidoo_wfe.wf import repository
         if user_id is None:
             return None
 
@@ -221,6 +228,7 @@ class ServiceTaskHelper:
         return user_rep
 
     def get_attachment_by_hash(self, hash):
+        from actidoo_wfe.wf import repository
 
         attachments = repository.find_task_attachments_by_worfklow_instance_id(
             db=self.db,
@@ -319,7 +327,7 @@ class ServiceTaskHelper:
         Raises:
             AssertionError: If the user is not found or created.
         """
-        from actidoo_wfe.wf import service_workflow
+        from actidoo_wfe.wf import repository, service_workflow
 
         try:
             user = repository.load_user_by_email(db=self.db, email=email)
@@ -480,7 +488,33 @@ class ServiceTaskHelper:
         descriptor = data_model_registry.get(model_name)
         return descriptor.model_class
 
+    def next_number(self, model_name: str, *, key: str | None = None) -> str:
+        """Issue the next number from a number range and return it formatted (ADR 012).
+
+        The range is a data model, so declare it in ``DATA_MODELS``. Draw the number
+        in its own short service task and use it in the next one: allocation holds
+        its sequence until the transaction commits, and an admin retry re-runs the
+        whole function - splitting keeps the lock window short and the retry limited
+        to the use. Repeated calls without ``key`` are counted (``#0``, ``#1``, ...),
+        so two calls yield two numbers and a retry gets both back; pass ``key`` where
+        the call order is not a stable anchor (e.g. a loop over items, keyed by item
+        id). See ``docs/number-ranges.md``.
+        """
+        from actidoo_wfe.wf.models import NumberRangeMixin
+
+        model = self.get_model(model_name)
+        if not issubclass(model, NumberRangeMixin):
+            raise TypeError(
+                f"Data model '{model_name}' ({model.__name__}) is not a number range. "
+                f"Add NumberRangeMixin to the model to issue numbers from it.",
+            )
+        if key is None:
+            key = f"#{self._number_calls[model_name]}"
+            self._number_calls[model_name] += 1
+        return allocate_number(model, sth=self, alloc_key=key)
+
     def _upload_attachment(self, datauri: str) -> UploadedAttachmentRepresentation:
+        from actidoo_wfe.wf import repository
         # A service task builds its own files, so there is no form validation to wait
         # for - unlike a submission, where the file is stored only after the payload
         # was accepted (see service_application._materialise_uploads).
@@ -598,3 +632,121 @@ class ServiceTaskHelper:
         datauri_value = f"data:application/{extension};name={sanitized_name};base64,{data_as_base64}"
         att = self._upload_attachment(datauri_value)
         self.set_task_data_key(destination_key, att.model_dump())
+
+
+# --- Number ranges (ADR 012): the allocator behind next_number ------------------
+
+
+def _committed_maximum(db: Session, model: type, scope_key: str) -> int | None:
+    """The highest ``value`` any transaction has committed for the scope.
+
+    The engine's half of the reference, read through ``committed_read`` so it is
+    not bound to the caller's snapshot - a locking read on the session would see
+    fresh data too, but on a scope with no rows yet it takes a gap lock and two
+    concurrent first allocations deadlock on their inserts. Used by
+    ``allocate_number`` only after a collision, so the nested pool checkout happens
+    only under observed contention, and merged with the session's own view,
+    which is the only one that sees this transaction's earlier allocations. A
+    checkout that cannot be served fails the allocation readably; the task stays
+    repeatable.
+    """
+    statement = select(model.value).where(model.scope_key == scope_key).order_by(model.value.desc()).limit(1)
+    try:
+        with committed_read(db) as connection:
+            return connection.execute(statement).scalar()
+    except (PoolTimeoutError, OperationalError) as error:
+        raise NumberAllocationFailedError(
+            model.__name__,
+            scope_key,
+            "could not obtain a connection for the fresh reference read",
+        ) from error
+
+
+def allocate_number(model: type, sth: "ServiceTaskHelper", alloc_key: str = "") -> str:
+    """Issue a number for this task occurrence, or return the one it already has.
+
+    Called through ``ServiceTaskHelper.next_number``, which enforces the
+    workflow's ``DATA_MODELS`` declaration and supplies ``alloc_key``. *model* is
+    a ``NumberRangeMixin`` subclass; the scheme hooks live on it, the guarantee
+    (unique key + retry) lives here. Why it is built this way: ADR 012.
+    """
+    db: Session = sth.db
+
+    # The claim lookup comes first and is what makes an administrator's retry
+    # of an erroneous task safe: the service function runs from the start, but
+    # the number it already issued is handed back instead of a second one.
+    with db.no_autoflush:
+        claimed = db.scalars(
+            select(model).where(
+                model.workflow_instance_task_id == sth.task_uuid,
+                model.alloc_key == alloc_key,
+            ),
+        ).one_or_none()
+    if claimed is not None:
+        return claimed.formatted
+
+    scope_key = model.number_scope(sth)
+
+    with session_lock_wait_timeout(db, model._number_lock_wait_timeout):
+        for attempt in range(model._number_max_attempts):
+            try:
+                with db.no_autoflush:
+                    previous = model.reference_value(db, scope_key)
+            except OperationalError as error:
+                raise NumberAllocationFailedError(
+                    model.__name__,
+                    scope_key,
+                    "timed out waiting for a concurrent allocation to commit",
+                ) from error
+
+            if attempt > 0:
+                # A refused insert means somebody committed after this
+                # transaction took its snapshot, and the session will keep
+                # showing the same stale reference. Only now is a second pool
+                # checkout worth it: read what was committed and take the
+                # higher of the two views.
+                committed = _committed_maximum(db, model, scope_key)
+                if committed is not None and (previous is None or committed > previous):
+                    previous = committed
+
+            value = model.next_value(previous)
+            formatted = model.format_number(value, scope_key)
+            row = model(
+                workflow_instance_id=sth.workflow_instance_id,
+                workflow_instance_task_id=sth.task_uuid,
+                alloc_key=alloc_key,
+                value=value,
+                formatted=formatted,
+                scope_key=scope_key,
+            )
+            try:
+                # The savepoint is mandatory, not cosmetic: after a failed flush
+                # the session is unusable until something rolls back, and the
+                # enclosing request transaction must survive a lost race.
+                with db.begin_nested():
+                    db.add(row)
+                    db.flush()
+            except IntegrityError:
+                if row in db:
+                    db.expunge(row)
+                continue
+            except OperationalError as error:
+                # A lock wait timed out: the winner of this race holds its
+                # uncommitted index entry until its transaction commits, and the
+                # insert waits on it. Retrying is pointless while that is still
+                # true, so fail with something readable instead of letting a raw
+                # database error escape.
+                if row in db:
+                    db.expunge(row)
+                raise NumberAllocationFailedError(
+                    model.__name__,
+                    scope_key,
+                    "timed out waiting for a concurrent allocation to commit",
+                ) from error
+            return formatted
+
+    raise NumberAllocationFailedError(
+        model.__name__,
+        scope_key,
+        f"no free value after {model._number_max_attempts} attempts",
+    )

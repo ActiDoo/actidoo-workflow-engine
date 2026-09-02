@@ -197,7 +197,7 @@ def service_post_expense(sth: ServiceTaskHelper):
 
 It reads the form values from `sth.task_data`, stamps the provenance (`sth.workflow_instance_id`) so the record remembers which instance wrote it, and adds the row through `sth.db`. `attach_files` records the uploaded `receipt` against the row's `receipt` field, and `sth.db.flush()` writes it out. The `Expense` model definition, its API config and how it is exposed on the Data page are on [data-models.md](data-models.md).
 
-When the function raises, when no function of that name exists, or when the return value is not JSON-serialisable, the task goes to state error with its stack trace; the other ready branches keep running, and admins and workflow owners are notified. Fix the code (running instances use the new code immediately) or the data, then retry from the admin area. Retrying re-runs the function from the start, so make external calls safe to repeat.
+When the function raises, when no function of that name exists, or when the return value is not JSON-serialisable, the task goes to state error with its stack trace; the other ready branches keep running, and admins and workflow owners are notified. Fix the code (running instances use the new code immediately) or the data, then retry from the admin area. Retrying re-runs the function from the start, so make external calls safe to repeat. A [number range](number-ranges.md) is safe to repeat by construction — a retry receives the number the step already issued.
 
 ### What the task helper offers
 

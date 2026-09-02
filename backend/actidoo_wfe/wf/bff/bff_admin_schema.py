@@ -207,3 +207,45 @@ class GetUserDetailResponse(BaseModel):
 
     user: InlineUserAdminResponse
     delegations: list["UserDelegationResponse"] = Field(default_factory=list)
+
+
+# --- Number ranges (ADR 012): read-only administrative view ---------------
+
+
+class NumberRangeScopeStatusResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    scope_key: str
+    count: int
+    highest_value: int
+    last_formatted: str
+    last_issued_at: datetime.datetime | None
+
+
+class NumberRangeSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    table: str
+    workflows: list[str]
+    scopes: list[NumberRangeScopeStatusResponse]
+
+
+class GetNumberRangesResponse(BaseModel):
+    ranges: list[NumberRangeSummaryResponse]
+
+
+class NumberRangeAllocationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    scope_key: str
+    value: int
+    formatted: str
+    workflow_instance_id: uuid.UUID
+    workflow_instance_task_id: uuid.UUID
+    alloc_key: str
+    created_at: datetime.datetime | None
+
+
+class GetNumberRangeAllocationsResponse(PaginatedDataSchema[NumberRangeAllocationResponse]):
+    pass

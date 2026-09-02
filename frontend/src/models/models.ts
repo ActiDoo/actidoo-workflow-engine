@@ -340,6 +340,36 @@ export interface GetSystemInformationResponse {
   build_number: string;
 }
 
+// Number ranges (ADR 012): read-only administrative view
+export interface NumberRangeScopeStatus {
+  scope_key: string;
+  count: number;
+  highest_value: number;
+  last_formatted: string;
+  last_issued_at: string | null;
+}
+
+export interface NumberRangeSummary {
+  name: string;
+  table: string;
+  workflows: string[];
+  scopes: NumberRangeScopeStatus[];
+}
+
+export interface GetNumberRangesResponse {
+  ranges: NumberRangeSummary[];
+}
+
+export interface NumberRangeAllocation {
+  scope_key: string;
+  value: number;
+  formatted: string;
+  workflow_instance_id: string;
+  workflow_instance_task_id: string;
+  alloc_key: string;
+  created_at: string | null;
+}
+
 export interface TaskState {
   title: string;
   ready_counter: number;

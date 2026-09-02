@@ -7,7 +7,27 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- Number ranges: a workflow can issue a running business number - a case,
+  ticket or document number people quote outside the system - without a
+  hand-built counter (ADR 012). A range is a data model whose rows *are* the
+  issued numbers, so the project owns the table and its migration and declares
+  access like for any other model, while the engine guarantees the two
+  properties that are hard to get right: a number is issued exactly once
+  however many instances run at the same time, and repeating the same work
+  hands back the number it already got instead of burning a new one. That
+  second point matters because an administrator can re-run an erroneous
+  service task; the claim is remembered per task occurrence, so the children
+  of a multi-instance activity and the passes of a loop each get their own
+  number. The project supplies the scope, the step to the next candidate and
+  how the number is rendered; a mistake there can produce a poor number but
+  never a duplicate.
+- Admin: a read-only page per number range shows which number went to which
+  workflow instance and step, and when - it outlives the instance, so an
+  issued number stays traceable after the workflow is gone. A global
+  administrator sees every range, a workflow owner the ranges declared by a
+  workflow of theirs.
 
 ## [0.1.42] - 2026-09-02
 
