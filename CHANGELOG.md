@@ -7,7 +7,36 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- Forms: an emptied field is now `null`. The browser sends `null` for a text,
+  number or date field the user cleared and for a cleared select, and the task
+  data stores it - so clearing a field in a later step really removes the
+  earlier value instead of silently keeping it. `required` therefore means
+  that a value was entered: `null`, an empty string and a whitespace-only
+  string do not satisfy it, in the browser and on the server alike. Values are
+  never trimmed. Existing workflows and running instances need no migration:
+  an open task keeps the form it was handed out with.
+- Forms: a required multi select or dynamic list now needs at least one entry.
+  Previously an empty selection satisfied the requirement.
+- Forms: `readonly` is treated like `disabled` - in both cases the value
+  belongs to the server and a submission cannot change it. A disabled dynamic
+  list is disabled as a whole.
+
+### Fixed
+
+- Engine: a `hide-if` comparison against a field that has no value no longer
+  behaves the opposite way round. `=category = "a"` with no `category` chosen
+  counted as true and hid the dependent field, discarding what the user had
+  entered there. An absent value now reads as `null`, so the comparison is
+  false and the field stays visible - the same rule the browser and FEEL use.
+- Engine: a `hide-if` comparison against `""` reads as a comparison against
+  `null`, so conditions written that way keep working now that an emptied
+  field is `null`.
+- Engine: a `hide-if` condition combining fields from different levels with
+  `or` or `and` - a field of the row and a field outside it - was anchored to
+  one level only and hid the wrong fields. Each operand is now evaluated at
+  the level it names.
 
 ## [0.1.42] - 2026-09-02
 
