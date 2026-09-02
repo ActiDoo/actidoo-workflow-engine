@@ -27,10 +27,10 @@ const CompletedTasks: React.FC = () => {
         dataKey={WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS}
         state={WorkflowState.COMPLETED}
         emptyMessage={t('tasks.empty.completed')}
-        className={`w-full md:w-[280px] ${workflowId ? 'hidden md:block' : ''}`}
+        className={`w-full md:w-[340px] ${workflowId ? 'hidden md:block' : ''}`}
       />
       <div
-        className={`absolute top-0 bottom-0 right-0 overflow-auto left-0 md:left-[280px] ${
+        className={`absolute top-0 bottom-0 right-0 overflow-auto left-0 md:left-[340px] ${
           workflowId ? '' : 'hidden md:block'
         }`}>
         {workflowId ? (

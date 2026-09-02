@@ -32,10 +32,10 @@ const OpenTasks: React.FC = () => {
         dataKey={WeDataKey.WORKFLOW_INSTANCES_WITH_TASKS}
         state={WorkflowState.READY}
         emptyMessage={t('tasks.empty.open')}
-        className={`w-full md:w-[280px] ${showDetail ? 'hidden md:block' : ''}`}
+        className={`w-full md:w-[340px] ${showDetail ? 'hidden md:block' : ''}`}
       />
       <div
-        className={`absolute top-0 bottom-0 right-0 overflow-auto left-0 md:left-[280px] ${
+        className={`absolute top-0 bottom-0 right-0 overflow-auto left-0 md:left-[340px] ${
           showDetail ? '' : 'hidden md:block'
         }`}>
         {showDetail ? (

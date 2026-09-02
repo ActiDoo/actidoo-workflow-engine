@@ -173,7 +173,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
   };
 
   const searchBar = (
-    <div className="sticky top-0 z-10 bg-white p-2 border-b border-neutral-200">
+    <div className="sticky top-0 z-10 bg-white py-2 pc-pl-responsive pr-3 md:pr-12 border-b border-neutral-200">
       <Input
         className="w-full"
         value={searchInput}
@@ -304,40 +304,63 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                   : `${t('common.labels.task')}: `;
               return (
                 <StandardListItem
+                  data-pc-task-row=""
                   data-task-selected={isSelected ? 'true' : undefined}
-                  className={` h-auto !pl-[15px] ${isDelegationHighlight ? 'bg-orange-50' : ''}`}
+                  className={` h-auto pc-pl-responsive ${
+                    isDelegationHighlight ? 'bg-orange-50' : ''
+                  }`}
                   key={`task-item-${instance.id}`}
                   onClick={() => {
                     navigate(`${instance.id}`);
                   }}>
-                  <div className="py-3 min-w-0 w-full">
-                    <div className="flex items-start justify-between gap-2 ml-1 pr-5">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <Text className={`${isSelected ? '!font-semibold' : ''} !mb-0`}>
-                            {instance.title}
-                          </Text>
-                          {props.state === WorkflowState.COMPLETED ? (
-                            <CompletedIcon />
-                          ) : priorityMeta.level === 'critical' ? (
-                            <WePriorityClock hour={20} color={TASK_PRIORITY_CRITICAL_COLOR} />
-                          ) : priorityMeta.level === 'urgency' ? (
-                            <WePriorityClock hour={16} color={TASK_PRIORITY_URGENT_COLOR} />
-                          ) : null}
-                        </div>
-
-                        {instance.subtitle && (
-                          <Text className="!text-xs !text-neutral-700 !block">
-                            <div className="line-clamp-2 break-words">{instance.subtitle}</div>
-                          </Text>
-                        )}
+                  <div className="py-3 min-w-0 w-full flex items-center">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <Text className={`${isSelected ? '!font-semibold' : ''} !mb-0`}>
+                          {instance.title}
+                        </Text>
+                        {props.state === WorkflowState.COMPLETED ? (
+                          <CompletedIcon />
+                        ) : priorityMeta.level === 'critical' ? (
+                          <WePriorityClock hour={20} color={TASK_PRIORITY_CRITICAL_COLOR} />
+                        ) : priorityMeta.level === 'urgency' ? (
+                          <WePriorityClock hour={16} color={TASK_PRIORITY_URGENT_COLOR} />
+                        ) : null}
                       </div>
+
+                      {instance.subtitle && (
+                        <Text className="!text-xs !text-neutral-700 !block">
+                          <div className="line-clamp-2 break-words">{instance.subtitle}</div>
+                        </Text>
+                      )}
+
+                      {tasks && tasks.length > 0 && (
+                        <Text className="!text-xs !text-brand-primary !block">
+                          <div className="line-clamp-1">
+                            {taskLabel}
+                            {tasks.map((task, index: number) => (
+                              <span key={`taskname-${instance.id}-${index}`}>
+                                {task.title}
+                                {tasks.length > index + 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </Text>
+                      )}
+                      {isDelegationHighlight && delegationTask?.assigned_user?.full_name ? (
+                        <Text className="!text-xs !text-orange-800 !block mt-1">
+                          {t('taskContent.delegateActingFor')}{' '}
+                          {delegationTask.assigned_user.full_name}
+                        </Text>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 flex justify-center w-3 md:w-12">
                       <Icon
                         name="message-information"
                         accessibleName={t('sidebar.moreInformation')}
                         interactive={true}
                         showTooltip={true}
-                        className="!w-4 !h-4 shrink-0 mt-0.5"
+                        className="!w-4 !h-4"
                         onClick={event => {
                           event.stopPropagation();
                           setInfoContent({
@@ -350,26 +373,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                           void infoPopoverRef.current?.showAt(event.currentTarget, true);
                         }}
                       />
-                    </div>
-                    {tasks && tasks.length > 0 && (
-                      <Text className="!text-xs !text-brand-primary !block ml-1">
-                        <div className="line-clamp-1">
-                          {taskLabel}
-                          {tasks.map((task, index: number) => (
-                            <span key={`taskname-${instance.id}-${index}`}>
-                              {task.title}
-                              {tasks.length > index + 1 ? ', ' : ''}
-                            </span>
-                          ))}
-                        </div>
-                      </Text>
-                    )}
-                    {isDelegationHighlight && delegationTask?.assigned_user?.full_name ? (
-                      <Text className="!text-xs !text-orange-800 !block ml-1 mt-1">
-                        {t('taskContent.delegateActingFor')}{' '}
-                        {delegationTask.assigned_user.full_name}
-                      </Text>
-                    ) : null}
+                    </span>
                   </div>
                   {isSelected ? (
                     <div className="bg-brand-primary w-1 absolute right-0 top-0.5 bottom-0.5"></div>
