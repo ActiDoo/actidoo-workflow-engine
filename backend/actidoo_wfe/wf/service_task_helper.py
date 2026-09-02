@@ -689,6 +689,13 @@ def allocate_number(model: type, sth: "ServiceTaskHelper", alloc_key: str = "") 
 
     with session_lock_wait_timeout(db, model._number_lock_wait_timeout):
         for attempt in range(model._number_max_attempts):
+            # A plain read, on purpose. A locking read (``with_for_update``)
+            # would give the same freshness in one step, but on a scope with
+            # no rows yet it locks the gap instead of a row, and two concurrent
+            # first allocations then deadlock on their inserts - precisely the
+            # first two numbers of every new scope. Freshness comes from the
+            # committed read below instead, and only once a collision has
+            # shown that it is needed.
             try:
                 with db.no_autoflush:
                     previous = model.reference_value(db, scope_key)

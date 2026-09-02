@@ -889,9 +889,13 @@ class NumberRangeMixin:
             _ext_table = "case_number"
 
     A sibling of the plain, versioned and workflow-managed tiers, with the
-    natural primary key ``(scope_key, value)`` and no surrogate ``id`` (a random
-    key scatters InnoDB's gap locks and deadlocks concurrent allocations - ADR
-    012). Register a range **without** ``api=``; it is numbering machinery, not a
+    natural primary key ``(scope_key, value)`` and no surrogate ``id``: when a
+    duplicate is caught on a secondary index, InnoDB gap-locks the conflicting
+    row in the clustered index, and a random key scatters those locks so that
+    concurrent allocations block each other crosswise until the retries
+    deadlock - measured at roughly one failed allocation in seven under
+    five-way contention, against none with the sequence as the clustered index
+    (ADR 012). Register a range **without** ``api=``; it is numbering machinery, not a
     Data page record, and has its own administrative view. No user column on
     purpose: the issuing step may run from cron without a request user, and the
     instance creator is reachable through ``workflow_instance_id``.

@@ -2,9 +2,9 @@
 
 A workflow often has to issue a running business number — a case, ticket or document number people quote outside the system. The running example is a case workflow that stamps each new case with `CASE-01000`, `CASE-01001` and so on, puts the number in the instance subtitle, and posts it to a downstream system.
 
-A number range is a [data model](data-models.md) whose **rows are the issued numbers**. There is no counter to keep next to them: the next number is derived from the rows already there, and the same rows are the record of which workflow instance and which step received which number. It is a tier of its own, beside the plain, versioned and workflow-managed ones — a range is an append-only ledger, so the versioning those carry would be permanently `1` on every row. What the data model brings applies unchanged: your project owns the table and its migration, and a workflow declares its access in `DATA_MODELS`.
+A number range is a [data model](data-models.md) whose **rows are the issued numbers**. There is no counter to keep next to them: the next number is derived from the rows already there, and the same rows are the record of which workflow instance and which step received which number. Your project owns the table and its migration, and a workflow declares its access in `DATA_MODELS`, like for any other model.
 
-A range is **not** exposed through the data API. `register_data_model(api=...)` is for workflow-produced business records on the Data page; a range is the numbering machinery behind them. The log has a view of its own under *Admin → Number ranges*: per range the workflows that declare it and the state of every scope, and the allocation log itself, filterable by scope and linking each number to the workflow instance that received it. A global admin sees every range; a workflow owner sees the ranges a workflow of theirs declares.
+A range is **not** a Data page record, so it is registered without `api=`. Its log has a view of its own under *Admin → Number ranges*: per range the workflows that declare it, the state of every scope, and the allocation log, filterable by scope and linking each number to the instance that received it. A global admin sees every range; a workflow owner the ranges a workflow of theirs declares. Why it is built this way: [ADR 012](adr/adr_012_number_ranges.md).
 
 ## Define a range
 
@@ -225,18 +225,16 @@ It is what the engine orders and compares, and a string column would order lexic
 
 **A number is issued once.** Issuing inserts a candidate row, and the primary key `(scope_key, value)` refuses a duplicate; the engine then tries the next candidate, up to `_number_max_attempts`. Uniqueness never depends on a lock, and therefore never on your hooks being right.
 
-That the sequence *is* the primary key is a concurrency decision. A range has no surrogate id: when a duplicate is caught on a secondary index instead, InnoDB gap-locks the conflicting row in the clustered index, and with a random key those gaps land in random places, so concurrent allocations lock each other's insert positions crosswise and the retries deadlock. Measured on this allocator, five concurrent allocations into one scope failed about one time in seven that way; with the sequence as the clustered index, eighty out of eighty succeeded.
-
 **Repeating the same work does not consume a new number.** The claim is recorded against the task occurrence and the draw within it. An administrator's retry runs the same task and gets the number it already has. The children of a multi-instance activity and the passes of a loop are separate occurrences and each get their own.
 
-A custom `reference_value` returns what *this transaction* can see — its own session, including numbers it has issued itself and not yet committed. It does not go looking for what other transactions committed in the meantime, and it should not: the engine does that itself, on a separate pooled connection, and only after a collision has shown that somebody else is active. Deferring that second read to the retry is deliberate — an uncontended allocation never holds two connections at once, so it adds no pool pressure. The engine merges the two views by taking the higher, so a custom reference has to be one a higher committed value may override: a floor, a maximum, `None`. Do not use `with_for_update` to see fresh data yourself — on a scope with no rows it takes a gap lock, and two concurrent first allocations then deadlock, which is exactly the first two numbers of every new scope.
+A custom `reference_value` reads from *this* transaction — its own session, including numbers it has issued and not yet committed. What other transactions committed in the meantime is the engine's business: after a collision it reads that itself and takes the higher of the two views. So return something a higher committed value may override — a floor, a maximum, `None` — and do not take a lock yourself (`with_for_update` deadlocks two concurrent first allocations on an empty scope; the reasons are with the code in `allocate_number`).
 
 ## Rules
 
 - **Never delete a row** from a number range table. A deleted row releases its number to be issued a second time. Deleting a workflow instance is safe — data model rows do not go with it.
 - **Numbers are not promised to be contiguous.** No number is silently consumed, but a scheme may skip on purpose, and a number issued to an instance that is later cancelled stays issued.
 - **`format_number` must work the scope in** if numbers have to be unique across scopes. Uniqueness of the rendering is enforced per scope, so plain padding under a yearly reset would collide across years by construction — a collision no retry can resolve.
-- **The log is read in the admin view, not on the Data page.** Which instance received which number, and when, is in the range's own table and shown under *Admin → Number ranges* — built for what an allocation log is read for: filtering by scope and jumping through to the issuing instance. The generic Data page would hide `workflow_instance_id` as a system column, which is why a range is never registered with `api=`.
+- **The log is read under *Admin → Number ranges*, not on the Data page**, which would hide `workflow_instance_id` as a system column — the reason a range is never registered with `api=`.
 - **Keep the issuing step short.** A range under real contention can raise its own lock timeout with `_number_lock_wait_timeout`, but that is padding, not a fix: the wait is for the competing transaction to finish.
 
 ## Related
