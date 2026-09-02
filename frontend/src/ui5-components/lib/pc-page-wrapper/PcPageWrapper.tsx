@@ -10,6 +10,7 @@ import '@ui5/webcomponents-icons/dist/action-settings';
 import '@ui5/webcomponents-icons/dist/question-mark';
 
 import { PcIconButton } from '@/ui5-components/lib/pc-icon-button/PcIconButton';
+import '@/ui5-components/lib/pc-page-wrapper/PcPageWrapper.styles';
 import { PcNavigationItem } from '@/ui5-components/lib/pc-page-wrapper/pc-navigation-item/PcNavigaionItem';
 import { useTranslation } from '@/i18n';
 
@@ -42,20 +43,20 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
     event.currentTarget.src = '';
   };
   const startHeaderContent = (
-    <div className="flex">
+    <div className="flex min-w-0 overflow-hidden">
       <NavLink
         to={props.logoLink ?? '/'}
-        className="flex no-underline items-center"
+        className="flex no-underline items-center shrink-0"
         onClick={props.onNavigate}>
         <img src={logoSrc} className="h-9 my-1 w-auto" onError={handleLogoError} />
         {props.appTitle ? (
-          <Text className="ml-3 self-center !text-sm !text-pc-gray-700 whitespace-nowrap">
+          <Text className="ml-3 self-center !text-sm !text-pc-gray-700 whitespace-nowrap hidden lg:inline">
             {props.appTitle}
           </Text>
         ) : null}
       </NavLink>
       {props.navigation ? (
-        <div className="mx-8 border-r border-pc-gray-200 border-r-solid h-11" />
+        <div className="mx-4 xl:mx-8 border-r border-pc-gray-200 border-r-solid h-11 shrink-0" />
       ) : null}
       {props.navigation?.map((item, index) =>
         item ? (
@@ -70,11 +71,11 @@ export const PcPageWrapper: React.FC<PcPageWrapperProps> = props => {
   );
 
   const endHeaderContent = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 shrink-0">
       {props.endHeaderActions}
       <div className="mx-2 border-r border-pc-gray-200 border-r-solid h-11" />
 
-      {props.user ? <Text>{props.user}</Text> : null}
+      {props.user ? <Text className="whitespace-nowrap hidden xl:inline">{props.user}</Text> : null}
       {props.helpRoute && (
         <PcIconButton
           icon="question-mark"
