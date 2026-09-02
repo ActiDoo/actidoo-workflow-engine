@@ -191,7 +191,9 @@ export const DialogStartWorkflow: React.FC = () => {
     <>
       <span>
         {environmentInfo && (
-          <span style={{ color: 'red', paddingRight: 10 }}>{environmentInfo}</span>
+          <span className="text-sm" style={{ color: 'red', paddingRight: 10 }}>
+            {environmentInfo}
+          </span>
         )}
       </span>
       <Button

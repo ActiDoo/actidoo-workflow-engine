@@ -20,7 +20,7 @@ const CustomArrayFieldItemTemplate = (props: ArrayFieldItemTemplateProps): React
     <div className={` relative m-4  ${className} `}>
       <div className="flex gap-2 items-center justify-end">
         <div className="flex-1 ">
-          <div className="bg-neutral-100  z-10 text-brand-primary font-fold aspect-square rounded  w-8 h-8 flex items-center justify-center">
+          <div className="bg-neutral-100  z-10 text-brand-primary font-semibold aspect-square rounded  w-8 h-8 flex items-center justify-center">
             {`${index + 1}`}
           </div>
         </div>

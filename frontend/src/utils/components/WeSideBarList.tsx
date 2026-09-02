@@ -314,7 +314,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
                     <div className="flex items-start justify-between gap-2 ml-1 pr-5">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 min-w-0">
-                          <Text className={`${isSelected ? '!font-bold' : ''} !mb-0`}>
+                          <Text className={`${isSelected ? '!font-semibold' : ''} !mb-0`}>
                             {instance.title}
                           </Text>
                           {props.state === WorkflowState.COMPLETED ? (

@@ -21,7 +21,7 @@ export const PcNavigationItem: React.FC<PcNavigationItemProps> = (props: PcNavig
   const buttonRef = useRef<HTMLSpanElement>(null);
 
   const linkClass = (isActive: boolean): string =>
-    `mr-4 h-11 !inline-flex items-center no-underline cursor-pointer border-b-4 ${
+    `mr-4 h-11 !inline-flex items-center text-sm no-underline cursor-pointer border-b-4 ${
       isActive
         ? 'border-brand-primary text-brand-primary font-semibold'
         : 'border-transparent text-neutral-700 hover:text-neutral-900'

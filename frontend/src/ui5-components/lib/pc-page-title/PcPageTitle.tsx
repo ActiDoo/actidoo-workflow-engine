@@ -9,6 +9,7 @@ import {
   MessageStrip,
   MessageStripDesign,
   Title,
+  TitleLevel,
 } from '@ui5/webcomponents-react';
 import React from 'react';
 import { PcPageHeaderData } from '@/ui5-components/lib/pc-page/PcPage';
@@ -21,8 +22,9 @@ export interface PcPageTitleProps {
  * Shared DynamicPageTitle for the DynamicPage/ObjectPage wrappers (PcDynamicPage,
  * PcDetailsPage). The title must render through `<Title>` — raw text in the
  * DynamicPageTitle header slot falls back to the extra-bold "72Black" cut and
- * drifts from the app-wide 32px "72-Bold" page-title typography. The ref is
- * forwarded because the page containers attach one to their headerTitle.
+ * drifts from the page-title typography. Level H3 (24px in Horizon) is the top
+ * step of the app's type scale. The ref is forwarded because the page containers
+ * attach one to their headerTitle.
  *
  * The top padding is owned here so every page container shows the title at the
  * same offset: 19px plus the 5px the title slot adds internally equals the 24px
@@ -51,7 +53,9 @@ export const PcPageTitle = React.forwardRef<HTMLDivElement, PcPageTitleProps>((p
               <Icon name="nav-back" className="w-8 h-full -ml-2" />
             </Link>
           ) : null}
-          <Title className="flex-1">{header?.title}</Title>
+          <Title level={TitleLevel.H3} className="flex-1">
+            {header?.title}
+          </Title>
         </div>
       }
       showSubHeaderRight={false}
