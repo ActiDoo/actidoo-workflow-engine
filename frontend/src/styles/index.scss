@@ -21,7 +21,11 @@
 body {
   --bs-border-color: var(--color-border-subtle);
   --bs-secondary-bg: var(--color-surface-base);
+  // Bootstrap's reboot puts 16px on the body while every UI5 component carries
+  // its own 14px (--sapFontSize). Anchor the document on the UI5 value so plain
+  // HTML text cannot drift away from the components next to it.
   font-family: var(--sapFontFamily);
+  font-size: var(--sapFontSize);
 }
 
 .pc-px-responsive {
