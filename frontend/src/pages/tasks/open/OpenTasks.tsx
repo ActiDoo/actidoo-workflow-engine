@@ -46,7 +46,7 @@ const OpenTasks: React.FC = () => {
               <Button
                 design={ButtonDesign.Transparent}
                 icon="nav-back"
-                style={{ border: 'none' }}
+                className="pc-button-borderless"
                 onClick={() => {
                   navigate('/tasks/open');
                 }}>

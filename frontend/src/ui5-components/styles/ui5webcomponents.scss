@@ -104,6 +104,15 @@ html,body, body > #root  {
   border-bottom-style: solid;
 }
 
+// The theme gives ButtonDesign.Transparent a brand-colored border. Where a
+// button has to read as plain text next to content (the mobile back links),
+// this drops the border without touching the design's other states.
+.pc-button-borderless {
+  --sapButton_Lite_BorderColor: transparent;
+  --sapButton_Lite_Hover_BorderColor: transparent;
+  --sapButton_Lite_Active_BorderColor: transparent;
+}
+
 .transparent-button-gray {
   --sapButton_Lite_TextColor: var(--color-neutral-700);
   --sapButton_Lite_BorderColor: var(--color-neutral-700);
