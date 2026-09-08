@@ -11,6 +11,8 @@ import {
   ButtonDesign,
   Dialog,
   List,
+  Menu,
+  MenuItem,
   StandardListItem,
   Text,
 } from '@ui5/webcomponents-react';
@@ -41,6 +43,17 @@ interface PendingAction {
   row: Record<string, unknown>;
   action: DataActionSchema;
 }
+
+interface OpenActionMenu {
+  actions: DataActionSchema[];
+  row: Record<string, unknown>;
+  openerId: string;
+}
+
+// Rough px width a Transparent button needs for a label, plus the gap between
+// two of them. Only used to decide inline vs. menu — no measuring needed.
+const buttonWidth = (label: string): number => label.length * 7.5 + 40;
+const ACTIONS_MAX_WIDTH = 340;
 
 const DataModelTable: React.FC = () => {
   // Remount the table per model: the table-state hook is not resettable, so
@@ -135,16 +148,25 @@ const DataModelTableInner: React.FC<{ modelName: string }> = ({ modelName }) => 
   const hasActions =
     data?.data?.model?.has_actions ??
     rows.some(r => Array.isArray(r.__actions) && r.__actions.length > 0);
-  // Size the actions column by its content instead of a fixed width.
-  const maxActionChars = rows.reduce(
+  // Size the actions column by its content instead of a fixed width. Rows have a
+  // fixed height, so buttons that don't fit side by side would wrap and overlap
+  // the neighbouring rows — those rows get a dropdown menu instead.
+  const widestActions = rows.reduce(
     (max, r) =>
       Math.max(
         max,
-        ((r.__actions ?? []) as DataActionSchema[]).reduce((sum, a) => sum + a.label.length, 0)
+        ((r.__actions ?? []) as DataActionSchema[]).reduce(
+          (sum, a) => sum + buttonWidth(a.label),
+          0
+        )
       ),
     0
   );
-  const actionsWidth = Math.min(340, Math.max(140, maxActionChars * 8 + 48));
+  const actionsAsMenu = widestActions > ACTIONS_MAX_WIDTH;
+  const actionsWidth = actionsAsMenu
+    ? 110 // icon-only overflow trigger, the header text sets the minimum
+    : Math.min(ACTIONS_MAX_WIDTH, Math.max(140, Math.ceil(widestActions) + 16));
+  const [actionMenu, setActionMenu] = useState<OpenActionMenu | null>(null);
 
   // "Involved processes" picker: the workflows that use this model and that the
   // current user may start (a model can be touched by several workflows).
@@ -173,6 +195,10 @@ const DataModelTableInner: React.FC<{ modelName: string }> = ({ modelName }) => 
       },
       showFullIds,
       onToggleIdDisplay: () => setShowFullIds(full => !full),
+      actionsAsMenu,
+      onOpenActionMenu: (row, openerId) => {
+        setActionMenu({ actions: (row.__actions ?? []) as DataActionSchema[], row, openerId });
+      },
     },
     hasActions,
     actionsWidth
@@ -243,6 +269,26 @@ const DataModelTableInner: React.FC<{ modelName: string }> = ({ modelName }) => 
         forcePage={tableData.forcePage}
         filterable={true}
       />
+      {actionMenu &&
+        createPortal(
+          <Menu
+            open
+            opener={actionMenu.openerId}
+            onAfterClose={() => {
+              setActionMenu(null);
+            }}
+            onItemClick={e => {
+              const index = Number((e.detail.item as HTMLElement).dataset.index);
+              const action = actionMenu.actions[index];
+              if (action) setPendingAction({ row: actionMenu.row, action });
+              setActionMenu(null);
+            }}>
+            {actionMenu.actions.map((action, index) => (
+              <MenuItem key={action.key} data-index={index} text={action.label} />
+            ))}
+          </Menu>,
+          document.body
+        )}
       {createPortal(
         <Dialog
           open={!!pendingAction}
