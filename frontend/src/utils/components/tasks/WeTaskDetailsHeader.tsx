@@ -58,14 +58,7 @@ const WeTaskDetailsHeader: React.FC<{
 
           {
             label: t('common.labels.laneRoles'),
-            content: task?.lane_roles
-              ? task.lane_roles.map((lane, index) => (
-                  <>
-                    {lane}
-                    {task.lane_roles && task.lane_roles.length > index + 1 ? ', ' : '-'}
-                  </>
-                ))
-              : undefined,
+            content: task?.lane_roles?.length ? task.lane_roles.join(', ') : undefined,
           },
           {
             label: t('common.labels.laneInitiator'),
