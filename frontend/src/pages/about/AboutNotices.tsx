@@ -70,11 +70,11 @@ const AboutNotices: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-5xl pb-6 text-sm text-pc-gray-700">
+    <div className="max-w-5xl pb-6 text-sm text-neutral-700">
       <div>{t('about.description')}</div>
       <div className="mt-2">
         <a
-          className="no-underline text-pc-gray-700 hover:text-pc-gray-900"
+          className="no-underline text-brand-primary hover:text-brand-primary-strong"
           href={`${assetBaseUrl}${notices?.rawNoticesPath ?? 'THIRD_PARTY_NOTICES.md'}`}
           target="_blank"
           rel="noreferrer">
@@ -84,14 +84,14 @@ const AboutNotices: React.FC = () => {
 
       {notices ? (
         <>
-          <div className="text-xs text-pc-gray-600 mt-3">
+          <div className="text-xs text-neutral-700 mt-3">
             {t('about.generatedAt', { value: notices.generatedAt })}
           </div>
 
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="text-left border-b border-pc-gray-200">
+                <tr className="text-left border-b border-border-subtle">
                   <th className="py-2 pr-4">{t('about.table.package')}</th>
                   <th className="py-2 pr-4">{t('about.table.version')}</th>
                   <th className="py-2 pr-4">{t('about.table.license')}</th>
@@ -100,14 +100,14 @@ const AboutNotices: React.FC = () => {
               </thead>
               <tbody>
                 {notices.dependencies.map(dep => (
-                  <tr key={`${dep.name}@${dep.version}`} className="border-b border-pc-gray-100">
+                  <tr key={`${dep.name}@${dep.version}`} className="border-b border-neutral-100">
                     <td className="py-2 pr-4 font-mono">{dep.name}</td>
                     <td className="py-2 pr-4 font-mono">{dep.version}</td>
                     <td className="py-2 pr-4 font-mono">{dep.license}</td>
                     <td className="py-2">
                       {dep.licenseFile ? (
                         <a
-                          className="no-underline text-pc-gray-700 hover:text-pc-gray-900 font-mono"
+                          className="no-underline text-brand-primary hover:text-brand-primary-strong font-mono"
                           href={`${assetBaseUrl}licenses/${dep.licenseFile}`}
                           target="_blank"
                           rel="noreferrer">
@@ -115,14 +115,14 @@ const AboutNotices: React.FC = () => {
                         </a>
                       ) : dep.repository ? (
                         <a
-                          className="no-underline text-pc-gray-700 hover:text-pc-gray-900 font-mono"
+                          className="no-underline text-brand-primary hover:text-brand-primary-strong font-mono"
                           href={dep.repository}
                           target="_blank"
                           rel="noreferrer">
                           {t('about.upstream')}
                         </a>
                       ) : (
-                        <span className="text-pc-gray-500">{t('about.missing')}</span>
+                        <span className="text-neutral-700">{t('about.missing')}</span>
                       )}
                     </td>
                   </tr>
@@ -134,14 +134,14 @@ const AboutNotices: React.FC = () => {
           {notices.bpmnJsIncluded ?? notices.dependencies.some(dep => dep.name === 'bpmn-js') ? (
             <div className="mt-6">
               <div className="text-sm font-semibold">{t('about.bpmnJsWatermarkTitle')}</div>
-              <div className="text-sm text-pc-gray-700 mt-1">{notices.bpmnJsWatermarkNotice}</div>
+              <div className="text-sm text-neutral-700 mt-1">{notices.bpmnJsWatermarkNotice}</div>
             </div>
           ) : null}
         </>
       ) : (
         <div className="mt-3">
           {t('about.noticesUnavailable')}
-          {error ? <div className="text-xs text-pc-gray-500 mt-1">{error}</div> : null}
+          {error ? <div className="text-xs text-neutral-700 mt-1">{error}</div> : null}
         </div>
       )}
     </div>

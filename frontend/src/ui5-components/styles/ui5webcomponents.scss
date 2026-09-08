@@ -16,7 +16,11 @@ body, :root{
   --sapContent_NonInteractiveIconColor: var(--color-brand-primary);
   --sapContent_Placeholderloading_Gradient:  linear-gradient(90deg, var(--color-neutral-50) 0%, var(--color-neutral-50) 20%, var(--color-neutral-100) 50%, var(--color-neutral-50) 80%, var(--color-neutral-50) 100%);
   --sapPageHeader_TextColor: var(--color-brand-primary);
+  // Links — the theme's own blue is not brandable; route every state through the palette.
+  --sapLinkColor: var(--color-brand-primary);
+  --sapLink_Hover_Color: var(--color-brand-primary-strong);
   --sapLink_Active_Color: var(--color-brand-primary);
+  --sapLink_Visited_Color: var(--color-brand-primary);
   --sapSelectedColor: var(--color-brand-primary) !important;
   --sapContent_FocusColor: var(--color-focus-ring) !important;
   --sapContent_HoverColor: var(--color-brand-primary) !important;

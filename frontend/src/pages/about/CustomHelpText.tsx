@@ -69,7 +69,7 @@ const CustomHelpText: React.FC = () => {
       {content ? (
         <Markdown>{content}</Markdown>
       ) : (
-        <div className="text-sm text-pc-gray-700">{t('about.help.fallback')}</div>
+        <div className="text-sm text-neutral-700">{t('about.help.fallback')}</div>
       )}
     </div>
   );
