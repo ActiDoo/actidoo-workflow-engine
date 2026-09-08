@@ -1,14 +1,14 @@
 # Number ranges
 
-A workflow often has to issue a running business number — a case, ticket or document number people quote outside the system. The running example is a case workflow that stamps each new case with `CASE-01000`, `CASE-01001` and so on, puts the number in the instance subtitle, and posts it to a downstream system.
+Many workflows have to hand out a running number: a case number, a ticket number, a document number. The example on this page is a case workflow. Each new case gets `CASE-01000`, `CASE-01001` and so on. The number goes into the instance subtitle and to a downstream system.
 
-A number range is a [data model](data-models.md) whose **rows are the issued numbers**. There is no counter to keep next to them: the next number is derived from the rows already there, and the same rows are the record of which workflow instance and which step received which number. Your project owns the table and its migration, and a workflow declares its access in `DATA_MODELS`, like for any other model.
+A number range is a [data model](data-models.md). Its rows are the numbers that have been issued. The next number is derived from the rows already in the table, and each row records which workflow instance and which step got the number. Your project owns the table and its migration. A workflow declares the range in `DATA_MODELS` like any other model.
 
-A range is **not** a Data page record, so it is registered without `api=`. Its log has a view of its own under *Admin → Number ranges*: per range the workflows that declare it, the state of every scope, and the allocation log, filterable by scope and linking each number to the instance that received it. A global admin sees every range; a workflow owner the ranges a workflow of theirs declares. Why it is built this way: [ADR 012](adr/adr_012_number_ranges.md).
+The issued numbers are shown under *Admin → Number ranges*: for each range the workflows that use it, the state of every scope, and the log of who got which number. A global admin sees all ranges; a workflow owner sees the ranges of their workflows. The reasoning behind the design is in [ADR 012](adr/adr_012_number_ranges.md).
 
 ## Define a range
 
-Base the model on `NumberRangeMixin`. It brings every column a range needs — the issued `value` and its rendering, the scope, the provenance and the timestamp — so all you write is the scheme.
+Base the model on `NumberRangeMixin`. It brings all the columns a range needs, so you only write the numbering scheme.
 
 ```python
 from actidoo_wfe.wf.models import NumberRangeMixin, extension_model_base
@@ -17,7 +17,7 @@ from actidoo_wfe.wf.registry_data_model import register_data_model
 Base = extension_model_base("acme")
 
 
-@register_data_model(name="CaseNumber")  # no api= — a range is not a Data page record
+@register_data_model(name="CaseNumber")
 class CaseNumber(Base, NumberRangeMixin):
     _ext_table = "case_number"  # -> table ext_acme_case_number
 
@@ -30,11 +30,13 @@ class CaseNumber(Base, NumberRangeMixin):
         return f"CASE-{value:05d}"
 ```
 
-Every row then carries `value`, `formatted`, `scope_key`, `workflow_instance_id`, `workflow_instance_task_id`, `alloc_key` and `created_at` — which is the allocation log, in the same table. The table needs a [migration](data-models.md#migrations) like any other data model table. When you are replacing an existing counter, seed the last number it issued in the same revision — otherwise the numbering starts over.
+Register the model without `api=`. The numbers are read in the admin area, not on the Data page.
 
-## Issue a number: the two-task shape
+Each row has `value`, `formatted`, `scope_key`, `workflow_instance_id`, `workflow_instance_task_id`, `alloc_key` and `created_at`. The table needs a [migration](data-models.md#migrations) like every other data model table. If you replace an existing counter, insert its last number in the same migration. Otherwise the numbering starts over.
 
-Declare the range in the workflow module like any data model, and give it a service task of its own:
+## Issue a number
+
+Declare the range in the workflow module and give it a service task of its own:
 
 ```python
 DATA_MODELS = ["CaseNumber"]
@@ -51,22 +53,20 @@ def service_post_case(sth):
         sap.post(case_number=sth.task_data["case_number"])
 ```
 
-**Issue the number in its own short step and use it in the next one.** This is the shape to copy, and it is not a matter of taste — it solves three things at once:
-
-- Issuing holds its sequence until the surrounding transaction commits. A step that issues a number and *then* calls an external system makes every concurrent issue wait for that call, and a wait that runs into the lock timeout leaves the task erroneous.
-- Retrying an erroneous task re-runs the function from the start, so a step that issues and posts repeats the post as well. Splitting keeps the retry limited to the posting.
-- The number itself stays stable across the retry either way (see below), so the downstream system sees the *same* number twice rather than two different ones.
+Issue the number in one step and use it in the next. The reason: issuing a number blocks the sequence until the step's transaction commits. If the same step also calls an external system, all other instances wait for that call. And if the step fails and an admin retries it, only the posting runs again. The number stays the same, so the downstream system sees the same number twice instead of two different ones.
 
 ## Several numbers in one step
 
-Two calls without a key give two numbers — the helper counts the draws (`#0`, `#1`) so a retry replays the same sequence and gets both back:
+A failing service task does not roll back. The engine catches the exception, sets the task to error and commits. A number issued before the exception is therefore in the table. When an admin retries the task, the function runs from the start and asks for the number again. Each number is stored under a key within the task, and the same key returns the stored number instead of a new one.
+
+Without `key`, the key is the position of the call: `#0`, `#1`. Two calls give two numbers, and the retry gets both back in the same order:
 
 ```python
 main = sth.next_number("CaseNumber")
 sub = sth.next_number("CaseNumber")
 ```
 
-Pass `key` where the call order is not a stable anchor, for instance a loop whose items may differ between attempts. The number is then tied to the thing rather than to the position:
+In a loop, use the item id as `key`. If the order of the items changes between runs, the position would pair the numbers with the wrong items:
 
 ```python
 for item in items:
@@ -75,20 +75,20 @@ for item in items:
 
 ## The scheme: four hooks
 
-Everything a range varies is a classmethod with a working default. All four are safe to override: none of them carries the uniqueness guarantee, so a mistake produces a poor number, never a duplicate one.
+The scheme is four classmethods, each with a working default. You override the ones you need. The engine enforces uniqueness itself, so a mistake in a hook gives an odd number, never a duplicate.
 
 | Hook | Job | Default |
 |---|---|---|
-| `number_scope(sth)` | which rows compete for one sequence | `""` — one global sequence |
+| `number_scope(sth)` | which rows share one sequence | `""`: one global sequence |
 | `reference_value(db, scope_key)` | the value `next_value` starts from | the highest `value` in the scope |
-| `next_value(previous)` | the next candidate; pure arithmetic | `previous + 1`, starting at 1 |
-| `format_number(value, scope_key)` | the number people see; pure | `str(value)` |
+| `next_value(previous)` | the next candidate | `previous + 1`, starting at 1 |
+| `format_number(value, scope_key)` | the number people see | `str(value)` |
 
-Each recipe below is one range's whole scheme — drop the methods into your model class and leave the other hooks alone.
+Each recipe below is a complete scheme. Copy the methods into your model class.
 
-### A number that restarts every year
+### Restart every year
 
-`number_scope` decides which rows share a sequence. Rows in different scopes never see each other, so a new year begins at 1 again.
+`number_scope` decides which rows share a sequence. A new year is a new scope and starts at 1.
 
 ```python
 from actidoo_wfe.helpers.time import dt_now_naive
@@ -104,11 +104,11 @@ def format_number(cls, value, scope_key):
     return f"PX-{scope_key}-{value:05d}"
 ```
 
-Gives `PX-2026-00001`, `PX-2026-00002`, and on 1 January `PX-2027-00001`. Note that `format_number` puts the year into the rendering: uniqueness of the rendered number is enforced per scope, so without it every year would repeat the same strings.
+Gives `PX-2026-00001`, `PX-2026-00002`, and on 1 January `PX-2027-00001`. Put the year into the rendering: numbers are unique per scope, so without the year every year would produce the same strings.
 
-### A separate sequence per site, taken from the form
+### One sequence per site, taken from the form
 
-`number_scope` receives the task helper, so the scope can come from task data.
+`number_scope` gets the task helper, so the scope can come from task data.
 
 ```python
 @classmethod
@@ -121,11 +121,11 @@ def format_number(cls, value, scope_key):
     return f"{scope_key}-{value:04d}"
 ```
 
-Gives `BER-0001`, `BER-0002`, `HAM-0001` — Hamburg starts at 1 regardless of how many Berlin numbers exist. If the field may be missing, read it defensively; a `KeyError` here fails the task.
+Gives `BER-0001`, `BER-0002`, `HAM-0001`. Hamburg starts at 1 no matter how many Berlin numbers exist. A `KeyError` here fails the task, so check the field if it can be missing.
 
-### A start value and a step
+### Start value and step
 
-`next_value` turns the highest number so far into the next candidate. `previous` is `None` when the scope is still empty.
+`next_value` turns the highest number so far into the next one. `previous` is `None` while the scope is empty.
 
 ```python
 @classmethod
@@ -135,9 +135,9 @@ def next_value(cls, previous):
 
 Gives `1000`, `1010`, `1020`.
 
-### A reserved band that must stay free
+### Skip a reserved block
 
-Same hook, one rule more. It is pure arithmetic — no database, no locking — so it is trivial to unit-test.
+Same hook, one rule more. It is plain arithmetic, so it is easy to unit-test.
 
 ```python
 @classmethod
@@ -146,11 +146,11 @@ def next_value(cls, previous):
     return 6000 if 5000 <= candidate < 6000 else candidate
 ```
 
-Gives `4998`, `4999`, `6000`, `6001` — the block from 5000 to 5999 is skipped in one step.
+Gives `4998`, `4999`, `6000`, `6001`.
 
-### A check digit
+### Check digit
 
-`value` stays the dense sequence; the check digit belongs to the rendering. (A digit sum is the placeholder here — put your scheme's rule in.)
+`value` stays the plain sequence. The check digit is part of the rendering. The digit sum here is a placeholder; put in your own rule.
 
 ```python
 @classmethod
@@ -171,11 +171,11 @@ def format_number(cls, value, scope_key):
     return f"{chr(ord('A') + block)}{index + 1:04d}"
 ```
 
-Gives `A0001` … `A9999`, then `B0001`. The sequence behind it stays `1, 2, 3, …`, which is what keeps the ordering intact when the letter rolls over.
+Gives `A0001` … `A9999`, then `B0001`. The sequence behind it stays `1, 2, 3, …`.
 
-### Numbers that do not reveal how many cases there are
+### Random numbers
 
-A consecutive number tells everyone how much business you did. Scatter it instead: `next_value` ignores `previous`, and `reference_value` returns `None` because there is nothing to read.
+A running number tells everyone how many cases you have. Random numbers do not. `next_value` ignores `previous`, and `reference_value` returns `None` because there is nothing to read.
 
 ```python
 import random
@@ -191,11 +191,11 @@ def next_value(cls, previous):
     return random.randrange(100_000, 1_000_000)
 ```
 
-Gives `975733`, `454499`. A collision just costs one more attempt, so keep the range far larger than the number of cases you expect, and raise `_number_max_attempts` if it is tight.
+Gives `975733`, `454499`. A collision costs one more attempt. Keep the range much larger than the number of cases you expect, or raise `_number_max_attempts`.
 
-### A separate block of numbers per site
+### A block of numbers per site
 
-`next_value` cannot do this: it gets the previous value, not the scope. Giving each scope its own starting point is exactly what `reference_value` is for — it is the one hook that sees the scope *and* may query. Take the highest number so far, but never go below the site's block floor.
+Each site gets its own starting point. `next_value` cannot do this because it does not know the scope. `reference_value` knows the scope and may query the database. Take the highest number so far, but never go below the site's floor.
 
 ```python
 from sqlalchemy import select
@@ -215,30 +215,29 @@ def reference_value(cls, db, scope_key):
     return max(highest or 0, SITE_BLOCKS[scope_key])
 ```
 
-Gives `10001`, `10002` for Berlin and `20001` for Hamburg, interleaved in any order. This is the whole hook — what other transactions committed in the meantime is the engine's business, not yours (see [What the engine guarantees](#what-the-engine-guarantees) below). Read the floor from a table instead of a dict if the blocks are configured rather than fixed — this is the hook where a query belongs.
+Gives `10001`, `10002` for Berlin and `20001` for Hamburg. If the blocks are configured rather than fixed, read the floor from a table instead of a dict.
 
-### Why `value` is always an integer
+### `value` is always an integer
 
-It is what the engine orders and compares, and a string column would order lexicographically, which breaks quietly and late — `"9"` sorts above `"10"`, and a letter block rolling over from `Z999` to `AA001` would stick on `Z999` forever. Letters belong in `format_number`.
+The engine sorts and compares `value`. A string column would sort `"9"` above `"10"`, and a letter block would get stuck at `Z999`. Letters belong in `format_number`.
 
 ## What the engine guarantees
 
-**A number is issued once.** Issuing inserts a candidate row, and the primary key `(scope_key, value)` refuses a duplicate; the engine then tries the next candidate, up to `_number_max_attempts`. Uniqueness never depends on a lock, and therefore never on your hooks being right.
+**A number is issued once.** Issuing inserts a row. The primary key `(scope_key, value)` rejects a duplicate, and the engine tries the next candidate, up to `_number_max_attempts`. Uniqueness does not depend on a lock or on your hooks.
 
-**Repeating the same work does not consume a new number.** The claim is recorded against the task occurrence and the draw within it. An administrator's retry runs the same task and gets the number it already has. The children of a multi-instance activity and the passes of a loop are separate occurrences and each get their own.
+**A retry does not consume a new number.** The number is recorded against the task occurrence and the call within it. An admin retry runs the same task and gets the same number. The children of a multi-instance activity and the passes of a loop are separate occurrences and get their own numbers.
 
-A custom `reference_value` reads from *this* transaction — its own session, including numbers it has issued and not yet committed. What other transactions committed in the meantime is the engine's business: after a collision it reads that itself and takes the higher of the two views. So return something a higher committed value may override — a floor, a maximum, `None` — and do not take a lock yourself (`with_for_update` deadlocks two concurrent first allocations on an empty scope; the reasons are with the code in `allocate_number`).
+**`reference_value` reads from its own transaction.** It sees the numbers this transaction has issued but not yet committed. After a collision the engine reads what other transactions committed and takes the higher of the two. So return a floor, a maximum or `None`, and do not take a lock yourself. A `with_for_update` deadlocks two concurrent first allocations on an empty scope; the details are in `allocate_number`.
 
 ## Rules
 
-- **Never delete a row** from a number range table. A deleted row releases its number to be issued a second time. Deleting a workflow instance is safe — data model rows do not go with it.
-- **Numbers are not promised to be contiguous.** No number is silently consumed, but a scheme may skip on purpose, and a number issued to an instance that is later cancelled stays issued.
-- **`format_number` must work the scope in** if numbers have to be unique across scopes. Uniqueness of the rendering is enforced per scope, so plain padding under a yearly reset would collide across years by construction — a collision no retry can resolve.
-- **The log is read under *Admin → Number ranges*, not on the Data page**, which would hide `workflow_instance_id` as a system column — the reason a range is never registered with `api=`.
-- **Keep the issuing step short.** A range under real contention can raise its own lock timeout with `_number_lock_wait_timeout`, but that is padding, not a fix: the wait is for the competing transaction to finish.
+- **Never delete a row** from a number range table. A deleted row frees its number, and it gets issued again. Deleting a workflow instance is fine; data model rows stay.
+- **Numbers have gaps.** A scheme may skip on purpose, and a number issued to a cancelled instance stays issued.
+- **Put the scope into `format_number`** when numbers must be unique across scopes. Uniqueness is checked per scope. Plain padding under a yearly reset collides across years.
+- **Keep the issuing step short.** `_number_lock_wait_timeout` raises the lock timeout of a range, but the wait is still for the other transaction to finish.
 
 ## Related
 
-- [Data models](data-models.md) — the extension point a number range is built on
-- [Developing workflows](workflows.md) — service functions, the task helper and the admin retry
+- [Data models](data-models.md)
+- [Developing workflows](workflows.md): service functions, the task helper and the admin retry
 - [ADR 012: Number ranges](adr/adr_012_number_ranges.md)
