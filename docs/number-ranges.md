@@ -4,7 +4,7 @@ Many workflows have to hand out a running number: a case number, a ticket number
 
 A number range is a [data model](data-models.md). Its rows are the numbers that have been issued. The next number is derived from the rows already in the table, and each row records which workflow instance and which step got the number. Your project owns the table and its migration. A workflow declares the range in `DATA_MODELS` like any other model.
 
-The issued numbers are shown under *Admin → Number ranges*: for each range the workflows that use it, the state of every scope, and the log of who got which number. A global admin sees all ranges; a workflow owner sees the ranges of their workflows. The reasoning behind the design is in [ADR 012](adr/adr_012_number_ranges.md).
+The issued numbers are shown under *Admin → Number ranges*. The list shows each range with the workflows that use it. The page of a range shows the state of every scope and the log of who got which number. A global admin sees all ranges; a workflow owner sees the ranges of their workflows. The reasoning behind the design is in [ADR 012](adr/adr_012_number_ranges.md).
 
 ## Define a range
 

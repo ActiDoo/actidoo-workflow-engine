@@ -29,6 +29,9 @@ import { useTranslation } from '@/i18n';
 const AdminNumberRanges = React.lazy(
   async () => await import('@/pages/admin/number-ranges/AdminNumberRanges')
 );
+const AdminNumberRangeDetails = React.lazy(
+  async () => await import('@/pages/admin/number-ranges/AdminNumberRangeDetails')
+);
 
 // Actually lazy loading is not necessary, but it will help to keep the initial JS file(s) smaller and speed up the initial loading
 // To omit lazy loading you'd have to use normal imports like `import { Tasks } from ...`
@@ -316,6 +319,11 @@ const router = createBrowserRouter(
         <Route
           path="/admin/number-ranges"
           element={<AdminNumberRanges />}
+          errorElement={<PcErrorView />}
+        />
+        <Route
+          path="/admin/number-ranges/:rangeName"
+          element={<AdminNumberRangeDetails />}
           errorElement={<PcErrorView />}
         />
         <Route
