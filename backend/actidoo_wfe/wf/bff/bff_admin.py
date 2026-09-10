@@ -21,12 +21,15 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     DownloadAttachmentRequest,
     ExecuteErroneousTaskRequest,
     GetAllTasksResponse,
-    GetAllWorkflowInstancesResponse,
     GetAllUsersResponse,
+    GetAllWorkflowInstancesResponse,
+    GetNumberRangeAllocationsResponse,
+    GetNumberRangesResponse,
     GetSingleTaskResponse,
     GetSystemInformationResponse,
     GetUserDetailRequest,
     GetUserDetailResponse,
+    NumberRangeSummaryResponse,
     ReplaceTaskDataRequest,
     SearchUsersRequest,
     SearchUsersResponse,
@@ -36,7 +39,12 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
 )
 from actidoo_wfe.wf.bff.deps import get_user, require_matching_client_version
 from actidoo_wfe.wf.cross_context.imports import require_realm_role
-from actidoo_wfe.wf.exceptions import UserMayNotAdministrateThisWorkflowException, UserMayNotAdministrateUsersException
+from actidoo_wfe.wf.exceptions import (
+    DataModelForbiddenError,
+    DataModelNotFoundError,
+    UserMayNotAdministrateThisWorkflowException,
+    UserMayNotAdministrateUsersException,
+)
 from actidoo_wfe.wf.models import WorkflowUser
 from actidoo_wfe.wf.service_user import search_users
 from actidoo_wfe.wf.types import Attachment, ReducedWorkflowInstanceResponse, WorkflowInstanceRepresentation, WorkflowInstanceTaskAdminRepresentation, WorkflowStateResponse
@@ -89,6 +97,18 @@ AdminWorkflowInstanceTasksBffTableQuerySchema = bff_table.get_bff_table_query_sc
         bff_table.TextSearchFilterField(name="assigned_user___full_name"),
         bff_table.TextSearchFilterField(name="assigned_delegate_user___full_name"),
         bff_table.BooleanFilterField(name="workflow_instance___is_completed"),
+    ],
+    add_global_search_filter=True,
+)
+
+
+NumberRangeAllocationsBffTableQuerySchema = bff_table.get_bff_table_query_schema(
+    schema_name="NumberRangeAllocationsBffTableQuerySchema",
+    sorting_fields=["scope_key", "value", "formatted", "created_at"],
+    filter_fields=[
+        bff_table.TextSearchFilterField(name="scope_key"),
+        bff_table.TextSearchFilterField(name="formatted"),
+        bff_table.UUidSearchFilterField(name="workflow_instance_id"),
     ],
     add_global_search_filter=True,
 )
@@ -463,3 +483,37 @@ def get_task_states_per_workflow(
 ) -> WorkflowStateResponse:
     result = service_application.admin_get_task_states_per_workflow(db=db, wf_name=wf_name, admin_user_id=user.id)
     return result
+
+
+@router.get("/number_ranges", name="bff_admin_get_number_ranges")
+def get_number_ranges(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+) -> GetNumberRangesResponse:
+    summaries = service_application.bff_admin_get_number_ranges(db=db, user_id=user.id)
+    return GetNumberRangesResponse(ranges=[NumberRangeSummaryResponse.model_validate(s) for s in summaries])
+
+
+@router.post("/number_range_allocations", name="bff_admin_get_number_range_allocations")
+def get_number_range_allocations(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    range_name: str,
+    bff_table_request_params: Annotated[
+        bff_table.BffTableQuerySchemaBase,
+        Depends(NumberRangeAllocationsBffTableQuerySchema),
+    ],  # type: ignore
+) -> GetNumberRangeAllocationsResponse:
+    try:
+        page = service_application.bff_admin_get_number_range_allocations(
+            db=db,
+            user_id=user.id,
+            range_name=range_name,
+            bff_table_request_params=bff_table_request_params,
+        )
+    except DataModelNotFoundError:
+        raise HTTPException(status_code=404)
+    except DataModelForbiddenError:
+        log.warning(f"User {user.username} is not allowed to view number range {range_name}")
+        raise HTTPException(status_code=403)
+    return GetNumberRangeAllocationsResponse(ITEMS=page.items, COUNT=page.count)

@@ -22,7 +22,7 @@ from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataS
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import providers as workflow_providers
-from actidoo_wfe.wf import repository, service_form, service_i18n, service_user, service_workflow, views
+from actidoo_wfe.wf import repository, service_form, service_i18n, service_user, service_workflow, views, views_data_model
 from actidoo_wfe.wf.error_schema import set_nested_error
 from actidoo_wfe.wf.exceptions import (
     AttachmentNotFoundException,
@@ -1589,3 +1589,27 @@ def admin_get_task_states_per_workflow(db: Session, wf_name: str, admin_user_id:
 
 def admin_get_statistics_graph_timestamps(db: Session) -> ReducedWorkflowInstanceResponse:
     return views.bff_admin_get_graph_workflow_instances(db=db)
+
+
+#### Number ranges (ADR 012) ####
+
+
+def _number_range_visibility(db: Session, user_id: uuid.UUID) -> set[str] | None:
+    """Workflow names whose number ranges the user may see; ``None`` = every range (global admin)."""
+    if is_global_admin(db=db, user_id=user_id):
+        return None
+    return get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
+
+
+def bff_admin_get_number_ranges(db: Session, user_id: uuid.UUID) -> list[views_data_model.NumberRangeSummary]:
+    return views_data_model.number_range_summaries(db=db, allowed_workflow_names=_number_range_visibility(db, user_id))
+
+
+def bff_admin_get_number_range_allocations(
+    db: Session,
+    user_id: uuid.UUID,
+    range_name: str,
+    bff_table_request_params: BffTableQuerySchemaBase,
+):
+    descriptor = views_data_model.get_visible_number_range(range_name, _number_range_visibility(db, user_id))
+    return views_data_model.number_range_allocations(db=db, model=descriptor.model_class, bff_table_request_params=bff_table_request_params)

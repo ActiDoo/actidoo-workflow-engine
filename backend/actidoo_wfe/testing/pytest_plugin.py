@@ -118,6 +118,26 @@ def clear_cache():
 
 
 @pytest.fixture
+def isolated_data_model_registry():
+    """Give a test an empty data-model registry and restore it afterwards.
+
+    Modules that register their own models need a clean registry, but the models
+    registered at import time belong to the whole session. Leaving the registry
+    empty makes every later test that relies on one fail far away from the cause,
+    with a bare "Data model ... is not registered. Available: []"."""
+    from actidoo_wfe.wf.registry_data_model import data_model_registry
+
+    saved = data_model_registry.list_models()
+    data_model_registry.clear()
+    try:
+        yield data_model_registry
+    finally:
+        data_model_registry.clear()
+        for descriptor in saved:
+            data_model_registry.register(descriptor)
+
+
+@pytest.fixture
 def mock_send_text_mail():
     """Capture outbound text mails for assertions."""
     from actidoo_wfe.helpers.mail import log_email

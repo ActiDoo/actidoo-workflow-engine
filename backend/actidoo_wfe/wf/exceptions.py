@@ -147,3 +147,20 @@ class DataModelAccessDeniedError(Exception):
         super().__init__(
             f"Access denied to data model '{model_name}'. Allowed models for this workflow: {sorted(allowed)}",
         )
+
+
+class NumberAllocationFailedError(Exception):
+    """Raised when a number range could not issue a number (ADR 012).
+
+    Either every candidate collided within the attempt budget, or a lock wait timed
+    out because a concurrent allocation held the scope until its transaction
+    committed. Both leave the task erroneous and repeatable through the admin retry,
+    which will hand back the number if one was in fact issued.
+    """
+
+    def __init__(self, model_name: str, scope_key: str, reason: str):
+        self.model_name = model_name
+        self.scope_key = scope_key
+        self.reason = reason
+        scope = f" (scope {scope_key!r})" if scope_key else ""
+        super().__init__(f"Could not allocate a number from '{model_name}'{scope}: {reason}.")

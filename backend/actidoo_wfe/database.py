@@ -12,7 +12,7 @@ from urllib import parse
 
 import alembic.config
 from asgi_correlation_id.context import correlation_id
-from sqlalchemy import TIMESTAMP, MetaData, NullPool, TypeDecorator, Uuid, literal, text
+from sqlalchemy import TIMESTAMP, Connection, MetaData, NullPool, TypeDecorator, Uuid, literal, text
 from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, scoped_session
@@ -182,6 +182,65 @@ def get_db() -> Generator[Session, None, None]:
 
 get_db_contextmanager = contextmanager(get_db)
 """The database dependency can also be used as a contextmanager, e.g. in background tasks."""
+
+
+@contextmanager
+def committed_read(db: Session) -> Generator[Connection, None, None]:
+    """A second, read-only connection that sees the latest committed state.
+
+    The engine runs at ``REPEATABLE READ``: a session's ordinary reads keep
+    returning the snapshot it started with, so code that needs to see what other
+    transactions committed *since* has to look outside the session. This yields a
+    connection from the same pool with its own fresh snapshot; it takes no locks,
+    cannot see the caller's own uncommitted rows, and is rolled back and returned
+    on exit - nothing written through it would take part in the caller's
+    transaction.
+
+    It is a nested pool checkout while the caller holds its own. Use it sparingly
+    and never hold it long; a caller that would need it on every request should
+    reconsider its isolation instead.
+    """
+    connection = db.get_bind().connect()
+    try:
+        yield connection
+    finally:
+        connection.rollback()
+        connection.close()
+
+
+@contextmanager
+def session_lock_wait_timeout(db: Session, seconds: int | None):
+    """Raise ``innodb_lock_wait_timeout`` for this session, then put it back.
+
+    The engine sets the value to a deliberately short 3s as an ``init_command`` on
+    every connection (``get_mysql_options`` above). That short value is a
+    bulkhead for the whole-blob ``workflow_instances`` lock, which is held for a
+    whole request transaction - raising it globally would turn fast failures into
+    occupied workers. A range that genuinely contends can raise it for its own
+    allocation only.
+
+    Restoring is mandatory, not tidiness: ``init_command`` runs only when a
+    connection is opened, so a value left behind would outlive this request on the
+    pooled connection and lift the bulkhead for everything that follows.
+    """
+    if seconds is None:
+        yield
+        return
+    seconds = int(seconds)
+    with db.no_autoflush:
+        previous = db.execute(text("SELECT @@SESSION.innodb_lock_wait_timeout")).scalar()
+        db.execute(text(f"SET SESSION innodb_lock_wait_timeout = {seconds}"))
+    try:
+        yield
+    finally:
+        try:
+            with db.no_autoflush:
+                db.execute(text(f"SET SESSION innodb_lock_wait_timeout = {int(previous)}"))
+        except Exception:  # pragma: no cover - only reachable on an already-broken session
+            log.exception(
+                "Could not restore innodb_lock_wait_timeout to %s; this connection keeps the raised value",
+                previous,
+            )
 
 
 ### Helpers
