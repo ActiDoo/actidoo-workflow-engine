@@ -44,14 +44,35 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
   const unassignTask = useSelector((state: State) => state.data[WeDataKey.ADMIN_UNASSIGN_TASK]);
   const unassignTaskLoadState = useSelectUiLoading(WeDataKey.ADMIN_UNASSIGN_TASK, 'POST');
 
+  // A 409 carries a `code` that says why the retry did not succeed; the store
+  // keeps the error body in `data`.
+  const retryErrorText = (): string => {
+    const errorBody = executeErroneousTask?.data as { code?: string } | undefined;
+    switch (errorBody?.code) {
+      case 'task_failed_again':
+        return t('admin.taskExecutedFailedAgain');
+      case 'workflow_instance_busy':
+        return t('admin.taskExecutedBusy');
+      case 'task_not_erroneous':
+        return t('admin.taskExecutedAlreadyDone');
+      default:
+        return t('admin.taskExecutedError');
+    }
+  };
+
   useEffect(() => {
     handleResponse(
       dispatch,
       WeDataKey.ADMIN_EXECUTE_ERRONEOUS_TASK,
       executeErroneousTask?.postResponse,
       t('admin.taskExecuted'),
-      t('admin.taskExecutedError'),
+      retryErrorText(),
       () => {
+        dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
+      },
+      () => {
+        // A 409 means the step failed again, was completed meanwhile or is
+        // held by another request. Reload so the admin sees the new state.
         dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
       }
     );

@@ -7,13 +7,35 @@ Form1 collects a text, a dynamic select, an upload, an optional note, and a
 trigger_error boolean. The gateway routes a `trigger_error == true` submission
 to a service task that intentionally raises, putting the task into state_error
 and giving `bff_admin_execute_erroneous_task` something real to operate on.
+
+The module-level switches below let a test decide what the crash task does on
+a retry. They are read at call time; tests set them through ``monkeypatch``.
 """
+
+import threading
 
 from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
 
+#: ``True`` (the default) makes every run of the crash task raise. A test sets
+#: it to ``False`` before an admin retry to let the step succeed.
+CRASH = True
+
+#: When set, a successful run blocks here until the event fires. That keeps the
+#: retry inside its request, holding the instance row lock, so a second retry
+#: can overlap with it.
+HOLD_UNTIL: threading.Event | None = None
+
+#: One entry per run of the crash task, so a test can count how often the step
+#: actually ran.
+RUNS: list = []
+
 
 def service_bff_crash_task(sth: ServiceTaskHelper):
-    raise RuntimeError("intentional crash for BFF endpoint tests")
+    RUNS.append(sth.task_uuid)
+    if CRASH:
+        raise RuntimeError("intentional crash for BFF endpoint tests")
+    if HOLD_UNTIL is not None:
+        HOLD_UNTIL.wait(timeout=30)
 
 
 __all__ = ["service_bff_crash_task"]

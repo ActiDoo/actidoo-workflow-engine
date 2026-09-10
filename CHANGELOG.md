@@ -28,6 +28,19 @@ releases correspond to the git tags of this repository.
   issued number stays traceable after the workflow is gone. A global
   administrator sees every range, a workflow owner the ranges declared by a
   workflow of theirs.
+- `EMAIL_REQUEST_TIMEOUT_SECONDS`: a limit for every call while sending mail,
+  default 30 seconds. A service task holds its workflow instance for as long
+  as the send takes. Before, a mail gateway that did not answer kept the
+  instance locked without end.
+
+### Fixed
+
+- Admin retry of an erroneous task: the answer now tells the truth. A step
+  that fails again returns 409 and keeps its new error message. A step that
+  was already completed by an earlier request returns 409 instead of a server
+  error. A second retry while the first one still holds the instance returns
+  409 instead of a database lock timeout. The frontend names the case in its
+  message and reloads the task.
 
 ## [0.1.42] - 2026-09-02
 

@@ -119,6 +119,9 @@ class Settings(BaseSettings):
 
     ### Email Settings
     email_transport: Literal["GRAPH", "SMTP"] = "GRAPH"
+    # Limit for every HTTP or SMTP call while sending. A service task holds
+    # its workflow instance for as long as the send takes.
+    email_request_timeout_seconds: int = 30
 
     # Microsoft Graph API
     email_client_id: str = ""

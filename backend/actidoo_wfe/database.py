@@ -15,6 +15,7 @@ from asgi_correlation_id.context import correlation_id
 from sqlalchemy import TIMESTAMP, Connection, MetaData, NullPool, TypeDecorator, Uuid, literal, text
 from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT
 from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Session, scoped_session
 from sqlalchemy.orm.session import sessionmaker
 
@@ -206,6 +207,15 @@ def committed_read(db: Session) -> Generator[Connection, None, None]:
     finally:
         connection.rollback()
         connection.close()
+
+
+MYSQL_LOCK_WAIT_TIMEOUT = 1205
+
+
+def is_lock_wait_timeout(error: OperationalError) -> bool:
+    """``True`` for MySQL 1205: the lock wait ran out while another transaction held the row."""
+    args = getattr(error.orig, "args", ())
+    return bool(args) and args[0] == MYSQL_LOCK_WAIT_TIMEOUT
 
 
 @contextmanager
