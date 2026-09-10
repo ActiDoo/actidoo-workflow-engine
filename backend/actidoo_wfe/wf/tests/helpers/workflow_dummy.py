@@ -32,7 +32,7 @@ class WorkflowDummy:
         workflow_name: str | None = None,
         start_user: str | None = None,
         initial_task_data: dict | None = None,
-        trusted_seed: bool = False
+        trusted_seed: bool = False,
     ):
         """Inititializes and (if `workflow_name` and `start_user` is given) starts a workflow
 
@@ -41,6 +41,11 @@ class WorkflowDummy:
             users_with_roles: the needed users and their roles
             workflow_name: name of the workflow
             start_user: user that is assigned firts
+            initial_task_data: data applied to the workflow's first user task
+            trusted_seed: marks `initial_task_data` as a server-built engine seed, applied
+                as-is without form validation. Only use it to reproduce a server-built start
+                payload (as a data-model action does); user-supplied form data must stay
+                `False` so the test exercises the same validation as production.
         """
         self.db: Session = db_session
 
@@ -61,8 +66,8 @@ class WorkflowDummy:
                 db=self.db,
                 name=workflow_name,
                 user_id=start_user_id,
-                initial_task_data = initial_task_data,
-                trusted_seed = trusted_seed
+                initial_task_data=initial_task_data,
+                trusted_seed=trusted_seed,
             )
         else:
             self.workflow_instance_id = None
