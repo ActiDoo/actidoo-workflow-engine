@@ -234,12 +234,15 @@ class SearchPropertyOptionsRequest(BaseModel):
     search: str = Field(default_factory=lambda: "")
     include_value: str | list[str] | None = Field(default_factory=lambda: None)
     form_data: dict | None = Field(default_factory=lambda: None)
+    offset: int = Field(default=0, ge=0)
 
 
 class SearchPropertyOptionsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     options: list["SearchPropertyOptionsResponseItem"]
+    has_more: bool = False
+    next_offset: int | None = None
 
 
 class SearchPropertyOptionsResponseItem(BaseModel):

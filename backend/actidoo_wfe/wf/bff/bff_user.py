@@ -537,7 +537,7 @@ def search_property_options(
     user: Annotated[WorkflowUser, Depends(get_user)],
     search_options: SearchPropertyOptionsRequest,
 ) -> SearchPropertyOptionsResponse:
-    options = service_application.search_property_options(
+    page = service_application.search_property_options(
         db=db,
         user_id=user.id,
         task_id=search_options.task_id,
@@ -545,10 +545,13 @@ def search_property_options(
         search=search_options.search,
         include_value=search_options.include_value,
         form_data=search_options.form_data,
+        offset=search_options.offset,
     )
 
     return SearchPropertyOptionsResponse(
-        options=[SearchPropertyOptionsResponseItem(value=option[0], label=option[1]) for option in options],
+        options=[SearchPropertyOptionsResponseItem(value=option[0], label=option[1]) for option in page.options],
+        has_more=page.has_more,
+        next_offset=page.next_offset,
     )
 
 

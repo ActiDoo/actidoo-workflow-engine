@@ -741,6 +741,58 @@ def test_search_property_options(db_engine_ctx):
         assert {"cat_alpha", "cat_beta", "cat_gamma"} <= values
 
 
+def test_search_property_options_pagination(db_engine_ctx, monkeypatch):
+    many_options = [(f"opt_{i:03d}", f"Option {i:03d}") for i in range(120)]
+    monkeypatch.setattr(
+        service_application.service_workflow,
+        "get_options_for_property",
+        lambda **kwargs: list(many_options),
+    )
+
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        def fetch_page(offset, include_value=None):
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+                status, json_resp = client.post(
+                    name="get_property_options",
+                    json={
+                        "task_id": str(task.id),
+                        "property_path": ["category"],
+                        "search": "",
+                        "offset": offset,
+                        "include_value": include_value,
+                    },
+                    cls=SearchPropertyOptionsResponse,
+                )
+            assert status == 200
+            return json_resp
+
+        first = fetch_page(0, include_value="opt_119")
+        assert [o.value for o in first.options][:50] == [f"opt_{i:03d}" for i in range(50)]
+        assert first.options[-1].value == "opt_119"
+        assert len(first.options) == 51
+        assert first.has_more is True
+        assert first.next_offset == 50
+
+        second = fetch_page(first.next_offset, include_value="opt_119")
+        assert [o.value for o in second.options] == [f"opt_{i:03d}" for i in range(50, 100)]
+        assert second.has_more is True
+        assert second.next_offset == 100
+
+        last = fetch_page(second.next_offset)
+        assert [o.value for o in last.options] == [f"opt_{i:03d}" for i in range(100, 120)]
+        assert last.has_more is False
+        assert last.next_offset is None
+
+        beyond = fetch_page(500)
+        assert beyond.options == []
+        assert beyond.has_more is False
+
+
 def test_download_attachment(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()

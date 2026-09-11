@@ -10,7 +10,7 @@ import hashlib
 import logging
 import uuid
 from copy import deepcopy
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
@@ -911,6 +911,12 @@ def _resolve_accessible_usertask(
     return workflow, task
 
 
+class PropertyOptionsPage(NamedTuple):
+    options: list[tuple[str, str]]
+    has_more: bool
+    next_offset: int | None
+
+
 def search_property_options(
     db: Session,
     user_id: uuid.UUID,
@@ -919,8 +925,10 @@ def search_property_options(
     search: str,
     include_value: str | list[str] | None,
     form_data: dict | None,
-) -> list[tuple[str, str]]:
+    offset: int = 0,
+) -> PropertyOptionsPage:
     workflow, _usertask = _resolve_accessible_usertask(db=db, user_id=user_id, task_id=task_id)
+    offset = max(offset, 0)
 
     # Workflow definition missing — we can't load remote options (the options/ folder and
     # service functions are gone). Echo back only the already-selected values so the form
@@ -931,7 +939,7 @@ def search_property_options(
             echoed = [(v, v) for v in include_value]
         elif include_value:
             echoed = [(include_value, include_value)]
-        return echoed
+        return PropertyOptionsPage(options=echoed, has_more=False, next_offset=None)
 
     options = service_workflow.get_options_for_property(
         workflow=workflow,
@@ -964,26 +972,36 @@ def search_property_options(
     for word in search.split():
         options = [x for x in options if word.lower() in x[1].lower() or word.lower() in x[0].lower()]
 
-    options_limit = 15
+    options_limit = service_form.DEFAULT_OPTIONS_LIMIT
     try:
         task = workflow.get_task_from_id(task_id)
         formdata = service_workflow.get_react_json_schema_form_data(task=task)
         options_limit = service_form.get_options_limit(
             jsonschema=formdata.jsonschema,
             path=property_path,
-            default_limit=15,
         )
     except Exception:
-        options_limit = 15
+        options_limit = service_form.DEFAULT_OPTIONS_LIMIT
 
+    total = len(options)
     if options_limit is not None:
-        options = options[:options_limit]
+        page_end = offset + options_limit
+        options = options[offset:page_end]
+        has_more = page_end < total
+    else:
+        options = options[offset:]
+        has_more = False
 
-    for val in options_by_value:
-        if val[0] not in {o[0] for o in options}:
-            options.append(val)
+    if offset == 0:
+        for val in options_by_value:
+            if val[0] not in {o[0] for o in options}:
+                options.append(val)
 
-    return options
+    return PropertyOptionsPage(
+        options=options,
+        has_more=has_more,
+        next_offset=offset + options_limit if has_more and options_limit is not None else None,
+    )
 
 
 def strip_hidden_form_fields(

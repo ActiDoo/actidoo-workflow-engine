@@ -765,7 +765,10 @@ def filter_template_data(*, jsonschema: dict, data: dict, mode: str, apply_value
     )
 
 
-def get_options_limit(jsonschema, path: list[str], default_limit: int = 15) -> int | None:
+DEFAULT_OPTIONS_LIMIT = 50
+
+
+def get_options_limit(jsonschema, path: list[str], default_limit: int = DEFAULT_OPTIONS_LIMIT) -> int | None:
     """
     Read optional options_limit from field custom_properties.
     Default is `default_limit`; explicit 0 disables limiting.

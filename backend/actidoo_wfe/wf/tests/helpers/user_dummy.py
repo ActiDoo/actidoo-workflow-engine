@@ -90,8 +90,8 @@ class UserDummy:
             property_path=property_path,
             search=search,
             include_value=None,
-            form_data=form_data,
-        )
+            form_data=None,
+        ).options
 
     def send_message(self, message_name, correlation_key, data):
         service_application.receive_message(db=self.db, message_name=message_name, correlation_key=correlation_key, data=data, user_id=self.user.id)

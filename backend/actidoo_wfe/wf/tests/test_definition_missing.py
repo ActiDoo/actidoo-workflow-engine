@@ -427,7 +427,8 @@ def test_search_property_options_does_not_crash_on_orphan(db_engine_ctx, restore
             include_value="already-selected-value",
             form_data=None,
         )
-        assert opts == [("already-selected-value", "already-selected-value")]
+        assert opts.options == [("already-selected-value", "already-selected-value")]
+        assert opts.has_more is False
 
 
 def test_get_workflow_instance_name_returns_name(db_engine_ctx, restore_registry):
