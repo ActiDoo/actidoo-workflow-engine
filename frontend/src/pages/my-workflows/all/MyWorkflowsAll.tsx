@@ -12,13 +12,11 @@ import {
   getQueryParamsFromTableData,
   getTableDataFromQueryParams,
   PcAnalyticalTable,
-  StringDict,
   useAdditionalTableFunctions,
   PcSearch,
 } from '@/ui5-components';
 import { environment } from '@/environment';
 import { ActiveTaskInstance, WorkflowState } from '@/models/models';
-import { myOpenWorkflowsColumns } from '@/pages/my-workflows/open/MyOpenWorkflowsSettings';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import { WeTaskSubRow } from '@/utils/components/WeTaskSubRow';
 import { useTranslation } from '@/i18n';
@@ -34,16 +32,18 @@ import {
   Text,
   Title,
   TitleLevel,
+  CheckBox,
 } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/decline';
 import { createPortal } from 'react-dom';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import _ from 'lodash';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
+import { myWorkflowsAllColumns } from '@/pages/my-workflows/all/MyWorkflowsAllSettings';
 
-const MyOpenWorkflows: React.FC = () => {
+const MyWorkflowsAll: React.FC = () => {
   const { t } = useTranslation();
-  const key = WeDataKey.MY_OPEN_WORKFLOW_INSTANCES;
+  const key = WeDataKey.MY_WORKFLOW_INSTANCES_ALL;
   const dispatch = useDispatch();
   const [submittedFormDialogOpen, setSubmittedFormDialogOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -54,14 +54,15 @@ const MyOpenWorkflows: React.FC = () => {
   const submittedFormLoading = useSelectUiLoading(WeDataKey.MY_USER_TASKS);
   const submittedTask = useSelectCurrentTask(selectedTaskId ?? undefined);
   const [offset, search, filter, sort] = getTableDataFromQueryParams(data?.queryParams);
-  const finalFilter: StringDict = { ...filter, is_completed: false };
+
   const [tableData] = useAdditionalTableFunctions(
     environment.tableCount,
     offset,
     search,
-    finalFilter,
+    filter,
     sort
   );
+  const [showInstanceID, setShowInstanceID] = useState(false);
 
   useEffect(() => {
     dispatch(
@@ -71,6 +72,16 @@ const MyOpenWorkflows: React.FC = () => {
       })
     );
   }, [tableData.loadData]);
+
+  const columns = () => {
+    if (showInstanceID) {
+      return myWorkflowsAllColumns(tableData, user?.id, t);
+    } else {
+      return myWorkflowsAllColumns(tableData, user?.id, t).filter(
+        column => column.accessor !== 'id'
+      );
+    }
+  };
 
   const openSubmittedForm = (workflowId: string, taskId?: string): void => {
     if (!taskId) return;
@@ -162,12 +173,20 @@ const MyOpenWorkflows: React.FC = () => {
 
   return (
     <>
-      <div className="flex items-center justify-end w-100 mb-4 gap-2 -mt-4">
-        <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
+      <div className="flex items-center justify-between w-100 mb-4 gap-2 -mt-4">
+        <CheckBox
+          text={t('myWorkflows.showInstanceId')}
+          checked={showInstanceID}
+          onChange={event => {
+            setShowInstanceID(event.currentTarget?.checked ?? false);
+          }}></CheckBox>
+        <div className="flex items-center gap-2">
+          <PcSearch initialSearch={search} searchInput={tableData.onSearch} />
+        </div>
       </div>
       <div className="my-workflows-table">
         <PcAnalyticalTable
-          columns={myOpenWorkflowsColumns(tableData, user?.id, t)}
+          columns={columns()}
           initialPage={calculateInitialPage(tableData.offset, environment.tableCount)}
           data={data?.data?.ITEMS ?? []}
           loading={loadingState}
@@ -218,4 +237,4 @@ const MyOpenWorkflows: React.FC = () => {
   );
 };
 
-export default MyOpenWorkflows;
+export default MyWorkflowsAll;
