@@ -28,8 +28,20 @@ export function CustomObjectFieldTemplate<
     options
   );
   const layout = uiSchema ? uiSchema['ui:layout'] : undefined;
-  const generateClassCol = (length: number): string =>
-    length > 4 ? 'col-lg-3' : length === 3 ? 'col-lg-4' : length === 2 ? 'col-lg-6' : 'col-md-12';
+  const generateClassCol = (length: number): string => {
+    switch (length) {
+      case 1:
+        return 'col-md-12';
+      case 2:
+        return 'col-lg-6';
+      case 3:
+        return 'col-lg-4';
+      case 4:
+        return 'col-lg-3';
+      default:
+        return 'col-lg';
+    }
+  };
 
   return (
     <div>
@@ -52,7 +64,7 @@ export function CustomObjectFieldTemplate<
             });
             const classColl = generateClassCol(items.length);
             return items.some(i => !i?.hidden) ? (
-              <div className="row" key={`pc-row-${rowId}`}>
+              <div className="row align-items-end" key={`pc-row-${rowId}`}>
                 {items.map((item, index) => {
                   return (
                     <div className={classColl} key={`pc-col-${item?.name}-${index}`}>
