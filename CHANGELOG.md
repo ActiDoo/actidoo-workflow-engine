@@ -7,6 +7,10 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.43] - 2026-09-14
+
 ### Added
 
 - Number ranges: a workflow can issue running business numbers - case,
@@ -165,6 +169,7 @@ releases correspond to the git tags of this repository.
 Last release before this changelog was introduced. See the git history for
 earlier changes.
 
-[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.42...HEAD
+[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.43...HEAD
+[0.1.43]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.42...v0.1.43
 [0.1.42]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.41...v0.1.42
 [0.1.41]: https://github.com/ActiDoo/actidoo-workflow-engine/releases/tag/v0.1.41
