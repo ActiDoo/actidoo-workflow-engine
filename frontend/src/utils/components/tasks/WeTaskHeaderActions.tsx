@@ -44,16 +44,48 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
   const unassignTask = useSelector((state: State) => state.data[WeDataKey.ADMIN_UNASSIGN_TASK]);
   const unassignTaskLoadState = useSelectUiLoading(WeDataKey.ADMIN_UNASSIGN_TASK, 'POST');
 
+  // A 409 carries a `code` that says why the retry did not succeed; the store
+  // keeps the error body in `data`.
+  const retryErrorText = (): string => {
+    const errorBody = executeErroneousTask?.data as { code?: string } | undefined;
+    switch (errorBody?.code) {
+      case 'task_failed_again':
+        return t('admin.taskExecutedFailedAgain');
+      case 'follow_up_task_failed':
+        return t('admin.taskExecutedFollowUpFailed');
+      case 'workflow_instance_busy':
+        return t('admin.taskExecutedBusy');
+      case 'task_not_erroneous':
+        return t('admin.taskExecutedAlreadyDone');
+      default:
+        return t('admin.taskExecutedError');
+    }
+  };
+
+  // A retry changes more than the task it was aimed at: it may complete the
+  // task and leave a later step of the workflow in error. Both hosts of these
+  // buttons are refreshed, the single-task page and the workflow's task list.
+  const reloadAfterRetry = (): void => {
+    dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
+    const instanceId = props.data?.workflow_instance?.id;
+    if (instanceId) {
+      dispatch(
+        postRequest(WeDataKey.ADMIN_TASKS_OF_WORKFLOW, {}, undefined, {
+          f_workflow_instance___id: instanceId,
+        })
+      );
+    }
+  };
+
   useEffect(() => {
     handleResponse(
       dispatch,
       WeDataKey.ADMIN_EXECUTE_ERRONEOUS_TASK,
       executeErroneousTask?.postResponse,
       t('admin.taskExecuted'),
-      t('admin.taskExecutedError'),
-      () => {
-        dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
-      }
+      retryErrorText(),
+      reloadAfterRetry,
+      reloadAfterRetry
     );
   }, [executeErroneousTask?.postResponse]);
 

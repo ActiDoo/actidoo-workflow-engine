@@ -305,7 +305,14 @@ export const de = {
     noSelectedTaskText: 'Bitte links eine Aufgabe auswählen',
     assignedUserDialogTitle: 'Zugewiesenen Nutzer bearbeiten',
     taskExecuted: 'Aufgabe erfolgreich ausgeführt',
-    taskExecutedError: 'Aufgabe konnte nicht ausgeführt werden. Bitte versuche es erneut.',
+    taskExecutedError: 'Aufgabe konnte nicht ausgeführt werden.',
+    taskExecutedFailedAgain:
+      'Aufgabe ist erneut fehlgeschlagen. Die Fehlermeldung wurde aktualisiert.',
+    taskExecutedFollowUpFailed:
+      'Aufgabe wurde ausgeführt. Ein späterer Schritt im Workflow ist fehlgeschlagen.',
+    taskExecutedBusy:
+      'Aufgabe wird gerade durch einen anderen Aufruf ausgeführt. Bitte warte kurz und lade die Seite neu.',
+    taskExecutedAlreadyDone: 'Aufgabe wurde inzwischen erfolgreich ausgeführt.',
     assignUserSuccess: 'Nutzer erfolgreich zugewiesen',
     assignUserError: 'Aufgabe konnte nicht ausgeführt werden. Bitte versuche es erneut.',
     unassignUserSuccess: 'Nutzerzuweisung entfernt',

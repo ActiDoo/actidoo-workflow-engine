@@ -303,7 +303,12 @@ export const en = {
     noSelectedTaskText: 'Please select task on left side',
     assignedUserDialogTitle: 'Edit assigned User',
     taskExecuted: 'Task successfully executed',
-    taskExecutedError: 'Task could not be executed. Please try again.',
+    taskExecutedError: 'Task could not be executed.',
+    taskExecutedFailedAgain: 'The task failed again. The error message was updated.',
+    taskExecutedFollowUpFailed: 'The task was executed. A later step of the workflow failed.',
+    taskExecutedBusy:
+      'The task is being executed by another request. Please wait a moment and reload the page.',
+    taskExecutedAlreadyDone: 'The task has meanwhile been executed successfully.',
     assignUserSuccess: 'User successfully assigned',
     assignUserError: 'Task could not be executed. Please try again.',
     unassignUserSuccess: 'User successfully unassigned',

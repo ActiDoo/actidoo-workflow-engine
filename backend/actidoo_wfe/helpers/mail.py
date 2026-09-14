@@ -66,7 +66,8 @@ def _send_via_graph(subject: str, content: str, recipients_list: list[str], atta
         scope=scope,
     ) as client:
         # Fetch token
-        client.fetch_token(token_endpoint_with_key, grant_type="client_credentials")
+        timeout = settings.email_request_timeout_seconds
+        client.fetch_token(token_endpoint_with_key, grant_type="client_credentials", timeout=timeout)
 
         send_endpoint_with_key = build_url(
             settings.email_send_endpoint,
@@ -105,7 +106,7 @@ def _send_via_graph(subject: str, content: str, recipients_list: list[str], atta
                 payload["message"]["attachments"] = attachments_payload
 
                 # Send email
-                response = client.post(url=send_endpoint_with_key, json=payload)
+                response = client.post(url=send_endpoint_with_key, json=payload, timeout=timeout)
                 response.raise_for_status()  # raises an exception for status_code >=400
                 successful_recipients.append(recipient)
         except Exception as error:
@@ -144,14 +145,15 @@ def _send_via_smtp(subject: str, content: str, recipients_list: list[str], attac
         message.add_attachment(data, maintype=maintype, subtype=subtype, filename=name)
 
     context = ssl.create_default_context()
+    timeout = settings.email_request_timeout_seconds
     try:
         if settings.email_smtp_use_ssl:
-            with smtplib.SMTP_SSL(host, port, context=context) as server:
+            with smtplib.SMTP_SSL(host, port, context=context, timeout=timeout) as server:
                 if username or password:
                     server.login(username, password)
                 server.send_message(message)
         else:
-            with smtplib.SMTP(host, port) as server:
+            with smtplib.SMTP(host, port, timeout=timeout) as server:
                 server.ehlo()
                 if settings.email_smtp_use_tls:
                     server.starttls(context=context)

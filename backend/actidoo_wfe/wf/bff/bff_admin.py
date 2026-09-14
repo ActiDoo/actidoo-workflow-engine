@@ -6,6 +6,7 @@ import os
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 import actidoo_wfe.helpers.bff_table as bff_table
@@ -38,12 +39,15 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     UnassignUserRequest,
 )
 from actidoo_wfe.wf.bff.deps import get_user, require_matching_client_version
+from actidoo_wfe.wf.constants import RetryOutcome
 from actidoo_wfe.wf.cross_context.imports import require_realm_role
 from actidoo_wfe.wf.exceptions import (
     DataModelForbiddenError,
     DataModelNotFoundError,
+    TaskIsNotErroneousException,
     UserMayNotAdministrateThisWorkflowException,
     UserMayNotAdministrateUsersException,
+    WorkflowInstanceBusyException,
 )
 from actidoo_wfe.wf.models import WorkflowUser
 from actidoo_wfe.wf.service_user import search_users
@@ -331,32 +335,67 @@ def replace_task_data(
         raise HTTPException(status_code=403)
 
 
+def _conflict(code: str, detail: str, **extra) -> JSONResponse:
+    """409 with a machine-readable ``code`` the frontend turns into a message."""
+    return JSONResponse(status_code=409, content={"detail": detail, "code": code, **extra})
+
+
 @router.post("/execute_erroneous_task", name="bff_admin_execute_erroneous_task")
 def execute_erroneous_task(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[WorkflowUser, Depends(get_user)],
     req_data: Annotated[ExecuteErroneousTaskRequest, Body()],
 ) -> GetAllTasksResponse:
+    """Re-runs an erroneous task.
+
+    Four outcomes are 409 rather than 200, each with its own ``code``: the step
+    failed again (``task_failed_again``), the step ran but a later one failed
+    (``follow_up_task_failed``), the task is no longer in error because an
+    earlier request completed it (``task_not_erroneous``), or another request
+    still holds the instance, typically a service task waiting on an external
+    system (``workflow_instance_busy``). The first two carry the task list in
+    the body like the success case.
+    """
 
     try:
-        workflow_instance_id = service_application.admin_execute_erroneous_task(
+        workflow_instance_id, outcome = service_application.admin_execute_erroneous_task(
             db=db,
             user_id=user.id,
             task_id=req_data.task_id,
         )
-
-        tasks = service_application.bff_admin_get_all_tasks(
-            db=db,
-            user_id=user.id,
-            bff_table_request_params=AdminWorkflowInstanceTasksBffTableQuerySchema.validate(
-                {"f_workflow_instance_id": str(workflow_instance_id)},
-            ),
-        )
-
-        return GetAllTasksResponse.model_validate(tasks)
-    except UserMayNotAdministrateThisWorkflowException as ex:
+    except UserMayNotAdministrateThisWorkflowException:
         log.warning(f"User {user.username} is not allowed to call execute_erroneous_task for task_id {req_data.task_id}")
         raise HTTPException(status_code=403)
+    except TaskIsNotErroneousException:
+        return _conflict("task_not_erroneous", "This task is not in error and cannot be re-run.")
+    except WorkflowInstanceBusyException as error:
+        return _conflict(
+            "workflow_instance_busy",
+            "Another request is still working on this workflow instance.",
+            workflow_instance_id=str(error.workflow_instance_id),
+        )
+
+    tasks = service_application.bff_admin_get_all_tasks(
+        db=db,
+        user_id=user.id,
+        bff_table_request_params=AdminWorkflowInstanceTasksBffTableQuerySchema.validate(
+            {"f_workflow_instance_id": str(workflow_instance_id)},
+        ),
+    )
+    response = GetAllTasksResponse.model_validate(tasks)
+
+    # Answered without raising so the request still commits and the new stack
+    # trace is stored.
+    if outcome is RetryOutcome.TASK_FAILED:
+        return _conflict("task_failed_again", "The task failed again.", **response.model_dump(mode="json"))
+    if outcome is RetryOutcome.FOLLOW_UP_FAILED:
+        return _conflict(
+            "follow_up_task_failed",
+            "The task ran, but a later step of the workflow failed.",
+            **response.model_dump(mode="json"),
+        )
+
+    return response
 
 
 @router.post("/download_attachment", name="bff_admin_download_attachment")

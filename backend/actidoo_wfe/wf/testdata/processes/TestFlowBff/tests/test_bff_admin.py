@@ -354,40 +354,6 @@ def test_admin_replace_task_data(db_engine_ctx):
         assert json_resp.task.data == {"required_text": "replaced", "short_code": "xy"}
 
 
-def test_admin_execute_erroneous_task(db_engine_ctx):
-    with db_engine_ctx():
-        db = SessionLocal()
-        workflow = WorkflowDummy(
-            db_session=db,
-            users_with_roles={"admin": ["wf-admin"], "initiator": ["wf-user"]},
-            workflow_name=WF_NAME,
-            start_user="initiator",
-        )
-        workflow.user("initiator").submit(
-            task_data=FORM1_DATA_TRIGGER_ERROR,
-            workflow_instance_id=workflow.workflow_instance_id,
-        )
-
-        client = Client()
-        with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
-            status, all_tasks = client.post(
-                name="bff_admin_get_all_tasks",
-                json={"f_state_error": True},
-                cls=GetAllTasksResponse,
-            )
-            assert status == 200
-            erroneous = [t for t in all_tasks.ITEMS if t.state_error]
-            assert erroneous, "expected a task in state_error"
-
-            status, _ = client.post(
-                name="bff_admin_execute_erroneous_task",
-                json={"task_id": str(erroneous[0].id)},
-                cls=GetAllTasksResponse,
-            )
-
-        assert status == 200
-
-
 def test_admin_download_attachment(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()

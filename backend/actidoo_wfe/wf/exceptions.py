@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+import uuid
+
 from actidoo_wfe.wf.constants import BFF_CONTRACT_VERSION
 
 
@@ -81,6 +83,19 @@ class UserMayNotAdministrateUsersException(Exception):
 
 class TaskIsNotErroneousException(Exception):
     pass
+
+
+class WorkflowInstanceBusyException(Exception):
+    """Raised when the instance row lock could not be taken in time.
+
+    Another request is still working on the instance - typically a service
+    task waiting on an external system. The caller reloads and tries again
+    later instead of waiting for the other request to finish.
+    """
+
+    def __init__(self, workflow_instance_id: uuid.UUID):
+        self.workflow_instance_id = workflow_instance_id
+        super().__init__(f"Workflow instance '{workflow_instance_id}' is being processed by another request")
 
 
 class WorkflowDefinitionMissingError(Exception):

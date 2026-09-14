@@ -45,6 +45,7 @@ from actidoo_wfe.wf.constants import (
     INTERNAL_DATA_KEY_DELEGATE_COMMENT,
     INTERNAL_DATA_KEY_STACKTRACE,
     ROW_ID_KEY,
+    RetryOutcome,
 )
 from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf.exceptions import (
@@ -1073,8 +1074,13 @@ def replace_task_data(workflow: BpmnWorkflow, task_id: uuid.UUID, task_data: dic
         stamp_missing_row_ids(form_spec.uischema, task.data)
 
 
-def execute_erroneous_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
-    """Runs a task, afterwards proceeds with run_workflow"""
+def execute_erroneous_task(workflow: BpmnWorkflow, task_id: uuid.UUID) -> RetryOutcome:
+    """Runs a task, afterwards proceeds with run_workflow.
+
+    The two ways this can fall short are told apart, because they mean
+    different things to the administrator who pressed the button: the task
+    itself failing again, or the task succeeding and a step behind it failing.
+    """
     task: Task = workflow.get_task_from_id(task_id)
     if not task.has_state(TaskState.ERROR):
         raise TaskIsNotErroneousException()
@@ -1083,10 +1089,22 @@ def execute_erroneous_task(workflow: BpmnWorkflow, task_id: uuid.UUID):
         task_id=task_id,
         stacktrace=None,
     )  # reset stacktrace
-    success = task.run()
-    if not success:
-        return False
-    return run_workflow(workflow=workflow)
+    try:
+        success = task.run()
+    except Exception:
+        # A service task catches its own errors and returns False. A script
+        # task or a gateway with a broken condition raises instead. Both end
+        # the same way here as they do in run_workflow: error state and a
+        # fresh stack trace, stored with the request instead of rolled back.
+        log.exception("retried task failed again")
+        task.error()
+        set_stacktrace(workflow=workflow, task_id=task_id, stacktrace=traceback.format_exc())
+        return RetryOutcome.TASK_FAILED
+    if not success or task.has_state(TaskState.ERROR):
+        return RetryOutcome.TASK_FAILED
+    if not run_workflow(workflow=workflow):
+        return RetryOutcome.FOLLOW_UP_FAILED
+    return RetryOutcome.COMPLETED
 
 
 def get_stacktrace(workflow: BpmnWorkflow, task_id: uuid.UUID) -> str | None:

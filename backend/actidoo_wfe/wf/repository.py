@@ -14,12 +14,14 @@ from SpiffWorkflow.bpmn.specs.mixins.events.event_types import CatchingEvent
 from SpiffWorkflow.bpmn.workflow import BpmnWorkflow
 from SpiffWorkflow.task import Task, TaskState
 from sqlalchemy import and_, delete, func, null, select, tuple_
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy_file import File
 
+from actidoo_wfe.database import is_lock_wait_timeout
 from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.wf import events, providers as workflow_providers
-from actidoo_wfe.wf.exceptions import InvalidWorkflowSpecException
+from actidoo_wfe.wf.exceptions import InvalidWorkflowSpecException, WorkflowInstanceBusyException
 from actidoo_wfe.wf.models import (
     DataModelFile,
     WorkflowAttachment,
@@ -300,11 +302,18 @@ def load_workflow_instance(db: Session, workflow_id: uuid.UUID, for_update: bool
     if for_update:
         statement = statement.with_for_update()
 
-    db_wf: WorkflowInstance = db.execute(statement).scalar_one()
-    # The refresh busts the identity-map cache. When locking it must lock too:
-    # a plain refresh reads from the transaction's REPEATABLE-READ snapshot and
-    # would overwrite the locking read's fresh row with pre-lock stale data.
-    db.refresh(db_wf, with_for_update=True if for_update else None)
+    try:
+        db_wf: WorkflowInstance = db.execute(statement).scalar_one()
+        # The refresh busts the identity-map cache. When locking it must lock too:
+        # a plain refresh reads from the transaction's REPEATABLE-READ snapshot and
+        # would overwrite the locking read's fresh row with pre-lock stale data.
+        db.refresh(db_wf, with_for_update=True if for_update else None)
+    except OperationalError as error:
+        # MySQL 1205: the lock wait ran out - another request holds the
+        # instance, typically a service task waiting on an external system.
+        if for_update and is_lock_wait_timeout(error):
+            raise WorkflowInstanceBusyException(workflow_id) from error
+        raise
 
     workflow = restore(serialized_data=db_wf.data)
 
