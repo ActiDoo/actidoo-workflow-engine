@@ -16,6 +16,7 @@ from sqlalchemy.orm.attributes import set_committed_value
 from actidoo_wfe.helpers.bff_table import BFFTable, BffTableQuerySchemaBase, CursorBFFTable
 from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataSchema
 from actidoo_wfe.helpers.time import dt_now_naive
+from actidoo_wfe.wf import service_workflow
 from actidoo_wfe.wf.exceptions import TaskNotFoundException
 from actidoo_wfe.wf.models import (
     WorkflowInstance,
@@ -172,6 +173,21 @@ def _instance_list_loader_options():
     )
 
 
+
+def _task_deadline(task: WorkflowInstanceTask):
+    return service_workflow.build_task_deadline(urgency_at=task.urgency_at, critical_at=task.critical_at)
+
+
+def _instance_representation(row: WorkflowInstance) -> WorkflowInstanceRepresentation:
+    """``WorkflowInstanceRepresentation`` of a row whose active tasks are loaded,
+    with the task deadlines and the instance's most pressing one filled in."""
+    rep = WorkflowInstanceRepresentation.model_validate(row)
+    for task_rep, task_row in zip(rep.active_tasks, row.active_tasks):
+        task_rep.deadline = _task_deadline(task_row)
+    rep.deadline = service_workflow.highest_task_deadline([t.deadline for t in rep.active_tasks])
+    return rep
+
+
 def bff_get_workflows_with_usertasks(
     db: Session,
     bff_table_request_params: BffTableQuerySchemaBase,
@@ -236,7 +252,7 @@ def bff_get_workflows_with_usertasks(
         db.expunge(row)
 
     res_representation = CursorPaginatedDataSchema(
-        ITEMS=[WorkflowInstanceRepresentation.model_validate(x) for x in paginated_data.items],
+        ITEMS=[_instance_representation(x) for x in paginated_data.items],
         NEXT_CURSOR=paginated_data.next_cursor,
     )
 
@@ -286,7 +302,7 @@ def bff_user_get_initiated_workflows(
         db.expunge(row)
 
     res_representation = PaginatedDataSchema(
-        ITEMS=[WorkflowInstanceRepresentation.model_validate(x) for x in paginated_data.items],
+        ITEMS=[_instance_representation(x) for x in paginated_data.items],
         COUNT=paginated_data.count,
     )
 
@@ -374,6 +390,7 @@ def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuery
                     workflow_instance=WorkflowInstanceWithoutTasksRepresentation.model_validate(
                         x.workflow_instance,
                     ),
+                    deadline=_task_deadline(x),
                 ),
             )
             for x in paginated_data.items
@@ -436,7 +453,7 @@ def bff_admin_get_all_workflow_instances(db: Session, bff_table_request_params: 
         db.expunge(row)
 
     res_representation = PaginatedDataSchema(
-        ITEMS=[WorkflowInstanceRepresentation.model_validate(x) for x in paginated_data.items],
+        ITEMS=[_instance_representation(x) for x in paginated_data.items],
         COUNT=paginated_data.count,
     )
 
@@ -474,6 +491,7 @@ def admin_get_single_task(db: Session, task_id: uuid.UUID) -> WorkflowInstanceTa
             workflow_instance=WorkflowInstanceWithoutTasksRepresentation.model_validate(
                 task.workflow_instance,
             ),
+            deadline=_task_deadline(task),
         ),
     )
 

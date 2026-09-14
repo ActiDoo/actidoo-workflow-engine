@@ -8,7 +8,9 @@
     padding: 0;
   }
 
-  ui5-li[focused]::part(native-li)::after {
+  /* Clicking a task leaves a focus ring on it; keyboard focus keeps the ring
+   * through :focus-visible, same rule as TabFocusRing.ts. */
+  ui5-li[focused]:not(:focus-visible)::part(native-li)::after {
     display: none;
   }
 

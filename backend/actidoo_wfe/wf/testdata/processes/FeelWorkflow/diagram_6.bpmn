@@ -8,7 +8,6 @@
       <bpmn:lane id="InitLaneID" name="Init Lane">
         <bpmn:extensionElements>
           <zeebe:properties>
-            <zeebe:property name="urgency" value="1" />
             <zeebe:property name="initiator" value="true" />
           </zeebe:properties>
         </bpmn:extensionElements>
@@ -32,6 +31,11 @@
     <bpmn:sequenceFlow id="Flow_1jw3vl8" sourceRef="Activity_06zk4v0" targetRef="Event_1knr342" />
     <bpmn:sequenceFlow id="Flow_14nwovz" sourceRef="FeelForm" targetRef="Activity_06zk4v0" />
     <bpmn:userTask id="FeelForm" name="A FEEL Form">
+      <bpmn:extensionElements>
+        <zeebe:properties>
+          <zeebe:property name="urgency" value="1" />
+        </zeebe:properties>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_1wxg32k</bpmn:incoming>
       <bpmn:outgoing>Flow_14nwovz</bpmn:outgoing>
     </bpmn:userTask>

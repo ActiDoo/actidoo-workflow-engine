@@ -4,11 +4,6 @@
     <bpmn:participant id="Participant_0xk54fj" name="Participant" processRef="TestFlow_SelectMultiple" />
   </bpmn:collaboration>
   <bpmn:process id="TestFlow_SelectMultiple" name="Test Flow - Select Multiple" isExecutable="true">
-    <bpmn:extensionElements>
-      <zeebe:properties>
-        <zeebe:property name="critical" value="0" />
-      </zeebe:properties>
-    </bpmn:extensionElements>
     <bpmn:laneSet id="LaneSet_1dci7ey">
       <bpmn:lane id="InitLaneID" name="Init Lane">
         <bpmn:extensionElements>
@@ -39,6 +34,11 @@
       <bpmn:outgoing>Flow_1wxg32k</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="SimpleForm" name="A Simple Form with selects">
+      <bpmn:extensionElements>
+        <zeebe:properties>
+          <zeebe:property name="critical" value="0" />
+        </zeebe:properties>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_1wxg32k</bpmn:incoming>
       <bpmn:outgoing>Flow_14nwovz</bpmn:outgoing>
     </bpmn:userTask>

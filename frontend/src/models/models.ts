@@ -38,7 +38,6 @@ export interface UserTask {
   completed_by_delegate_user?: { id: string; full_name: string } | null;
   delegate_submit_comment?: string | null;
   is_readonly?: boolean;
-  deadline?: WorkflowDeadline | null;
 }
 
 export interface WorkflowInstanceMeta {
@@ -47,7 +46,6 @@ export interface WorkflowInstanceMeta {
   subtitle?: string | null;
   is_completed: boolean;
   is_readonly?: boolean;
-  deadline?: WorkflowDeadline | null;
 }
 
 export interface GetUserTasksResponse {
@@ -139,8 +137,6 @@ export interface PinnedWorkflowsResponse {
 export type WorkflowDeadlineLevel = 'normal' | 'urgency' | 'critical';
 
 export interface WorkflowDeadline {
-  urgency_days?: number | null;
-  critical_days?: number | null;
   urgency_at?: string | null;
   critical_at?: string | null;
   level?: WorkflowDeadlineLevel;
@@ -180,7 +176,6 @@ export interface AdminWorkflowInstance {
   has_task_in_error_state?: boolean;
   created_by?: User;
   is_readonly?: boolean;
-  deadline?: WorkflowDeadline | null;
 }
 
 export interface MyInitiatedWorkflowInstance {

@@ -4,11 +4,6 @@
     <bpmn:participant id="Participant_demo_change" name="Demo Expense Change" processRef="TestFlowDemoExpenseChange" />
   </bpmn:collaboration>
   <bpmn:process id="TestFlowDemoExpenseChange" name="Demo Expense Change" isExecutable="true">
-    <bpmn:extensionElements>
-      <zeebe:properties>
-        <zeebe:property name="urgency" value="0" />
-      </zeebe:properties>
-    </bpmn:extensionElements>
     <bpmn:laneSet id="LaneSet_demo_change">
       <bpmn:lane id="EditorLane" name="Editor">
         <bpmn:extensionElements>
@@ -34,6 +29,11 @@
       <bpmn:outgoing>Flow_prefill_edit</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:userTask id="EditExpense" name="Edit Expense">
+      <bpmn:extensionElements>
+        <zeebe:properties>
+          <zeebe:property name="urgency" value="0" />
+        </zeebe:properties>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_prefill_edit</bpmn:incoming>
       <bpmn:outgoing>Flow_edit_persist</bpmn:outgoing>
     </bpmn:userTask>

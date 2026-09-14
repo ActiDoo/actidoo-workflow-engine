@@ -54,8 +54,6 @@ class SubmitTaskDataErrorResponse(BaseModel):
 class WorkflowDeadlineResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    urgency_days: int | None = None
-    critical_days: int | None = None
     urgency_at: datetime.datetime | None = None
     critical_at: datetime.datetime | None = None
     level: str = "normal"
@@ -69,7 +67,6 @@ class GetUserTasksResponseWorkflowInstance(BaseModel):
     subtitle: Optional[str] = None
     is_completed: bool
     is_readonly: bool = False
-    deadline: WorkflowDeadlineResponse | None = None
 
 
 class GetUserTasksResponse(BaseModel):
@@ -105,7 +102,6 @@ class GetUserTasksResponseUserTasks(BaseModel):
     completed_by_delegate_user: Optional["InlineUserResponse"]
     delegate_submit_comment: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
-    deadline: WorkflowDeadlineResponse | None = None
 
 
 class StartWorkflowWithDataResponse(BaseModel):

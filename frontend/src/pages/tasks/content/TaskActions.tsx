@@ -30,7 +30,7 @@ export const TaskActions: React.FC<TaskActionsProps> = props => {
           <BusyIndicator active={deleteWorkflowLoadState} delay={0} className="">
             <Button
               design={ButtonDesign.Negative}
-              disabled={!!props.disabled}
+              disabled={!!props.disabled || deleteWorkflowLoadState}
               onClick={props.onDelete}>
               {t('taskActions.delete')}
             </Button>

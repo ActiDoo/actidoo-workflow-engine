@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   BusyIndicator,
   Button,
@@ -85,31 +85,6 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
   const { items, loadingInitial, loadingMore, error, hasMore, loadMore, reload } =
     useInfiniteWorkflowInstances(props.dataKey, props.state, debouncedSearch);
 
-  const sortedItems = useMemo(() => {
-    if (props.state === WorkflowState.COMPLETED) return items;
-
-    return [...items].sort((first, second) => {
-      const firstMeta = getTaskPriorityMeta({
-        deadline: first.deadline,
-        priorityDate: first.priority_date,
-        createdAt: first.created_at,
-      });
-      const secondMeta = getTaskPriorityMeta({
-        deadline: second.deadline,
-        priorityDate: second.priority_date,
-        createdAt: second.created_at,
-      });
-
-      if (firstMeta.priority !== secondMeta.priority) {
-        return secondMeta.priority - firstMeta.priority;
-      }
-      if (firstMeta.priority > 0 && firstMeta.referenceTime !== secondMeta.referenceTime) {
-        return firstMeta.referenceTime - secondMeta.referenceTime;
-      }
-      return 0;
-    });
-  }, [items, props.state]);
-
   // Load the next page when the sentinel scrolls into view. The observer root is
   // the sidebar's own scroll container — with the viewport as root the 200px
   // prefetch margin would never apply inside the overflow container.
@@ -130,7 +105,7 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, error, loadMore, loadingMore, loadingInitial, sortedItems.length]);
+  }, [hasMore, error, loadMore, loadingMore, loadingInitial, items.length]);
 
   const errorComponent = (
     <div className="p-12 flex flex-col items-center gap-3">
@@ -268,12 +243,12 @@ export const WeSideBarList: React.FC<WeSideBarListProps> = props => {
           delay={0}
           className="w-full h-full flex items-center justify-center"
         />
-      ) : error && sortedItems.length === 0 ? (
+      ) : error && items.length === 0 ? (
         errorComponent
-      ) : sortedItems.length > 0 ? (
+      ) : items.length > 0 ? (
         <>
           <List>
-            {sortedItems.map(instance => {
+            {items.map(instance => {
               const isSelected = workflowId === instance.id.toString();
               const tasks =
                 props.state === WorkflowState.COMPLETED

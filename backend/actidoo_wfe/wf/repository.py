@@ -55,6 +55,7 @@ from actidoo_wfe.wf.service_workflow import (
     get_stacktrace,
     get_subtitle,
     get_task_data,
+    get_task_deadline_times,
     get_task_roles,
     restore,
 )
@@ -140,6 +141,9 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
             db_task.manual = task_spec.manual
             db_task.name = task_spec.name
             db_task.title = task_spec.bpmn_name or task_spec.name
+            db_task.created_at = dt_now_naive()
+            if task_spec.manual:
+                db_task.urgency_at, db_task.critical_at = get_task_deadline_times(task, db_task.created_at)
 
             db_task.state = task.state
             db_task.state_ready = task.has_state(TaskState.READY)

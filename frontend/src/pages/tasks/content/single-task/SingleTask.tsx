@@ -593,7 +593,7 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
             </Button>
           </>
         }>
-        <Text>{t('taskContent.deleteDialogText')}</Text>
+        <Text className="whitespace-pre-line">{t('taskContent.deleteDialogText')}</Text>
       </WeAlertDialog>
     );
   };

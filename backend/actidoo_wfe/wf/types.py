@@ -66,12 +66,9 @@ class InlineUserRepresentation(BaseModel):
 class TaskDeadlineRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    urgency_days: int | None = Field(default=None)
-    critical_days: int | None = Field(default=None)
     urgency_at: datetime.datetime | None = Field(default=None)
     critical_at: datetime.datetime | None = Field(default=None)
     level: Literal["normal", "urgency", "critical"] = Field(default="normal")
-    
 
 class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -97,7 +94,6 @@ class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     completed_by_delegate_user_id: uuid.UUID | None = Field(default=None)
     delegate_submit_comment: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
-    deadline: TaskDeadlineRepresentation | None = Field(default=None)
 
 
 class UserTaskRepresentation(UserTaskWithoutNestedAssignedUserRepresentation):
@@ -127,7 +123,6 @@ class WorkflowInstanceTaskInlineRepresentation(BaseModel):
     can_be_assigned_as_delegate: bool = Field(default=False)
     is_readonly: bool = Field(default=False)
     deadline: TaskDeadlineRepresentation | None = Field(default=None)
-
 
 
 class WorkflowInstanceRepresentation(BaseModel):
@@ -165,7 +160,6 @@ class WorkflowInstanceWithoutTasksRepresentation(BaseModel):
     created_by: InlineUserRepresentation
     has_task_in_error_state: bool
     is_readonly: bool = Field(default=False)
-    deadline: TaskDeadlineRepresentation | None = Field(default=None)
 
 
 class WorkflowRepresentation(BaseModel):

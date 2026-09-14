@@ -31,6 +31,7 @@ from SpiffWorkflow.task import Task, TaskFilter, TaskState
 
 from actidoo_wfe.helpers.modules import env_from_module
 from actidoo_wfe.helpers.string import boolean_or_string_list
+from actidoo_wfe.helpers.time import dt_now_aware
 from actidoo_wfe.settings import settings
 from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.wf import providers as workflow_providers
@@ -595,69 +596,66 @@ def get_task_deadline_thresholds(task: Task) -> tuple[int | None, int | None]:
     )
 
 
-@cache
-def get_task_deadline_thresholds_cached(
-    workflow_name: str,
-    task_name: str,
-    bpmn_id: str | None = None,
-) -> tuple[int | None, int | None]:
-    """Return user-task deadline thresholds from the BPMN definition.
+def get_task_deadline_times(task: Task, created_at: datetime.datetime) -> tuple[datetime.datetime | None, datetime.datetime | None]:
+    """``(urgency_at, critical_at)`` of a task that just became ready, from the
+    BPMN thresholds of the current definition. Stored on the task row so a later
+    definition change does not move the deadlines of running tasks."""
+    urgency_days, critical_days = get_task_deadline_thresholds(task)
+    return (
+        created_at + datetime.timedelta(days=urgency_days) if urgency_days is not None else None,
+        created_at + datetime.timedelta(days=critical_days) if critical_days is not None else None,
+    )
 
-    The thresholds are not persisted in the database. They are read from the
-    user-task custom properties in the currently configured workflow definition.
-    """
-    assert workflow_name is not None and workflow_name != ""
-    assert task_name is not None and task_name != ""
 
-    try:
-        workflow = load_process_from_file(name=workflow_name)
-        specs = list(getattr(workflow.spec, "task_specs", {}).values())
-        specs.extend(
-            spec
-            for subprocess in getattr(workflow, "subprocess_specs", {}).values()
-            for spec in getattr(subprocess, "task_specs", {}).values()
-        )
-    except Exception:
-        log.exception("Cannot get task deadline custom properties for workflow %s task %s", workflow_name, task_name)
-        return None, None
+def highest_task_deadline(deadlines: list[TaskDeadlineRepresentation | None]) -> TaskDeadlineRepresentation | None:
+    """The deadline that matters most in a list of task deadlines: the highest
+    level, and among equals the one reached first."""
+    candidates = [deadline for deadline in deadlines if deadline is not None]
+    if not candidates:
+        return None
 
-    for spec in specs:
-        if getattr(spec, "name", None) == task_name or (bpmn_id is not None and getattr(spec, "bpmn_id", None) == bpmn_id):
-            return _parse_task_deadline_thresholds_from_custom_props(
-                getattr(spec, "custom_props", {}) or {},
-                context=f"Workflow '{workflow_name}' task '{task_name}'",
-            )
+    level_priority = {"normal": 0, "urgency": 1, "critical": 2}
 
-    return None, None
+    def _reference_timestamp(deadline: TaskDeadlineRepresentation) -> float:
+        if deadline.level == "critical" and deadline.critical_at is not None:
+            return deadline.critical_at.timestamp()
+        if deadline.urgency_at is not None:
+            return deadline.urgency_at.timestamp()
+        if deadline.critical_at is not None:
+            return deadline.critical_at.timestamp()
+        return float("inf")
+
+    return max(
+        candidates,
+        key=lambda deadline: (level_priority.get(deadline.level, 0), -_reference_timestamp(deadline)),
+    )
 
 
 def build_task_deadline(
-    created_at: datetime.datetime,
-    urgency_days: int | None,
-    critical_days: int | None,
+    urgency_at: datetime.datetime | None,
+    critical_at: datetime.datetime | None,
     now: datetime.datetime | None = None,
 ) -> TaskDeadlineRepresentation | None:
-    if urgency_days is None and critical_days is None:
+    """Deadline representation of a task row: its stored timestamps plus the
+    level they have reached at ``now``."""
+    if urgency_at is None and critical_at is None:
         return None
 
-    urgency_at = created_at + datetime.timedelta(days=urgency_days) if urgency_days is not None else None
-    critical_at = created_at + datetime.timedelta(days=critical_days) if critical_days is not None else None
+    # The timestamps are UTC either way: aware when read back through
+    # UTCDateTime, naive before the row was flushed. Compare as aware UTC.
+    def _aware(value: datetime.datetime | None) -> datetime.datetime | None:
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=datetime.timezone.utc)
+        return value
 
-    if now is None:
-        now = datetime.datetime.now(tz=created_at.tzinfo) if created_at.tzinfo else datetime.datetime.now()
+    urgency_at, critical_at, now = _aware(urgency_at), _aware(critical_at), _aware(now) or dt_now_aware()
     level: Literal["normal", "urgency", "critical"] = "normal"
     if critical_at is not None and now >= critical_at:
         level = "critical"
     elif urgency_at is not None and now >= urgency_at:
         level = "urgency"
 
-    return TaskDeadlineRepresentation(
-        urgency_days=urgency_days,
-        critical_days=critical_days,
-        urgency_at=urgency_at,
-        critical_at=critical_at,
-        level=level,
-    )
+    return TaskDeadlineRepresentation(urgency_at=urgency_at, critical_at=critical_at, level=level)
 
 
 @cache
