@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 import actidoo_wfe.wf.providers as workflow_providers
 import actidoo_wfe.wf.repository as repository
+import actidoo_wfe.wf.repository_data_model as repository_data_model
 import actidoo_wfe.wf.service_application as service_application
 import actidoo_wfe.wf.service_workflow as service_workflow
 import actidoo_wfe.wf.views_data_model as views_data_model
@@ -297,7 +298,7 @@ def load_row_attachment(
     # Ownership + filename come from the side table: a file row for this exact
     # version must reference the hash. The per-row filename names the download in
     # this record's context (the deduped attachment's first_filename may differ).
-    side = repository.find_data_model_file_by_hash(db, data_model.name, row.id, row_version, file_hash)
+    side = repository_data_model.find_data_model_file_by_hash(db, data_model.name, row.id, row_version, file_hash)
     if side is None or side.attachment.file is None:
         raise DataModelRowNotFoundError("Attachment not found")
 

@@ -395,16 +395,15 @@ def _run_extension_migrations(engine, ext_alembic_module, entry_point_name: str)
         return
 
     if not already_stamped:
-        # Fresh DB: build this project's data-model tables from the models and
-        # stamp the history instead of replaying the create-table migrations.
-        from actidoo_wfe.wf.registry_data_model import data_model_registry
-
+        # Fresh DB: build this project's tables from its mapped models and stamp
+        # the history instead of replaying the create-table migrations. The
+        # mapper registry knows every model the env just imported, and which
+        # package it lives in — no need to ask the wf data-model registry.
         package = ext_alembic_module.__name__.split(".")[0]
         project_tables = [
-            descriptor.model_class.__table__
-            for descriptor in data_model_registry.list_models()
-            if descriptor.model_class.__module__ == package
-            or descriptor.model_class.__module__.startswith(package + ".")
+            mapper.class_.__table__
+            for mapper in Base.registry.mappers
+            if mapper.class_.__module__ == package or mapper.class_.__module__.startswith(package + ".")
         ]
         metadata.create_all(engine, tables=project_tables)
         stamp(config=alembic_cfg, revision="head")

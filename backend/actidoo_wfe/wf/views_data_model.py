@@ -225,13 +225,13 @@ def files_by_row(
     One query for the whole page — mirrors the ``actions_by_row`` secondary-query
     pattern so file fields stay free of an N+1.
     """
-    from actidoo_wfe.wf import repository
+    from actidoo_wfe.wf import repository_data_model
 
     if not _model_has_file_fields(data_model) or not rows:
         return {}
     keys = [(row.id, getattr(row, "version", 0) or 0) for row in rows]
     result: dict[tuple[uuid.UUID, int], dict[str, list[dict]]] = {}
-    for file in repository.find_data_model_files_for_rows(db, data_model.name, keys):
+    for file in repository_data_model.find_data_model_files_for_rows(db, data_model.name, keys):
         by_field = result.setdefault((file.row_id, file.row_version), {})
         by_field.setdefault(file.field_name, []).append(
             {

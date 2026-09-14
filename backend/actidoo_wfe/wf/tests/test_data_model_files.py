@@ -16,7 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from actidoo_wfe.database import SessionMaker, setup_db
 from actidoo_wfe.settings import settings
-from actidoo_wfe.wf import repository
+from actidoo_wfe.wf import repository, repository_data_model
 from actidoo_wfe.wf.config_data_model import READ_ALL_WORKFLOW_USERS, FieldDef, WorkflowDataApiConfig
 from actidoo_wfe.wf.data_model_files import record_file_intent
 from actidoo_wfe.wf.models import (
@@ -273,7 +273,7 @@ class TestAttachmentGc:
                 assert repository.find_attachment_by_id(db=db, attachment_id=att) is not None
             # Drop the file row -> attachment becomes collectable.
             with SessionMaker() as db, db.begin():
-                repository.delete_data_model_files_for_row(db, "Docs", record_id, version)
+                repository_data_model.delete_data_model_files_for_row(db, "Docs", record_id, version)
             with SessionMaker() as db, db.begin():
                 repository.delete_dangling_attachment(db=db, attachment_id=att)
             with SessionMaker() as db:

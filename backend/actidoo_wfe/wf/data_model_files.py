@@ -12,7 +12,7 @@ registered after ``_assign_versions`` (this module is imported at the bottom of
 ``registry_data_model``, which imports ``models`` first), so it sees the final
 ``(id, version)``.
 
-Repository functions do the DB work (flush-free, see repository.py); this module
+``repository_data_model`` does the DB work (flush-free); this module
 is only the trigger plus the author-facing intent recording.
 """
 
@@ -92,7 +92,7 @@ def _materialize_data_model_files(session: Session, flush_context, instances) ->
         return
 
     # Late imports break the import cycle (this module is imported by the registry).
-    from actidoo_wfe.wf import repository
+    from actidoo_wfe.wf import repository_data_model
     from actidoo_wfe.wf.registry_data_model import data_model_registry
 
     def file_fields(descriptor):
@@ -127,7 +127,7 @@ def _materialize_data_model_files(session: Session, flush_context, instances) ->
             for descriptor in descriptors:
                 for _r, field_name, refs in entries:
                     # Replace this field's files for this version.
-                    repository.delete_data_model_files_for_row(
+                    repository_data_model.delete_data_model_files_for_row(
                         session,
                         model_name=descriptor.name,
                         row_id=row.id,
@@ -138,7 +138,7 @@ def _materialize_data_model_files(session: Session, flush_context, instances) ->
                         attachment_id = _attachment_id(ref)
                         if attachment_id is None:
                             continue
-                        repository.store_data_model_file(
+                        repository_data_model.store_data_model_file(
                             session,
                             model_name=descriptor.name,
                             row_id=row.id,
@@ -163,7 +163,7 @@ def _materialize_data_model_files(session: Session, flush_context, instances) ->
                 for field in file_fields(descriptor):
                     if field.name in specified:
                         continue
-                    repository.copy_data_model_files_forward(
+                    repository_data_model.copy_data_model_files_forward(
                         session,
                         model_name=descriptor.name,
                         row_id=row.id,
@@ -176,7 +176,7 @@ def _materialize_data_model_files(session: Session, flush_context, instances) ->
         for row in deleted_rows:
             version = _row_version(row) or 0
             for descriptor in data_model_registry.descriptors_for_class(type(row)):
-                repository.delete_data_model_files_for_row(
+                repository_data_model.delete_data_model_files_for_row(
                     session,
                     model_name=descriptor.name,
                     row_id=row.id,
