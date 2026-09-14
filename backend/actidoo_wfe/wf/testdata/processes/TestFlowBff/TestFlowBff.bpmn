@@ -51,7 +51,7 @@
     <bpmn:scriptTask id="ScriptStep" name="Script step">
       <bpmn:incoming>Flow_followup_to_script</bpmn:incoming>
       <bpmn:outgoing>Flow_script_to_end</bpmn:outgoing>
-      <bpmn:script>bff_script_step()</bpmn:script>
+      <bpmn:script>if globals().get("crash_script"): raise RuntimeError("intentional crash of the script step")</bpmn:script>
     </bpmn:scriptTask>
     <bpmn:userTask id="Form2" name="Form 2">
       <bpmn:incoming>Flow_gateway_to_form2</bpmn:incoming>
