@@ -123,9 +123,7 @@ export function PcEditableDetailsSection<T>(props: PcDetailsSectionProps<T>): Re
                           </Label>
                           <br />
                           {item.description ? (
-                            <Text className="!text-[12px] !text-pc-gray-400">
-                              {item.description}
-                            </Text>
+                            <Text className="!text-xs !text-pc-gray-400">{item.description}</Text>
                           ) : null}
                         </div>
                         <div className="flex-1">

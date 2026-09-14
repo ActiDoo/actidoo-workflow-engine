@@ -57,7 +57,6 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const cancelWorkflowLoadState = useSelectUiLoading(WeDataKey.CANCEL_WORKFLOW, 'POST');
 
   const deleteWorkflow = useSelector((state: State) => state.data[WeDataKey.DELETE_WORKFLOW]);
-  const deleteWorkflowLoadState = useSelectUiLoading(WeDataKey.DELETE_WORKFLOW, 'POST');
 
   const copyInstance = useSelector((state: State) => state.data[WeDataKey.COPY_INSTANCE]);
   const copyInstanceLoadState = useSelectUiLoading(WeDataKey.COPY_INSTANCE, 'POST');
@@ -168,10 +167,6 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   };
 
   const showDialog = Modals.useShowDialog();
-
-  const handleDeleteWorkflow = (taskId: string): void => {
-    dispatch(postRequest(WeDataKey.DELETE_WORKFLOW, { task_id: taskId }));
-  };
 
   const handleCopyInstance = (): void => {
     // The route param IS the instance id — no need for the instance block here.
@@ -299,52 +294,6 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                     });
                   }}>
                   {t('singleTaskHeader.cancelWorkflow')}
-                </Button>
-              </BusyIndicator>
-            ) : null}
-            {task.can_delete_workflow ? (
-              <BusyIndicator active={deleteWorkflowLoadState} delay={0} className="">
-                <Button
-                  icon="employee-rejections"
-                  disabled={deleteWorkflowLoadState}
-                  design={ButtonDesign.Transparent}
-                  onClick={() => {
-                    const { close } = showDialog({
-                      children: (
-                        <span
-                          dangerouslySetInnerHTML={{
-                            __html: t('singleTaskHeader.deleteWorkflowDialogText'),
-                          }}
-                        />
-                      ),
-                      footer: (
-                        <Bar
-                          startContent={
-                            <div>
-                              <Button
-                                onClick={() => {
-                                  close();
-                                }}>
-                                {t('singleTaskHeader.closeDialog')}
-                              </Button>
-                            </div>
-                          }
-                          endContent={
-                            <div>
-                              <Button
-                                onClick={() => {
-                                  handleDeleteWorkflow(task.id);
-                                  close();
-                                }}>
-                                {t('singleTaskHeader.deleteWorkflowAction')}
-                              </Button>
-                            </div>
-                          }
-                        />
-                      ),
-                    });
-                  }}>
-                  {t('singleTaskHeader.deleteWorkflow')}
                 </Button>
               </BusyIndicator>
             ) : null}

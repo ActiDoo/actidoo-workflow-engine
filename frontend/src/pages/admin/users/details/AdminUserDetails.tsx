@@ -254,7 +254,7 @@ const AdminUserDetails: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
         <div className="flex flex-wrap justify-between gap-2">
           <div className="space-y-1">
-            <Label className="font-semibold block text-lg">{t('adminUserDetails.account')}</Label>
+            <Label className="font-semibold block text-base">{t('adminUserDetails.account')}</Label>
             <Text className="text-sm text-neutral-700">
               {t('adminUserDetails.userId')}: {user.id}
             </Text>

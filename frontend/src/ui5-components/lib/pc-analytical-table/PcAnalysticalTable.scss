@@ -7,9 +7,17 @@
    height: inherit !important;
 }
 
-.pc-analytical-table span[class*='ExpandableIndicatorStyles-container'] {
-   padding-left: 0 !important;
-   margin-right: 8px
+/* Row expander. The library hard-sets `color: var(--sapTextColor)` on its own
+   button, which beats the brand color the Transparent design would give it — so
+   the chevron has to be re-colored here to match our icon buttons. */
+[class*='Expandable_container'] {
+   /* !important: the library injects its own stylesheet at runtime, so an equally
+      specific rule here would lose the cascade against its 0.125rem default. */
+   margin-inline-end: 0.625rem !important;
+}
+
+[class*='Expandable_button'] {
+   color: var(--color-brand-primary) !important;
 }
 
 .my-workflows-table [class*='AnalyticalTable_tr_']:hover:not([data-empty-row]),

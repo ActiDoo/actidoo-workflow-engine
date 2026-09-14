@@ -22,9 +22,7 @@ const Tasks: React.FC = () => {
     <PcDetailsPage
       id="pc-tasks"
       mode={ObjectPageMode.IconTabBar}
-      header={{
-        title: t('tasks.header'),
-      }}
+      headerTitle={undefined}
       className={`!p-0 ${isDetail ? 'pc-tasks--detail' : ''}`}
       onSelectedSectionChange={event => {
         if (event.detail.selectedSectionId !== selectedTab) {

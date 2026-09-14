@@ -29,6 +29,7 @@ import { useTranslation } from '@/i18n';
 import TemplatePreviewList from '@/pages/tasks/content/single-task/form-templates/TemplatePreviewList';
 import TemplateStepper from '@/pages/tasks/content/single-task/form-templates/TemplateStepper';
 import { useFormTemplates } from '@/pages/tasks/content/single-task/form-templates/useFormTemplates';
+import { PcIconButton } from '@/ui5-components';
 
 interface ApplyTemplateModalProps {
   isOpen: boolean;
@@ -298,10 +299,11 @@ const ApplyTemplateModal: React.FC<ApplyTemplateModalProps> = props => {
                         {new Date(template.updated_at).toLocaleString()}
                       </span>
                     </div>
-                    <Button
+                    <PcIconButton
                       className="shrink-0"
-                      design={ButtonDesign.Negative}
+                      negative={true}
                       icon="delete"
+                      tooltip={t('formTemplates.delete.title')}
                       disabled={deleteLoading && deletedIdRef.current === template.id}
                       onClick={event => {
                         event.stopPropagation();

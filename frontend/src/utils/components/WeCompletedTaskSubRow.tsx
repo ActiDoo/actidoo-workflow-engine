@@ -2,7 +2,8 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React from 'react';
-import { Button, Text, Title, TitleLevel } from '@ui5/webcomponents-react';
+import { Text, Title, TitleLevel } from '@ui5/webcomponents-react';
+import { PcIconButton } from '@/ui5-components';
 import '@ui5/webcomponents-icons/dist/show';
 import { useTranslation } from '@/i18n';
 import { ActiveTaskInstance } from '@/models/models';
@@ -45,8 +46,9 @@ export const WeCompletedTaskSubRow: React.FC<{
                   <Text>{completedBy}</Text>
                 </td>
                 <td className="p-2 py-1 text-right">
-                  <Button
+                  <PcIconButton
                     icon="show"
+                    tooltip={t('common.actions.showSubmittedForm')}
                     onClick={() => {
                       props.onShowForm(task.id);
                     }}

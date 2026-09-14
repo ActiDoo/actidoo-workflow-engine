@@ -11,7 +11,7 @@
  *   - var-based: Bootstrap exposes a per-component --bs-* var → override it (.btn-*).
  *   - baked:     Bootstrap compiles a fixed hex (form-check checked, form-range thumb,
  *                focus borders) with no CSS var → set the property explicitly.
- * Only rendered controls are covered (no nav/pagination/dropdown/accordion/switch/links;
+ * Only rendered controls are covered (no nav/pagination/dropdown/accordion/switch;
  * btn-secondary/light/danger are not brand-primary). The white checkmark/radio-dot glyph
  * SVGs stay white — correct on a brand-colored background.
  */
@@ -54,6 +54,19 @@
 }
 .form-range::-moz-range-thumb:active {
   background-color: var(--color-brand-primary-strong);
+}
+
+// Links. Bootstrap 5.3 colors anchors from --bs-link-color-rgb (an rgb triplet baked
+// from $primary), which a hex-valued runtime token cannot feed — so set the color on the
+// anchor itself. Utility classes (0,1,0) still win over this element selector, so a link
+// that wants a different color keeps it.
+a {
+  color: var(--color-brand-primary);
+
+  &:hover,
+  &:focus {
+    color: var(--color-brand-primary-strong);
+  }
 }
 
 // Generic focus ring (.focus-ring / :focus-visible utilities). color-mix gives the 25%

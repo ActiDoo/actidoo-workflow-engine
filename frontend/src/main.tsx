@@ -14,6 +14,7 @@ import { setTheme } from '@ui5/webcomponents-base/dist/config/Theme';
 import { persistor, store } from '@/init/initStore'; // -> will set up the Redux Store
 import router from '@/init/initRouter'; // -> will do the main work of setting up everything
 import '@/styles/index.scss';
+import '@/ui5-components/styles/TabFocusRing';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { WeDialog } from '@/utils/components/WeDialog';
 import { WeToast } from '@/utils/components/WeToast';

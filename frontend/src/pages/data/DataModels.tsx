@@ -59,16 +59,18 @@ const DataModels: React.FC = () => {
 
   return (
     <PcDynamicPage
-      header={{ title: t('data.modelsTitle') }}
+      headerTitle={undefined}
       showHideHeaderButton={false}
       headerContentPinnable={false}>
-      <PcAnalyticalTable
-        columns={columns}
-        data={models}
-        loading={!!loading || !loaded}
-        response={data?.response}
-        noDataText={t('data.noModels')}
-      />
+      <div className="pt-6">
+        <PcAnalyticalTable
+          columns={columns}
+          data={models}
+          loading={!!loading || !loaded}
+          response={data?.response}
+          noDataText={t('data.noModels')}
+        />
+      </div>
     </PcDynamicPage>
   );
 };

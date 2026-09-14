@@ -5,6 +5,7 @@ export * from '@/ui5-components/lib/pc-editable-details-section/PcEditableDetail
 export * from '@/ui5-components/lib/pc-editable-details-section/models/PcEditableDetailsSectionModels';
 export * from '@/ui5-components/lib/pc-details-page/PcDetailsPage';
 export * from '@/ui5-components/lib/pc-dynamic-page/PcDynamicPage';
+export * from '@/ui5-components/lib/pc-icon-button/PcIconButton';
 export * from '@/ui5-components/lib/pc-page-title/PcPageTitle';
 export * from '@/ui5-components/lib/pc-page/PcPage';
 export * from '@/ui5-components/lib/pc-page-wrapper/PcPageWrapper';
@@ -31,3 +32,4 @@ export * from '@/ui5-components/services/FetchService';
 export * from '@/ui5-components/services/GernericDataService';
 
 export * from '@/ui5-components/hooks/useAdditionalTableFunctions';
+export * from '@/ui5-components/hooks/useBackNavigation';

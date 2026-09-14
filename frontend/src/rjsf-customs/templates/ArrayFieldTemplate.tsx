@@ -22,11 +22,25 @@ import {
   RJSFSchema,
   StrictRJSFSchema,
 } from '@rjsf/utils';
+import { InterpreterContext, unaryTest } from 'feelin';
 import { fetchPost } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
+import {
+  buildEvaluationContext,
+  buildMaskedParentContext,
+  resolveHiddenFields,
+} from '@/services/feelContext';
 import { PcValueLabelItem } from '@/models/models';
 import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import _ from 'lodash';
+
+const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
+  try {
+    return unaryTest(expression, { ...(context ?? {}) });
+  } catch {
+    return false;
+  }
+};
 
 export default function CustomArrayFieldTemplate<
   T = any,
@@ -207,6 +221,37 @@ export default function CustomArrayFieldTemplate<
     properties: Record<string, { title: string }>;
   };
 
+  const rootData = (props.registry as any)?.formContext?.formData;
+  const rootUiSchema = (props.registry as any)?.formContext?.uiSchema;
+  const maskedRootContext = useMemo(
+    () =>
+      rootUiSchema
+        ? resolveHiddenFields(rootUiSchema, rootData, evaluateHideIf).maskedContext ?? rootData
+        : rootData,
+    [formContextSignature, rootUiSchema]
+  );
+
+  // The overview must show exactly what the form shows, so it evaluates every row's
+  // hide-if with the same context the row's fields were rendered with (see
+  // CustomArraySchemaField). Rows of one list can differ: a field hidden in row 1 can
+  // be visible in row 2.
+  const resolveHiddenKeysPerRow = (
+    rowUiSchema: any,
+    rows: any[],
+    arrayId: string
+  ): Array<Set<string>> =>
+    rows.map((row, index) => {
+      const parent = buildMaskedParentContext(
+        rootData,
+        rootUiSchema,
+        `${arrayId}_${index}`,
+        maskedRootContext,
+        evaluateHideIf
+      );
+      const evalContext = buildEvaluationContext(maskedRootContext, row, parent);
+      return resolveHiddenFields(rowUiSchema, evalContext, evaluateHideIf).hiddenFields;
+    });
+
   const getDynamicValueLabel = (fieldKey: string, value: unknown): string | null => {
     if (!dynamicSelectConfigs[fieldKey]) {
       return null;
@@ -233,14 +278,29 @@ export default function CustomArrayFieldTemplate<
     return mapped || null;
   };
 
-  const renderTable = (items: any, dataArray: any[]): JSX.Element => {
-    const tableColumns = items?.properties
-      ? Object.keys(items.properties).map((key, index) => (
-          <TableColumn key={`column-${index}`}>
-            <Label>{items.properties[key].title}</Label>
-          </TableColumn>
-        ))
-      : null;
+  const renderTable = (
+    items: any,
+    dataArray: any[],
+    rowUiSchema: any,
+    arrayId: string
+  ): JSX.Element => {
+    const properties = items?.properties ?? {};
+    const rows = dataArray ?? [];
+    const hiddenKeysPerRow = resolveHiddenKeysPerRow(rowUiSchema, rows, arrayId);
+
+    // A text view carries no data ("null" type), and a field every row hides carries
+    // no visible one, so neither earns a column.
+    const columnKeys = Object.keys(properties).filter(
+      key =>
+        properties[key]?.type !== 'null' &&
+        (!rows.length || hiddenKeysPerRow.some(hiddenKeys => !hiddenKeys.has(key)))
+    );
+
+    const tableColumns = columnKeys.map((key, index) => (
+      <TableColumn key={`column-${index}`}>
+        <Label>{properties[key].title}</Label>
+      </TableColumn>
+    ));
 
     const isPdfArray = (val: any) => {
       return (
@@ -248,12 +308,16 @@ export default function CustomArrayFieldTemplate<
       );
     };
 
-    const tableRows = dataArray?.map((data, rowIndex) => (
+    const tableRows = rows.map((data, rowIndex) => (
       <TableRow key={`row-${rowIndex}`}>
-        {Object.keys(items.properties).map(key => {
+        {columnKeys.map(key => {
+          if (hiddenKeysPerRow[rowIndex]?.has(key)) {
+            return <TableCell key={`cell-${rowIndex}-${key}`} />;
+          }
+
           let val = data[key];
 
-          const property = items.properties[key];
+          const property = properties[key];
           if (property?.oneOf) {
             const match = property.oneOf.find((o: any) => o.const === val);
             if (match) val = match.title;
@@ -293,7 +357,12 @@ export default function CustomArrayFieldTemplate<
           if (property?.type === 'array' && Array.isArray(val)) {
             return (
               <TableCell key={`cell-${rowIndex}-${key}`}>
-                {renderTable(property.items, val)}
+                {renderTable(
+                  property.items,
+                  val,
+                  rowUiSchema?.[key]?.items,
+                  `${arrayId}_${rowIndex}_${key}`
+                )}
               </TableCell>
             );
           }
@@ -337,7 +406,7 @@ export default function CustomArrayFieldTemplate<
     }
 
     const { close } = showDialog({
-      children: renderTable(items, dataArray),
+      children: renderTable(items, dataArray, itemUiSchema, props.fieldPathId?.$id ?? 'root'),
       footer: (
         <Bar
           endContent={

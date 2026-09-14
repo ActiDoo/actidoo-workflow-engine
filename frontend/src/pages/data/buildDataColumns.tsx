@@ -13,6 +13,7 @@ import {
   TextAlign,
 } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/resize-horizontal';
+import '@ui5/webcomponents-icons/dist/overflow';
 import { PcDateColumn, PcInputColumn, PcTableData } from '@/ui5-components';
 import { PcArrowLink } from '@/ui5-components/utils/PcArrowLink';
 import { DataActionSchema, DataFieldSchema } from '@/models/dataViewer';
@@ -28,6 +29,10 @@ interface ColumnContext {
   // full value via the icon in the column header (for copying/searching).
   showFullIds: boolean;
   onToggleIdDisplay: () => void;
+  // Row actions either fit inline or are collapsed into a per-row menu; the
+  // decision is made once for the whole column so all rows look alike.
+  actionsAsMenu: boolean;
+  onOpenActionMenu: (row: Record<string, unknown>, openerId: string) => void;
 }
 
 const booleanFilter = (
@@ -176,11 +181,32 @@ const actionsColumn = (
     const row = instance.row.original;
     const actions = (row.__actions ?? []) as DataActionSchema[];
     if (actions.length === 0) return null;
+    // Table rows have a fixed height: buttons must never wrap, or they spill
+    // over the neighbouring rows. Long or many labels go into a menu instead.
+    if (ctx.actionsAsMenu) {
+      const openerId = `data-actions-opener-${String(instance.row.id)}`;
+      // Icon only: the column header already says "actions", and the narrow
+      // trigger leaves the width to the data columns.
+      return (
+        <Button
+          id={openerId}
+          icon="overflow"
+          design={ButtonDesign.Transparent}
+          accessibleName={t('data.actions')}
+          title={t('data.actions')}
+          onClick={() => {
+            ctx.onOpenActionMenu(row, openerId);
+          }}
+        />
+      );
+    }
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center gap-2 w-full min-w-0 overflow-hidden">
         {actions.map(action => (
           <Button
             key={action.key}
+            className="min-w-0"
+            title={action.label}
             design={ButtonDesign.Transparent}
             onClick={() => {
               ctx.onAction(row, action);

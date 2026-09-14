@@ -191,12 +191,15 @@ export const DialogStartWorkflow: React.FC = () => {
     <>
       <span>
         {environmentInfo && (
-          <span style={{ color: 'red', paddingRight: 10 }}>{environmentInfo}</span>
+          <span className="text-sm whitespace-nowrap" style={{ color: 'red', paddingRight: 10 }}>
+            {environmentInfo}
+          </span>
         )}
       </span>
       <Button
         design={ButtonDesign.Emphasized}
         icon="add"
+        className="shrink-0 whitespace-nowrap"
         onClick={() => {
           setDialogOpen(true);
         }}>

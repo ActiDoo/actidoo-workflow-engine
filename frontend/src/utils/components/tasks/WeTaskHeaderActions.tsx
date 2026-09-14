@@ -3,8 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { BusyIndicator, BusyIndicatorSize, Button, ButtonDesign } from '@ui5/webcomponents-react';
+import { PcIconButton } from '@/ui5-components';
 import '@ui5/webcomponents-icons/dist/synchronize';
-import '@ui5/webcomponents-icons/dist/begin';
 import '@ui5/webcomponents-icons/dist/cancel';
 import '@ui5/webcomponents-icons/dist/user-edit';
 import { useDispatch, useSelector } from 'react-redux';
@@ -124,8 +124,6 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
     dispatch(postRequest(WeDataKey.ADMIN_UNASSIGN_TASK, { task_id: props.taskId }));
   };
 
-  const handleSkipTask = (): void => {};
-
   const handleTryAgain = (): void => {
     dispatch(postRequest(WeDataKey.ADMIN_EXECUTE_ERRONEOUS_TASK, { task_id: props.taskId }));
   };
@@ -185,10 +183,9 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
 
   return (
     <>
-      <div className="flex gap-3">
-        <Button
+      <div className="flex gap-2">
+        <PcIconButton
           icon="user-edit"
-          design={ButtonDesign.Transparent}
           tooltip={t('admin.assignUserTooltip')}
           disabled={isReadonly}
           onClick={() => {
@@ -196,25 +193,12 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
           }}
         />
 
-        <BusyIndicator active={false} delay={0} size={BusyIndicatorSize.Small}>
-          <Button
-            icon="begin"
-            design={ButtonDesign.Transparent}
-            tooltip={t('admin.skipTasksTooltip')}
-            disabled={isReadonly}
-            onClick={() => {
-              handleSkipTask();
-            }}
-          />
-        </BusyIndicator>
-
         <BusyIndicator
           active={executeErroneousTaskLoadState}
           delay={0}
           size={BusyIndicatorSize.Small}>
-          <Button
+          <PcIconButton
             icon="synchronize"
-            design={ButtonDesign.Transparent}
             tooltip={t('admin.tryAgainTooltip')}
             disabled={!props.data?.state_error || isReadonly}
             onClick={() => {

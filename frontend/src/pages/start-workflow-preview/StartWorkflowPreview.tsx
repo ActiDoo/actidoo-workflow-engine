@@ -110,7 +110,10 @@ const StartWorkflowPreview: React.FC = () => {
         <div className="flex-1">
           <Text>{previewWorkflowTitle}</Text>
           <Title level={TitleLevel.H3}>{previewTask?.title ?? ''}</Title>
-          <MessageStrip design={MessageStripDesign.Information} hideCloseButton={true}>
+          <MessageStrip
+            className="mt-4"
+            design={MessageStripDesign.Information}
+            hideCloseButton={true}>
             {t('workflowPreview.previewInfo')}
           </MessageStrip>
         </div>
@@ -144,11 +147,8 @@ const StartWorkflowPreview: React.FC = () => {
             }}
           />
 
-          <div className="mt-16 flex flex-row justify-end">
-            <MessageStrip
-              className="max-w-4xl"
-              design={MessageStripDesign.Information}
-              hideCloseButton={true}>
+          <div className="mt-16">
+            <MessageStrip design={MessageStripDesign.Information} hideCloseButton={true}>
               {t('workflowPreview.startInfo')}
             </MessageStrip>
           </div>

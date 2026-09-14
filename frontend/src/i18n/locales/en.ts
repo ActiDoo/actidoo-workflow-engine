@@ -66,11 +66,14 @@ export const en = {
       signOut: 'Sign out',
       settings: 'Settings',
       showDetails: 'Show details',
+      openTask: 'Open task',
+      showSubmittedForm: 'Show submitted form',
+      moveUp: 'Move up',
+      moveDown: 'Move down',
       assignToMe: 'Assign to me',
       unassignFromMe: 'Unassign from me',
       assignUser: 'Assign User',
       unassignUser: 'Unassign User',
-      skipTasks: 'Skip tasks',
       saveSettings: 'Save Settings',
       resetToInitial: 'Reset To Initial State',
       submit: 'Submit',
@@ -140,8 +143,8 @@ export const en = {
   tasks: {
     header: 'Tasks',
     tabs: {
-      open: 'Open',
-      completed: 'Completed',
+      open: 'Open Tasks',
+      completed: 'Completed Tasks',
     },
     empty: {
       open: "You don't have any open tasks",
@@ -160,6 +163,9 @@ export const en = {
     unassigned: 'Unassigned',
     resetDialogTitle: 'Reset to Initial State',
     resetDialogText: 'This will reset all form data to the initial state.',
+    deleteDialogTitle: 'Delete workflow',
+    deleteDialogText:
+      'This will PERMANENTLY DELETE the workflow.\n\nIf you have started this workflow by mistake, you can delete it without any problems.',
     uploadForm: 'Form is being uploaded',
     uploadDraft: 'Draft is being uploaded',
     processForm: 'Form is being processed',
@@ -168,8 +174,9 @@ export const en = {
     submitError: 'An error occurred while submitting the form',
   },
   taskActions: {
-    reset: 'Reset To Initial State',
+    reset: 'Reset',
     submit: 'Submit',
+    delete: 'Delete',
   },
   formTemplates: {
     saveAction: 'Save as template',
@@ -232,11 +239,8 @@ export const en = {
     assignedDelegate: 'Assigned delegate',
     unassignFromMe: 'Unassign from me',
     cancelWorkflow: 'Cancel workflow',
-    deleteWorkflow: 'Delete workflow',
     cancelWorkflowDialogText:
       'This will cancel the workflow.<br/><br/>All entered data up to this point will remain visible in the My Workflows overview.',
-    deleteWorkflowDialogText:
-      'This will PERMANENTLY DELETE the workflow.<br/><br/>If you have started this workflow by mistake, you can delete it without any problems.',
     closeDialog: 'Close Dialog',
     cancelWorkflowAction: 'Cancel Workflow',
     deleteWorkflowAction: 'Delete Workflow',
@@ -258,14 +262,15 @@ export const en = {
   },
   myWorkflows: {
     title: 'My Workflows',
-    inProgress: 'In progress',
-    completed: 'Completed',
+    inProgress: 'Workflows in progress',
+    completed: 'Completed Workflows',
     activeTasksOfWorkflow: 'Active tasks of workflow',
     tasksOfWorkflow: 'Tasks of workflow',
     completedTasksOfWorkflow: 'Completed tasks of workflow',
     submittedFormTitle: 'Submitted form',
     submittedFormTitleWithTask: 'Submitted form: {{title}}',
     submittedFormUnavailable: 'Submitted form data could not be loaded.',
+    showInstanceId: 'Show instance ID',
   },
   myWorkflowsTable: {
     workflow: 'Workflow',
@@ -317,7 +322,6 @@ export const en = {
     unassignUser: 'Unassign User',
     assignUserTooltip: 'Assign user',
     unassignUserTooltip: 'Unassign User',
-    skipTasksTooltip: 'Skip tasks',
     tryAgainTooltip: 'Try again',
   },
   adminTables: {
@@ -454,6 +458,13 @@ export const en = {
     noItems: 'No items found.',
     noSearchResults: 'The search found no matching tasks.',
     taskCount: '{{count}} Task{{suffix}}:',
+    startDate: 'Start date',
+    workFlowInstanceID: 'Workflow Instance ID',
+    deadline: 'Deadline',
+    urgency: 'Urgency at : ',
+    critical: 'Deadline : ',
+    subtitle: 'Subtitle',
+    moreInformation: 'More information',
     searchPlaceholder: 'Search …',
     loadMore: 'Load more',
     retry: 'Try again',
@@ -475,6 +486,18 @@ export const en = {
       title: 'Erroneous task reminders',
       hint: 'Only relevant for administrators and workflow owners: a daily summary of all tasks in an error state.',
       label: 'Receive a daily reminder email about erroneous tasks',
+    },
+    taskPriority: {
+      title: 'Task prioritization',
+      hint: 'Define when open tasks are marked as urgent or critical in the list and sorted accordingly.',
+      enabled: 'Enable prioritization',
+      urgentAfter: 'Urgent after',
+      criticalAfter: 'Critical after',
+      unitDays: 'days',
+      urgentHint: 'Tasks receive the yellow urgency marker from this age onward.',
+      criticalHint:
+        'Tasks receive the red critical marker from this age onward and move to the top.',
+      invalid: 'The critical value must be greater than the urgent value.',
     },
     delegations: {
       title: 'Delegations',

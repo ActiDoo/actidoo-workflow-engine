@@ -67,11 +67,14 @@ export const de = {
       signOut: 'Abmelden',
       settings: 'Einstellungen',
       showDetails: 'Details anzeigen',
+      openTask: 'Aufgabe öffnen',
+      showSubmittedForm: 'Abgeschicktes Formular anzeigen',
+      moveUp: 'Nach oben verschieben',
+      moveDown: 'Nach unten verschieben',
       assignToMe: 'Mir zuweisen',
       unassignFromMe: 'Zuweisung aufheben',
       assignUser: 'Nutzer zuweisen',
       unassignUser: 'Nutzerzuweisung entfernen',
-      skipTasks: 'Aufgaben überspringen',
       saveSettings: 'Einstellungen speichern',
       resetToInitial: 'Auf Anfangszustand zurücksetzen',
       submit: 'Absenden',
@@ -141,8 +144,8 @@ export const de = {
   tasks: {
     header: 'Aufgaben',
     tabs: {
-      open: 'Offen',
-      completed: 'Abgeschlossen',
+      open: 'Offene Aufgaben',
+      completed: 'Abgeschlossene Aufgaben',
     },
     empty: {
       open: 'Du hast keine offenen Aufgaben',
@@ -161,6 +164,9 @@ export const de = {
     unassigned: 'Nicht zugewiesen',
     resetDialogTitle: 'Auf Anfangszustand zurücksetzen',
     resetDialogText: 'Dadurch werden alle Formulardaten auf den Anfangszustand zurückgesetzt.',
+    deleteDialogTitle: 'Workflow löschen',
+    deleteDialogText:
+      'Dadurch wird der Workflow dauerhaft gelöscht.\n\nWenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
     uploadForm: 'Formular wird hochgeladen',
     uploadDraft: 'Entwurf wird hochgeladen',
     processForm: 'Formular wird verarbeitet',
@@ -169,8 +175,9 @@ export const de = {
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
   },
   taskActions: {
-    reset: 'Auf Anfangszustand zurücksetzen',
+    reset: 'Zurücksetzen',
     submit: 'Absenden',
+    delete: 'Löschen',
   },
   formTemplates: {
     saveAction: 'Als Vorlage speichern',
@@ -234,11 +241,8 @@ export const de = {
     assignedDelegate: 'Delegiert an',
     unassignFromMe: 'Zuweisung aufheben',
     cancelWorkflow: 'Workflow abbrechen',
-    deleteWorkflow: 'Workflow löschen',
     cancelWorkflowDialogText:
       'Dadurch wird der Workflow abgebrochen.<br/><br/>Alle bisher eingegebenen Daten bleiben in der Übersicht „Meine Workflows“ sichtbar.',
-    deleteWorkflowDialogText:
-      'Dadurch wird der Workflow dauerhaft gelöscht.<br/><br/>Wenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
     closeDialog: 'Dialog schließen',
     cancelWorkflowAction: 'Workflow abbrechen',
     deleteWorkflowAction: 'Workflow löschen',
@@ -260,14 +264,15 @@ export const de = {
   },
   myWorkflows: {
     title: 'Meine Workflows',
-    inProgress: 'In Bearbeitung',
-    completed: 'Abgeschlossen',
+    inProgress: 'Workflows in Bearbeitung',
+    completed: 'Abgeschlossene Workflows',
     activeTasksOfWorkflow: 'Aktive Aufgaben des Workflows',
     tasksOfWorkflow: 'Aufgaben des Workflows',
     completedTasksOfWorkflow: 'Abgeschlossene Aufgaben des Workflows',
     submittedFormTitle: 'Abgeschicktes Formular',
     submittedFormTitleWithTask: 'Abgeschicktes Formular: {{title}}',
     submittedFormUnavailable: 'Formulardaten konnten nicht geladen werden.',
+    showInstanceId: 'Instanz-ID anzeigen',
   },
   myWorkflowsTable: {
     workflow: 'Workflow',
@@ -321,7 +326,6 @@ export const de = {
     unassignUser: 'Nutzerzuweisung entfernen',
     assignUserTooltip: 'Nutzer zuweisen',
     unassignUserTooltip: 'Zuweisung aufheben',
-    skipTasksTooltip: 'Aufgaben überspringen',
     tryAgainTooltip: 'Erneut versuchen',
   },
   adminTables: {
@@ -458,6 +462,13 @@ export const de = {
     noItems: 'Keine Einträge gefunden.',
     noSearchResults: 'Die Suche hat keine übereinstimmenden Aufgaben gefunden.',
     taskCount: '{{count}} Aufgabe{{suffix}}:',
+    startDate: 'Eingangsdatum',
+    workFlowInstanceID: 'Workflow-Instanz-ID',
+    deadline: 'Prioritäten',
+    urgency: 'Soll-Termin : ',
+    critical: 'Deadline : ',
+    subtitle: 'Untertitel',
+    moreInformation: 'Mehr Information',
     searchPlaceholder: 'Suchen …',
     loadMore: 'Mehr laden',
     retry: 'Erneut versuchen',
@@ -479,6 +490,18 @@ export const de = {
       title: 'Erinnerung über fehlerhafte Aufgaben',
       hint: 'Nur relevant für Administratoren und Workflow-Owner: tägliche Zusammenfassung aller Aufgaben im Fehlerzustand.',
       label: 'Tägliche Erinnerungs-E-Mail über fehlerhafte Aufgaben erhalten',
+    },
+    taskPriority: {
+      title: 'Aufgaben-Priorisierung',
+      hint: 'Lege fest, ab wann offene Aufgaben in der Liste als dringend oder kritisch markiert und entsprechend sortiert werden.',
+      enabled: 'Priorisierung aktivieren',
+      urgentAfter: 'Dringend nach',
+      criticalAfter: 'Kritisch nach',
+      unitDays: 'Tage',
+      urgentHint: 'Aufgaben erhalten ab diesem Alter die gelbe Dringlichkeitsmarkierung.',
+      criticalHint:
+        'Aufgaben erhalten ab diesem Alter die rote Kritisch-Markierung und stehen ganz oben.',
+      invalid: 'Der kritische Wert muss größer als der dringende Wert sein.',
     },
     delegations: {
       title: 'Vertretungen',

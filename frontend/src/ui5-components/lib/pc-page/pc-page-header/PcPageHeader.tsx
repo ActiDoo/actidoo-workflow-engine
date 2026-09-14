@@ -4,7 +4,7 @@
 import React, { PropsWithChildren } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Icon, Link, Title } from '@ui5/webcomponents-react';
+import { Icon, Link, Title, TitleLevel } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/log';
 import { PcPageHeaderData } from '@/ui5-components/lib/pc-page/PcPage';
 import { PcSearch } from '@/ui5-components/lib/pc-search/PcSearch';
@@ -31,7 +31,9 @@ export const PcPageHeader: React.FC<PcPageHeaderProps> = props => {
             <Icon name="nav-back" className="w-8 h-full -ml-2" />
           </Link>
         )}
-        <Title className="flex-1">{header?.title}</Title>
+        <Title level={TitleLevel.H3} className="flex-1">
+          {header?.title}
+        </Title>
 
         <div className="flex items-center gap-4">
           {header?.searchInput && (
