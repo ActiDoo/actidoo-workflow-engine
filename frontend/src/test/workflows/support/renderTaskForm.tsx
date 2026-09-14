@@ -3,8 +3,9 @@
 
 // Renders TaskForm the way SingleTask does: the schema goes through
 // changeRequiredDefinitionForFieldsWithHideIfDefinition, formData is controlled and mirrored
-// into formContext.formData (hide-if reads it from there), HTML5 validation is on, and there
-// is a router because the dynamic-list template only adds its default rows under /tasks/open/.
+// into formContext.formData (hide-if reads it from there), HTML5 validation is on, there
+// is a router because the dynamic-list template only adds its default rows under /tasks/open/,
+// and the i18n provider because the templates translate their button tooltips.
 // The captured formData equals the request body of POST user/submit_task_data:
 // SingleTask.submitData sends it unchanged.
 //
@@ -24,6 +25,7 @@ import type { IChangeEvent } from '@rjsf/core';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 import TaskForm from '@/rjsf-customs/components/TaskForm';
+import { I18nProvider } from '@/i18n';
 import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
 
 export const TEST_TASK_ID = 'workflow-test-task';
@@ -78,15 +80,17 @@ export const renderTaskForm = (fixture: WorkflowFormFixture) => {
   });
 
   render(
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <MemoryRouter initialEntries={[`/tasks/open/${TEST_TASK_ID}`]}>
-            <TaskFormHarness fixture={fixture} onSubmit={submitted} />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </Provider>
+    <I18nProvider>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <MemoryRouter initialEntries={[`/tasks/open/${TEST_TASK_ID}`]}>
+              <TaskFormHarness fixture={fixture} onSubmit={submitted} />
+            </MemoryRouter>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </Provider>
+    </I18nProvider>
   );
 
   // A form field by its rjsf id ("root_<key>", inside lists "root_<list>_<index>_<key>") —
