@@ -3,7 +3,7 @@
 
 """Admin retry of an erroneous task.
 
-``bff_admin_execute_erroneous_task`` re-runs a step that ended in error. Four
+``bff_admin_execute_erroneous_task`` re-runs a step that ended in error. Five
 things can go wrong around that, and the tests below pin the answer for each:
 
 * the step fails again, which must not be reported as success,
@@ -12,12 +12,15 @@ things can go wrong around that, and the tests below pin the answer for each:
 * the step was already completed by an earlier request, which must be a clean
   rejection and not a traceback,
 * two retries overlap on one instance, which must not surface the database's
-  lock wait timeout.
+  lock wait timeout,
+* the retried step raises instead of returning ``False``, which only service
+  tasks do for themselves; a script task hands the exception up.
 
-They use ``TestFlowBff``'s two service tasks through the switches in its
+They use ``TestFlowBff``'s three engine tasks through the switches in its
 module: ``CRASH`` decides whether the retried task raises,
-``FOLLOW_UP_CRASH`` whether the step behind it does, and ``HOLD_UNTIL`` keeps
-a successful run inside its request so a second request can overlap with it.
+``FOLLOW_UP_CRASH`` whether the step behind it does, ``SCRIPT_CRASH`` whether
+the script step at the end raises, and ``HOLD_UNTIL`` keeps a successful run
+inside its request so a second request can overlap with it.
 """
 
 import threading
@@ -50,6 +53,7 @@ def crash_task(monkeypatch):
     """Fresh switches for every test; the defaults make only the first task crash."""
     monkeypatch.setattr(workflow_module, "CRASH", True)
     monkeypatch.setattr(workflow_module, "FOLLOW_UP_CRASH", False)
+    monkeypatch.setattr(workflow_module, "SCRIPT_CRASH", False)
     monkeypatch.setattr(workflow_module, "HOLD_UNTIL", None)
     monkeypatch.setattr(workflow_module, "RUNS", [])
     return workflow_module
@@ -138,6 +142,44 @@ class TestRetryOutcome:
 
             erroneous = [item.name for item in all_tasks if item.state_error]
             assert erroneous == ["FollowUpTask"], f"the error belongs to the later step, found {erroneous}"
+
+    def test_a_retried_task_that_raises_is_reported_as_failed_again(self, db_engine_ctx, crash_task):
+        """A service task catches its own exception and returns ``False``. A
+        script task does not: its exception leaves ``task.run()``. The retry has
+        to treat both the same - error state, fresh stack trace, 409 - and must
+        not roll the request back, or the new stack trace is lost."""
+        with db_engine_ctx():
+            workflow, crash_task_id = _start_with_erroneous_task(SessionLocal())
+            crash_task.CRASH = False
+            crash_task.SCRIPT_CRASH = True
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                # Gets the crash task done and leaves the script step in error.
+                status, body = _retry(client, crash_task_id)
+                assert (status, body["code"]) == (409, "follow_up_task_failed")
+                instance_tasks = _all_tasks(client, f_workflow_instance___id=str(workflow.workflow_instance_id))
+                script_step = next(item for item in instance_tasks if item.name == "ScriptStep")
+                assert script_step.state_error
+
+                try:
+                    status, body = _retry(client, script_step.id)
+                except Exception as error:  # noqa: BLE001 - any leak is the failure under test
+                    pytest.fail(f"the retry of a raising task crashed the request instead of answering: {error!r}")
+                task = _get_task(client, script_step.id)
+
+                assert status == 409, f"a retry that raised again was answered with {status}"
+                assert body["code"] == "task_failed_again"
+                assert task.state_error
+                assert task.error_stacktrace is not None and "intentional crash of the script step" in task.error_stacktrace
+
+                crash_task.SCRIPT_CRASH = False
+                status, _ = _retry(client, script_step.id)
+                task = _get_task(client, script_step.id)
+
+            assert status == 200
+            assert task.state_completed and task.error_stacktrace is None
+            assert task.workflow_instance.is_completed
 
     def test_a_retry_that_succeeds_completes_the_step(self, db_engine_ctx, crash_task):
         with db_engine_ctx():

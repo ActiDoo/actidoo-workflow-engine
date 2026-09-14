@@ -8,9 +8,10 @@ trigger_error boolean. The gateway routes a `trigger_error == true` submission
 to a service task that intentionally raises, putting the task into state_error
 and giving `bff_admin_execute_erroneous_task` something real to operate on. A
 second service task sits behind it, so a test can also let the retried task
-succeed and the step after it fail.
+succeed and the step after it fail. A script task closes the chain: unlike a
+service task it does not catch its own errors, so a retry of it can raise.
 
-The module-level switches below let a test decide what the two tasks do. They
+The module-level switches below let a test decide what the three tasks do. They
 are read at call time; tests set them through ``monkeypatch``.
 """
 
@@ -35,6 +36,10 @@ RUNS: list = []
 #: task is the only thing that can fail.
 FOLLOW_UP_CRASH = False
 
+#: Makes the script step raise. Scripts run with this module as their globals,
+#: which is how the BPMN script reaches ``bff_script_step``.
+SCRIPT_CRASH = False
+
 
 def service_bff_crash_task(sth: ServiceTaskHelper):
     RUNS.append(sth.task_uuid)
@@ -49,4 +54,9 @@ def service_bff_follow_up_task(sth: ServiceTaskHelper):
         raise RuntimeError("intentional crash of the step after the crash task")
 
 
-__all__ = ["service_bff_crash_task", "service_bff_follow_up_task"]
+def bff_script_step():
+    if SCRIPT_CRASH:
+        raise RuntimeError("intentional crash of the script step")
+
+
+__all__ = ["bff_script_step", "service_bff_crash_task", "service_bff_follow_up_task"]

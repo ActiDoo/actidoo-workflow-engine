@@ -1089,7 +1089,17 @@ def execute_erroneous_task(workflow: BpmnWorkflow, task_id: uuid.UUID) -> RetryO
         task_id=task_id,
         stacktrace=None,
     )  # reset stacktrace
-    success = task.run()
+    try:
+        success = task.run()
+    except Exception:
+        # A service task catches its own errors and returns False. A script
+        # task or a gateway with a broken condition raises instead. Both end
+        # the same way here as they do in run_workflow: error state and a
+        # fresh stack trace, stored with the request instead of rolled back.
+        log.exception("retried task failed again")
+        task.error()
+        set_stacktrace(workflow=workflow, task_id=task_id, stacktrace=traceback.format_exc())
+        return RetryOutcome.TASK_FAILED
     if not success or task.has_state(TaskState.ERROR):
         return RetryOutcome.TASK_FAILED
     if not run_workflow(workflow=workflow):
