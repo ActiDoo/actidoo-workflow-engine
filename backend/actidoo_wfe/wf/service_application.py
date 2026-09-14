@@ -23,6 +23,7 @@ from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf import repository, service_form, service_i18n, service_user, service_workflow, views, views_data_model
+from actidoo_wfe.wf.constants import RetryOutcome
 from actidoo_wfe.wf.error_schema import set_nested_error
 from actidoo_wfe.wf.exceptions import (
     AttachmentNotFoundException,
@@ -1521,19 +1522,20 @@ def admin_replace_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID,
     repository.store_workflow_instance(db=db, workflow=workflow)
 
 
-def admin_execute_erroneous_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID) -> tuple[uuid.UUID, bool]:
-    """Re-runs an erroneous task. Returns the instance id and whether the run succeeded.
+def admin_execute_erroneous_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID) -> tuple[uuid.UUID, RetryOutcome]:
+    """Re-runs an erroneous task. Returns the instance id and what came of the run.
 
-    A run that fails again is stored as well: the task keeps its error state
-    and gets the new stack trace, which is what the administrator needs to see.
+    A run that fails is stored as well: whichever task ended in error keeps
+    that state and gets the new stack trace, which is what the administrator
+    needs to see.
     """
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
 
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id, for_update=True)
     _require_definition_for_write(workflow.spec.name)
-    success = service_workflow.execute_erroneous_task(workflow=workflow, task_id=task_id)
+    outcome = service_workflow.execute_erroneous_task(workflow=workflow, task_id=task_id)
     repository.store_workflow_instance(db=db, workflow=workflow)
-    return workflow.task_tree.id, success
+    return workflow.task_tree.id, outcome
 
 
 def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID):

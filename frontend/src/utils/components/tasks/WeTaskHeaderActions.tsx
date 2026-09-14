@@ -51,12 +51,29 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
     switch (errorBody?.code) {
       case 'task_failed_again':
         return t('admin.taskExecutedFailedAgain');
+      case 'follow_up_task_failed':
+        return t('admin.taskExecutedFollowUpFailed');
       case 'workflow_instance_busy':
         return t('admin.taskExecutedBusy');
       case 'task_not_erroneous':
         return t('admin.taskExecutedAlreadyDone');
       default:
         return t('admin.taskExecutedError');
+    }
+  };
+
+  // A retry changes more than the task it was aimed at: it may complete the
+  // task and leave a later step of the workflow in error. Both hosts of these
+  // buttons are refreshed, the single-task page and the workflow's task list.
+  const reloadAfterRetry = (): void => {
+    dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
+    const instanceId = props.data?.workflow_instance?.id;
+    if (instanceId) {
+      dispatch(
+        postRequest(WeDataKey.ADMIN_TASKS_OF_WORKFLOW, {}, undefined, {
+          f_workflow_instance___id: instanceId,
+        })
+      );
     }
   };
 
@@ -67,14 +84,8 @@ const WeTaskHeaderActions: React.FC<AdminTaskHeaderActionsProps> = props => {
       executeErroneousTask?.postResponse,
       t('admin.taskExecuted'),
       retryErrorText(),
-      () => {
-        dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
-      },
-      () => {
-        // A 409 means the step failed again, was completed meanwhile or is
-        // held by another request. Reload so the admin sees the new state.
-        dispatch(postRequest(WeDataKey.ADMIN_ALL_TASKS, {}, undefined, { f_id: props.taskId }));
-      }
+      reloadAfterRetry,
+      reloadAfterRetry
     );
   }, [executeErroneousTask?.postResponse]);
 

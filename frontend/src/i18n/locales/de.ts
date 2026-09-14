@@ -308,6 +308,8 @@ export const de = {
     taskExecutedError: 'Aufgabe konnte nicht ausgeführt werden.',
     taskExecutedFailedAgain:
       'Aufgabe ist erneut fehlgeschlagen. Die Fehlermeldung wurde aktualisiert.',
+    taskExecutedFollowUpFailed:
+      'Aufgabe wurde ausgeführt. Ein späterer Schritt im Workflow ist fehlgeschlagen.',
     taskExecutedBusy:
       'Aufgabe wird gerade durch einen anderen Aufruf ausgeführt. Bitte warte kurz und lade die Seite neu.',
     taskExecutedAlreadyDone: 'Aufgabe wurde inzwischen erfolgreich ausgeführt.',

@@ -53,6 +53,18 @@ BFF_CLIENT_VERSION_HEADER = "X-WFE-Client-Version"
 # Sent instead of a version number, this opts out of the check.
 BFF_CLIENT_VERSION_IGNORE = "ignore"
 
+# What came of re-running an erroneous task from the admin area. A run that
+# does not complete has two very different reasons, and the administrator is
+# told which one it was.
+class RetryOutcome(StrEnum):
+    #: The task ran and so did every engine step that followed it.
+    COMPLETED = "completed"
+    #: The task itself is in error again, with a fresh stack trace.
+    TASK_FAILED = "task_failed"
+    #: The task is done; a step behind it failed and is now the erroneous one.
+    FOLLOW_UP_FAILED = "follow_up_failed"
+
+
 # Form template modes (see ADR-008). Single source for transform, services and BFF schema.
 class TemplateMode(StrEnum):
     OFF = "off"

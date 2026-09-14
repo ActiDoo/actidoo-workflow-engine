@@ -37,10 +37,12 @@ releases correspond to the git tags of this repository.
 
 - Admin retry of an erroneous task: the answer now tells the truth. A step
   that fails again returns 409 and keeps its new error message. A step that
-  was already completed by an earlier request returns 409 instead of a server
-  error. A second retry while the first one still holds the instance returns
-  409 instead of a database lock timeout. The frontend names the case in its
-  message and reloads the task.
+  ran while a later step of the workflow failed says so, instead of blaming
+  the step the administrator retried. A step that was already completed by an
+  earlier request returns 409 instead of a server error. A second retry while
+  the first one still holds the instance returns 409 instead of a database
+  lock timeout. The frontend names the case in its message and reloads the
+  task.
 
 ## [0.1.42] - 2026-09-02
 

@@ -3,18 +3,21 @@
 
 """Admin retry of an erroneous task.
 
-``bff_admin_execute_erroneous_task`` re-runs a step that ended in error. Three
+``bff_admin_execute_erroneous_task`` re-runs a step that ended in error. Four
 things can go wrong around that, and the tests below pin the answer for each:
 
 * the step fails again, which must not be reported as success,
+* the step runs but a later step fails, which must not be reported as the step
+  failing again,
 * the step was already completed by an earlier request, which must be a clean
   rejection and not a traceback,
 * two retries overlap on one instance, which must not surface the database's
   lock wait timeout.
 
-The last two use ``TestFlowBff``'s crash task with the switches in its module:
-``CRASH`` decides whether a run raises, ``HOLD_UNTIL`` keeps a successful run
-inside its request so a second request can overlap with it.
+They use ``TestFlowBff``'s two service tasks through the switches in its
+module: ``CRASH`` decides whether the retried task raises,
+``FOLLOW_UP_CRASH`` whether the step behind it does, and ``HOLD_UNTIL`` keeps
+a successful run inside its request so a second request can overlap with it.
 """
 
 import threading
@@ -44,8 +47,9 @@ LOCK_WAIT_TIMEOUT_SECONDS = 3
 
 @pytest.fixture
 def crash_task(monkeypatch):
-    """Fresh switches for every test; the defaults make the task crash."""
+    """Fresh switches for every test; the defaults make only the first task crash."""
     monkeypatch.setattr(workflow_module, "CRASH", True)
+    monkeypatch.setattr(workflow_module, "FOLLOW_UP_CRASH", False)
     monkeypatch.setattr(workflow_module, "HOLD_UNTIL", None)
     monkeypatch.setattr(workflow_module, "RUNS", [])
     return workflow_module
@@ -102,13 +106,38 @@ class TestRetryOutcome:
 
             client = Client()
             with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
-                status, _ = _retry(client, task_id)
+                status, body = _retry(client, task_id)
                 task = _get_task(client, task_id)
 
             assert len(crash_task.RUNS) == 1, "the retry should have run the step once"
             assert status == 409, f"a retry that failed again was answered with {status}"
+            assert body["code"] == "task_failed_again"
             assert task.state_error, "the step is still erroneous"
             assert task.error_stacktrace is not None and "intentional crash" in task.error_stacktrace
+
+    def test_a_failing_later_step_is_not_reported_as_the_retried_task_failing(self, db_engine_ctx, crash_task):
+        """The retried step runs to completion, the step behind it raises.
+
+        Telling the administrator that *their* task failed again would be
+        wrong twice over: the task is done, and its error message is gone.
+        """
+        with db_engine_ctx():
+            workflow, task_id = _start_with_erroneous_task(SessionLocal())
+            crash_task.CRASH = False
+            crash_task.FOLLOW_UP_CRASH = True
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                status, body = _retry(client, task_id)
+                task = _get_task(client, task_id)
+                all_tasks = _all_tasks(client, f_workflow_instance___id=str(workflow.workflow_instance_id))
+
+            assert task.state_completed and not task.state_error, "the retried step itself succeeded"
+            assert status == 409, f"a failing later step was answered with {status}"
+            assert body["code"] == "follow_up_task_failed", f"reported as {body['code']}"
+
+            erroneous = [item.name for item in all_tasks if item.state_error]
+            assert erroneous == ["FollowUpTask"], f"the error belongs to the later step, found {erroneous}"
 
     def test_a_retry_that_succeeds_completes_the_step(self, db_engine_ctx, crash_task):
         with db_engine_ctx():

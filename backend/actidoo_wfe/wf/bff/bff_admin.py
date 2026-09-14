@@ -39,6 +39,7 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     UnassignUserRequest,
 )
 from actidoo_wfe.wf.bff.deps import get_user, require_matching_client_version
+from actidoo_wfe.wf.constants import RetryOutcome
 from actidoo_wfe.wf.cross_context.imports import require_realm_role
 from actidoo_wfe.wf.exceptions import (
     DataModelForbiddenError,
@@ -347,16 +348,17 @@ def execute_erroneous_task(
 ) -> GetAllTasksResponse:
     """Re-runs an erroneous task.
 
-    Three outcomes are 409 rather than 200, each with its own ``code``: the step
-    failed again (``task_failed_again``, the task list is in the body like on
-    success), the task is no longer in error because an earlier request
-    completed it (``task_not_erroneous``), or another request still holds the
-    instance, typically a service task waiting on an external system
-    (``workflow_instance_busy``).
+    Four outcomes are 409 rather than 200, each with its own ``code``: the step
+    failed again (``task_failed_again``), the step ran but a later one failed
+    (``follow_up_task_failed``), the task is no longer in error because an
+    earlier request completed it (``task_not_erroneous``), or another request
+    still holds the instance, typically a service task waiting on an external
+    system (``workflow_instance_busy``). The first two carry the task list in
+    the body like the success case.
     """
 
     try:
-        workflow_instance_id, success = service_application.admin_execute_erroneous_task(
+        workflow_instance_id, outcome = service_application.admin_execute_erroneous_task(
             db=db,
             user_id=user.id,
             task_id=req_data.task_id,
@@ -382,10 +384,16 @@ def execute_erroneous_task(
     )
     response = GetAllTasksResponse.model_validate(tasks)
 
-    if not success:
-        # Answered without raising so the request still commits and the new
-        # stack trace is stored.
+    # Answered without raising so the request still commits and the new stack
+    # trace is stored.
+    if outcome is RetryOutcome.TASK_FAILED:
         return _conflict("task_failed_again", "The task failed again.", **response.model_dump(mode="json"))
+    if outcome is RetryOutcome.FOLLOW_UP_FAILED:
+        return _conflict(
+            "follow_up_task_failed",
+            "The task ran, but a later step of the workflow failed.",
+            **response.model_dump(mode="json"),
+        )
 
     return response
 

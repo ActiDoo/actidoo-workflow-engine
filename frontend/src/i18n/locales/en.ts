@@ -305,6 +305,7 @@ export const en = {
     taskExecuted: 'Task successfully executed',
     taskExecutedError: 'Task could not be executed.',
     taskExecutedFailedAgain: 'The task failed again. The error message was updated.',
+    taskExecutedFollowUpFailed: 'The task was executed. A later step of the workflow failed.',
     taskExecutedBusy:
       'The task is being executed by another request. Please wait a moment and reload the page.',
     taskExecutedAlreadyDone: 'The task has meanwhile been executed successfully.',

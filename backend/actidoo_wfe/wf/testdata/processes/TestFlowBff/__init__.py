@@ -6,10 +6,12 @@
 Form1 collects a text, a dynamic select, an upload, an optional note, and a
 trigger_error boolean. The gateway routes a `trigger_error == true` submission
 to a service task that intentionally raises, putting the task into state_error
-and giving `bff_admin_execute_erroneous_task` something real to operate on.
+and giving `bff_admin_execute_erroneous_task` something real to operate on. A
+second service task sits behind it, so a test can also let the retried task
+succeed and the step after it fail.
 
-The module-level switches below let a test decide what the crash task does on
-a retry. They are read at call time; tests set them through ``monkeypatch``.
+The module-level switches below let a test decide what the two tasks do. They
+are read at call time; tests set them through ``monkeypatch``.
 """
 
 import threading
@@ -29,6 +31,10 @@ HOLD_UNTIL: threading.Event | None = None
 #: actually ran.
 RUNS: list = []
 
+#: Makes the step *behind* the crash task raise. Off by default, so the crash
+#: task is the only thing that can fail.
+FOLLOW_UP_CRASH = False
+
 
 def service_bff_crash_task(sth: ServiceTaskHelper):
     RUNS.append(sth.task_uuid)
@@ -38,4 +44,9 @@ def service_bff_crash_task(sth: ServiceTaskHelper):
         HOLD_UNTIL.wait(timeout=30)
 
 
-__all__ = ["service_bff_crash_task"]
+def service_bff_follow_up_task(sth: ServiceTaskHelper):
+    if FOLLOW_UP_CRASH:
+        raise RuntimeError("intentional crash of the step after the crash task")
+
+
+__all__ = ["service_bff_crash_task", "service_bff_follow_up_task"]
