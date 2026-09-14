@@ -235,6 +235,8 @@ Use `correlation_key` for a catch event; send an empty string for a start messag
 
 For a deadline, attach an interrupting timer boundary event to a user task (keep "Cancel activity" on) and set a `=`-prefixed duration string, for example `="P3D"` for three days or `="PT5M"` for five minutes. In the example, a three-day timer on `ApproveExpense` catches an approval that stalls: when it is due, the user task is cancelled and the flow leaves the boundary event into a service task that reminds finance. The engine checks due timers on a schedule, so a timer fires shortly after its due time, not to the second.
 
+To mark a task as overdue without cancelling it, add the custom properties `urgency` and `critical` to the user task, each a number of days. Past `urgency` the task gets a yellow clock in the task list, past `critical` a red one. Both count from the moment the task became ready.
+
 ## Translations
 
 The engine translates process, lane and user-task names, form labels, descriptions, text views and static option labels at read time, per user [locale](glossary.md#locale), from a gettext [catalog](glossary.md#catalog) in the workflow's `i18n/` folder. So the `Travel` / `Meals` / `Equipment` labels and the form field labels get German translations, while dynamic option labels (from a CSV file or a function) and the workflow instance subtitle do not. Run these commands in the environment where the workflow's provider is registered (the devcontainer):

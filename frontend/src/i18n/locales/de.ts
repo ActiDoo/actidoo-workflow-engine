@@ -491,18 +491,6 @@ export const de = {
       hint: 'Nur relevant für Administratoren und Workflow-Owner: tägliche Zusammenfassung aller Aufgaben im Fehlerzustand.',
       label: 'Tägliche Erinnerungs-E-Mail über fehlerhafte Aufgaben erhalten',
     },
-    taskPriority: {
-      title: 'Aufgaben-Priorisierung',
-      hint: 'Lege fest, ab wann offene Aufgaben in der Liste als dringend oder kritisch markiert und entsprechend sortiert werden.',
-      enabled: 'Priorisierung aktivieren',
-      urgentAfter: 'Dringend nach',
-      criticalAfter: 'Kritisch nach',
-      unitDays: 'Tage',
-      urgentHint: 'Aufgaben erhalten ab diesem Alter die gelbe Dringlichkeitsmarkierung.',
-      criticalHint:
-        'Aufgaben erhalten ab diesem Alter die rote Kritisch-Markierung und stehen ganz oben.',
-      invalid: 'Der kritische Wert muss größer als der dringende Wert sein.',
-    },
     delegations: {
       title: 'Vertretungen',
       hint: 'Wähle Kolleg:innen, die Aufgaben in deiner Vertretung bearbeiten dürfen. Optional kannst du eine Frist hinterlegen.',

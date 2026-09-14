@@ -9,40 +9,55 @@ releases correspond to the git tags of this repository.
 
 ### Added
 
-- Number ranges: a workflow can issue a running business number - a case,
-  ticket or document number people quote outside the system - without a
-  hand-built counter (ADR 012). A range is a data model whose rows *are* the
-  issued numbers, so the project owns the table and its migration and declares
-  access like for any other model, while the engine guarantees the two
-  properties that are hard to get right: a number is issued exactly once
-  however many instances run at the same time, and repeating the same work
-  hands back the number it already got instead of burning a new one. That
-  second point matters because an administrator can re-run an erroneous
-  service task; the claim is remembered per task occurrence, so the children
-  of a multi-instance activity and the passes of a loop each get their own
-  number. The project supplies the scope, the step to the next candidate and
-  how the number is rendered; a mistake there can produce a poor number but
-  never a duplicate.
-- Admin: a read-only page per number range shows which number went to which
-  workflow instance and step, and when - it outlives the instance, so an
-  issued number stays traceable after the workflow is gone. A global
-  administrator sees every range, a workflow owner the ranges declared by a
-  workflow of theirs.
+- Number ranges: a workflow can issue running business numbers - case,
+  ticket or document numbers - without a hand-built counter (ADR 012). A
+  range is a data model the project owns; the engine guarantees that a number
+  is issued exactly once, also when instances run in parallel or an
+  administrator re-runs a step.
+- Admin: a page per number range shows which number went to which workflow
+  instance and step, and when. Visible to global administrators and to the
+  owners of the workflows that declare the range.
+- Task deadlines: a user task in the BPMN can carry the properties `urgency`
+  and `critical`, in days after the task became ready. Open tasks show a
+  yellow or red clock once a threshold is passed, with the date in the task's
+  info popover. The dates are fixed when the task is created; a later change
+  of the workflow definition leaves running tasks alone.
 - `EMAIL_REQUEST_TIMEOUT_SECONDS`: a limit for every call while sending mail,
-  default 30 seconds. A service task holds its workflow instance for as long
-  as the send takes. Before, a mail gateway that did not answer kept the
-  instance locked without end.
+  default 30 seconds. An unresponsive mail gateway no longer holds a workflow
+  instance forever.
+
+### Changed
+
+- Task pages reworked: open and completed tasks are one list per tab with
+  title, subtitle and an info popover (start date, instance id, deadline); the
+  selected task is highlighted. Submit sits bottom right in a sticky bar,
+  Reset and Delete bottom left; a workflow is deleted from there after a
+  confirmation.
+- "My workflows" is one list instead of separate "in progress" and
+  "completed" tabs, sortable by state, with an option to show the instance id.
+- One type scale and one page header across the app; icon-only buttons share
+  one outlined look; link colors follow the branding palette; the focus ring
+  on tabs and list items shows for keyboard focus only.
+- Data tables: when a row's actions would not fit side by side, the column
+  shows a menu instead.
+- Instance subtitles may be up to 255 characters (was 50); lists clamp them
+  to two lines.
+- Admin: the non-functional "Skip tasks" button is gone.
 
 ### Fixed
 
 - Admin retry of an erroneous task: the answer now tells the truth. A step
-  that fails again returns 409 and keeps its new error message. A step that
-  ran while a later step of the workflow failed says so, instead of blaming
-  the step the administrator retried. A step that was already completed by an
-  earlier request returns 409 instead of a server error. A second retry while
-  the first one still holds the instance returns 409 instead of a database
-  lock timeout. The frontend names the case in its message and reloads the
-  task.
+  that fails again returns 409 and keeps its new error message; a step that
+  ran while a later step failed says so instead of blaming the retried step;
+  a step already completed by an earlier request, or an instance still busy
+  with the first retry, returns 409 instead of a server error. The frontend
+  names the case and reloads the task.
+- Dynamic lists: the collapsed row overview no longer shows fields that a
+  `hide-if` condition hides for that row.
+- Task header: lane roles without a trailing separator, "-" when no role is
+  assigned.
+- A second click on Delete while the first request is still running is
+  ignored.
 
 ## [0.1.42] - 2026-09-02
 
