@@ -141,12 +141,14 @@ class ServiceTaskHelper:
         content: str,
         recipient_or_recipients_list: list[str] | str,
         attachments: dict[str, io.BytesIO],
+        cc_recipient_or_recipients_list: list[str] | str | None = None,
     ):
         return mail_helpers.send_text_mail(
             subject=subject,
             content=content,
             recipient_or_recipients_list=recipient_or_recipients_list,
             attachments=attachments,
+            cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
         )
 
     def get_user_by_id(self, user_id):
