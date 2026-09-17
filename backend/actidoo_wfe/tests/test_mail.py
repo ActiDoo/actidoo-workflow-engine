@@ -196,3 +196,92 @@ def test_skipped_sending_logs_cc(monkeypatch, caplog):
 
     assert sent is False
     assert "cc: 'cc@example.com'" in caplog.text
+
+
+MARKDOWN = "Hello **Jens**,\n\nplease check the [document](https://tenant.sharepoint.com/very/long/link?x=1).\n\nRaw <b>html</b> stays literal."
+
+
+def _html_part(message):
+    return message.get_body(preferencelist=("html",)).get_content()
+
+
+def _plain_part(message):
+    return message.get_body(preferencelist=("plain",)).get_content()
+
+
+def test_smtp_markdown_sends_html_with_markdown_source_as_plain_alternative(smtp_server):
+    mail.send_mail("Hi", MARKDOWN, "to@example.com", {"file.txt": io.BytesIO(b"data")}, body_format="markdown")
+
+    message = _sent_message(smtp_server)
+    html = _html_part(message)
+    assert '<a href="https://tenant.sharepoint.com/very/long/link?x=1">document</a>' in html
+    assert "<strong>Jens</strong>" in html
+    assert "&lt;b&gt;html&lt;/b&gt;" in html
+    assert "<b>html</b>" not in html
+    assert _plain_part(message).strip() == MARKDOWN
+    assert [a.get_filename() for a in message.iter_attachments()] == ["file.txt"]
+
+
+def test_smtp_html_without_alternative_sends_single_html_part(smtp_server):
+    mail.send_mail("Hi", "<p>Hello</p>", "to@example.com", {}, body_format="html")
+
+    message = _sent_message(smtp_server)
+    assert message.get_content_type() == "text/html"
+    assert "<p>Hello</p>" in message.get_content()
+
+
+def test_smtp_html_with_text_alternative_sends_both_parts(smtp_server):
+    mail.send_mail("Hi", "<p>Hello</p>", "to@example.com", {}, body_format="html", text_alternative="Hello")
+
+    message = _sent_message(smtp_server)
+    assert message.get_content_type() == "multipart/alternative"
+    assert _plain_part(message).strip() == "Hello"
+    assert "<p>Hello</p>" in _html_part(message)
+
+
+def test_smtp_text_stays_plain(smtp_server):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {})
+
+    message = _sent_message(smtp_server)
+    assert message.get_content_type() == "text/plain"
+    assert message.get_content().strip() == "Body"
+
+
+def test_graph_markdown_sends_html_content_type(graph_client):
+    mail.send_mail("Hi", MARKDOWN, "to@example.com", {}, body_format="markdown")
+
+    body = graph_client.post.call_args.kwargs["json"]["message"]["body"]
+    assert body["contentType"] == "HTML"
+    assert 'href="https://tenant.sharepoint.com/very/long/link?x=1"' in body["content"]
+    assert "&lt;b&gt;html&lt;/b&gt;" in body["content"]
+
+
+def test_graph_text_sends_text_content_type(graph_client):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {})
+
+    body = graph_client.post.call_args.kwargs["json"]["message"]["body"]
+    assert body == {"contentType": "Text", "content": "Body"}
+
+
+def test_markdown_drops_unsafe_link_schemes(smtp_server):
+    mail.send_mail("Hi", "[click](javascript:alert(1))", "to@example.com", {}, body_format="markdown")
+
+    assert "<a " not in _html_part(_sent_message(smtp_server))
+
+
+def test_unknown_body_format_is_rejected(smtp_server):
+    with pytest.raises(ValueError):
+        mail.send_mail("Hi", "Body", "to@example.com", {}, body_format="rtf")  # type: ignore[arg-type]
+    smtp_server.send_message.assert_not_called()
+
+
+def test_skipped_sending_logs_body_format(monkeypatch, caplog):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
+    monkeypatch.setattr(settings, "email_override_recipients_enable", False)
+    monkeypatch.setattr(settings, "email_override_recipients_list", [])
+
+    with caplog.at_level("INFO", logger="actidoo_wfe.helpers.mail"):
+        mail.send_mail("Hi", MARKDOWN, "to@example.com", {}, body_format="markdown")
+
+    assert "Printing markdown email" in caplog.text
+    assert "[document](https://tenant.sharepoint.com/very/long/link?x=1)" in caplog.text

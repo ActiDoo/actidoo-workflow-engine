@@ -7,7 +7,20 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- Mails from service tasks can carry Markdown or HTML (ADR 013).
+  `sth.send_mail(..., body_format="markdown")` renders the body to HTML,
+  so a long OneDrive or SharePoint link can sit behind a short link text;
+  the Markdown source travels as the plain-text alternative. Raw HTML in a
+  Markdown body is escaped and `javascript:` links are dropped;
+  `sth.escape_markdown(value)` makes form values render literally.
+  `send_text_mail` and the engine's own notification mails are unchanged.
+
+### Changed
+
+- `mock_send_text_mail` captures every body format and records
+  `body_format` per mail.
 
 ## [0.1.43] - 2026-09-14
 

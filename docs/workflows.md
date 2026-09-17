@@ -208,10 +208,27 @@ When the function raises, when no function of that name exists, or when the retu
 | task data | `set_task_data`, `set_task_data_key`; read `task_data["<field key>"]`, `task_data["result_<task id>"]`, `task_data["<event id>_Response"]` |
 | workflow control | `set_workflow_data` (instance-level values forms never see), `set_workflow_instance_subtitle`, `get_task`, `get_last_completed_task`, `get_task_completion_day` |
 | users & assignment | `get_created_by`, `get_users_of_role`, `get_user_by_task_name`, `get_user_by_id`; `assign_user_without_role("<task id>", "<email>")` assigns and hides the next such task; `assign_task_roles("<task id>", [...])` replaces its lane roles |
-| mails | `send_text_mail(subject, content, recipients, attachments)`; `get_mail_attachments("<field key>")` turns uploaded files into the attachments argument |
+| mails | `send_mail(subject, content, recipients, attachments, cc=None, body_format="text")` with `body_format` `"text"`, `"markdown"` or `"html"`; `send_text_mail(...)` is the plain-text shorthand; `escape_markdown(value)` makes a task-data value render literally in Markdown; `get_mail_attachments("<field key>")` turns uploaded files into the attachments argument |
 | attachments | `add_attachment_to_task_data(file, "<name>", "<ext>", "<field key>")` stores a generated file like an upload; `get_attachment_by_hash(hash)` reads one back |
 | data models | `get_model("<name>")` opens a model listed in `DATA_MODELS`, and `attach_files` / `clear_files` manage its file fields; see [data-models.md](data-models.md) |
 | connectors | `get_connector("<type>", "<instance>")` in a `with` block opens a configured connection; see [connectors.md](connectors.md) |
+
+A mail body is plain text unless you say otherwise. Pass `body_format="markdown"` to write the body in Markdown: `**bold**`, lists, and above all links with a readable text in place of a long URL, `[Open the offer](https://tenant.sharepoint.com/...)`. The engine renders it to HTML, sends the Markdown source as the plain-text alternative, escapes raw HTML in the body and drops `javascript:` links. Wrap every value that comes from a form in `sth.escape_markdown(...)`, so a user who typed `*` or `[` into a field does not change the layout, and so a typed link cannot pose as one of yours:
+
+```python
+def service_notify_approver(sth: ServiceTaskHelper):
+    summary = sth.escape_markdown(sth.task_data["summary"])
+    body = "\n".join([
+        "Hello,",
+        "",
+        f"please review **{summary}**.",
+        "",
+        f"[Offer document]({sth.task_data['offer_url']})",
+    ])
+    sth.send_mail("Review required", body, sth.task_data["approver_email"], body_format="markdown")
+```
+
+`body_format="html"` sends the body unchanged and leaves escaping to you; use it only for a body you control completely.
 
 Keep service functions short; long-running work belongs in a background task. Task data must stay JSON-serialisable, and values of hidden form fields are removed after every run, so do not rely on them later.
 
