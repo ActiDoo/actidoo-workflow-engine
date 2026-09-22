@@ -213,6 +213,8 @@ When the function raises, when no function of that name exists, or when the retu
 | data models | `get_model("<name>")` opens a model listed in `DATA_MODELS`, and `attach_files` / `clear_files` manage its file fields; see [data-models.md](data-models.md) |
 | connectors | `get_connector("<type>", "<instance>")` in a `with` block opens a configured connection; see [connectors.md](connectors.md) |
 
+Recipients and cc both take a single address or a list. A mail with cc goes out as one message, so a cc recipient sees who was addressed and receives a single copy.
+
 A mail body is plain text unless you say otherwise. Pass `body_format="markdown"` to write the body in Markdown: `**bold**`, lists, and above all links with a readable text in place of a long URL, `[Open the offer](https://tenant.sharepoint.com/...)`. The engine renders it to HTML, sends the Markdown source as the plain-text alternative, escapes raw HTML in the body and drops `javascript:` links. Wrap every value that comes from a form in `sth.escape_markdown(...)`, so a user who typed `*` or `[` into a field does not change the layout, and so a typed link cannot pose as one of yours:
 
 ```python
