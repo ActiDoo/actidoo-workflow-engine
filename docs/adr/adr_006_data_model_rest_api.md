@@ -66,7 +66,7 @@ System columns — `version`, `is_current`, the provenance workflow instance, `a
 
 ### Label localization
 
-Declared labels (model, fields, actions) are gettext msgids, resolved server-side to the requesting user's locale against the data model's own Babel catalog (`i18n/locales/<locale>/LC_MESSAGES/<name>.mo` next to the model module) — the same extraction/update/compile toolchain the workflows use, extended by data-model CLI commands. The alternative, per-locale dicts at the declaration, was rejected: it would introduce a second i18n mechanism beside gettext and move translations out of the `.po` files translators work with. The wire schema always carries plain strings; a missing catalog or translation falls back to the msgid.
+Declared labels (model, fields, actions) are gettext msgids, resolved server-side to the requesting user's locale against the data model's own Babel catalog (`i18n/locales/<locale>/LC_MESSAGES/<name>.po` next to the model module) — the same extraction/update toolchain the workflows use, extended by data-model CLI commands. The alternative, per-locale dicts at the declaration, was rejected: it would introduce a second i18n mechanism beside gettext and move translations out of the `.po` files translators work with. The wire schema always carries plain strings; a missing catalog or translation falls back to the msgid.
 
 ### Authorization
 

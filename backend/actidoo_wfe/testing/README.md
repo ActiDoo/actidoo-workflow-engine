@@ -12,6 +12,11 @@ Provided fixtures:
 - `clear_cache` – autouse fixture clearing `actidoo_wfe.cache.Namespace`.
 - `mock_send_text_mail` – captures outgoing text mails for assertions.
 
+Provided tests:
+- Every `LC_MESSAGES/*.po` under the collected paths is a test item of its own
+  and fails when the file cannot be parsed. The engine reads `.po` files
+  directly, so this is the check that a compile step used to give you.
+
 ## Dynamic lists and row ids (ADR 010)
 
 The engine stamps a technical row id onto every dynamic-list row when a task is

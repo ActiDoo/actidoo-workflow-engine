@@ -2,7 +2,7 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.wf import service_application, service_i18n
+from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff.bff_user import WorkflowInstancesBffTableQuerySchema
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
@@ -26,7 +26,6 @@ def test_translation(db_engine_ctx):
 
         workflow.user("initiator").user.locale = "en-US"
 
-        service_i18n.compile_all()
         tasks = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)
         task = tasks[0]
 
@@ -63,7 +62,6 @@ def test_getAllowedWorkflowsToStart_translatesTitlePerUserLocale(db_engine_ctx):
             start_user="initiator",
         )
 
-        service_i18n.compile_all()
         # Caching: get_workflow_title_cached is @cache'd on (name, locale).
         # Tests run in isolated workers, but make sure prior calls don't bleed.
         from actidoo_wfe.wf import service_workflow
@@ -100,7 +98,6 @@ def test_getWorkflowStatistics_translatesTitlePerUserLocale(db_engine_ctx):
             start_user="initiator",
         )
 
-        service_i18n.compile_all()
         from actidoo_wfe.wf import service_workflow
         service_workflow.get_workflow_title_cached.cache_clear()
 
@@ -136,7 +133,6 @@ def test_bffAdminGetAllWorkflowInstances_translatesTitlePerUserLocale(db_engine_
             start_user="admin",
         )
 
-        service_i18n.compile_all()
 
         admin = workflow.user("admin").user
         admin.locale = "en-US"
@@ -175,7 +171,6 @@ def test_adminGetTaskStatesPerWorkflow_translatesTaskTitlePerAdminLocale(db_engi
             start_user="admin",
         )
 
-        service_i18n.compile_all()
 
         admin = workflow.user("admin").user
         admin.locale = "en-US"

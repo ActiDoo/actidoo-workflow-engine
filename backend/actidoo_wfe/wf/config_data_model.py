@@ -26,7 +26,7 @@ class FieldDef:
     it cannot be inferred.
 
     ``label`` is a gettext msgid: it is resolved to the requesting user's locale
-    against the model's catalog (``i18n/locales/<locale>/LC_MESSAGES/<Model>.mo``
+    against the model's catalog (``i18n/locales/<locale>/LC_MESSAGES/<Model>.po``
     next to the model module — same toolchain as the workflow catalogs) and falls
     back to the msgid itself when no catalog/translation exists.
 

@@ -15,7 +15,7 @@ acme/workflows/ExpenseApproval/
 ├── ApproveExpense.form
 ├── __init__.py               workflow module: service, options, validation functions
 ├── options/<name>.csv        option files for selects
-├── i18n/                     translation catalog (.pot, .po, compiled .mo)
+├── i18n/                     translation catalog (.pot, .po)
 ├── <name>.dmn                decision tables for business rule tasks
 └── tests/test_<name>.py      pytest files
 ```
@@ -244,13 +244,14 @@ The engine translates process, lane and user-task names, form labels, descriptio
 ```
 python -m actidoo_wfe.wf.cli_i18n extract ExpenseApproval
 python -m actidoo_wfe.wf.cli_i18n update ExpenseApproval de
-python -m actidoo_wfe.wf.cli_i18n compile-all
 ```
 
 `extract` reads the workflow's `.bpmn` and `.form` files and writes the template `i18n/ExpenseApproval.pot`. `update` creates or merges `i18n/locales/de/LC_MESSAGES/ExpenseApproval.po` for a locale folder — new texts are added untranslated, a changed text keeps its old translation marked `fuzzy` for review. Fill in each `msgstr`, remove the `fuzzy` marker once checked, and commit the `.pot` and `.po` files. Name locale folders with hyphens (`de`, `de-CH`); a user with `de-DE` is served by the `de` folder through base-language matching.
 
+The engine reads the `.po` files directly. There is nothing to compile: a saved `.po` is picked up on the next form load, in the devcontainer and in the container alike. Only the workflow title in the start list is cached until the backend restarts. The pytest plugin (see below) turns every `.po` into a test of its own, so a file that cannot be parsed fails your test run.
+
 :::{warning}
-The engine reads only compiled `.mo` files and never compiles `.po` at build or start. Run `compile-all` and ship the resulting `.mo` files, or translations are simply absent in the deployment. Make it part of your build.
+The `.po` files must be installed with your package. The template's `pyproject.toml` lists `workflows/**/*.po` in the package data; if you removed that pattern, translations are simply absent in the image.
 :::
 
 ## Testing a workflow

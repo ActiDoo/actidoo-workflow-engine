@@ -575,15 +575,13 @@ class TestListRowsEndpoint:
 
 class TestLabelResolution:
     """Labels are gettext msgids, resolved against the model's Babel catalog
-    (``i18n/locales/<locale>/LC_MESSAGES/<name>.mo``) — the same toolchain as the
+    (``i18n/locales/<locale>/LC_MESSAGES/<name>.po``) — the same toolchain as the
     per-workflow catalogs."""
 
     def _catalog_dir(self, tmp_path, model_name, translations, locale="de"):
-        """Write + compile a catalog under tmp_path (the model's i18n_dir)."""
+        """Write a catalog under tmp_path (the model's i18n_dir)."""
         from babel.messages.catalog import Catalog
         from babel.messages.pofile import write_po
-
-        from actidoo_wfe.i18n import compile_po_to_mo
 
         po = tmp_path / "i18n" / "locales" / locale / "LC_MESSAGES" / f"{model_name}.po"
         po.parent.mkdir(parents=True)
@@ -592,7 +590,6 @@ class TestLabelResolution:
             catalog.add(id=msgid, string=msgstr)
         with open(po, "wb") as f:
             write_po(f, catalog)
-        compile_po_to_mo(po)
         return tmp_path
 
     def test_resolver_fallbacks(self):

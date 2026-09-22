@@ -1,6 +1,6 @@
 # ADR 001: Internationalization of Process Forms
 
-**Status:** Implemented
+**Status:** Implemented; decision points 3 and 4 replaced by [ADR 013](adr_013_translation_catalogs_at_runtime.md)
 **Date:** 2025-05-09
 
 ## Context

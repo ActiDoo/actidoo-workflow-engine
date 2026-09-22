@@ -12,6 +12,7 @@ include-package-data = true
 actidoo_wfe = [
     "wf/templates/mails/*.mako",
     "alembic/script.py.mako",
+    "locales/*/LC_MESSAGES/*.po",
 ]
 
 [project]

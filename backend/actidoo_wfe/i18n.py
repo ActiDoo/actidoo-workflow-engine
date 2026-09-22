@@ -10,7 +10,14 @@ This module owns:
   templates, mail subjects, future cross-cutting strings.
 * Generic gettext utilities reused by the per-workflow catalog
   implementation in ``actidoo_wfe.wf.service_i18n`` — locale matching,
-  PO/MO compilation, supported-locale listing, Accept-Language parsing.
+  catalog loading straight from ``.po``, supported-locale listing,
+  Accept-Language parsing.
+
+Catalogs are never compiled to ``.mo``: :func:`load_catalog` reads the ``.po``
+on first use and keeps the parsed catalog in memory, keyed by the file's mtime,
+so an edited ``.po`` takes effect on the next form load without a build step.
+Workflow titles are cached per process in ``service_workflow`` and keep their
+translation until restart.
 
 Workflow-specific catalog handling (form labels, BPMN names, per-process
 ``.po`` files in ``wf/testdata/processes/<wf>/i18n/``) stays in ``wf.service_i18n``
@@ -18,9 +25,11 @@ because it depends on the workflow plugin layout.
 """
 
 import gettext
+import io
+import logging
 import pathlib
 import re
-from functools import cache
+from functools import cache, lru_cache
 from pathlib import Path
 from typing import Callable, List, Optional, Union
 
@@ -33,6 +42,8 @@ from babel.messages.pofile import read_po, write_po
 from babel.support import Translations
 
 from actidoo_wfe.settings import settings
+
+log = logging.getLogger(__name__)
 
 # --- Global catalog layout ---------------------------------------------------
 
@@ -77,7 +88,7 @@ def _available_global_locales() -> List[str]:
     return [
         p.name
         for p in GLOBAL_I18N_DIR.iterdir()
-        if p.is_dir() and (p / "LC_MESSAGES" / f"{GLOBAL_CATALOG_DOMAIN}.mo").exists()
+        if p.is_dir() and (p / "LC_MESSAGES" / f"{GLOBAL_CATALOG_DOMAIN}.po").exists()
     ]
 
 
@@ -85,7 +96,7 @@ def _load_global_translations(locale: str) -> Union[gettext.GNUTranslations, get
     """Load the global backend gettext catalog for the given locale."""
     available = _available_global_locales()
     chosen = match_translation(user_locale=locale or settings.default_locale, available=available)
-    return Translations.load(dirname=GLOBAL_I18N_DIR, locales=[chosen], domain=GLOBAL_CATALOG_DOMAIN)
+    return load_catalog(GLOBAL_I18N_DIR / chosen / "LC_MESSAGES" / f"{GLOBAL_CATALOG_DOMAIN}.po")
 
 
 def translate(msgid: str, locale: Optional[str] = None) -> str:
@@ -164,20 +175,54 @@ def update_catalogue(template_pot: Path, input_po: Path, output_po: Path, locale
         write_po(f, updated)
 
 
-def compile_po_to_mo(po_file: Path):
-    """Compile a .po file into its sibling .mo (flat catalog, no msgctxt)."""
-    mo_file = po_file.with_suffix(".mo")
-    mo_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(po_file, "r", encoding="utf-8") as f:
-        original_catalog = read_po(f)
-
-    flat_catalog = Catalog(locale=original_catalog.locale, project=original_catalog.project)
-    for message in original_catalog:
+def _flatten_catalog(catalog: Catalog) -> Catalog:
+    """Drop msgctxt: the runtime looks strings up by msgid alone."""
+    flat = Catalog(locale=catalog.locale, project=catalog.project)
+    for message in catalog:
         if message.id and message.string:
-            flat_catalog.add(id=message.id, string=message.string)
+            flat.add(id=message.id, string=message.string)
+    return flat
 
-    with open(mo_file, "wb") as f:
-        write_mo(f, flat_catalog)
+
+def parse_catalog(po_file: Path) -> gettext.GNUTranslations:
+    """Parse a ``.po`` into the runtime catalog; raises on an unreadable file.
+
+    Used by :func:`load_catalog` and by the pytest plugin's catalog check, which
+    wants the parse error itself rather than the runtime fallback.
+    """
+    with open(po_file, "r", encoding="utf-8") as f:
+        catalog = read_po(f)
+    buffer = io.BytesIO()
+    write_mo(buffer, _flatten_catalog(catalog))
+    buffer.seek(0)
+    return Translations(fp=buffer)
+
+
+@lru_cache(maxsize=256)
+def _load_catalog_cached(po_path: str, mtime_ns: int) -> gettext.GNUTranslations | gettext.NullTranslations:
+    try:
+        return parse_catalog(Path(po_path))
+    except Exception:
+        # A broken catalog (wrong encoding, truncated write) must not take forms
+        # or mails down; fall back to the msgids and say why. The result is cached
+        # like a good one, so the log line appears once per file version.
+        log.exception("Cannot read translation catalog %s; using untranslated texts", po_path)
+        return gettext.NullTranslations()
+
+
+def load_catalog(po_file: Path) -> gettext.GNUTranslations | gettext.NullTranslations:
+    """Load a gettext catalog straight from its ``.po`` file.
+
+    The parsed catalog is cached per file and mtime, so a changed ``.po`` is
+    re-read on the next call and an unchanged one costs a single ``stat``.
+    A missing or unreadable file yields ``NullTranslations`` (every msgid falls
+    back to itself).
+    """
+    try:
+        mtime_ns = po_file.stat().st_mtime_ns
+    except OSError:
+        return gettext.NullTranslations()
+    return _load_catalog_cached(str(po_file), mtime_ns)
 
 
 def extract_global_messages() -> Path:
@@ -219,14 +264,6 @@ def update_global_catalogue(locale: str) -> Path:
     po = GLOBAL_I18N_DIR / locale / "LC_MESSAGES" / f"{GLOBAL_CATALOG_DOMAIN}.po"
     update_catalogue(template_pot=pot, input_po=po, output_po=po, locale=locale)
     return po
-
-
-def compile_global_catalog():
-    """Compile every locale's messages.po → messages.mo in the global catalog."""
-    if not GLOBAL_I18N_DIR.exists():
-        return
-    for po_file in GLOBAL_I18N_DIR.glob(f"**/LC_MESSAGES/{GLOBAL_CATALOG_DOMAIN}.po"):
-        compile_po_to_mo(po_file)
 
 
 # --- Supported locales (Babel-driven) + Accept-Language parsing -------------

@@ -109,10 +109,6 @@ def test_taskInRoleLane_sendsLimitWarningMail_whenRoleExceedsCap(db_engine_ctx, 
 
 def test_taskInRoleLane_rendersMailInRecipientLocale(db_engine_ctx, mock_send_text_mail):
     """Each recipient receives the task-ready mail in their own user.locale."""
-    from actidoo_wfe.wf import service_i18n
-
-    service_i18n.compile_all()
-
     with db_engine_ctx():
         db_session = SessionLocal()
 

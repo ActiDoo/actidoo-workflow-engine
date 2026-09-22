@@ -34,7 +34,7 @@ class DataModelDescriptor:
     # single row per ``id`` and no history.
     is_versioned: bool = False
     # Directory of the module declaring the model. Its ``i18n/locales/<locale>/
-    # LC_MESSAGES/<name>.mo`` catalog resolves the declared labels (msgids) to the
+    # LC_MESSAGES/<name>.po`` catalog resolves the declared labels (msgids) to the
     # requesting user's locale — same toolchain as the per-workflow catalogs.
     i18n_dir: pathlib.Path | None = None
 

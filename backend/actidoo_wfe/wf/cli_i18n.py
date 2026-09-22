@@ -6,7 +6,7 @@ import typer
 from actidoo_wfe.wf import providers as workflow_providers
 from actidoo_wfe.wf import service_i18n
 
-app = typer.Typer(help="i18n CLI for WFE processes and data models")
+app = typer.Typer(help="i18n CLI for WFE processes and data models (extract and update catalogs; the engine reads .po files directly)")
 
 
 def _scan_extensions() -> None:
@@ -72,14 +72,6 @@ def update_datamodel(name: str, locale: str):
     _scan_extensions()
     po_path = service_i18n.update_datamodel(data_model_registry.get(name), locale)
     typer.echo(f"Updated catalog: {po_path}")
-
-
-@app.command("compile-all")
-def compile_all():
-    """Compile all .po files (processes, data models, global) to .mo files"""
-    _scan_extensions()
-    service_i18n.compile_all()
-    typer.echo("Compiled all .po files to .mo")
 
 
 if __name__ == "__main__":

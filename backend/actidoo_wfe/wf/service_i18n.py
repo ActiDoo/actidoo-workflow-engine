@@ -3,10 +3,11 @@
 
 """Per-workflow gettext catalog handling.
 
-Each workflow ships its own ``i18n/locales/<locale>/LC_MESSAGES/<wf>.po`` and is
-loaded via ``translate_string`` / ``translate_form_data``.
+Each workflow ships its own ``i18n/locales/<locale>/LC_MESSAGES/<wf>.po``, read
+directly by ``translate_string`` / ``translate_form_data`` — there is no compiled
+``.mo`` and no build step.
 
-Generic catalog utilities (locale matching, PO/MO compile, supported-locale
+Generic catalog utilities (locale matching, catalog loading, supported-locale
 listing, global ``messages`` catalog) live in :mod:`actidoo_wfe.i18n`.
 """
 
@@ -20,11 +21,9 @@ from typing import Any, List, Optional, Tuple, Union
 
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po
-from babel.support import Translations
 
 from actidoo_wfe.i18n import (
-    compile_global_catalog,
-    compile_po_to_mo,
+    load_catalog,
     match_translation,
     update_catalogue,
 )
@@ -38,14 +37,13 @@ def _available_locales_for(process: str, workflow_dir: pathlib.Path) -> List[str
     locales_dir = workflow_dir / "i18n" / "locales"
     if not locales_dir.exists():
         return []
-    return [p.name for p in locales_dir.iterdir() if p.is_dir() and (p / "LC_MESSAGES" / f"{process}.mo").exists()]
+    return [p.name for p in locales_dir.iterdir() if p.is_dir() and (p / "LC_MESSAGES" / f"{process}.po").exists()]
 
 
 def _load_translations(process: str, locale: str, workflow_dir: pathlib.Path) -> Union[gettext.GNUTranslations, gettext.NullTranslations]:
-    """
-    Loads Babel translations with context support.
-    Expects:
-      wf/testdata/processes/<process>/i18n/locales/<locale>/LC_MESSAGES/<process>.mo
+    """Load the workflow's catalog for the best matching locale.
+
+    Reads ``<workflow_dir>/i18n/locales/<locale>/LC_MESSAGES/<process>.po``.
     """
 
     available = _available_locales_for(process, workflow_dir)
@@ -56,11 +54,7 @@ def _load_translations(process: str, locale: str, workflow_dir: pathlib.Path) ->
         available=available,
     )
 
-    return Translations.load(
-        dirname=workflow_dir / "i18n" / "locales",
-        locales=[chosen],
-        domain=process,
-    )
+    return load_catalog(workflow_dir / "i18n" / "locales" / chosen / "LC_MESSAGES" / f"{process}.po")
 
 
 def _resolve_workflow_directory(process: str, base: Optional[pathlib.Path]) -> Optional[pathlib.Path]:
@@ -81,7 +75,7 @@ def translate_form_data(
     base_i18n_dir: Optional[pathlib.Path] = None,
 ) -> ReactJsonSchemaFormData:
     """
-    Translates jsonschema and uischema from form_data using the .mo file
+    Translates jsonschema and uischema from form_data using the workflow's .po catalog
     for the given process (workflow_name) and locale.
     """
     # 1) Load translations
@@ -283,26 +277,3 @@ def update_datamodel(descriptor, locale: str) -> pathlib.Path:
     po = descriptor.i18n_dir / "i18n" / "locales" / locale / "LC_MESSAGES" / f"{descriptor.name}.po"
     update_catalogue(template_pot=pot, input_po=po, output_po=po, locale=locale)
     return po
-
-
-def compile_all():
-    """Compile every workflow's and data model's .po into .mo, then the global
-    ``messages`` catalog. Data-model catalogs come from the registry, so the
-    caller must have scanned/imported the extensions first."""
-    from actidoo_wfe.wf.registry_data_model import data_model_registry
-
-    for workflow_dir in workflow_providers.iter_workflow_directories():
-        locales_root = workflow_dir / "i18n" / "locales"
-        if not locales_root.exists():
-            continue
-        for po_file in locales_root.glob("**/LC_MESSAGES/*.po"):
-            compile_po_to_mo(po_file)
-
-    datamodel_roots = {d.i18n_dir / "i18n" / "locales" for d in data_model_registry.list_models() if d.i18n_dir}
-    for locales_root in datamodel_roots:
-        if not locales_root.exists():
-            continue
-        for po_file in locales_root.glob("**/LC_MESSAGES/*.po"):
-            compile_po_to_mo(po_file)
-
-    compile_global_catalog()

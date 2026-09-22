@@ -46,7 +46,7 @@ The template ships with the placeholder package name `myworkflows`; the steps be
 
 3. Set the workflow provider in `src/acme/providers.py`. The template registers the engine's file-system provider with `@register_workflow_provider`; set its `name` (usually the package name, `acme`), its `priority` (the template uses `100` — when two providers serve the same workflow name, the higher priority wins) and its `module_base` (`acme.workflows`, the package that holds the [workflow modules](glossary.md#workflow-module)). Leave the base path — the `workflows` folder — as it is.
 
-4. Complete the package data. Non-Python files are installed only when a `[tool.setuptools.package-data]` pattern matches them. The template lists `*.bpmn`, `*.form`, `*.json` and `*.csv`; add every other file type your workflows contain, for example compiled translation catalogs (`workflows/**/*.mo`) and DMN files. A file that is missing here is missing from the image.
+4. Complete the package data. Non-Python files are installed only when a `[tool.setuptools.package-data]` pattern matches them. The template lists `*.bpmn`, `*.form`, `*.json`, `*.csv` and the translation catalogs (`workflows/**/*.po`); add every other file type your workflows contain, for example DMN files. A file that is missing here is missing from the image.
 
 5. Pin the engine version. Three places name the engine tag and must stay in sync: `workflow-engine.version` (`WFE_TAG`), the build argument `BASE_IMAGE` in `docker/Dockerfile`, and `${WFE_TAG}` in `.devcontainer/docker-compose.yml`. Upgrading the engine means changing the tag and rebuilding.
 

@@ -7,7 +7,27 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- Translations: the engine reads the `.po` catalogs directly and keeps them in
+  memory, keyed by the file's modification time. There is no `.mo` file and no
+  compile step any more; a saved `.po` takes effect on the next form load
+  (workflow titles are cached until restart). A
+  workflow project only has to list `workflows/**/*.po` in its package data,
+  as the template now does. The pytest plugin collects every `.po` as a test
+  of its own, so a file that cannot be parsed fails the test run instead of
+  the deployment.
+
+### Fixed
+
+- Engine image: the global mail catalog was not part of the wheel, so every
+  mail went out untranslated. The `.po` files are packaged now.
+
+### Removed
+
+- The `compile-all` command of `actidoo_wfe.wf.cli_i18n` and the functions
+  `compile_po_to_mo`, `compile_all` and `compile_global_catalog`. Drop the
+  call from your build; nothing replaces it.
 
 ## [0.1.43] - 2026-09-14
 

@@ -152,7 +152,7 @@ def test_create_persists_row_and_typed_schema(db_engine_ctx):
 
 
 def test_labels_resolve_via_committed_catalog(db_engine_ctx):
-    """A German user gets the labels from datamodels/i18n/.../DemoExpense.mo."""
+    """A German user gets the labels from datamodels/i18n/.../DemoExpense.po."""
     with db_engine_ctx():
         db = SessionLocal()
         wf = _setup(db)

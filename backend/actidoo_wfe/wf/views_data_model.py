@@ -257,7 +257,7 @@ def _file_refs_for(files_map: dict, row: Any) -> dict[str, list[dict]]:
 def resolve_label(data_model: DataModelDescriptor, label: str | None, locale: str | None, fallback: str) -> str:
     """Resolve a declared label (gettext msgid) to the requesting user's locale.
 
-    Uses the model's catalog (``i18n/locales/<locale>/LC_MESSAGES/<name>.mo`` next
+    Uses the model's catalog (``i18n/locales/<locale>/LC_MESSAGES/<name>.po`` next
     to the model module — the same Babel toolchain as the per-workflow catalogs).
     Missing catalog or translation yields the msgid itself; ``None``/empty labels
     fall back to *fallback* (usually the field or model name) — the wire schema

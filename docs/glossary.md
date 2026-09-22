@@ -24,7 +24,7 @@ An OAuth2 access token that an external client obtains from the IdP and sends in
 
 ## catalog
 
-A gettext translation catalog: a `.pot` template with all texts, one `.po` file per locale that translators edit, and the compiled `.mo` file the engine reads. Every workflow and every data model has its own catalog in its `i18n/` folder; the engine has a global catalog for mail texts. See [ADR 001](adr/adr_001_form_i18n.md).
+A gettext translation catalog: a `.pot` template with all texts, and one `.po` file per locale that translators edit and the engine reads directly. Every workflow and every data model has its own catalog in its `i18n/` folder; the engine has a global catalog for mail texts. See [ADR 001](adr/adr_001_form_i18n.md).
 
 ## connector
 

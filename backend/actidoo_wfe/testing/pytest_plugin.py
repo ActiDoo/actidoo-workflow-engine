@@ -20,6 +20,35 @@ from actidoo_wfe.settings import settings
 log = logging.getLogger(__name__)
 
 
+# --- Translation catalogs ----------------------------------------------------
+# The engine reads ``.po`` files directly; there is no compile step that would
+# reject a broken one before deployment. So every ``LC_MESSAGES/*.po`` that
+# pytest walks past becomes a test item of its own, and a file that cannot be
+# parsed fails the run - in the engine and in every workflow project that
+# enables this plugin.
+
+
+class CatalogItem(pytest.Item):
+    def runtest(self) -> None:
+        from actidoo_wfe.i18n import parse_catalog
+
+        parse_catalog(self.path)
+
+    def reportinfo(self):
+        return self.path, 0, f"translation catalog {self.path.name}"
+
+
+class CatalogFile(pytest.File):
+    def collect(self):
+        yield CatalogItem.from_parent(self, name="parses")
+
+
+def pytest_collect_file(parent, file_path):
+    if file_path.suffix == ".po" and file_path.parent.name == "LC_MESSAGES":
+        return CatalogFile.from_parent(parent, path=file_path)
+    return None
+
+
 def setup_test_db() -> None:
     """Import demo data and schema into a clean test database."""
     teardown_test_db()
