@@ -520,6 +520,40 @@ def test_unassign_task_from_me(db_engine_ctx):
         assert status == 200
 
 
+def test_unassign_completed_task_is_refused(db_engine_ctx):
+    """A completed task keeps its assignment - it records who did the work."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+        workflow.user("initiator").assign_task(task_id=task.id)
+        workflow.user("initiator").submit(
+            task_data=FORM1_DATA_MIN,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            response = client.root_client.post(
+                client.root_client.app.url_path_for("unassign_task"),
+                json={"task_id": str(task.id)},
+            )
+
+        assert response.status_code == 409
+        assert response.json()["code"] == "task_cannot_be_unassigned"
+
+        # the assignment is still on the completed task
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            completed = client.root_client.get(
+                client.root_client.app.url_path_for("get_usertasks", state="completed"),
+                params={"workflow_instance_id": str(workflow.workflow_instance_id)},
+            )
+        parsed = GetUserTasksResponse.model_validate(completed.json())
+        form1 = next(t for t in parsed.usertasks if t.id == task.id)
+        assert form1.assigned_user is not None
+        assert form1.can_be_unassigned is False
+
+
 # ---------------------------------------------------------------------------
 # pagination
 # ---------------------------------------------------------------------------

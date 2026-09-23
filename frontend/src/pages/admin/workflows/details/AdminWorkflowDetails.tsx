@@ -65,7 +65,7 @@ const AdminWorkflowDetails: React.FC = () => {
         navigate('/admin/all-workflows', { replace: true });
       },
       () => {
-        // The instance may have finished while this page was open — reload so the
+        // The instance may have finished while this page was open - reload so the
         // header and the cancel button match the server again.
         setCancelDialogOpen(false);
         getWorkflow();

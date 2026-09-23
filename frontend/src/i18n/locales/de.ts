@@ -253,6 +253,8 @@ export const de = {
     assignError: 'Aufgabe konnte dir nicht zugewiesen werden. Bitte versuche es erneut',
     unassignSuccess: 'Aufgabe erfolgreich freigegeben',
     unassignError: 'Aufgabe konnte dir nicht entzogen werden. Bitte versuche es erneut',
+    unassignCompletedError:
+      'Die Aufgabe ist bereits abgeschlossen; die Zuweisung kann nicht mehr aufgehoben werden.',
     cancelSuccess: 'Workflow erfolgreich abgebrochen',
     cancelError: 'Workflow konnte nicht abgebrochen werden. Bitte versuche es erneut',
     deleteSuccess: 'Workflow erfolgreich gelöscht',

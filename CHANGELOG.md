@@ -16,6 +16,10 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
+- Unassigning a completed task. The service layer already refused it, but the
+  exception reached the client as a 500; it is a 409 `task_cannot_be_unassigned`
+  now. The task header no longer offers the button for a completed task - the
+  delegate cases used to show it although the task could not be handed back.
 - Cancelling a workflow that is already finished. `cancel_workflow_instance`
   answers a completed or already cancelled instance with 409
   `workflow_instance_already_finished` instead of reporting success and
