@@ -302,6 +302,8 @@ export const en = {
     cancelWorkflowConfirm: 'Do you really want to cancel this workflow?',
     cancelWorkflowSuccess: 'Workflow successfully canceled',
     cancelWorkflowError: 'Task could not be executed. Please try again.',
+    cancelWorkflowAlreadyFinished:
+      'This workflow is already finished and cannot be cancelled any more.',
     keepWorkflowTitle: 'Keep Workflow',
     tasksHeadline: 'Tasks',
     noSelectedTaskTitle: 'No selected task',

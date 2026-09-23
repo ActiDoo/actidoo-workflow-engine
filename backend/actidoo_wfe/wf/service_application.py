@@ -37,6 +37,7 @@ from actidoo_wfe.wf.exceptions import (
     UserMayNotStartWorkflowException,
     ValidationResultContainsErrors,
     WorkflowDefinitionMissingError,
+    WorkflowInstanceAlreadyFinishedException,
     WorkflowSpecNotFoundException,
 )
 from actidoo_wfe.wf.models import (
@@ -1541,6 +1542,13 @@ def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id:
     require_workflow_admin_by_instance_id(db=db, user_id=user_id, instance_id=workflow_instance_id)
 
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id, for_update=True)
+
+    # An instance without unfinished tasks has nothing left to cancel: it either reached
+    # its end event or was cancelled before. Cancelling it again would only flip the
+    # instance to unsuccessful and report success to the caller.
+    if len(service_workflow.get_unfinished_tasks(workflow)) == 0:
+        raise WorkflowInstanceAlreadyFinishedException(workflow_instance_id)
+
     service_workflow.cancel_workflow(workflow=workflow)
     repository.store_workflow_instance(db=db, workflow=workflow)
 

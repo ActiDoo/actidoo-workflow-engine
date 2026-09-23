@@ -75,6 +75,12 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     !isReadonly &&
     (!task.assigned_user || task.can_be_assigned_as_delegate) &&
     !task.assigned_to_me;
+  // A finished task belongs to a finished instance: there is nothing left to cancel, and the
+  // backend refuses it. Both facts are checked so a stale can_cancel_workflow flag - e.g. from
+  // a task page that was open while someone else finished the workflow - cannot offer the action.
+  const isWorkflowFinished = !!task.state_completed || !!workflowInstance?.is_completed;
+  const canCancelWorkflow =
+    !isReadonly && !isWorkflowFinished && task.can_cancel_workflow && !task.can_delete_workflow;
   const canUnassignTask =
     !isReadonly &&
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
@@ -251,7 +257,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 </Button>
               </BusyIndicator>
             ) : null}
-            {task.can_cancel_workflow && !task.can_delete_workflow ? (
+            {canCancelWorkflow ? (
               <BusyIndicator active={cancelWorkflowLoadState} delay={0} className="">
                 <Button
                   icon="employee-rejections"

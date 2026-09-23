@@ -135,6 +135,83 @@ def test_cancel_workflow(db_engine_ctx):
         assert any(x.state_cancelled for x in json_resp.ITEMS)
 
 
+def _cancel(client, workflow):
+    with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+        return client.post(
+            name="bff_admin_cancel_workflow_instance",
+            json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+        )
+
+
+def _tasks_of(client, workflow):
+    with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+        _, json_resp = client.post(
+            name="bff_admin_get_all_tasks",
+            json={},
+            cls=GetAllTasksResponse,
+        )
+    return [t for t in json_resp.ITEMS if t.workflow_instance.id == workflow.workflow_instance_id]
+
+
+def test_cancel_completed_workflow_is_refused(db_engine_ctx):
+    """A completed instance has nothing left to cancel and must not be reported as cancelled."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _create_completed_workflow(db=db)
+        client = Client()
+
+        status, json_resp = _cancel(client=client, workflow=workflow)
+
+        assert status == 409
+        assert json_resp["code"] == "workflow_instance_already_finished"
+
+        tasks = _tasks_of(client=client, workflow=workflow)
+        assert len(tasks) > 0
+        assert not any(t.state_cancelled for t in tasks)
+
+
+def test_cancel_workflow_twice_is_refused(db_engine_ctx):
+    """The second cancel finds no unfinished task left and is refused."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow)
+        assert status == 200
+
+        status, json_resp = _cancel(client=client, workflow=workflow)
+        assert status == 409
+        assert json_resp["code"] == "workflow_instance_already_finished"
+
+
+def test_cancel_workflow_with_erroneous_task(db_engine_ctx):
+    """A workflow stuck on a failed service task is still running and stays cancellable."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        workflow.user("initiator").submit(
+            task_data=FORM1_DATA_TRIGGER_ERROR,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow)
+
+        assert status == 200
+        assert any(t.state_cancelled for t in _tasks_of(client=client, workflow=workflow))
+
+
 def test_admin_assign(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()

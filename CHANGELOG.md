@@ -7,7 +7,14 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- Cancelling a workflow that is already finished. `cancel_workflow_instance`
+  answers a completed or already cancelled instance with 409
+  `workflow_instance_already_finished` instead of reporting success and
+  marking the closed instance as unsuccessful. The admin workflow details page
+  no longer offers the button for a finished instance, and the task header
+  hides it once the task or its instance is done.
 
 ## [0.1.44] - 2026-09-23
 

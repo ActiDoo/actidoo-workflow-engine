@@ -85,6 +85,18 @@ class TaskIsNotErroneousException(Exception):
     pass
 
 
+class WorkflowInstanceAlreadyFinishedException(Exception):
+    """Raised when a write path is asked to change an instance that has no unfinished tasks left.
+
+    A finished instance is either completed or already cancelled - cancelling it
+    again would rewrite a closed history, so the request is refused instead.
+    """
+
+    def __init__(self, workflow_instance_id: uuid.UUID):
+        self.workflow_instance_id = workflow_instance_id
+        super().__init__(f"Workflow instance '{workflow_instance_id}' is already finished")
+
+
 class WorkflowInstanceBusyException(Exception):
     """Raised when the instance row lock could not be taken in time.
 
