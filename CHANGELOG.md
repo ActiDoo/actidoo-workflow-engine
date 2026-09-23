@@ -11,7 +11,8 @@ releases correspond to the git tags of this repository.
 
 - Completed tasks show when they were submitted. `my_usertasks/{state}` carries
   the task's `completed_at`, and the task header prints date and time under the
-  title.
+  title. The admin workflow details page shows the same date per task in the
+  task list, plus the instance's own start and completion time in its header.
 
 ### Fixed
 

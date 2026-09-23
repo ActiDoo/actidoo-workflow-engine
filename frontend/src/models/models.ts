@@ -174,6 +174,7 @@ export interface AdminWorkflowInstance {
   title?: string;
   subtitle?: string;
   created_at?: string;
+  completed_at?: string | null;
   is_completed?: boolean;
   has_task_in_error_state?: boolean;
   created_by?: User;

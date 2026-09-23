@@ -100,6 +100,11 @@ def test_admin_get_all_workflow_instances(db_engine_ctx):
             )
 
         assert len(json_resp.ITEMS) > 0
+        # the details header prints when the instance was finished
+        item = next(x for x in json_resp.ITEMS if x.id == workflow.workflow_instance_id)
+        assert item.is_completed
+        assert item.completed_at is not None
+        assert item.created_at <= item.completed_at
 
 
 def test_cancel_workflow(db_engine_ctx):

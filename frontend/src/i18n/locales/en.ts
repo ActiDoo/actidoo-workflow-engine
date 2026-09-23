@@ -414,6 +414,8 @@ export const en = {
     isCompleted: 'Is completed',
     hasError: 'Has task in error state',
     createdBy: 'Created by',
+    createdAt: 'Created at',
+    completedAt: 'Completed at',
   },
   statistics: {
     title: 'Workflow Statistics',

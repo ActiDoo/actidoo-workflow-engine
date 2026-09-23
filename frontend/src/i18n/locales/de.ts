@@ -418,6 +418,8 @@ export const de = {
     isCompleted: 'Ist abgeschlossen',
     hasError: 'Aufgaben mit Fehler',
     createdBy: 'Erstellt von',
+    createdAt: 'Erstellt am',
+    completedAt: 'Abgeschlossen am',
   },
   statistics: {
     title: 'Workflow-Statistiken',
