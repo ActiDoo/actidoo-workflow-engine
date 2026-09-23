@@ -94,6 +94,8 @@ class UserTaskWithoutNestedAssignedUserRepresentation(BaseModel):
     completed_by_delegate_user_id: uuid.UUID | None = Field(default=None)
     delegate_submit_comment: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
+    # Read from the task row, not from the engine: the workflow object has no history.
+    completed_at: datetime.datetime | None = Field(default=None)
 
 
 class UserTaskRepresentation(UserTaskWithoutNestedAssignedUserRepresentation):

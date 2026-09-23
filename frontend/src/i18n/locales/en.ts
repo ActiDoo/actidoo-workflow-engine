@@ -251,6 +251,8 @@ export const en = {
     assignError: 'Task could not be assigned to you. Please try again',
     unassignSuccess: 'Successfully unassigned task',
     unassignError: 'Task could not be unassigned from you. Please try again',
+    unassignCompletedError:
+      'This task is already completed; its assignment cannot be given back any more.',
     cancelSuccess: 'Successfully cancelled workflow',
     cancelError: 'Workflow could not be cancelled. Please try again',
     deleteSuccess: 'Successfully deleted workflow',
@@ -302,6 +304,8 @@ export const en = {
     cancelWorkflowConfirm: 'Do you really want to cancel this workflow?',
     cancelWorkflowSuccess: 'Workflow successfully canceled',
     cancelWorkflowError: 'Task could not be executed. Please try again.',
+    cancelWorkflowAlreadyFinished:
+      'This workflow is already finished and cannot be cancelled any more.',
     keepWorkflowTitle: 'Keep Workflow',
     tasksHeadline: 'Tasks',
     noSelectedTaskTitle: 'No selected task',
@@ -412,6 +416,8 @@ export const en = {
     isCompleted: 'Is completed',
     hasError: 'Has task in error state',
     createdBy: 'Created by',
+    createdAt: 'Created at',
+    completedAt: 'Completed at',
   },
   statistics: {
     title: 'Workflow Statistics',

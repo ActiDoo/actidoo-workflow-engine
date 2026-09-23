@@ -366,6 +366,20 @@ def get_workflow_instance_names_by_task_ids(db: Session, task_ids: set[uuid.UUID
     return {row[0]: row[1] for row in rows}
 
 
+def get_task_completion_times(db: Session, task_ids: set[uuid.UUID]) -> dict[uuid.UUID, datetime.datetime | None]:
+    """Batch lookup of the moment each task was completed.
+
+    The engine's task objects do not carry it - the timestamp is written to the
+    task row when the task first reaches the completed state.
+    """
+    if not task_ids:
+        return {}
+    rows = db.execute(
+        select(WorkflowInstanceTask.id, WorkflowInstanceTask.completed_at).where(WorkflowInstanceTask.id.in_(task_ids)),
+    ).all()
+    return {row[0]: row[1] for row in rows}
+
+
 def load_workflow_instance_by_task_id(db: Session, task_id: uuid.UUID, for_update: bool = False) -> BpmnWorkflow:
     """Restores a workflow by task_id.
 

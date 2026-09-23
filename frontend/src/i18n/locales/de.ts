@@ -253,6 +253,8 @@ export const de = {
     assignError: 'Aufgabe konnte dir nicht zugewiesen werden. Bitte versuche es erneut',
     unassignSuccess: 'Aufgabe erfolgreich freigegeben',
     unassignError: 'Aufgabe konnte dir nicht entzogen werden. Bitte versuche es erneut',
+    unassignCompletedError:
+      'Die Aufgabe ist bereits abgeschlossen; die Zuweisung kann nicht mehr aufgehoben werden.',
     cancelSuccess: 'Workflow erfolgreich abgebrochen',
     cancelError: 'Workflow konnte nicht abgebrochen werden. Bitte versuche es erneut',
     deleteSuccess: 'Workflow erfolgreich gelöscht',
@@ -304,6 +306,8 @@ export const de = {
     cancelWorkflowConfirm: 'Möchtest du diesen Workflow wirklich abbrechen?',
     cancelWorkflowSuccess: 'Workflow erfolgreich abgebrochen',
     cancelWorkflowError: 'Aufgabe konnte nicht ausgeführt werden. Bitte versuche es erneut.',
+    cancelWorkflowAlreadyFinished:
+      'Dieser Workflow ist bereits beendet und kann nicht mehr abgebrochen werden.',
     keepWorkflowTitle: 'Workflow behalten',
     tasksHeadline: 'Aufgaben',
     noSelectedTaskTitle: 'Keine Aufgabe ausgewählt',
@@ -416,6 +420,8 @@ export const de = {
     isCompleted: 'Ist abgeschlossen',
     hasError: 'Aufgaben mit Fehler',
     createdBy: 'Erstellt von',
+    createdAt: 'Erstellt am',
+    completedAt: 'Abgeschlossen am',
   },
   statistics: {
     title: 'Workflow-Statistiken',

@@ -47,6 +47,7 @@ from actidoo_wfe.wf.exceptions import (
     TaskIsNotErroneousException,
     UserMayNotAdministrateThisWorkflowException,
     UserMayNotAdministrateUsersException,
+    WorkflowInstanceAlreadyFinishedException,
     WorkflowInstanceBusyException,
 )
 from actidoo_wfe.wf.models import WorkflowUser
@@ -491,6 +492,12 @@ def cancel_workflow_instance(
     user: Annotated[WorkflowUser, Depends(get_user)],
     reqdata: CancelWorkflowInstanceRequest,
 ) -> CancelWorkflowInstanceResponse:
+    """Cancels a running instance.
+
+    An instance that has no unfinished tasks left - completed or already
+    cancelled - is answered with 409 ``workflow_instance_already_finished``
+    instead of being silently "cancelled" a second time.
+    """
 
     try:
         service_application.admin_cancel_workflow(
@@ -501,8 +508,14 @@ def cancel_workflow_instance(
         return CancelWorkflowInstanceResponse()
 
     except UserMayNotAdministrateThisWorkflowException as ex:
-        log.warning(f"User {user.username} is not allowed to call cancel_workflow_instance for task_id {reqdata.task_id}")
+        log.warning(f"User {user.username} is not allowed to call cancel_workflow_instance for workflow_instance_id {reqdata.workflow_instance_id}")
         raise HTTPException(status_code=403)
+    except WorkflowInstanceAlreadyFinishedException as error:
+        return _conflict(
+            "workflow_instance_already_finished",
+            "This workflow is already finished and cannot be cancelled.",
+            workflow_instance_id=str(error.workflow_instance_id),
+        )
 
 
 @router.get("/system_information", name="bff_admin_system_information")

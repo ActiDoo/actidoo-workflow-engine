@@ -7,7 +7,25 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- Completed tasks show when they were submitted. `my_usertasks/{state}` carries
+  the task's `completed_at`, and the task header prints date and time under the
+  title. The admin workflow details page shows the same date per task in the
+  task list, plus the instance's own start and completion time in its header.
+
+### Fixed
+
+- Unassigning a completed task. The service layer already refused it, but the
+  exception reached the client as a 500; it is a 409 `task_cannot_be_unassigned`
+  now. The task header no longer offers the button for a completed task - the
+  delegate cases used to show it although the task could not be handed back.
+- Cancelling a workflow that is already finished. `cancel_workflow_instance`
+  answers a completed or already cancelled instance with 409
+  `workflow_instance_already_finished` instead of reporting success and
+  marking the closed instance as unsuccessful. The admin workflow details page
+  no longer offers the button for a finished instance, and the task header
+  hides it once the task or its instance is done.
 
 ## [0.1.44] - 2026-09-23
 
