@@ -251,6 +251,8 @@ export const en = {
     assignError: 'Task could not be assigned to you. Please try again',
     unassignSuccess: 'Successfully unassigned task',
     unassignError: 'Task could not be unassigned from you. Please try again',
+    unassignCompletedError:
+      'This task is already completed; its assignment cannot be given back any more.',
     cancelSuccess: 'Successfully cancelled workflow',
     cancelError: 'Workflow could not be cancelled. Please try again',
     deleteSuccess: 'Successfully deleted workflow',

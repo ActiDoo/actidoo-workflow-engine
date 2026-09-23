@@ -82,8 +82,12 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const isWorkflowFinished = !!task.state_completed || !!workflowInstance?.is_completed;
   const canCancelWorkflow =
     !isReadonly && !isWorkflowFinished && task.can_cancel_workflow && !task.can_delete_workflow;
+  // A completed task keeps its assignment - it is the record of who did it. The backend
+  // refuses to hand it back with 409, and the delegate cases below would otherwise offer
+  // the button although can_be_unassigned is already false for a completed task.
   const canUnassignTask =
     !isReadonly &&
+    !task.state_completed &&
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
     (task.can_be_unassigned || task.assigned_to_me_as_delegate || isDelegatedToMyDelegate);
 
@@ -99,13 +103,22 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     );
   }, [assignToMeState?.postResponse]);
 
+  // A 409 carries a `code`; the store keeps the error body in `data`.
+  const unassignErrorText = (): string => {
+    const errorBody = unassignTaskFromMe?.data as { code?: string } | undefined;
+    if (errorBody?.code === 'task_cannot_be_unassigned') {
+      return t('singleTaskHeader.unassignCompletedError');
+    }
+    return t('singleTaskHeader.unassignError');
+  };
+
   useEffect(() => {
     handleResponse(
       dispatch,
       WeDataKey.UNASSIGN_TASK_FROM_ME,
       unassignTaskFromMe?.postResponse,
       t('singleTaskHeader.unassignSuccess'),
-      t('singleTaskHeader.unassignError'),
+      unassignErrorText(),
       props.reloadTask,
       props.reloadTask
     );

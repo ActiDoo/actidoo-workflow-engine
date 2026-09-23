@@ -32,7 +32,7 @@ from actidoo_wfe.storage import setup_storage
 from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.venusian_scan import run_venusian_scan
 from actidoo_wfe.wf.constants import BFF_CONTRACT_VERSION
-from actidoo_wfe.wf.exceptions import ClientVersionMismatchError, TaskIsNotInReadyUsertasksException, WorkflowDefinitionMissingError
+from actidoo_wfe.wf.exceptions import ClientVersionMismatchError, TaskCannotBeUnassignedException, TaskIsNotInReadyUsertasksException, WorkflowDefinitionMissingError
 from actidoo_wfe.wf.fastapi import router as router_wf
 
 print(f"Setting Log-Level to {settings.log_level}")
@@ -167,6 +167,20 @@ async def _task_not_submittable_handler(_request: Request, _exc: TaskIsNotInRead
         content={
             "detail": "This task cannot be submitted by you.",
             "code": "task_not_submittable",
+        },
+    )
+
+
+@app.exception_handler(TaskCannotBeUnassignedException)
+async def _task_cannot_be_unassigned_handler(_request: Request, _exc: TaskCannotBeUnassignedException) -> JSONResponse:
+    # 409 Conflict: the assignment can no longer be given back - the task has been
+    # completed in the meantime, or it was never one that may be handed back.
+    # The caller reloads the task instead of retrying.
+    return JSONResponse(
+        status_code=409,
+        content={
+            "detail": "This task can no longer be unassigned.",
+            "code": "task_cannot_be_unassigned",
         },
     )
 
