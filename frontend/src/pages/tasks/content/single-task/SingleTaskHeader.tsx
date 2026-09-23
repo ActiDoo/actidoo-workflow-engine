@@ -14,6 +14,7 @@ import {
   Title,
   TitleLevel,
 } from '@ui5/webcomponents-react';
+import { PcDateString } from '@/ui5-components';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
@@ -189,6 +190,11 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
         <div className="flex-1">
           <Text>{workflowInstance?.title}</Text>
           <Title level={TitleLevel.H3}>{task.title}</Title>
+          {task.completed_at ? (
+            <Text className="text-xs text-neutral-700">
+              {t('common.labels.completedAt')}: <PcDateString val={task.completed_at} />
+            </Text>
+          ) : null}
         </div>
         {isReadonly && (
           <MessageStrip

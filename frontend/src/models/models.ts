@@ -38,6 +38,8 @@ export interface UserTask {
   completed_by_delegate_user?: { id: string; full_name: string } | null;
   delegate_submit_comment?: string | null;
   is_readonly?: boolean;
+  /** When the task was submitted; only set once it is completed. */
+  completed_at?: string | null;
 }
 
 export interface WorkflowInstanceMeta {

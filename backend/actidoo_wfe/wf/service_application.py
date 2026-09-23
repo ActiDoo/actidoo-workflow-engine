@@ -586,6 +586,20 @@ def _enrich_user_tasks_with_nested_users(
     return enriched
 
 
+def _enrich_user_tasks_with_completion_times(
+    db: Session,
+    usertasks: list[UserTaskRepresentation],
+) -> None:
+    """Fills in when each completed task was submitted, from the task rows."""
+    completed_ids = {ut.id for ut in usertasks if ut.state_completed}
+    if not completed_ids:
+        return
+
+    completed_at_by_id = repository.get_task_completion_times(db=db, task_ids=completed_ids)
+    for ut in usertasks:
+        ut.completed_at = completed_at_by_id.get(ut.id)
+
+
 def _translate_UserTaskRepresentationForms(db: Session, workflow_name: str, usertask: UserTaskRepresentation, locale) -> UserTaskRepresentation:
     if usertask.jsonschema and usertask.uischema:
         translated = service_i18n.translate_form_data(
@@ -654,6 +668,7 @@ def get_usertasks_for_user_id(
     )
 
     usertasks = _enrich_user_tasks_with_nested_users(db=db, usertasks=usertasks)
+    _enrich_user_tasks_with_completion_times(db=db, usertasks=usertasks)
     usertasks = [_translate_UserTaskRepresentationForms(db=db, workflow_name=workflow.spec.name, usertask=ut, locale=user.locale) for ut in usertasks]
 
     # If the workflow definition has been removed, the workflow can no longer be progressed.

@@ -7,6 +7,12 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Added
+
+- Completed tasks show when they were submitted. `my_usertasks/{state}` carries
+  the task's `completed_at`, and the task header prints date and time under the
+  title.
+
 ### Fixed
 
 - Cancelling a workflow that is already finished. `cancel_workflow_instance`

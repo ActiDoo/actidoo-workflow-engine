@@ -13,6 +13,7 @@ from sqlalchemy import update as sa_update
 
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.helpers.bff_table import CursorPosition, decode_cursor, encode_cursor
+from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff.bff_user_schema import (
@@ -274,6 +275,40 @@ def test_get_my_usertasks_ready(db_engine_ctx):
         assert parsed.workflow_instance is not None
         assert parsed.workflow_instance.id == workflow.workflow_instance_id
         assert parsed.workflow_instance.title
+
+
+def test_get_my_usertasks_completed_carries_completion_time(db_engine_ctx):
+    """Completed tasks ship the moment they were submitted; ready ones have nothing to ship yet."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        before = dt_now_naive()
+        workflow.user("initiator").submit(
+            task_data=FORM1_DATA_MIN,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+        after = dt_now_naive()
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            completed = client.root_client.get(
+                client.root_client.app.url_path_for("get_usertasks", state="completed"),
+                params={"workflow_instance_id": str(workflow.workflow_instance_id)},
+            )
+            ready = client.root_client.get(
+                client.root_client.app.url_path_for("get_usertasks", state="ready"),
+                params={"workflow_instance_id": str(workflow.workflow_instance_id)},
+            )
+
+        parsed = GetUserTasksResponse.model_validate(completed.json())
+        form1 = next(t for t in parsed.usertasks if t.name == "Form1")
+        assert form1.completed_at is not None
+        # the column stores whole seconds, so the value may round past the window
+        tolerance = datetime.timedelta(seconds=1)
+        assert before - tolerance <= form1.completed_at.replace(tzinfo=None) <= after + tolerance
+
+        still_open = GetUserTasksResponse.model_validate(ready.json())
+        assert all(t.completed_at is None for t in still_open.usertasks)
 
 
 def test_get_my_usertasks_instance_block_visibility(db_engine_ctx):
