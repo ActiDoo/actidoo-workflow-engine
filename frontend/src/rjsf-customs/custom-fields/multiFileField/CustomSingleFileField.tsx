@@ -10,7 +10,11 @@ import React, { DragEvent, ReactElement, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
 import { useDragging } from '@/utils/hooks/useDragging';
-import { isRealFile } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
+import {
+  fileMatchesAccept,
+  getAccept,
+  isRealFile,
+} from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 
 export interface PcFile {
   datauri?: string | null;
@@ -34,6 +38,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
   const isDisabled = !!props.readonly || !!props.disabled;
 
   const isRequired = !!props.required;
+  const accept = getAccept(props.schema);
 
   const file = files && isRealFile(files) ? files : undefined;
 
@@ -53,7 +58,14 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
 
     const newFile = fileList[0];
 
-    if (newFile.size > maxFileSize) {
+    if (accept && !fileMatchesAccept(newFile, accept)) {
+      dispatch(
+        addToast(
+          <WeToastContent text={`File type not allowed (${accept.join(', ')}): ${newFile.name}`} />
+        )
+      );
+      return;
+    } else if (newFile.size > maxFileSize) {
       dispatch(addToast(<WeToastContent text={`File exceeds the max size of 15MB.`} />));
       return;
     } else if (file && file.filename === newFile.name) {
@@ -118,6 +130,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
               key={fileUploadKey}
               multiple
               hideInput
+              accept={accept?.join(',')}
               onChange={e => {
                 if (e.detail.files) updateFileList(e.detail.files);
               }}>
@@ -125,6 +138,7 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
                 Upload file (15 MB / file)
               </Button>
             </FileUploader>
+            {accept && <Text className="!text-neutral-500">Allowed: {accept.join(', ')}</Text>}
           </div>
         )}
 

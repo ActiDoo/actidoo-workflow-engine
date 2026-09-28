@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1f0rmup" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.51.1" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:collaboration id="Collaboration_0f7upl1">
+    <bpmn:participant id="Participant_1upl0ad" name="Demo Form Upload" processRef="TestFlowDemoFormUpload" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlowDemoFormUpload" name="Demo Form Upload" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_0upl0ad">
+      <bpmn:lane id="InitLaneID" name="Initiator">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UploadFiles</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ReviewUploads</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0start1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="UploadFiles" name="Upload Files">
+      <bpmn:incoming>Flow_0start1</bpmn:incoming>
+      <bpmn:outgoing>Flow_0upl2rv</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="ReviewUploads" name="Review Uploads">
+      <bpmn:incoming>Flow_0upl2rv</bpmn:incoming>
+      <bpmn:outgoing>Flow_0rv2end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_0rv2end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0start1" sourceRef="StartEvent_1" targetRef="UploadFiles" />
+    <bpmn:sequenceFlow id="Flow_0upl2rv" sourceRef="UploadFiles" targetRef="ReviewUploads" />
+    <bpmn:sequenceFlow id="Flow_0rv2end" sourceRef="ReviewUploads" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_0f7upl1">
+      <bpmndi:BPMNShape id="Participant_1upl0ad_di" bpmnElement="Participant_1upl0ad" isHorizontal="true">
+        <dc:Bounds x="129" y="79" width="689" height="251" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InitLaneID_di" bpmnElement="InitLaneID" isHorizontal="true">
+        <dc:Bounds x="159" y="79" width="659" height="251" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="192" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UploadFiles_di" bpmnElement="UploadFiles">
+        <dc:Bounds x="304" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReviewUploads_di" bpmnElement="ReviewUploads">
+        <dc:Bounds x="480" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="682" y="172" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0start1_di" bpmnElement="Flow_0start1">
+        <di:waypoint x="228" y="190" />
+        <di:waypoint x="304" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0upl2rv_di" bpmnElement="Flow_0upl2rv">
+        <di:waypoint x="404" y="190" />
+        <di:waypoint x="480" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0rv2end_di" bpmnElement="Flow_0rv2end">
+        <di:waypoint x="580" y="190" />
+        <di:waypoint x="682" y="190" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
