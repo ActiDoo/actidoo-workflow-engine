@@ -11,7 +11,11 @@ import React, { DragEvent, ReactElement, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
 import { useDragging } from '@/utils/hooks/useDragging';
-import { isRealFile } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
+import {
+  fileMatchesAccept,
+  getAccept,
+  isRealFile,
+} from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 
 export interface PcFile {
   datauri?: string | null; // available during adding, not available when showing backend data
@@ -37,6 +41,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
   const isDisabled = Boolean(props.readonly || props.disabled);
   const isRequired = !!props.schema?.minItems;
+  const accept = getAccept(props.schema);
 
   // Show only real files. Cleaning placeholders out of the data is not this field's
   // job (it happens centrally when the form data is loaded) — rendering must not
@@ -54,9 +59,12 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
     const newFiles: File[] = [];
     const maxFileSize = 15 * 1024 * 1024; // 15MB in bytes
     const oversizedFiles: File[] = [];
+    const rejectedFiles: File[] = [];
 
     Array.from(fileList).forEach(file => {
-      if (file.size > maxFileSize) {
+      if (accept && !fileMatchesAccept(file, accept)) {
+        rejectedFiles.push(file);
+      } else if (file.size > maxFileSize) {
         oversizedFiles.push(file);
       } else if (visibleFiles?.some(x => x.filename === file.name)) {
         duplicatedFiles.push(file);
@@ -70,6 +78,19 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
         addToast(
           <WeToastContent
             text={`File/s already in list: ${_.map(duplicatedFiles, 'name').join(', ')}`}
+          />
+        )
+      );
+    }
+
+    if (rejectedFiles.length > 0) {
+      dispatch(
+        addToast(
+          <WeToastContent
+            text={`File type not allowed (${accept?.join(', ')}): ${_.map(
+              rejectedFiles,
+              'name'
+            ).join(', ')}`}
           />
         )
       );
@@ -122,7 +143,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
   };
 
   return (
-    <div className="relative">
+    <div id={fieldPathId?.$id} className="relative">
       <label className="form-label px-2 ml-4 -mt-2 bg-white relative float-left z-10">
         {label}
       </label>
@@ -144,6 +165,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
               key={fileUploadKey}
               multiple
               hideInput
+              accept={accept?.join(',')}
               onChange={e => {
                 if (e.detail.files) updateFileList(e.detail.files);
               }}>
@@ -151,6 +173,7 @@ const CustomMultiFileField = (props: FieldProps<PcFile[] | null>): ReactElement 
                 Upload files (15 MB / file)
               </Button>
             </FileUploader>
+            {accept && <Text className="!text-neutral-500">Allowed: {accept.join(', ')}</Text>}
           </div>
         )}
 

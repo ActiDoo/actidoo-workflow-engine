@@ -11,5 +11,8 @@
   },
   "test-flow-dynamic-list-hidden/form010-fill.fixture.json": {
     "form": "TestFlow_DynamicListHidden/Form010_Fill.form"
+  },
+  "test-flow-demo-form-upload/upload-files.fixture.json": {
+    "form": "TestFlowDemoFormUpload/UploadFiles.form"
   }
 }

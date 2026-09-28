@@ -222,3 +222,5 @@ upload_dir/
 .codex
 .claude
 
+
+tmp/

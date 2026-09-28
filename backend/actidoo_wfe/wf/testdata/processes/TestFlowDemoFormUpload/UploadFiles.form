@@ -1,0 +1,111 @@
+{
+  "components": [
+    {
+      "label": "File picker - default",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_1qbeacq",
+        "columns": null
+      },
+      "id": "Field_1up7wqo",
+      "key": "file_single"
+    },
+    {
+      "label": "File picker - disabled",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_1741yni",
+        "columns": null
+      },
+      "id": "Field_0zxldsv",
+      "key": "file_disabled",
+      "disabled": true
+    },
+    {
+      "label": "File picker - multiple files",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_16dafd7",
+        "columns": null
+      },
+      "id": "Field_0eb7t0l",
+      "key": "file_multi",
+      "multiple": true
+    },
+    {
+      "label": "File picker - supported files only (csv, pdf)",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_12khw2c",
+        "columns": null
+      },
+      "id": "Field_1jk7hbh",
+      "key": "file_accept",
+      "accept": "csv,pdf"
+    },
+    {
+      "label": "Show required upload",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_0chk7q1",
+        "columns": null
+      },
+      "id": "Field_0chk7q1",
+      "key": "show_required"
+    },
+    {
+      "label": "File picker - required, visible when checked",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_08sg40l",
+        "columns": 2
+      },
+      "id": "Field_0s7t7uq",
+      "key": "file_required",
+      "validate": {
+        "required": true
+      },
+      "conditional": {
+        "hide": "=show_required != true"
+      }
+    },
+    {
+      "label": "File picker - multiple, required (pdf, xml)",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_1840o0f",
+        "columns": null
+      },
+      "id": "Field_18kh9hh",
+      "key": "file_multi_accept_required",
+      "accept": "pdf, xml",
+      "multiple": true,
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Textfield upload - custom_type attachment_multi (images only)",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_0x3k9aa",
+        "columns": null
+      },
+      "id": "Field_1a8lq2c",
+      "key": "legacy_multi_images",
+      "properties": {
+        "custom_type": "attachment_multi",
+        "accept": "image/*"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form_1mtwbwn",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.51.1"
+  },
+  "schemaVersion": 19
+}
