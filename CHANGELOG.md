@@ -7,7 +7,15 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- Statistics: after a workflow was renamed, the graph labelled the workflow
+  with the title stored on one of its instances, often the old name. It now
+  shows the current, translated title, like the table below it.
+
+### Added
+
+- Docs: what happens when a workflow is renamed.
 
 ## [0.1.44] - 2026-09-23
 

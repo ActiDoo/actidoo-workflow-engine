@@ -157,13 +157,14 @@ def get_all_tasks(
 @router.post("/statistics_information", name="bff_admin_get_statistics_information")
 def get_statistic_information(
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
 ) -> ReducedWorkflowInstanceResponse:
     """
     Used by the Frontend Graph and similar to "all_workflow_instances",
     but without the function get_paginated_data() in `views.py`,
     because this caused high loading times, which were unacceptable for the Graph.
     """
-    result = service_application.admin_get_statistics_graph_timestamps(db=db)
+    result = service_application.admin_get_statistics_graph_timestamps(db=db, user_id=user.id)
     return result
 
 

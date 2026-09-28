@@ -1,0 +1,90 @@
+{
+  "components": [
+    {
+      "label": "File picker - deafult",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_1qbeacq",
+        "columns": null
+      },
+      "id": "Field_1up7wqo",
+      "key": "filepicker_smiode"
+    },
+    {
+      "label": "File picker - disabled",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_1741yni",
+        "columns": null
+      },
+      "id": "Field_0zxldsv",
+      "key": "filepicker_dd7xmr",
+      "disabled": true
+    },
+    {
+      "label": "File picker - multiple files",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_16dafd7",
+        "columns": null
+      },
+      "id": "Field_0eb7t0l",
+      "key": "filepicker_ywhl2e",
+      "multiple": true
+    },
+    {
+      "label": "File picker - supportet files only (cvs, pdf)",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_12khw2c",
+        "columns": null
+      },
+      "id": "Field_1jk7hbh",
+      "key": "filepicker_2tpr29",
+      "accept": "cvs,pdf"
+    },
+    {
+      "label": "File picker - others",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_08sg40l",
+        "columns": 2
+      },
+      "id": "Field_0s7t7uq",
+      "key": "filepicker_7tw26o",
+      "validate": {
+        "required": true
+      },
+      "conditional": {
+        "hide": "=false"
+      },
+      "properties": {
+        "custo_test": "asdasd"
+      }
+    },
+    {
+      "label": "File picker - freestyle",
+      "type": "filepicker",
+      "layout": {
+        "row": "Row_1840o0f",
+        "columns": null
+      },
+      "id": "Field_18kh9hh",
+      "key": "filepicker_35gdhh",
+      "accept": "pdf, xml",
+      "multiple": true,
+      "validate": {
+        "required": true
+      }
+    }
+  ],
+  "type": "default",
+  "id": "Form_1mtwbwn",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.51.1"
+  },
+  "schemaVersion": 19
+}
