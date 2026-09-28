@@ -1592,8 +1592,20 @@ def admin_get_task_states_per_workflow(db: Session, wf_name: str, admin_user_id:
     return response
 
 
-def admin_get_statistics_graph_timestamps(db: Session) -> ReducedWorkflowInstanceResponse:
-    return views.bff_admin_get_graph_workflow_instances(db=db)
+def admin_get_statistics_graph_timestamps(db: Session, user_id: uuid.UUID) -> ReducedWorkflowInstanceResponse:
+    """Completed instances for the graph, labelled with the current workflow title; the newest stored title if the definition is gone."""
+    locale = repository.load_user(db=db, user_id=user_id).locale
+    instances = views.bff_admin_get_graph_workflow_instances(db=db)
+
+    titles = {instance.name: instance.title for instance in instances.ITEMS}
+    for name in titles:
+        if workflow_providers.workflow_definition_available(name):
+            titles[name] = service_workflow.get_workflow_title_cached(name, locale=locale)
+
+    for instance in instances.ITEMS:
+        instance.title = titles[instance.name]
+
+    return instances
 
 
 #### Number ranges (ADR 012) ####

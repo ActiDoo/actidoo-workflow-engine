@@ -404,9 +404,11 @@ def bff_admin_get_all_tasks(db: Session, bff_table_request_params: BffTableQuery
 def bff_admin_get_graph_workflow_instances(db: Session) -> ReducedWorkflowInstanceResponse:
     completed_workflows = [
         ReducedWorkflowState(id=row[0], created_at=row[1], title=row[2], name=row[3])
-        for row in db.query(WorkflowInstance.id, WorkflowInstance.created_at, WorkflowInstance.title, WorkflowInstance.name).filter(
+        for row in db.query(WorkflowInstance.id, WorkflowInstance.created_at, WorkflowInstance.title, WorkflowInstance.name)
+        .filter(
             WorkflowInstance.is_completed,
         )
+        .order_by(WorkflowInstance.created_at)
     ]
     return ReducedWorkflowInstanceResponse(ITEMS=completed_workflows)
 
