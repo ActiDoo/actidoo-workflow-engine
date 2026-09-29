@@ -231,6 +231,11 @@ export const de = {
       error: 'Vorlage konnte nicht gelöscht werden. Bitte versuche es erneut.',
     },
   },
+  listOverview: {
+    copyColumn: 'Spalte kopieren',
+    columnCopied: 'Spalte kopiert',
+    copyFailed: 'Spalte konnte nicht kopiert werden.',
+  },
   singleTaskHeader: {
     readonlyDefinitionMissing:
       'Diese Workflow-Definition ist nicht mehr verfügbar. Die Instanz ist schreibgeschützt.',
