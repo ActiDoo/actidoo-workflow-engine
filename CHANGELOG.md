@@ -7,7 +7,11 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- Forms: the overview of a dynamic list copies a column to the clipboard
+  (icon in the column header), one value per line as Excel does, so it can be
+  pasted into SAP.
 
 ## [0.1.44] - 2026-09-23
 

@@ -2,11 +2,13 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { ReactElement, useEffect, useMemo, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useLocation, useParams } from 'react-router-dom';
 import {
   Bar,
   Button,
   ButtonDesign,
+  Icon,
   Label,
   Modals,
   Table,
@@ -14,6 +16,7 @@ import {
   TableColumn,
   TableRow,
 } from '@ui5/webcomponents-react';
+import '@ui5/webcomponents-icons/dist/copy';
 import '@ui5/webcomponents-icons/dist/duplicate';
 import {
   ArrayFieldTemplateProps,
@@ -24,6 +27,9 @@ import {
 } from '@rjsf/utils';
 import { InterpreterContext, unaryTest } from 'feelin';
 import { fetchPost } from '@/ui5-components';
+import { useTranslation } from '@/i18n';
+import { addToast } from '@/store/ui/actions';
+import { WeToastContent } from '@/utils/components/WeToast';
 import { getApiUrl } from '@/services/ApiService';
 import {
   buildEvaluationContext,
@@ -51,6 +57,8 @@ export default function CustomArrayFieldTemplate<
   // console.log(props)
 
   const uiOptions = getUiOptions<T, S, F>(props.uiSchema);
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
 
   const location = useLocation();
   const { taskId } = useParams();
@@ -278,6 +286,28 @@ export default function CustomArrayFieldTemplate<
     return mapped || null;
   };
 
+  const cellText = (property: any, key: string, raw: unknown): string | undefined => {
+    let val: any = raw;
+    if (property?.oneOf) {
+      const match = property.oneOf.find((o: any) => o.const === val);
+      if (match) val = match.title;
+    }
+
+    const dynamicLabel = getDynamicValueLabel(key, val);
+    if (dynamicLabel) return dynamicLabel;
+    if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+    if (property?.type === 'array' && Array.isArray(val)) return undefined;
+    return val == null ? '' : String(val);
+  };
+
+  const copyColumn = (texts: string[]): void => {
+    const text = texts.map(value => value.replace(/[\t\r\n]+/g, ' ')).join('\r\n');
+    navigator.clipboard.writeText(text).then(
+      () => dispatch(addToast(<WeToastContent text={t('listOverview.columnCopied')} />)),
+      () => dispatch(addToast(<WeToastContent text={t('listOverview.copyFailed')} />))
+    );
+  };
+
   const renderTable = (
     items: any,
     dataArray: any[],
@@ -298,7 +328,27 @@ export default function CustomArrayFieldTemplate<
 
     const tableColumns = columnKeys.map((key, index) => (
       <TableColumn key={`column-${index}`}>
-        <Label>{properties[key].title}</Label>
+        <div className="flex items-center gap-1">
+          <Label>{properties[key].title}</Label>
+          {(properties[key]?.type !== 'array' || dynamicSelectConfigs[key]) && (
+            <Icon
+              name="copy"
+              accessibleName={t('listOverview.copyColumn')}
+              interactive
+              showTooltip
+              className="!w-3.5 !h-3.5 shrink-0 cursor-pointer !text-brand-primary"
+              onClick={() => {
+                copyColumn(
+                  rows.map((data, rowIndex) =>
+                    hiddenKeysPerRow[rowIndex]?.has(key)
+                      ? ''
+                      : cellText(properties[key], key, data[key]) ?? ''
+                  )
+                );
+              }}
+            />
+          )}
+        </div>
       </TableColumn>
     ));
 
@@ -315,22 +365,8 @@ export default function CustomArrayFieldTemplate<
             return <TableCell key={`cell-${rowIndex}-${key}`} />;
           }
 
-          let val = data[key];
-
+          const val = data[key];
           const property = properties[key];
-          if (property?.oneOf) {
-            const match = property.oneOf.find((o: any) => o.const === val);
-            if (match) val = match.title;
-          }
-
-          const dynamicLabel = getDynamicValueLabel(key, val);
-          if (dynamicLabel) {
-            return (
-              <TableCell key={`cell-${rowIndex}-${key}`}>
-                <Label>{dynamicLabel}</Label>
-              </TableCell>
-            );
-          }
 
           // Check if the value is an array containing PDFs
           if (isPdfArray(val)) {
@@ -343,18 +379,10 @@ export default function CustomArrayFieldTemplate<
             );
           }
 
-          // General check for boolean properties
-          if (typeof val === 'boolean') {
-            return (
-              <TableCell key={`cell-${rowIndex}-${key}`}>
-                <Label>{val ? 'Yes' : 'No'}</Label>{' '}
-                {/* Display "Yes" or "No" based on boolean value */}
-              </TableCell>
-            );
-          }
+          const text = cellText(property, key, val);
 
           // Handle nested arrays recursively
-          if (property?.type === 'array' && Array.isArray(val)) {
+          if (text === undefined) {
             return (
               <TableCell key={`cell-${rowIndex}-${key}`}>
                 {renderTable(
@@ -369,7 +397,7 @@ export default function CustomArrayFieldTemplate<
 
           return (
             <TableCell key={`cell-${rowIndex}-${key}`}>
-              <Label>{val}</Label>
+              <Label>{text}</Label>
             </TableCell>
           );
         })}
