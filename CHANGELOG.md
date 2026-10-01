@@ -39,7 +39,8 @@ server now apply the same rules.
     multi select becomes an empty list. If a request leaves a field out, the
     stored value stays, as before.
 - **When** the cleared field has a default:
-  - Before: the next form with this field showed the default again.
+  - Before: if clearing left a stored value unchanged, the next form showed
+    that old value. If no value was stored, it showed the default.
   - Now: the field stays empty. A default only fills a field that was never
     answered.
 - **When** a required field is sent empty:
@@ -62,12 +63,14 @@ server now apply the same rules.
     not work at all.
   - Now: the variable counts as `null`, like in a form's hide-if.
     `=approver = null` is enough. Old guards still work, and `null` works in
-    all expressions. A typo in a variable name no longer fails; the condition
-    is just false. Timers, multi-instance collections and correlation keys
-    still fail when a variable is missing.
+    all expressions. A missing name can make a condition true or false,
+    depending on the comparison. An ordering comparison (`<`, `>`, `<=`,
+    `>=`) with `null` is false. Timers, multi-instance collections and
+    correlation keys still fail when a variable is missing.
 - **When** a field or a whole dynamic list is marked `readonly` or `disabled`:
-  - Before: `readonly` only locked the field in the browser. On a list the
-    mark did nothing. The server took what the browser sent.
+  - Before: `readonly` only locked the field in the browser; the server took
+    what the browser sent. Individual `disabled` fields were already protected
+    on the server. Neither mark locked a whole dynamic list.
   - Now: the server keeps the stored value and ignores what the browser
     sends. A list is locked as a whole. If users should change such a field,
     remove `readonly`.
@@ -95,8 +98,9 @@ server now apply the same rules.
   for example a field of a list row and a field outside the list:
   - Before: the server looked for all fields on the level of the first one.
     It hid or required the wrong fields.
-  - Now: each part is checked on its own level. An `and` across more than two
-    levels raises an error.
+  - Now: each comparison is checked on its own level, including nested
+    combinations of `or` and `and` and conditions across more than two levels.
+    Such a condition may contain at most 10 comparisons; more raise an error.
 - **When** a `hide-if` uses `<`, `>`, `<=` or `>=`:
   - Before: the server read them as `=`. For `amount > 10`, the server hid the
     field at 10 and showed it at 20. The browser did the opposite.
@@ -131,12 +135,16 @@ Forms:
   removed.
 - Rewrite `hide-if` conditions that use `<`, `>`, `<=` or `>=` with text, or
   a chain like `1 < x < 5`. They now raise an error.
+- Split a `hide-if` that mixes list-row fields with other fields in more than
+  10 comparisons, for example with a helper field set by a service task. It
+  now raises an error.
 
 Gateways:
 - Guards like `="x" not in globals() or x is None` still work. You can write
   `=x = null` instead.
-- Check variable names in conditions. A typo no longer fails; the condition
-  is just false.
+- Check variable names in conditions. A missing name reads as `null`, so a
+  typo can change the route. For example, `=aprover = null` is true when
+  `aprover` is missing, even if `approver` has a value.
 
 Tests:
 - Send real values for required fields. `""` or only spaces now fail.
