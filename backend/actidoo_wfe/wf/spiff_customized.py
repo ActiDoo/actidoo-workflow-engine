@@ -59,6 +59,7 @@ from actidoo_wfe.wf.constants import (
     INTERNAL_DATA_KEY_STACKTRACE,
 )
 from actidoo_wfe.wf.exceptions import FormNotFoundException
+from actidoo_wfe.wf.feel_expressions import feel_to_python
 from actidoo_wfe.wf.form_transformation import empty_form, transform_camunda_form_from_file
 from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
 from actidoo_wfe.wf.types import TaskToUserMapping
@@ -674,10 +675,11 @@ class MyScriptEngine(FeelLikeScriptEngine):
             # )
 
     def patch_expression(self, invalid_python, lhs=""):
-        patched = super().patch_expression(invalid_python, lhs)
-        # Replace single '=' (assignment/equality ambiguity) with '==', but avoid '==', '<=', '>=', '!='
-        patched = re.sub(r"(?<!=|<|>|\!)=(?!=|<|>|\!)", "==", patched)
-        return patched
+        # One rewrite for gateway conditions and hide-if: FEEL fixes, a single '=' as '==',
+        # null as None - text in quotes stays as written.
+        if invalid_python is None:
+            return None
+        return (lhs or "") + feel_to_python(invalid_python)
 
     def get_task_to_user_mapping(self, workflow: BpmnWorkflow) -> TaskToUserMapping:
         tasks: Dict[uuid.UUID, Task] = {t.id: t for t in workflow.get_tasks()}
