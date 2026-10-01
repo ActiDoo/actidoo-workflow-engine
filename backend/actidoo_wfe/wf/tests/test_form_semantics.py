@@ -110,8 +110,8 @@ def _required_errors(result) -> set[str]:
 
 
 def test__hidden_required_field_may_be_absent():
-    """A required field that is currently hidden may be missing from the submission -
-    hidden means the user could not fill it, so it must not block."""
+    """Stored testclass is "a", so ``testclass != "b"`` is true and approval is
+    hidden. The user could not fill it, so leaving it out is no error."""
     result = _validate(DISABLED_REFERENCE_FORM, {"comment": "x"}, stored={"testclass": "a"})
 
     assert not result.error_schema
@@ -119,14 +119,16 @@ def test__hidden_required_field_may_be_absent():
 
 
 def test__visible_required_field_is_still_required():
-    """The same required field, now shown: leaving it out is an error."""
+    """Stored testclass is "b", so the condition is false and approval is
+    shown. It is required and missing, so there is an error."""
     result = _validate(DISABLED_REFERENCE_FORM, {"comment": "x"}, stored={"testclass": "b"})
 
     assert "approval" in (result.error_schema or {})
 
 
 def test__visible_required_field_value_is_kept():
-    """A value entered into a shown field ends up in the cleaned data unchanged."""
+    """Stored testclass is "b", approval is shown and set to "approved".
+    The value ends up in the result unchanged."""
     result = _validate(DISABLED_REFERENCE_FORM, {"approval": "approved"}, stored={"testclass": "b"})
 
     assert not result.error_schema
@@ -134,8 +136,8 @@ def test__visible_required_field_value_is_kept():
 
 
 def test__value_submitted_for_hidden_field_is_stripped_without_error():
-    """A value sent for a hidden field is silently dropped - it is not an error,
-    because the browser legitimately sends everything it holds."""
+    """Stored testclass is "a", so approval is hidden. The browser still sends
+    a value for it. That value is dropped without an error."""
     result = _validate(DISABLED_REFERENCE_FORM, {"approval": "approved"}, stored={"testclass": "a"})
 
     assert not result.error_schema
@@ -143,16 +145,16 @@ def test__value_submitted_for_hidden_field_is_stripped_without_error():
 
 
 def test__submitted_disabled_value_cannot_override_stored_one():
-    """A disabled field belongs to the server: whatever the client sends for it,
-    the stored value decides - here it keeps the approval visible and required."""
+    """The client sends testclass "a", but the stored value is "b". testclass is
+    disabled, so the stored "b" wins: approval stays shown and required."""
     result = _validate(DISABLED_REFERENCE_FORM, {"testclass": "a"}, stored={"testclass": "b"})
 
     assert "approval" in (result.error_schema or {})
 
 
 def test__garbage_in_disabled_field_is_replaced_by_the_stored_value():
-    """Nonsense sent for a disabled field does not even produce an error -
-    it is simply replaced by the stored value."""
+    """The client sends an invalid option for the disabled testclass. That is no
+    error: the stored "b" replaces it."""
     result = _validate(
         DISABLED_REFERENCE_FORM,
         {"testclass": "NOT_A_VALID_OPTION", "approval": "approved"},
@@ -164,8 +166,8 @@ def test__garbage_in_disabled_field_is_replaced_by_the_stored_value():
 
 
 def test__unset_disabled_reference_behaves_like_feel_null():
-    """A disabled reference with nothing stored counts as null:
-    ``null != "b"`` is true, so the dependent field is hidden."""
+    """Nothing is stored for testclass, so it reads as null. ``null != "b"`` is
+    true, approval is hidden and may be absent."""
     result = _validate(DISABLED_REFERENCE_FORM, {"comment": "x"}, stored={})
 
     assert not result.error_schema
@@ -189,16 +191,16 @@ def _unset_reference_form() -> dict:
 
 
 def test__required_field_hidden_behind_unset_optional_reference_may_be_absent():
-    """The reference was never filled: ``null != "a"`` is true, the dependent
-    field is hidden and its required rule does not apply."""
+    """category was never filled, so ``null != "a"`` is true. detail is hidden
+    and its required rule does not apply."""
     result = _validate(_unset_reference_form(), {})
 
     assert not result.error_schema
 
 
 def test__required_field_visible_behind_set_reference_is_required():
-    """The reference is set to the showing value: the dependent field appears
-    and its required rule applies again."""
+    """category is "a", so ``category != "a"`` is false. detail is shown,
+    required and missing, so there is an error."""
     result = _validate(_unset_reference_form(), {"category": "a"})
 
     assert "detail" in (result.error_schema or {})
@@ -220,16 +222,16 @@ def _null_literal_form() -> dict:
 
 
 def test__comparison_against_null_literal_matches_unset_reference():
-    """``kind = null`` matches exactly when kind was never filled - the one
-    comparison that is meant to hit the unset case."""
+    """kind was never filled, so ``kind = null`` is true. company_name is hidden
+    and may be absent."""
     result = _validate(_null_literal_form(), {})
 
     assert not result.error_schema
 
 
 def test__comparison_against_null_literal_does_not_match_set_reference():
-    """Once kind holds a value, ``kind = null`` no longer matches - the
-    dependent field is shown and required."""
+    """kind is "b", so neither ``kind = "a"`` nor ``kind = null`` is true.
+    company_name is shown, required and missing, so there is an error."""
     result = _validate(_null_literal_form(), {"kind": "b"})
 
     assert "company_name" in (result.error_schema or {})
@@ -251,15 +253,16 @@ def _not_null_form() -> dict:
 
 
 def test__not_null_conjunction_leaves_field_visible_for_unset_reference():
-    """With kind unset the first part is already false (``null != null``),
-    so the field stays visible."""
+    """kind is unset, so ``kind != null`` is false and the whole condition is
+    false. person_name stays shown and its required rule reports it."""
     result = _validate(_not_null_form(), {})
 
     assert "person_name" in (result.error_schema or {})
 
 
 def test__not_null_conjunction_hides_field_for_matching_reference():
-    """The same guard with kind = "b": both parts hold, the field is hidden."""
+    """kind is "b", so both parts are true. person_name is hidden and may be
+    absent."""
     result = _validate(_not_null_form(), {"kind": "b"})
 
     assert not result.error_schema
@@ -407,7 +410,8 @@ def test__parent_reference_addresses_the_surrounding_row():
 
 
 def test__hidden_list_does_not_enforce_min_items():
-    """A hidden list does not insist on its minimum number of rows."""
+    """variant is "a", so the positions list is hidden. Its minItems of 1 does
+    not apply to the empty list, and the list is dropped."""
     result = _validate(HIDDEN_LIST_FORM, {"variant": "a", "positions": []})
 
     assert not result.error_schema
@@ -415,7 +419,8 @@ def test__hidden_list_does_not_enforce_min_items():
 
 
 def test__rows_submitted_for_a_hidden_list_are_stripped_without_error():
-    """Rows sent for a hidden list are dropped, like any hidden value."""
+    """variant is "a", so the positions list is hidden. The submitted row is
+    dropped without an error."""
     result = _validate(HIDDEN_LIST_FORM, {"variant": "a", "positions": [{"name": "x"}]})
 
     assert not result.error_schema
@@ -423,8 +428,8 @@ def test__rows_submitted_for_a_hidden_list_are_stripped_without_error():
 
 
 def test__hidden_list_does_not_enforce_required_fields_of_its_rows():
-    """An empty required field inside a hidden list does not block the submit -
-    the reported bug this module started with."""
+    """variant is "a", so the positions list is hidden. The row is missing its
+    required name, but that is no error because the whole list is hidden."""
     result = _validate(HIDDEN_LIST_FORM, {"variant": "a", "positions": [{}]})
 
     assert not result.error_schema
@@ -432,21 +437,24 @@ def test__hidden_list_does_not_enforce_required_fields_of_its_rows():
 
 
 def test__visible_list_still_enforces_min_items():
-    """The same list, shown: too few rows is an error again."""
+    """variant is "b", so the positions list is shown. The empty list violates
+    minItems of 1, so there is an error."""
     result = _validate(HIDDEN_LIST_FORM, {"variant": "b", "positions": []})
 
     assert "positions" in (result.error_schema or {})
 
 
 def test__visible_list_still_enforces_required_fields_of_its_rows():
-    """The same list, shown: an empty required field in a row is an error again."""
+    """variant is "b", so the positions list is shown. The row is missing its
+    required name, so there is an error."""
     result = _validate(HIDDEN_LIST_FORM, {"variant": "b", "positions": [{}]})
 
     assert "positions" in (result.error_schema or {})
 
 
 def test__visible_list_keeps_its_rows():
-    """Rows of a shown list pass through unchanged."""
+    """variant is "b", so the positions list is shown. Its row passes through
+    unchanged."""
     result = _validate(HIDDEN_LIST_FORM, {"variant": "b", "positions": [{"name": "x"}]})
 
     assert not result.error_schema
@@ -490,7 +498,8 @@ def test__nested_hidden_list_is_evaluated_per_row():
 
 
 def test__hidden_attachment_field_is_stripped_without_error():
-    """A hidden attachment list behaves like any hidden field: dropped, no error."""
+    """variant is "a", so the attachment field docs is hidden. The empty list is
+    no error and docs is dropped."""
     form = {
         "components": [
             {"type": "select", "key": "variant", "values": AB_OPTIONS},
@@ -544,8 +553,10 @@ def test__visible_list_keeps_its_row_ids_during_cleanup():
 
 
 def test__or_across_levels_hides_when_the_root_operand_holds():
-    """``this.n = 9 or rootflag = "a"``: the root operand alone hides the row
-    field - in every row, whatever the row itself says."""
+    """Condition ``this.n = 9 or rootflag = "a"``. With rootflag "a" the root
+    operand is true, so the condition holds for every row regardless of n.
+    ``note`` is hidden and must not appear in the result, even though the row
+    submitted a value for it."""
     result = _validate(MIXED_OR_FORM, {"rootflag": "a", "rows": [{"n": 1, "note": "dropped"}]})
 
     assert not result.error_schema
@@ -553,8 +564,11 @@ def test__or_across_levels_hides_when_the_root_operand_holds():
 
 
 def test__or_across_levels_hides_per_row_when_the_row_operand_holds():
-    """The row operand alone hides the field too - but only in the rows where
-    it holds."""
+    """Condition ``this.n = 9 or rootflag = "a"``. With rootflag "b" the root
+    operand is false, so only the row operand decides. In the row with n = 9
+    the condition is true and ``note`` is hidden: it must not appear in that
+    row's result. In the row with n = 1 the condition is false and ``note`` is
+    kept as submitted."""
     result = _validate(MIXED_OR_FORM, {"rootflag": "b", "rows": [{"n": 9, "note": "dropped"}, {"n": 1, "note": "kept"}]})
 
     assert not result.error_schema
@@ -563,15 +577,20 @@ def test__or_across_levels_hides_per_row_when_the_row_operand_holds():
 
 
 def test__or_across_levels_requires_the_field_when_neither_operand_holds():
-    """Neither operand holds: the field is shown and its required rule applies."""
+    """Condition ``this.n = 9 or rootflag = "a"``. With rootflag "b" and n = 1
+    neither operand is true, so ``note`` is visible. It is required and was not
+    submitted, so validation must report an error for it."""
     result = _validate(MIXED_OR_FORM, {"rootflag": "b", "rows": [{"n": 1}]})
 
     assert "note" in json.dumps(result.error_schema)
 
 
 def test__and_across_levels_hides_only_when_both_operands_hold():
-    """``this.n = 9 and rootflag = "a"``: hidden only when the row AND the root
-    operand hold; either one alone leaves the field visible."""
+    """Condition ``this.n = 9 and rootflag = "a"``. Only rootflag "a" together
+    with n = 9 makes the condition true, so ``note`` is hidden and must not
+    appear in the result. With rootflag "a" and n = 1, or rootflag "b" and
+    n = 9, one operand is false, the condition is false, and ``note`` is kept
+    as submitted."""
     form = {
         "components": [
             {"type": "select", "key": "rootflag", "values": AB_OPTIONS},
@@ -626,15 +645,16 @@ def test__comparison_against_the_empty_string_with_a_value_set():
 
 
 def test__equality_against_unset_reference_leaves_field_visible_and_required():
-    """``category = "a"`` with category unset is false (``null = "a"``), so the
-    dependent field is shown and required - not silently hidden."""
+    """category is unset, so ``category = "a"`` is false. detail is shown,
+    required and missing, so there is an error."""
     result = _validate(EQUALITY_REFERENCE_FORM, {})
 
     assert "detail" in (result.error_schema or {})
 
 
 def test__equality_against_unset_reference_keeps_the_submitted_value():
-    """The value entered into that shown field survives - it used to be dropped."""
+    """category is unset, so detail is shown. The submitted detail "b" is kept.
+    It used to be dropped."""
     result = _validate(EQUALITY_REFERENCE_FORM, {"detail": "b"})
 
     assert not result.error_schema
@@ -642,7 +662,8 @@ def test__equality_against_unset_reference_keeps_the_submitted_value():
 
 
 def test__equality_against_matching_reference_hides_the_field():
-    """Once the reference matches, the field is hidden and its value dropped."""
+    """category is "a", so ``category = "a"`` is true. detail is hidden and the
+    submitted value is dropped."""
     result = _validate(EQUALITY_REFERENCE_FORM, {"category": "a", "detail": "b"})
 
     assert not result.error_schema
@@ -849,7 +870,8 @@ def test__required_multi_select_needs_at_least_one_item():
 
 
 def test__hidden_required_multi_select_may_be_empty():
-    """The same multi-select, hidden: its minimum does not apply."""
+    """flag is true, so tags is hidden. The empty list is no error and tags is
+    dropped."""
     result = _validate(_multi_select_form(), {"flag": True, "tags": []})
 
     assert not result.error_schema
