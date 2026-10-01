@@ -4,7 +4,10 @@
     "type": "object",
     "properties": {
       "file_single": {
-        "type": "object",
+        "type": [
+          "object",
+          "null"
+        ],
         "title": "File picker - default",
         "properties": {
           "datauri": {
@@ -26,7 +29,10 @@
         }
       },
       "file_disabled": {
-        "type": "object",
+        "type": [
+          "object",
+          "null"
+        ],
         "title": "File picker - disabled",
         "properties": {
           "datauri": {
@@ -73,7 +79,10 @@
         }
       },
       "file_accept": {
-        "type": "object",
+        "type": [
+          "object",
+          "null"
+        ],
         "title": "File picker - supported files only (csv, pdf)",
         "properties": {
           "datauri": {

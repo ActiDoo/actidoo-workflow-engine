@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux';
 import { MultiFileRow } from '@/rjsf-customs/custom-fields/multiFileField/components/MultiFileRow';
 import { useDragging } from '@/utils/hooks/useDragging';
 import {
+  admitsNull,
   fileMatchesAccept,
   getAccept,
   isRealFile,
@@ -103,8 +104,11 @@ const CustomSingleFileField = (props: FieldProps<PcFile | null>): ReactElement |
       });
   };
 
+  // A removed file is an emptied field: null, which the merge writes over the stored
+  // reference. Tasks of older running instances have a schema without null - there the
+  // key is left out as before.
   const removeFile = (): void => {
-    onChange(undefined, fieldPath);
+    onChange(admitsNull(props.schema) ? null : undefined, fieldPath);
   };
 
   return (
