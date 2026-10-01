@@ -857,6 +857,52 @@ def test__stored_blank_reference_hides_like_null_when_a_task_is_handed_out():
     assert result.task_data == {"status": ""}
 
 
+def _amount_form(condition: str) -> dict:
+    return {
+        "components": [
+            {"type": "number", "key": "amount"},
+            {"type": "textfield", "key": "detail", "validate": {"required": True}, "conditional": {"hide": condition}},
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    ("condition", "amount", "hidden"),
+    [
+        ("=amount > 10", 10, False),
+        ("=amount > 10", 20, True),
+        ("=amount >= 10", 10, True),
+        ("=amount < 10", 5, True),
+        ("=amount < 10", 10, False),
+        ("=amount <= 10", 10, True),
+        ("=10 < amount", 20, True),
+        ("=10 < amount", 5, False),
+        ("=amount > -1", 0, True),
+        ("=amount > -1", -3, False),
+    ],
+)
+def test__hide_if_compares_numbers_like_the_browser(condition, amount, hidden):
+    """<, >, <= and >= compare numbers, as FEEL does in the browser. They used to
+    be read as '=': 'amount > 10' hid the field at exactly 10 and showed it at 20."""
+    result = _validate(_amount_form(condition), {"amount": amount})
+
+    assert (_required_errors(result) == set()) is hidden
+
+
+@pytest.mark.parametrize("condition", ["=amount > 10", "=amount <= 10"])
+def test__a_number_comparison_on_an_unset_field_does_not_match(condition):
+    """In FEEL, null compared with a number is not true - the field stays visible."""
+    assert _required_errors(_validate(_amount_form(condition), {})) == {"detail"}
+
+
+@pytest.mark.parametrize("condition", ['=amount > "b"', "=1 < amount < 5"])
+def test__an_unsupported_comparison_is_an_error_not_a_silent_guess(condition):
+    """Ordering against text, or a chain of comparisons, has no server-side meaning.
+    It fails loudly instead of being evaluated as something else."""
+    with pytest.raises(NotImplementedError):
+        _validate(_amount_form(condition), {"amount": 2})
+
+
 def _tags_form(condition: str) -> dict:
     return {
         "components": [

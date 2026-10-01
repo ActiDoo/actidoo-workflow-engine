@@ -169,6 +169,29 @@ describe('evaluateHideIfAndFeel', () => {
     expect(chosen?.some['ui:widget']).toBe('hidden');
   });
 
+  it('compares numbers with <, >, <= and >=, as the server does', () => {
+    const uiSchema = {
+      big: { 'ui:hideif': '=amount > 10' },
+      small: { 'ui:hideif': '=amount <= 10' },
+    };
+    const schema: RJSFSchema = {
+      type: 'object',
+      properties: {
+        amount: { type: 'number' },
+        big: { type: 'string' },
+        small: { type: 'string' },
+      },
+    };
+
+    const at10 = evaluateHideIfAndFeel({ amount: 10 }, uiSchema, schema).newUiSchema;
+    expect(at10?.big['ui:widget']).toBeUndefined();
+    expect(at10?.small['ui:widget']).toBe('hidden');
+
+    const unset = evaluateHideIfAndFeel({}, uiSchema, schema).newUiSchema;
+    expect(unset?.big['ui:widget']).toBeUndefined();
+    expect(unset?.small['ui:widget']).toBeUndefined();
+  });
+
   it('evaluates FEEL expressions in ui:description', () => {
     const uiSchema = { a: { 'ui:description': 'Summe: {{ numberA * numberB }} Euro' } };
     const schema: RJSFSchema = { type: 'object', properties: { a: { type: 'string' } } };
