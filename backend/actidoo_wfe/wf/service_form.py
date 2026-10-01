@@ -358,13 +358,17 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             found_path = starting_path
         value_type = type(value)
 
+        if value is None:
+            # FEEL null, as the browser reads it: an unset field, null, and a blank text
+            # (empty or whitespace only) are all "no value". A blank can still be stored -
+            # a server-owned value, or data older than the empty-value rules.
+            reference_schema = {"anyOf": [{"const": None}, {"type": "string", "pattern": r"^\s*$"}], "default": ""}
+        else:
+            reference_schema = {"const": value, "default": False if value_type == "boolean" else ""}
         if_schema = {
             "type": "object",
             "properties": {
-                property: {
-                    "const": value,
-                    "default": False if value_type == "boolean" else "",
-                },
+                property: reference_schema,
             },
         }
 
@@ -1131,6 +1135,10 @@ def validate_task_data(
             removed_unknown_fields.append((path, value))
 
     if authoritative_disabled_values is not None:
+        # A submission is user input: a blank means "nothing entered". Only what the
+        # user sent is normalized - the disabled values the server owns are put in
+        # afterwards exactly as stored, blanks included (hide-if reads a blank as null).
+        normalize_blank_values(task_data, form.jsonschema)
         for disabled_path, default in _iter_disabled_field_paths(form.jsonschema, form.uischema):
             _overwrite_disabled_field_with_authoritative_value(
                 task_data,
@@ -1138,9 +1146,6 @@ def validate_task_data(
                 disabled_path,
                 default=default,
             )
-        # A submission is user input: a blank means "nothing entered". Trusted engine
-        # data is not touched.
-        normalize_blank_values(task_data, form.jsonschema)
 
     validation_schema = get_jsonschema_for_validation(
         form,

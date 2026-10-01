@@ -29,6 +29,7 @@ import pytest
 from actidoo_wfe.wf.constants import ROW_ID_KEY
 from actidoo_wfe.wf.form_transformation import transform_camunda_form
 from actidoo_wfe.wf.service_form import normalize_blank_values, validate_task_data
+from actidoo_wfe.wf.service_workflow import update
 
 OPTIONS_FOLDER = Path(__file__).parent / "options"
 
@@ -799,6 +800,63 @@ def test__blank_reference_reads_as_unset_in_hide_if():
     assert _required_errors(_validate(form, {"mode": "on"})) == {"detail"}
 
 
+@pytest.mark.parametrize("stored_status", ["", "   ", None, "<absent>"])
+@pytest.mark.parametrize("condition", ["=status = null", '=status = ""'])
+def test__a_blank_disabled_reference_reads_as_null(condition, stored_status):
+    """The reference is disabled, so its value comes from the stored data, where
+    a blank text can still sit (a server-owned value, or older data). The browser
+    reads it as null and hides reason; the server must agree, or the submit fails
+    with reason required although the user cannot see it."""
+    form = {
+        "components": [
+            {"type": "textfield", "key": "status", "disabled": True},
+            {"type": "textfield", "key": "reason", "validate": {"required": True}, "conditional": {"hide": condition}},
+        ],
+    }
+    stored = {} if stored_status == "<absent>" else {"status": stored_status}
+
+    result = _validate(form, {"status": "x"}, stored=stored)
+
+    assert not result.error_schema
+
+
+def test__a_blank_reference_does_not_match_not_null():
+    """The other direction: ``status != null`` is false for a blank status, so
+    the dependent field is not hidden and stays required."""
+    form = {
+        "components": [
+            {"type": "textfield", "key": "status", "disabled": True},
+            {"type": "textfield", "key": "reason", "validate": {"required": True}, "conditional": {"hide": "=status != null"}},
+        ],
+    }
+
+    assert _required_errors(_validate(form, {}, stored={"status": "  "})) == {"reason"}
+    assert not _validate(form, {}, stored={"status": "set"}).error_schema
+
+
+def test__stored_blank_reference_hides_like_null_when_a_task_is_handed_out():
+    """When a task is handed out, its stored data is cleaned as trusted data,
+    without the submission rules. A stored blank still counts as null there, so
+    the value of a field the browser hides is not kept."""
+    form = transform_camunda_form(
+        {
+            "components": [
+                {"type": "textfield", "key": "status"},
+                {"type": "textfield", "key": "detail", "conditional": {"hide": "=status = null"}},
+            ],
+        }
+    )
+    result = validate_task_data(
+        form=form,
+        task_data={"status": "", "detail": "stale"},
+        options_folder=OPTIONS_FOLDER,
+        functions_env={},
+        preserve_unknown_fields=True,
+    )
+
+    assert result.task_data == {"status": ""}
+
+
 def test__submitted_data_is_not_mutated():
     """Validation works on a copy: the caller's dict looks the same afterwards."""
     submitted = {"name": "", "note": "y", "choice": "a", "amount": 1}
@@ -840,6 +898,45 @@ def test__attachment_objects_are_left_alone():
     normalize_blank_values(data, schema)
 
     assert data == {"file": reference, "name": None, "technical": ""}
+
+
+def test__clearing_a_field_in_a_later_task_overwrites_the_stored_value():
+    """The earlier task stored values; this task's user clears two of them. The
+    submission carries null for both, and the merge writes null over the old
+    values - the field stays empty, and a default does not come back."""
+    stored = {"name": "old", "amount": 5, "choice": "a"}
+    result = _validate(OPTIONAL_FIELDS_FORM, {"name": "", "amount": 5, "choice": None}, stored=stored)
+
+    update(stored, result.task_data)
+
+    assert stored == {"name": None, "amount": 5, "choice": None}
+
+
+def test__a_key_missing_from_the_submission_deletes_nothing():
+    """A missing key is not a clear: a client may send only part of the form.
+    The merge keeps what it does not receive."""
+    stored = {"name": "old", "result_check": {"ok": True}}
+    result = _validate(OPTIONAL_FIELDS_FORM, {"amount": 5}, stored=stored)
+
+    update(stored, result.task_data)
+
+    assert stored == {"name": "old", "amount": 5, "result_check": {"ok": True}}
+
+
+def test__disabled_values_are_kept_exactly_as_stored():
+    """A disabled field belongs to the server. Whatever the client sends, the
+    stored value is what the submission carries - a blank one included, it is
+    not rewritten to null."""
+    form = {
+        "components": [
+            {"type": "textfield", "key": "owner", "disabled": True},
+            {"type": "textfield", "key": "remark", "disabled": True},
+        ],
+    }
+    result = _validate(form, {"owner": "forged", "remark": "  "}, stored={"owner": "server", "remark": ""})
+
+    assert not result.error_schema
+    assert result.task_data == {"owner": "server", "remark": ""}
 
 
 def _multi_select_form() -> dict:
