@@ -24,6 +24,7 @@ import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/C
 import { skipMinItemsPopulation } from '@/rjsf-customs/arrayDefaults';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
+import CustomDateWidget from '@/rjsf-customs/custom-widgets/CustomDateWidget';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
 import CustomFieldErrorTemplate from '@/rjsf-customs/templates/CustomFieldErrorTemplate';
 import CustomDescriptionFieldTemplate from '@/rjsf-customs/templates/CustomDescriptionFieldTemplate';
@@ -60,6 +61,7 @@ const customWidgets: RegistryWidgetsType = {
   combobox: CustomComboBox,
   SelectWidget: CustomSelect,
   CheckboxWidget: CustomCheckbox,
+  DateWidget: CustomDateWidget,
   CurrencyNumberWidget,
   MultiSelectDynamic,
   MultiSelectStatic,

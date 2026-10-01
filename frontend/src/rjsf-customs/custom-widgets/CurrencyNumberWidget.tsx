@@ -3,7 +3,7 @@
 
 // Storage contract — stable, do not break:
 //   - props.value is a JSON number (or null for empty); never a formatted string.
-//   - props.onChange(value) is called with the parsed number or null (an emptied field is null).
+//   - props.onChange(value) is called with the parsed number, or ui:emptyValue when emptied.
 //   - The currency symbol comes from props.uiSchema and is purely a display hint;
 //     it is NOT persisted with the value.
 //   - parseInput accepts both DE ("1.234,56") and EN ("1,234.56" / "1234.56") inputs,
@@ -125,7 +125,10 @@ const CurrencyNumberWidget = (props: WidgetProps): ReactElement => {
   const onBlur = (_evt: FocusEvent<HTMLInputElement>) => {
     setIsFocused(false);
     const parsed = parseInput(draft, language);
-    props.onChange(parsed);
+    // An emptied field is whatever the form declares as empty (ui:emptyValue): null in
+    // forms handed out since empty fields are null, nothing in older running tasks whose
+    // schema does not admit null.
+    props.onChange(parsed === null ? props.options.emptyValue : parsed);
     setDraft(formatForDisplay(parsed, displayFormatter));
   };
 
