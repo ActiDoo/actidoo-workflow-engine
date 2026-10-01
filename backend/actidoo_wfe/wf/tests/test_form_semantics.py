@@ -926,6 +926,22 @@ def test__an_empty_multi_select_reads_as_null(tags, hidden_by_null, hidden_by_no
     assert (_required_errors(by_not_null) == set()) is hidden_by_not_null
 
 
+@pytest.mark.parametrize("text", ["true_positive", "a=b", "null"])
+def test__text_in_quotes_is_compared_as_written(text):
+    """The expression is rewritten to Python before it is evaluated. Text in quotes
+    used to be rewritten too ("true_positive" became "True_positive", "a=b" became
+    "a==b"), so such a condition never matched."""
+    form = {
+        "components": [
+            {"type": "textfield", "key": "kind"},
+            {"type": "textfield", "key": "detail", "validate": {"required": True}, "conditional": {"hide": f'=kind = "{text}"'}},
+        ],
+    }
+
+    assert not _validate(form, {"kind": text}).error_schema
+    assert _required_errors(_validate(form, {"kind": "other"})) == {"detail"}
+
+
 def test__submitted_data_is_not_mutated():
     """Validation works on a copy: the caller's dict looks the same afterwards."""
     submitted = {"name": "", "note": "y", "choice": "a", "amount": 1}
