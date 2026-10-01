@@ -61,7 +61,7 @@ from actidoo_wfe.wf.constants import (
     INTERNAL_DATA_KEY_STACKTRACE,
 )
 from actidoo_wfe.wf.exceptions import FormNotFoundException
-from actidoo_wfe.wf.feel_expressions import feel_to_python
+from actidoo_wfe.wf.feel_expressions import compile_feel_condition, feel_to_python
 from actidoo_wfe.wf.form_transformation import empty_form, transform_camunda_form_from_file
 from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
 from actidoo_wfe.wf.types import TaskToUserMapping
@@ -694,7 +694,8 @@ class MyScriptEngine(FeelLikeScriptEngine):
             scope.update(external_context or {})
             scope.update(externalFuncs)
             scope.update(context)
-            return eval(self.patch_expression(expression.lstrip("= ")), scope, _NullForMissingNames(scope))  # eval, as Spiff's own engine does
+            condition = compile_feel_condition(expression.lstrip("= "), scope)
+            return eval(condition, scope, _NullForMissingNames(scope))  # eval, as Spiff's own engine does
         else:
             return self.environment.evaluate(expression, context, external_context)
             # return PythonScriptEngine.evaluate(

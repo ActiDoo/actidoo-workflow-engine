@@ -56,6 +56,62 @@ def test__a_condition_compares_a_present_field_as_before():
     assert _condition("=amount > 1000", {"amount": 5}) is False
 
 
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "=amount < 10",
+        "=amount <= 10",
+        "=amount > 10",
+        "=amount >= 10",
+        "=10 < amount",
+        "=10 <= amount",
+        "=10 > amount",
+        "=10 >= amount",
+        "=0 < amount < 10",
+    ],
+)
+@pytest.mark.parametrize("data", [{}, {"amount": None}])
+def test__ordering_a_missing_or_null_value_is_false(expression, data):
+    """An unanswered amount cannot satisfy an ordering comparison or fail a gateway."""
+    assert _condition(expression, data) is False
+
+
+def test__a_null_ordering_comparison_does_not_skip_the_other_boolean_operand():
+    """A null comparison is false locally, so a matching fallback still routes."""
+    assert _condition('=amount > 10 or fallback = "yes"', {"fallback": "yes"}) is True
+    assert _condition('=amount > 10 and fallback = "yes"', {"fallback": "yes"}) is False
+
+
+def test__a_typo_still_reads_as_null_in_equality_comparisons():
+    """Null equality and inequality can be true; typos are not always false."""
+    assert _condition("=aprover = null", {}) is True
+    assert _condition('=aprover != "yes"', {}) is True
+
+
+def test__ordering_keeps_python_short_circuiting_and_evaluates_each_operand_once():
+    """Chained comparisons do not call the last operand after an earlier false result."""
+    calls = []
+
+    def middle():
+        calls.append("middle")
+        return 5
+
+    def last():
+        calls.append("last")
+        return 10
+
+    assert _condition("=0 < middle() < last()", {}, middle=middle, last=last) is True
+    assert calls == ["middle", "last"]
+    calls.clear()
+    assert _condition("=amount < middle() < last()", {}, middle=middle, last=last) is False
+    assert calls == ["middle"]
+
+
+def test__ordering_real_incompatible_values_still_fails():
+    with pytest.raises(TypeError):
+        _condition("=amount > 10", {"amount": "invalid"})
+
+
 def test__null_and_none_are_the_same_literal():
     """Older workflows write ``None`` and ``is None`` the Python way; ``null`` is
     the FEEL spelling. Both mean the missing value, and an emptied field holds null."""
@@ -152,9 +208,9 @@ GATEWAY_BPMN = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
-def _gateway_workflow(data: dict, restored: bool) -> BpmnWorkflow:
+def _gateway_workflow(data: dict, restored: bool, condition: str = "=approver = null") -> BpmnWorkflow:
     parser = get_parser()
-    parser.add_bpmn_str(GATEWAY_BPMN.encode())
+    parser.add_bpmn_str(GATEWAY_BPMN.replace("=approver = null", condition).encode())
     workflow = BpmnWorkflow(parser.get_spec("GatewayOnMissingField"), script_engine=_engine())
     if restored:
         # A stored instance rebuilds its conditions from the serialized form.
@@ -179,3 +235,11 @@ def test__a_gateway_on_a_field_that_was_never_filled_routes(restored):
     assert _reached_end(_gateway_workflow({}, restored)) == "skipped"
     assert _reached_end(_gateway_workflow({"approver": None}, restored)) == "skipped"
     assert _reached_end(_gateway_workflow({"approver": "a@example.com"}, restored)) == "approval"
+
+
+@pytest.mark.parametrize("restored", [False, True])
+def test__a_gateway_ordering_an_unanswered_amount_routes_to_its_default(restored):
+    """New and restored instances take the default route for a missing or cleared amount."""
+    for data in [{}, {"amount": None}, {"amount": 5}]:
+        assert _reached_end(_gateway_workflow(data, restored, "=amount > 10")) == "approval"
+    assert _reached_end(_gateway_workflow({"amount": 20}, restored, "=amount > 10")) == "skipped"
