@@ -857,6 +857,29 @@ def test__stored_blank_reference_hides_like_null_when_a_task_is_handed_out():
     assert result.task_data == {"status": ""}
 
 
+def _tags_form(condition: str) -> dict:
+    return {
+        "components": [
+            {"type": "select", "key": "tags", "properties": {"custom_type": "select_multi"}, "values": AB_OPTIONS},
+            {"type": "textfield", "key": "detail", "validate": {"required": True}, "conditional": {"hide": condition}},
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    ("tags", "hidden_by_null", "hidden_by_not_null"),
+    [([], True, False), (["a"], False, True)],
+)
+def test__an_empty_multi_select_reads_as_null(tags, hidden_by_null, hidden_by_not_null):
+    """A multi select with nothing chosen is empty, as in the browser: '= null'
+    matches it, '!= null' does not. There was no way to test for 'nothing chosen'."""
+    by_null = _validate(_tags_form("=tags = null"), {"tags": tags})
+    by_not_null = _validate(_tags_form("=tags != null"), {"tags": tags})
+
+    assert (_required_errors(by_null) == set()) is hidden_by_null
+    assert (_required_errors(by_not_null) == set()) is hidden_by_not_null
+
+
 def test__submitted_data_is_not_mutated():
     """Validation works on a copy: the caller's dict looks the same afterwards."""
     submitted = {"name": "", "note": "y", "choice": "a", "amount": 1}

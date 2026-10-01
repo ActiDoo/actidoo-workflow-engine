@@ -21,7 +21,7 @@ import {
   resolveHiddenFields,
   HideIfEvaluator,
 } from './feelContext';
-import { collectBlankRequiredPaths, isBlank } from './emptyValues';
+import { collectBlankRequiredPaths, isBlank, readsAsNull } from './emptyValues';
 import form010Fixture from '@/test/workflows/test-flow-dynamic-list-hidden/form010-fill.fixture.json';
 
 describe('evaluateHideIfAndFeel', () => {
@@ -144,6 +144,29 @@ describe('evaluateHideIfAndFeel', () => {
       expect(newUiSchema?.b['ui:widget']).toBe('hidden');
       expect(newUiSchema?.c['ui:widget']).toBe('hidden');
     }
+  });
+
+  it('reads an empty multi select as null, as the server does', () => {
+    const uiSchema = {
+      none: { 'ui:hideif': '=tags = null' },
+      some: { 'ui:hideif': '=tags != null' },
+    };
+    const schema: RJSFSchema = {
+      type: 'object',
+      properties: {
+        tags: { type: 'array', items: { type: 'string' } },
+        none: { type: 'string' },
+        some: { type: 'string' },
+      },
+    };
+
+    const empty = evaluateHideIfAndFeel({ tags: [] }, uiSchema, schema).newUiSchema;
+    expect(empty?.none['ui:widget']).toBe('hidden');
+    expect(empty?.some['ui:widget']).toBeUndefined();
+
+    const chosen = evaluateHideIfAndFeel({ tags: ['a'] }, uiSchema, schema).newUiSchema;
+    expect(chosen?.none['ui:widget']).toBeUndefined();
+    expect(chosen?.some['ui:widget']).toBe('hidden');
   });
 
   it('evaluates FEEL expressions in ui:description', () => {
@@ -853,6 +876,17 @@ describe('buildMaskedParentContext', () => {
 
 // ----------------------------------------------------------------------------
 // Empty values (emptyValues.ts)
+
+describe('readsAsNull', () => {
+  it('reads blanks and an empty list as null in conditions', () => {
+    expect(readsAsNull(null)).toBe(true);
+    expect(readsAsNull('  ')).toBe(true);
+    expect(readsAsNull([])).toBe(true);
+    expect(readsAsNull(['a'])).toBe(false);
+    expect(readsAsNull(0)).toBe(false);
+    expect(readsAsNull(false)).toBe(false);
+  });
+});
 
 describe('isBlank', () => {
   it('treats nothing, null and whitespace-only strings as blank', () => {

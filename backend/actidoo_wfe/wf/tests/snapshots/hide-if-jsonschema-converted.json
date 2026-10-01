@@ -132,6 +132,10 @@
                                                         {
                                                             "type": "string",
                                                             "pattern": "^\\s*$"
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "maxItems": 0
                                                         }
                                                     ],
                                                     "default": ""

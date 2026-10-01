@@ -11,7 +11,7 @@ import {
   HideIfEvaluator,
   resolveHiddenFields,
 } from '@/services/feelContext';
-import { isBlank } from '@/services/emptyValues';
+import { readsAsNull } from '@/services/emptyValues';
 
 // ============================================================================
 // Internal Helpers
@@ -78,10 +78,11 @@ export function computeHiddenMap(
   const maxIterations = Math.max(1, uiKeys.length + 2);
   for (let iter = 0; iter < maxIterations; iter++) {
     // Build context excluding hidden fields (they should be treated as null)
-    // Hidden and blank fields both read as null - the server drops hidden values and
-    // stores a blank as null before it evaluates the conditions that depend on them.
+    // Hidden fields, blank fields and empty lists all read as null - the server drops
+    // hidden values and reads a blank or an empty list as null in its conditions too.
     const hiddenKeys = new Set(uiKeys.filter(k => hiddenMap[k]));
-    const isInContext = ([k, v]: [string, unknown]): boolean => !hiddenKeys.has(k) && !isBlank(v);
+    const isInContext = ([k, v]: [string, unknown]): boolean =>
+      !hiddenKeys.has(k) && !readsAsNull(v);
     const ctx: Record<string, any> = Object.fromEntries(
       Object.entries(formData).filter(isInContext)
     );

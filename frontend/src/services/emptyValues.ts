@@ -14,6 +14,14 @@ export const isBlank = (value: unknown): boolean =>
   value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
 
 /**
+ * Whether a value reads as null in a hide-if condition: anything blank, and an empty
+ * list - a multi select with nothing chosen. The server reads them the same way. For
+ * 'required' an empty list is not blank; a required list has its own minimum instead.
+ */
+export const readsAsNull = (value: unknown): boolean =>
+  isBlank(value) || (Array.isArray(value) && value.length === 0);
+
+/**
  * Paths of required fields that are present in the data but blank. AJV's `required` only
  * catches absent keys, so a whitespace-only text or a cleared select (null) would pass it.
  * Hidden fields are skipped: a hidden field is not required while it is not shown.

@@ -4,7 +4,7 @@
 import type { InterpreterContext } from 'feelin';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
-import { isBlank } from '@/services/emptyValues';
+import { readsAsNull } from '@/services/emptyValues';
 
 // FEEL context helpers overview (example):
 // Given root data { listA: [{ a: 1, listB: [{ b: 2 }] }], x: 5 } and id "root_listA_0_listB_0":
@@ -144,7 +144,7 @@ export function applyHiddenMask(
   const withoutHidden = (context: InterpreterContext): InterpreterContext =>
     Object.fromEntries(
       Object.entries(context).filter(
-        ([field, value]) => !hiddenFields.has(field) && !isBlank(value)
+        ([field, value]) => !hiddenFields.has(field) && !readsAsNull(value)
       )
     );
 
