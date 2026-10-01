@@ -28,7 +28,7 @@ import pytest
 
 from actidoo_wfe.wf.constants import ROW_ID_KEY
 from actidoo_wfe.wf.form_transformation import transform_camunda_form
-from actidoo_wfe.wf.service_form import normalize_blank_values, validate_task_data
+from actidoo_wfe.wf.service_form import MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS, normalize_blank_values, validate_task_data
 from actidoo_wfe.wf.service_workflow import update
 
 OPTIONS_FOLDER = Path(__file__).parent / "options"
@@ -625,6 +625,35 @@ def test__nested_boolean_conditions_use_each_references_level(condition, rootfla
     assert not filled.error_schema
     assert ("note" not in filled.task_data["rows"][0]) is hidden
     assert bool(missing.error_schema) is not hidden
+
+
+def _mixed_level_form(comparisons: int) -> dict:
+    """A row field hidden by alternating root and row comparisons."""
+    parts = [f'root{i} = "x"' if i % 2 else f"this.n{i} = 1" for i in range(comparisons)]
+    return {
+        "components": [
+            *[{"type": "textfield", "key": f"root{i}"} for i in range(1, comparisons, 2)],
+            {
+                "type": "dynamiclist",
+                "path": "rows",
+                "components": [
+                    *[{"type": "number", "key": f"n{i}"} for i in range(0, comparisons, 2)],
+                    {"type": "textfield", "key": "note", "conditional": {"hide": "=" + " or ".join(parts)}},
+                ],
+            },
+        ],
+    }
+
+
+def test__a_mixed_level_condition_has_a_limit_of_comparisons():
+    """A condition across levels becomes a decision tree that grows with every
+    comparison. Up to the limit it works; above it, the form fails with a clear
+    message instead of building a huge schema."""
+    within = _validate(_mixed_level_form(MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS), {"rows": [{"n0": 1, "note": "x"}]})
+    assert "note" not in within.task_data["rows"][0]
+
+    with pytest.raises(NotImplementedError, match="at most"):
+        _validate(_mixed_level_form(MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS + 1), {"rows": [{"n0": 1}]})
 
 
 @pytest.mark.parametrize(
