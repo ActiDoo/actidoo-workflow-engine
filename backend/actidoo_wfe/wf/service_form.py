@@ -27,13 +27,13 @@ from pydantic_core import ValidationError
 from actidoo_wfe.helpers.collections import remove_item, set_item
 from actidoo_wfe.helpers.datauri import DATA_URI_RE
 from actidoo_wfe.helpers.json_traverse import get_position_tracker
+from actidoo_wfe.wf.constants import ROW_ID_KEY, UI_FIELD_LAYOUT, TemplateMode
 from actidoo_wfe.wf.error_schema import set_nested_error, validate_and_create_error_dict
 from actidoo_wfe.wf.exceptions import (
     OptionFunctionNotFound,
     OptionsFileCouldNotBeReadException,
     OptionsFileNotExistsException,
 )
-from actidoo_wfe.wf.constants import ROW_ID_KEY, UI_FIELD_LAYOUT, TemplateMode
 from actidoo_wfe.wf.feel_expressions import feel_to_python
 from actidoo_wfe.wf.form_transformation import _get_subschema
 from actidoo_wfe.wf.option_task_helper import OptionTaskHelper
@@ -210,75 +210,81 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                 # status = "rejected" or action = "update"
                 # becomes
                 # {'anyOf': [{'type': 'object', 'properties': {'status': {'const': 'rejected', 'default': ''}}}, {'type': 'object', 'properties': {'action': {'const': 'update', 'default': ''}}}]}
-                # Operands referencing different levels (a row field combined with a root
-                # field) cannot share one ``if`` - each level gets its own; see
-                # _hide_if_level_groups for how "or" and "and" are laid out.
-                parts, bool_op = _hide_if_level_groups(ast_tree.body, global_jsonschema, path)
-
-                def _chain_node(if_path):
-                    pointer = outer_ifthenschema
-                    for p in if_path:
-                        pointer = pointer["then"]["properties"][p]["items"]
-                    return pointer
-
-                def _null_field_from(level_path):
-                    # From a level above the field, reach down the remaining path and null it.
-                    return _build_nested_schema_for_path(path[len(level_path):], inner_ifthenschema["else"])
-
-                if bool_op == "and" and len(parts) > 1:
-                    # Hidden only if every level's condition holds: the shallower condition
-                    # decides in its else-branch, where the deeper one gets the last word.
-                    if len(parts) != 2:
-                        raise NotImplementedError("hide-if with 'and' across more than two levels")
-                    (shallow_schema, shallow_path), (deep_schema, deep_path) = sorted(parts, key=lambda part: len(part[1]))
-                    node_ = _chain_node(shallow_path)
-                    node_["if"] = {"not": shallow_schema}
-                    node_["else"] = _build_nested_schema_for_path(
-                        deep_path[len(shallow_path):],
-                        {
-                            "if": {"not": deep_schema},
-                            "then": {"type": "object", "properties": {}},
-                            "else": _null_field_from(deep_path),
-                        },
+                comparisons = [
+                    (comparison, *_camunda_hide_if_expression_ast_to_jsonschema(comparison, global_jsonschema, path)) for comparison in ast.walk(ast_tree.body) if isinstance(comparison, ast.Compare)
+                ]
+                if len({tuple(level) for _, _, level in comparisons}) > 1:
+                    # Evaluate parent comparisons before entering rows. Each branch keeps
+                    # the remaining boolean expression, including its parentheses.
+                    outer_ifthenschema.clear()
+                    outer_ifthenschema.update(
+                        _build_hide_if_decision_schema(
+                            ast_tree.body,
+                            comparisons,
+                            path,
+                            inner_ifthenschema["then"],
+                            inner_ifthenschema["else"],
+                        )
                     )
                 else:
-                    # One condition per level; the chain is a conjunction of their negations,
-                    # so the field is hidden as soon as any level's condition holds ("or").
-                    for if_not_schema, if_path in parts:
-                        node_ = _chain_node(if_path)
-                        node_["if"] = {"not": if_not_schema}
-                        if 0 < len(if_path) < len(path):
-                            node_["else"] = _null_field_from(if_path)
+                    condition_schema, condition_path = _camunda_hide_if_expression_ast_to_jsonschema(
+                        ast_tree.body,
+                        global_jsonschema,
+                        path,
+                    )
+                    pointer = outer_ifthenschema
+                    for part in condition_path:
+                        pointer = pointer["then"]["properties"][part]["items"]
+                    pointer["if"] = {"not": condition_schema}
+                    if 0 < len(condition_path) < len(path):
+                        pointer["else"] = _build_nested_schema_for_path(
+                            path[len(condition_path) :],
+                            inner_ifthenschema["else"],
+                        )
 
         except Exception as error:
             log.exception(f"{type(error).__name__}: {error.args}. Raised in convert_hide_if_props_to_declarative_jsonschema for key={key}")
             raise error
 
 
-def _hide_if_level_groups(node: ast.expr, global_jsonschema, path):
-    """Convert a hide-if condition into ``(if_not_schema, if_path)`` parts, one per data
-    level its operands reference, plus the boolean operator combining the parts.
+def _build_hide_if_decision_schema(expression, comparisons, field_path, visible_schema, hidden_schema):
+    """Compile a boolean expression across data levels into nested decisions.
 
-    A single comparison (or a boolean expression whose operands all live on one level)
-    yields one part - the shape the converter always produced. Operands on different
-    levels are grouped by level, each group combined with the expression's own operator."""
-    if not isinstance(node, ast.BoolOp):
-        return [_camunda_hide_if_expression_ast_to_jsonschema(node, global_jsonschema, path)], None
+    A root decision applies to every row; row decisions apply to that row only.
+    Known comparison results decide the original expression without changing its grouping.
+    """
+    comparisons = sorted(comparisons, key=lambda comparison: len(comparison[2]))
 
-    operands = [
-        _camunda_hide_if_expression_ast_to_jsonschema(operand, global_jsonschema, path)
-        for operand in node.values
-    ]
-    groups: dict[tuple, list] = {}
-    for operand_schema, operand_path in operands:
-        groups.setdefault(tuple(operand_path), []).append(operand_schema)
+    def result(node, known_values):
+        if isinstance(node, ast.Compare):
+            return known_values.get(node)  # None means this comparison has not been decided yet.
+        values = [result(operand, known_values) for operand in node.values]
+        if isinstance(node.op, ast.And):
+            if False in values:
+                return False
+            return True if all(value is True for value in values) else None
+        if True in values:
+            return True
+        return False if all(value is False for value in values) else None
 
-    combinator = "anyOf" if isinstance(node.op, ast.Or) else "allOf"
-    parts = [
-        (schemas[0] if len(schemas) == 1 else {combinator: schemas}, list(group_path))
-        for group_path, schemas in groups.items()
-    ]
-    return parts, ("or" if isinstance(node.op, ast.Or) else "and")
+    def build(index, level, known_values):
+        hidden = result(expression, known_values)
+        if hidden is not None:
+            # The whole condition is decided. Apply visibility at the field's own level.
+            return _build_nested_schema_for_path(
+                field_path[len(level) :],
+                hidden_schema if hidden else visible_schema,
+            )
+        comparison, schema, comparison_path = comparisons[index]
+        decision = {
+            "if": schema,
+            "then": build(index + 1, comparison_path, {**known_values, comparison: True}),
+            "else": build(index + 1, comparison_path, {**known_values, comparison: False}),
+        }
+        # Ancestor comparisons come first: enter a list only after its parent's decision.
+        return _build_nested_schema_for_path(comparison_path[len(level) :], decision)
+
+    return build(0, [], {})
 
 
 # JSON Schema keyword for each ordering comparison of a hide-if: 'x > 10' holds when x is

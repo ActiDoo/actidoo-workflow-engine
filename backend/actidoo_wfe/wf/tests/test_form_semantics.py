@@ -586,6 +586,93 @@ def test__or_across_levels_requires_the_field_when_neither_operand_holds():
     assert "note" in json.dumps(result.error_schema)
 
 
+@pytest.mark.parametrize(
+    "condition",
+    [
+        '=this.n = 9 or (rootflag = "a" and this.n = 1)',
+        '=(this.n = 1 and rootflag = "a") or this.n = 9',
+        '=this.n = 1 and (rootflag = "a" or this.n = 9)',
+    ],
+)
+@pytest.mark.parametrize(
+    ("rootflag", "n", "hidden"),
+    [
+        ("a", 1, True),
+        ("b", 1, False),
+        ("a", 2, False),
+        ("b", 2, False),
+    ],
+)
+def test__nested_boolean_conditions_use_each_references_level(condition, rootflag, n, hidden):
+    """The row and root comparisons keep their levels inside parentheses too.
+    A hidden required note is dropped; a visible one is kept or reported missing."""
+    form = {
+        "components": [
+            {"type": "textfield", "key": "rootflag"},
+            {
+                "type": "dynamiclist",
+                "path": "rows",
+                "components": [
+                    {"type": "number", "key": "n"},
+                    {"type": "textfield", "key": "note", "validate": {"required": True}, "conditional": {"hide": condition}},
+                ],
+            },
+        ]
+    }
+    filled = _validate(form, {"rootflag": rootflag, "rows": [{"n": n, "note": "answer"}]})
+    missing = _validate(form, {"rootflag": rootflag, "rows": [{"n": n}]})
+
+    assert not filled.error_schema
+    assert ("note" not in filled.task_data["rows"][0]) is hidden
+    assert bool(missing.error_schema) is not hidden
+
+
+@pytest.mark.parametrize(
+    "condition",
+    [
+        '=rootflag = "a" and parent.flag = "b" and this.n = 1',
+        '=this.n = 9 or (rootflag = "a" and parent.flag = "b" and this.n = 1)',
+    ],
+)
+def test__conditions_across_three_levels_are_evaluated_per_nested_row(condition):
+    """Only the matching inner row is hidden; sibling rows keep their required notes."""
+    form = {
+        "components": [
+            {"type": "textfield", "key": "rootflag"},
+            {
+                "type": "dynamiclist",
+                "path": "groups",
+                "components": [
+                    {"type": "textfield", "key": "flag"},
+                    {
+                        "type": "dynamiclist",
+                        "path": "rows",
+                        "components": [
+                            {"type": "number", "key": "n"},
+                            {"type": "textfield", "key": "note", "validate": {"required": True}, "conditional": {"hide": condition}},
+                        ],
+                    },
+                ],
+            },
+        ]
+    }
+    result = _validate(
+        form,
+        {
+            "rootflag": "a",
+            "groups": [
+                {"flag": "b", "rows": [{"n": 1, "note": "hidden"}, {"n": 2, "note": "kept"}]},
+                {"flag": "c", "rows": [{"n": 1, "note": "other group"}]},
+            ],
+        },
+    )
+
+    assert not result.error_schema
+    assert "note" not in result.task_data["groups"][0]["rows"][0]
+    assert result.task_data["groups"][0]["rows"][1]["note"] == "kept"
+    assert result.task_data["groups"][1]["rows"][0]["note"] == "other group"
+
+
 def test__and_across_levels_hides_only_when_both_operands_hold():
     """Condition ``this.n = 9 and rootflag = "a"``. Only rootflag "a" together
     with n = 9 makes the condition true, so ``note`` is hidden and must not

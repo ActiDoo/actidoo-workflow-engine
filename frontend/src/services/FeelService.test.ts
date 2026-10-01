@@ -305,6 +305,38 @@ describe('normalizeEmptyStringComparisons', () => {
 });
 
 describe('collectHiddenPaths', () => {
+  it.each([
+    '=this.n = 9 or (rootflag = "a" and this.n = 1)',
+    '=(this.n = 1 and rootflag = "a") or this.n = 9',
+    '=this.n = 1 and (rootflag = "a" or this.n = 9)',
+  ])('keeps the levels of nested boolean operands: %s', condition => {
+    const schema: any = {
+      type: 'object',
+      properties: {
+        rootflag: { type: 'string' },
+        rows: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              n: { type: 'number' },
+              note: { type: 'string' },
+            },
+          },
+        },
+      },
+    };
+    const uiSchema = { rows: { items: { note: { 'ui:hideif': condition } } } };
+    const rows = [
+      { n: 1, note: 'hidden' },
+      { n: 2, note: 'kept' },
+    ];
+    expect(collectHiddenPaths(uiSchema, schema, { rootflag: 'a', rows })).toEqual([
+      ['rows', 0, 'note'],
+    ]);
+    expect(collectHiddenPaths(uiSchema, schema, { rootflag: 'b', rows })).toEqual([]);
+  });
+
   const list = (properties: Record<string, any>, required?: string[]): any => ({
     type: 'array',
     items: { type: 'object', properties, ...(required ? { required } : {}) },
