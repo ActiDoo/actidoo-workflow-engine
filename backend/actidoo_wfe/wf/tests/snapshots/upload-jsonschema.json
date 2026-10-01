@@ -28,7 +28,10 @@
             }
         },
         "uploadFieldSingle": {
-            "type": "object",
+            "type": [
+                "object",
+                "null"
+            ],
             "title": "Single upload",
             "properties": {
                 "datauri": {
@@ -127,7 +130,10 @@
             }
         },
         "single_default": {
-            "type": "object",
+            "type": [
+                "object",
+                "null"
+            ],
             "title": "",
             "properties": {
                 "datauri": {
@@ -226,7 +232,10 @@
             }
         },
         "uploadFieldSingleDisabled": {
-            "type": "object",
+            "type": [
+                "object",
+                "null"
+            ],
             "title": "Single upload disabled",
             "properties": {
                 "datauri": {
@@ -273,7 +282,10 @@
             }
         },
         "uploadFieldSingleRequiredDisabledEmpty": {
-            "type": "object",
+            "type": [
+                "object",
+                "null"
+            ],
             "title": "Single Upload required+disabled, empty",
             "properties": {
                 "datauri": {

@@ -324,7 +324,7 @@ EXPECTED = {
                 },
             },
             "title": "",
-            "type": "object",
+            "type": ["object", "null"],
         },
         "singleDefaultRequired": {
             "properties": {
@@ -445,7 +445,7 @@ EXPECTED = {
                 },
             },
             "title": "Single upload",
-            "type": "object",
+            "type": ["object", "null"],
         },
         "uploadFieldSingleDisabled": {
             "properties": {
@@ -463,7 +463,7 @@ EXPECTED = {
                 },
             },
             "title": "Single upload disabled",
-            "type": "object",
+            "type": ["object", "null"],
         },
         "uploadFieldSingleRequired": {
             "properties": {
@@ -499,7 +499,7 @@ EXPECTED = {
                 },
             },
             "title": "Single Upload required+disabled, empty",
-            "type": "object",
+            "type": ["object", "null"],
         },
     },
     "required": [
@@ -591,7 +591,7 @@ JSONSCHEMA_ORG = {
                 },
             },
             "title": "",
-            "type": "object",
+            "type": ["object", "null"],
         },
         "singleDefaultRequired": {
             "properties": {
@@ -736,7 +736,7 @@ JSONSCHEMA_ORG = {
                 },
             },
             "title": "Single upload",
-            "type": "object",
+            "type": ["object", "null"],
         },
         "uploadFieldSingleDisabled": {
             "properties": {
@@ -758,7 +758,7 @@ JSONSCHEMA_ORG = {
                 },
             },
             "title": "Single upload disabled",
-            "type": "object",
+            "type": ["object", "null"],
         },
         "uploadFieldSingleRequired": {
             "properties": {
@@ -802,7 +802,7 @@ JSONSCHEMA_ORG = {
                 },
             },
             "title": "Single Upload required+disabled, empty",
-            "type": "object",
+            "type": ["object", "null"],
         },
     },
     "required": [

@@ -30,6 +30,16 @@ describe('isAttachmentSingleSchema', () => {
     expect(isAttachmentSingleSchema(schema)).toBe(true);
   });
 
+  it('recognizes an optional single attachment, which admits null', () => {
+    const schema = {
+      type: ['object', 'null'],
+      properties: { datauri: { type: 'string', format: 'data-url' } },
+    };
+
+    expect(isAttachmentSingleSchema(schema)).toBe(true);
+    expect(isAttachmentSingleSchema({ ...schema, type: ['object', 'string'] })).toBe(false);
+  });
+
   it('rejects other object schemas', () => {
     expect(isAttachmentSingleSchema({ type: 'object', properties: {} })).toBe(false);
     expect(

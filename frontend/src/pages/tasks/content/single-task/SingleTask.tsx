@@ -28,6 +28,7 @@ import FormTemplateActions from '@/pages/tasks/content/single-task/form-template
 import WeAlertDialog from '@/utils/components/WeAlertDialog';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import {
+  admitsNull,
   isAttachmentMultiSchema,
   isAttachmentSingleSchema,
   isRealFile,
@@ -81,13 +82,14 @@ const prepareFormData = (
       if (isRealFile(value)) continue;
 
       // Required single uploads must remain present as null; deleting the key lets
-      // rjsf repopulate the required object as {}. Optional empty uploads can vanish.
+      // rjsf repopulate the required object as {}. An optional removed upload stays
+      // null too - that is what clears the stored file. Other leftovers vanish.
       if (isRequired) {
         if (value !== null) {
           prepared[key] = null;
           changed = true;
         }
-      } else if (value !== undefined) {
+      } else if (value !== undefined && !(value === null && admitsNull(prop))) {
         delete prepared[key];
         changed = true;
       }

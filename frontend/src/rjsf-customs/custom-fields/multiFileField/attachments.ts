@@ -41,8 +41,17 @@ export const stripAttachmentPayload = <T>(value: T): T => {
   return value;
 };
 
+// Whether a schema admits null - an optional single upload does since a removed file is
+// null; the schema of a task from an older running instance does not.
+export const admitsNull = (schema: any): boolean =>
+  Array.isArray(schema?.type) && schema.type.includes('null');
+
+// An optional single upload admits null (a removed file), so its type is ['object', 'null'].
 export const isAttachmentSingleSchema = (schema: any): boolean =>
-  schema?.type === 'object' &&
+  (schema?.type === 'object' ||
+    (Array.isArray(schema?.type) &&
+      schema.type.includes('object') &&
+      schema.type.every((type: unknown) => type === 'object' || type === 'null'))) &&
   typeof schema.properties === 'object' &&
   !Array.isArray(schema.properties) &&
   (schema.properties?.datauri as { format?: string } | undefined)?.format === 'data-url';

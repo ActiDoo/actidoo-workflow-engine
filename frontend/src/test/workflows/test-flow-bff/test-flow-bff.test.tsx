@@ -63,6 +63,32 @@ describe('Test Flow BFF — Form1', () => {
     expect(payload).not.toHaveProperty('optional_note');
   });
 
+  it('sends a removed file as null, so the stored reference is cleared', async () => {
+    const { submitted, field, submit, uploadFile } = renderTaskForm(form1);
+
+    await field('required_text').fill('Hello BFF');
+    await uploadFile('attachment', new File(['Hallo'], 'note.txt', { type: 'text/plain' }));
+    await field('attachment').getByCss('ui5-icon[name="delete"]').click();
+    await submit();
+
+    expect(submitted).toHaveBeenCalledTimes(1);
+    expect(submitted.mock.calls[0][0]).toHaveProperty('attachment', null);
+  });
+
+  it('leaves a removed file out in an older form whose schema has no null', async () => {
+    const olderForm = structuredClone(form1);
+    Object.assign(olderForm.jsonschema.properties.attachment, { type: 'object' });
+    const { submitted, field, submit, uploadFile } = renderTaskForm(olderForm);
+
+    await field('required_text').fill('Hello BFF');
+    await uploadFile('attachment', new File(['Hallo'], 'note.txt', { type: 'text/plain' }));
+    await field('attachment').getByCss('ui5-icon[name="delete"]').click();
+    await submit();
+
+    expect(submitted).toHaveBeenCalledTimes(1);
+    expect(submitted.mock.calls[0][0]).not.toHaveProperty('attachment');
+  });
+
   it('blocks submission when the required field is missing', async () => {
     const { submitted, submit } = renderTaskForm(form1);
 

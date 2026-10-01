@@ -248,7 +248,9 @@ def _insert_single_component(
         )
         jsonschema["properties"][key].update(
             {
-                "type": "object",
+                # A removed optional file is null, like any emptied field - the browser
+                # sends it, and the merge replaces the stored reference with it.
+                "type": "object" if _is_required(component) else ["object", "null"],
                 "properties": {
                     "datauri": {"type": "string", "format": "data-url"},
                     "filename": {"type": "string"},

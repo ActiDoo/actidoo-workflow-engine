@@ -33,7 +33,10 @@
         }
       },
       "attachment": {
-        "type": "object",
+        "type": [
+          "object",
+          "null"
+        ],
         "title": "Attachment",
         "properties": {
           "datauri": {
