@@ -359,10 +359,14 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         value_type = type(value)
 
         if value is None:
-            # FEEL null, as the browser reads it: an unset field, null, and a blank text
-            # (empty or whitespace only) are all "no value". A blank can still be stored -
-            # a server-owned value, or data older than the empty-value rules.
-            reference_schema = {"anyOf": [{"const": None}, {"type": "string", "pattern": r"^\s*$"}], "default": ""}
+            # FEEL null, as the browser reads it: an unset field, null, a blank text (empty
+            # or whitespace only) and an empty list - a multi select with nothing chosen -
+            # are all "no value". A blank can still be stored: a server-owned value, or data
+            # older than the empty-value rules.
+            reference_schema = {
+                "anyOf": [{"const": None}, {"type": "string", "pattern": r"^\s*$"}, {"type": "array", "maxItems": 0}],
+                "default": "",
+            }
         else:
             reference_schema = {"const": value, "default": False if value_type == "boolean" else ""}
         if_schema = {
