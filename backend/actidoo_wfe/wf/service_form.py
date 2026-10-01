@@ -306,10 +306,18 @@ def _patch_expression(invalid_python, lhs=""):
     return patched
 
 
+# JSON Schema keyword for each ordering comparison of a hide-if: 'x > 10' holds when x is
+# a number with exclusiveMinimum 10.
+_ORDERING_BOUNDS = {ast.Gt: "exclusiveMinimum", ast.GtE: "minimum", ast.Lt: "exclusiveMaximum", ast.LtE: "maximum"}
+
+
 def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonschema, path):
-    if isinstance(node, ast.Compare):  # =; !=
-        assert isinstance(node.left, ast.Name) or isinstance(node.left, ast.Constant) or isinstance(node.left, ast.Attribute)
-        assert isinstance(node.comparators[0], ast.Name) or isinstance(node.comparators[0], ast.Constant) or isinstance(node.comparators[0], ast.Attribute)
+    if isinstance(node, ast.Compare):  # =, !=, <, >, <=, >=
+        if len(node.ops) > 1:
+            raise NotImplementedError("hide-if supports one comparison per operand, not a chain like 'a < x < b'")
+        operand_types = (ast.Name, ast.Constant, ast.Attribute, ast.UnaryOp)
+        assert isinstance(node.left, operand_types)
+        assert isinstance(node.comparators[0], operand_types)
 
         hops = 0
         scoped = False
@@ -324,7 +332,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
                 global_jsonschema,
                 path,
             )
-        elif isinstance(node.left, ast.Constant):
+        elif isinstance(node.left, (ast.Constant, ast.UnaryOp)):
             property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.comparators[0],
                 global_jsonschema,
@@ -342,6 +350,9 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             value, _ = _camunda_hide_if_expression_ast_to_jsonschema(node.comparators[0], global_jsonschema, path)  # type: ignore
 
         op = node.ops[0]
+        if isinstance(node.left, (ast.Constant, ast.UnaryOp)):
+            # 'value op field' reads as 'field op value' with the order turned around.
+            op = {ast.Lt: ast.Gt(), ast.Gt: ast.Lt(), ast.LtE: ast.GtE(), ast.GtE: ast.LtE()}.get(type(op), op)
 
         # property auflösen und auf const wert setzen
         starting_path = path[:-hops] if hops > 0 else path
@@ -358,7 +369,16 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             found_path = starting_path
         value_type = type(value)
 
-        if value is None:
+        bound = _ORDERING_BOUNDS.get(type(op))
+        if bound is not None:
+            # <, >, <=, >= compare numbers, as FEEL does in the browser. A field that holds
+            # no number does not match - null compared with a number is not true in FEEL.
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise NotImplementedError(f"hide-if compares with {type(op).__name__} only against a number, not {value!r}")
+            reference_schema = {"type": "number", bound: value}
+        elif not isinstance(op, (ast.Eq, ast.NotEq, ast.Is, ast.IsNot)):
+            raise NotImplementedError(f"Unsupported hide-if comparison {type(op).__name__}")
+        elif value is None:
             # FEEL null, as the browser reads it: an unset field, null, a blank text (empty
             # or whitespace only) and an empty list - a multi select with nothing chosen -
             # are all "no value". A blank can still be stored: a server-owned value, or data
@@ -386,7 +406,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         if requires_reference and "required" not in if_schema:
             if_schema["required"] = [property]
 
-        if isinstance(op, ast.NotEq):
+        if isinstance(op, (ast.NotEq, ast.IsNot)):
             cp = copy.deepcopy(if_schema)
             if_schema.clear()
             if_schema["not"] = cp
@@ -430,6 +450,11 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         if node.id == "null":  # FEEL null literal, e.g. 'somefield = null'
             return None, []
         return node.id, []
+    elif isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)) and isinstance(node.operand, ast.Constant):
+        number = node.operand.value
+        if isinstance(number, bool) or not isinstance(number, (int, float)):
+            raise NotImplementedError("Unsupported sign on a non-number")
+        return (-number if isinstance(node.op, ast.USub) else number), []
     elif isinstance(node, ast.Constant):  # Constant
         if node.value == "":
             # An empty field is null, never "" - forms comparing against "" mean "empty",
