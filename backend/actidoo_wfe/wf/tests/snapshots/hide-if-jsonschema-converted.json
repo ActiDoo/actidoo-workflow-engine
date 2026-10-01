@@ -125,7 +125,15 @@
                                             "type": "object",
                                             "properties": {
                                                 "employee": {
-                                                    "const": null,
+                                                    "anyOf": [
+                                                        {
+                                                            "const": null
+                                                        },
+                                                        {
+                                                            "type": "string",
+                                                            "pattern": "^\\s*$"
+                                                        }
+                                                    ],
                                                     "default": ""
                                                 }
                                             }
