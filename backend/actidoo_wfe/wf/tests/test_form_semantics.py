@@ -1024,6 +1024,35 @@ def test__disabled_values_are_kept_exactly_as_stored():
     assert result.task_data == {"owner": "server", "remark": ""}
 
 
+def _single_upload_form(required: bool) -> dict:
+    field = {"type": "textfield", "key": "receipt", "properties": {"custom_type": "attachment_single"}}
+    if required:
+        field["validate"] = {"required": True}
+    return {"components": [field]}
+
+
+REFERENCE = {"id": "1", "hash": "h", "filename": "a.txt", "mimetype": "text/plain"}
+
+
+def test__removing_an_optional_file_clears_the_stored_reference():
+    """The browser sends null for a removed file, like for any emptied field. The
+    merge then replaces the stored reference - a missing key would have kept it,
+    pointing at a file the task no longer holds."""
+    stored = {"receipt": dict(REFERENCE)}
+    result = _validate(_single_upload_form(required=False), {"receipt": None}, stored=stored)
+
+    update(stored, result.task_data)
+
+    assert not result.error_schema
+    assert stored == {"receipt": None}
+
+
+def test__a_required_file_cannot_be_removed():
+    result = _validate(_single_upload_form(required=True), {"receipt": None})
+
+    assert "receipt" in json.dumps(result.error_schema)
+
+
 def _multi_select_form() -> dict:
     """A required multi-select that a checkbox can hide."""
     return {
