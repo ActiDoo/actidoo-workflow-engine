@@ -15,16 +15,19 @@ server now apply the same rules.
 
 ### Added
 
-- **When** workflow code reads a value that may be missing or `null`:
-  - Before: `task_data.get(key, default)` gave `None` for a `null` value. The
-    default only works for a missing key.
-  - Now: use `sth.get_value(key, default)`. It gives `default` when the value
-    is missing, `null` or blank. For a dynamic-list row, use
-    `get_value(row, key, default)` from the same module. It never reads the
-    default from the form.
-- **When** a mail template prints an empty value:
-  - Before: the mail showed `None`.
-  - Now: the mail shows nothing.
+- **When** a service function reads an optional form field, for example to put
+  it into a mail subject:
+  - Before: `sth.task_data.get("comment", "")` returned `""` when the user
+    never filled the field. A cleared field kept its old value, see below.
+  - Now: a cleared field is `null`, so `.get("comment", "")` returns `None`.
+    Use `sth.get_value("comment", "")`: it returns `""` when the field is
+    missing, `null` or only spaces. The second argument is your own fallback,
+    not the default value from the form. For a row of a dynamic list, use
+    `get_value(row, "comment", "")` from
+    `actidoo_wfe.wf.service_task_helper`.
+- **When** a mail template shows a field that is `null`:
+  - Before: the mail showed the word `None`.
+  - Now: the mail shows nothing at that place.
 
 ### Changed
 
@@ -33,8 +36,8 @@ server now apply the same rules.
     a removed file. The old value stayed in the task data.
   - Now: the browser sends `null` and the server stores it. The old value is
     gone. This works for text, number, date, select and a removed file. A
-    multi select becomes an empty list. A field that the browser does not
-    send keeps its value, as before.
+    multi select becomes an empty list. If a request leaves a field out, the
+    stored value stays, as before.
 - **When** the cleared field has a default:
   - Before: the next form with this field showed the default again.
   - Now: the field stays empty. A default only fills a field that was never
@@ -43,17 +46,17 @@ server now apply the same rules.
   - Before: an empty text or only spaces counted as a value. A required multi
     select or dynamic list could be empty.
   - Now: empty is empty, also only spaces. Browser and server check the same
-    way. A multi select or dynamic list needs at least one entry. Values are
-    never trimmed.
+    way. A multi select or dynamic list needs at least one entry. Spaces
+    around a real value are kept.
 - **When** a `hide-if` checks if a field is empty, with `= null` or `= ""`:
-  - Before: each form of the check found only one kind of empty. For a field
-    that was never filled, `= ""` hid the field on the server but not in the
-    browser. A multi select with nothing chosen never counted as empty, so
-    "nothing chosen" could not be tested.
+  - Before: `= null` did not match empty text, and `= ""` did not match
+    `null`. For a field that was never filled, `= ""` hid the field on the
+    server but not in the browser. A multi select with nothing chosen never
+    counted as empty.
   - Now: both forms find every empty field: missing, `null`, empty text, only
     spaces, or a multi select with nothing chosen. Browser and server agree.
-- **When** a sequence-flow condition with a leading `=` uses a variable that
-  is not in the task data:
+- **When** a gateway condition on a sequence flow, with a leading `=`, uses a
+  variable that is not in the task data:
   - Before: the task failed. Workflows needed a guard like
     `="approver" not in globals() or approver is None`. The word `null` did
     not work at all.
@@ -65,20 +68,20 @@ server now apply the same rules.
 - **When** a field or a whole dynamic list is marked `readonly` or `disabled`:
   - Before: `readonly` only locked the field in the browser. On a list the
     mark did nothing. The server took what the browser sent.
-  - Now: the server owns the value, and a submission cannot change it. A list
-    is locked as a whole. A form where users change a `readonly` field loses
-    this input.
+  - Now: the server keeps the stored value and ignores what the browser
+    sends. A list is locked as a whole. If users should change such a field,
+    remove `readonly`.
 - **When** you copy an instance and its data breaks the current rules, for
   example an empty required field:
   - Before: the copy failed.
   - Now: the data goes into the form. The engine checks it when the user
     submits.
-- **When** an instance started before the update:
-  - It keeps the forms it started with. No migration is needed.
-  - These rules apply at once: required means not empty, the `hide-if`
-    fixes, the condition rules, the mail output and copying.
-  - These rules apply only to new instances: cleared fields as `null`, at
-    least one entry, `readonly` as `disabled` and locked lists.
+- **When** an instance was started before the update:
+  - It keeps the form definitions from its start. No migration is needed.
+  - At once: the required check, all `hide-if` fixes, gateway conditions, the
+    mail output and copying an instance.
+  - Only for new instances: cleared fields become `null`, required lists need
+    one entry, `readonly` works like `disabled`, locked lists.
 
 ### Fixed
 
@@ -90,8 +93,8 @@ server now apply the same rules.
     checked.
 - **When** a `hide-if` mixes fields from different levels with `or` or `and`,
   for example a field of a list row and a field outside the list:
-  - Before: the server checked everything on the level of the first field. It
-    hid or required the wrong fields.
+  - Before: the server looked for all fields on the level of the first one.
+    It hid or required the wrong fields.
   - Now: each part is checked on its own level. An `and` across more than two
     levels raises an error.
 - **When** a `hide-if` uses `<`, `>`, `<=` or `>=`:
@@ -102,8 +105,8 @@ server now apply the same rules.
 - **When** a condition contains text in quotes, like `"true_positive"` or
   `"a=b"`:
   - Before: the engine changed the text before it checked the condition, to
-    `"True_positive"` or `"a==b"`. The condition never matched. Names like
-    `is_true_flag` were changed too.
+    `"True_positive"` or `"a==b"`. The condition never matched. Variable names
+    that contain true or false, like `is_true_flag`, were changed too.
   - Now: text in quotes and such names stay as written, in gateway conditions
     and in `hide-if`.
 
