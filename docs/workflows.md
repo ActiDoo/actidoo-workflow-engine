@@ -77,10 +77,10 @@ The first lane in the file that carries the property decides the start permissio
 The engine evaluates expressions in sequence-flow conditions, timer definitions, multi-instance collections and message correlation keys. In the example, the exclusive gateway after the policy check routes on the amount: the flow to `ApproveExpense` carries the condition `=amount > 1000`, and the default flow auto-approves everything else.
 
 :::{warning}
-An expression with a leading `=` is rewritten to Python by text replacement — not run by a real FEEL engine — and everything without `=` is plain Python. So a numeric comparison like `=amount > 1000` is correct here. Keep to simple comparisons and boolean logic, for example `=approve="yes"` or `=amount>1000 and category="Travel"`. A single `=` is equality; use `None`, not `null`. A reference to a missing variable, or an exclusive gateway with no matching flow and no default, puts the task into state error.
+An expression with a leading `=` is rewritten to Python by text replacement — not run by a real FEEL engine — and everything without `=` is plain Python. So a numeric comparison like `=amount > 1000` is correct here. Keep to simple comparisons and boolean logic, for example `=approve="yes"` or `=amount>1000 and category="Travel"`. A single `=` is equality; `null` and `None` both spell the missing value. In a sequence-flow condition a variable the task data does not hold reads as `null`, as in a form's hide-if: `=approve="yes"` is then false and `=approve=null` true. Anywhere else — timers, multi-instance collections, correlation keys — a reference to a missing variable puts the task into state error, and so does an exclusive gateway with no matching flow and no default.
 :::
 
-Remember this contrast for the next section: `=` expressions on gateways and flows are Python and may use `<`, `>`, `<=`, `>=`; form hide-if expressions may not.
+Remember this for the next section: `=` expressions on gateways and flows are Python and may use any comparison; form hide-if expressions use a smaller subset.
 
 ## Forms
 
@@ -94,7 +94,7 @@ The example has two forms. `EnterExpense` collects `title` (text, required), `am
 
 Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, single and multi attachment, and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
 
-An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared and for a cleared select, and the task data stores it - so clearing a field in a later task really removes the earlier value. `required` therefore means that a value was entered: `null`, an empty string and a whitespace-only string do not satisfy it, in the browser and on the server alike - and for a multi select or a dynamic list it means at least one entry. A checkbox is always `true` or `false` while it is shown.
+An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared, for a cleared select and for a removed optional file, and the task data stores it - so clearing a field in a later task really removes the earlier value, and a field with a default stays empty once the user cleared it. A key missing from a submission changes nothing. `required` therefore means that a value was entered: `null`, an empty string and a whitespace-only string do not satisfy it, in the browser and on the server alike - and for a multi select or a dynamic list it means at least one entry. A checkbox is always `true` or `false` while it is shown. Code that reads an optional field must therefore expect a missing key as well as `null`; `sth.get_value` handles both (see [What the task helper offers](#what-the-task-helper-offers)), and mail templates print `null` as nothing.
 
 ### Custom properties
 
@@ -121,7 +121,7 @@ A dynamic list stores an array of row objects; the fields inside it are the row'
 Set a component's "Hide if" condition to an expression starting with `=`. The browser hides the field while the condition is true and re-evaluates on every change; the server drops the values of hidden fields on submit, so a hidden field never reaches the task data and never blocks the submit. In `EnterExpense`, `travel_details` is shown only for travel expenses, with the hide-if `=category != "Travel"`; in `ApproveExpense`, `reason` is shown only for a rejection, with `=decision != "reject"`.
 
 :::{warning}
-The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, references with `this.` and `parent.`, and string, number, boolean and `null` literals. The browser evaluates full FEEL. Keep hide-if expressions inside the subset, otherwise browser and server disagree. This is the contrast with gateway expressions: a gateway may write `=amount > 1000`, but a form hide-if must stick to equality and boolean logic — never `<`, `>`, `<=`, `>=`. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row.
+The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, `<`, `>`, `<=` and `>=` against a number, references with `this.` and `parent.`, and string, number, boolean and `null` literals. The browser evaluates full FEEL. Keep hide-if expressions inside the subset, otherwise browser and server disagree; an ordering comparison against text, or a chain like `1 < amount < 5`, is an error on the server. A comparison with `null` (or `""`) matches every empty field: missing, `null`, empty or whitespace-only text, and a multi select with nothing chosen. Text in quotes is compared exactly as written. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row.
 :::
 
 How the field-level flags interact with hide-if:
@@ -207,7 +207,7 @@ When the function raises, when no function of that name exists, or when the retu
 
 | Group | Key methods |
 |---|---|
-| task data | `set_task_data`, `set_task_data_key`; read `task_data["<field key>"]`, `task_data["result_<task id>"]`, `task_data["<event id>_Response"]` |
+| task data | `set_task_data`, `set_task_data_key`; `get_value("<field key>", default)` returns the default when the field is missing, `null` or blank; read `task_data["result_<task id>"]`, `task_data["<event id>_Response"]` directly |
 | workflow control | `set_workflow_data` (instance-level values forms never see), `set_workflow_instance_subtitle`, `get_task`, `get_last_completed_task`, `get_task_completion_day` |
 | users & assignment | `get_created_by`, `get_users_of_role`, `get_user_by_task_name`, `get_user_by_id`; `assign_user_without_role("<task id>", "<email>")` assigns and hides the next such task; `assign_task_roles("<task id>", [...])` replaces its lane roles |
 | mails | `send_text_mail(subject, content, recipients, attachments)`; `get_mail_attachments("<field key>")` turns uploaded files into the attachments argument |

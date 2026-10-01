@@ -7,36 +7,136 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+This release makes empty values and form conditions consistent. A field has
+one of three states: it has a value; it is `null` because the user cleared
+it; or it is missing because it was never asked or is hidden. In conditions
+and in the required check, `null` and missing both mean empty. Browser and
+server now apply the same rules.
+
+### Added
+
+- **When** workflow code reads a value that may be missing or `null`:
+  - Before: `task_data.get(key, default)` gave `None` for a `null` value. The
+    default only works for a missing key.
+  - Now: use `sth.get_value(key, default)`. It gives `default` when the value
+    is missing, `null` or blank. For a dynamic-list row, use
+    `get_value(row, key, default)` from the same module. It never reads the
+    default from the form.
+- **When** a mail template prints an empty value:
+  - Before: the mail showed `None`.
+  - Now: the mail shows nothing.
+
 ### Changed
 
-- Forms: an emptied field is now `null`. The browser sends `null` for a text,
-  number or date field the user cleared and for a cleared select, and the task
-  data stores it - so clearing a field in a later step really removes the
-  earlier value instead of silently keeping it. `required` therefore means
-  that a value was entered: `null`, an empty string and a whitespace-only
-  string do not satisfy it, in the browser and on the server alike. Values are
-  never trimmed. Existing workflows and running instances need no migration:
-  an open task keeps the form it was handed out with.
-- Forms: a required multi select or dynamic list now needs at least one entry.
-  Previously an empty selection satisfied the requirement.
-- Forms: `readonly` is treated like `disabled` - in both cases the value
-  belongs to the server and a submission cannot change it. A disabled dynamic
-  list is disabled as a whole.
+- **When** a user clears an optional field that had a value:
+  - Before: the browser did not send a cleared text, number or date field or
+    a removed file. The old value stayed in the task data.
+  - Now: the browser sends `null` and the server stores it. The old value is
+    gone. This works for text, number, date, select and a removed file. A
+    multi select becomes an empty list. A field that the browser does not
+    send keeps its value, as before.
+- **When** the cleared field has a default:
+  - Before: the next form with this field showed the default again.
+  - Now: the field stays empty. A default only fills a field that was never
+    answered.
+- **When** a required field is sent empty:
+  - Before: an empty text or only spaces counted as a value. A required multi
+    select or dynamic list could be empty.
+  - Now: empty is empty, also only spaces. Browser and server check the same
+    way. A multi select or dynamic list needs at least one entry. Values are
+    never trimmed.
+- **When** a `hide-if` checks if a field is empty, with `= null` or `= ""`:
+  - Before: each form of the check found only one kind of empty. For a field
+    that was never filled, `= ""` hid the field on the server but not in the
+    browser. A multi select with nothing chosen never counted as empty, so
+    "nothing chosen" could not be tested.
+  - Now: both forms find every empty field: missing, `null`, empty text, only
+    spaces, or a multi select with nothing chosen. Browser and server agree.
+- **When** a sequence-flow condition with a leading `=` uses a variable that
+  is not in the task data:
+  - Before: the task failed. Workflows needed a guard like
+    `="approver" not in globals() or approver is None`. The word `null` did
+    not work at all.
+  - Now: the variable counts as `null`, like in a form's hide-if.
+    `=approver = null` is enough. Old guards still work, and `null` works in
+    all expressions. A typo in a variable name no longer fails; the condition
+    is just false. Timers, multi-instance collections and correlation keys
+    still fail when a variable is missing.
+- **When** a field or a whole dynamic list is marked `readonly` or `disabled`:
+  - Before: `readonly` only locked the field in the browser. On a list the
+    mark did nothing. The server took what the browser sent.
+  - Now: the server owns the value, and a submission cannot change it. A list
+    is locked as a whole. A form where users change a `readonly` field loses
+    this input.
+- **When** you copy an instance and its data breaks the current rules, for
+  example an empty required field:
+  - Before: the copy failed.
+  - Now: the data goes into the form. The engine checks it when the user
+    submits.
+- **When** an instance started before the update:
+  - It keeps the forms it started with. No migration is needed.
+  - These rules apply at once: required means not empty, the `hide-if`
+    fixes, the condition rules, the mail output and copying.
+  - These rules apply only to new instances: cleared fields as `null`, at
+    least one entry, `readonly` as `disabled` and locked lists.
 
 ### Fixed
 
-- Engine: a `hide-if` comparison against a field that has no value no longer
-  behaves the opposite way round. `=category = "a"` with no `category` chosen
-  counted as true and hid the dependent field, discarding what the user had
-  entered there. An absent value now reads as `null`, so the comparison is
-  false and the field stays visible - the same rule the browser and FEEL use.
-- Engine: a `hide-if` comparison against `""` reads as a comparison against
-  `null`, so conditions written that way keep working now that an emptied
-  field is `null`.
-- Engine: a `hide-if` condition combining fields from different levels with
-  `or` or `and` - a field of the row and a field outside it - was anchored to
-  one level only and hid the wrong fields. Each operand is now evaluated at
-  the level it names.
+- **When** a `hide-if` compares a field that was never filled, like
+  `=category = "a"`:
+  - Before: the server said true and hid the dependent field. It dropped what
+    the user typed there. The browser showed the field.
+  - Now: browser and server both say false. The field stays visible and is
+    checked.
+- **When** a `hide-if` mixes fields from different levels with `or` or `and`,
+  for example a field of a list row and a field outside the list:
+  - Before: the server checked everything on the level of the first field. It
+    hid or required the wrong fields.
+  - Now: each part is checked on its own level. An `and` across more than two
+    levels raises an error.
+- **When** a `hide-if` uses `<`, `>`, `<=` or `>=`:
+  - Before: the server read them as `=`. For `amount > 10`, the server hid the
+    field at 10 and showed it at 20. The browser did the opposite.
+  - Now: browser and server compare numbers the same way. A comparison with
+    text, or a chain like `1 < amount < 5`, is an error.
+- **When** a condition contains text in quotes, like `"true_positive"` or
+  `"a=b"`:
+  - Before: the engine changed the text before it checked the condition, to
+    `"True_positive"` or `"a==b"`. The condition never matched. Names like
+    `is_true_flag` were changed too.
+  - Now: text in quotes and such names stay as written, in gateway conditions
+    and in `hide-if`.
+
+### Migration notes
+
+Running instances need no data migration. Check your workflow project for
+these points.
+
+Workflow code:
+- Read optional fields with `sth.get_value(key, default)` where you build
+  text, a mail subject, a file name or a PDF. A cleared field is now `null`,
+  and `task_data.get(key, default)` returns `None` for it.
+- A project that uses `sth.get_value` needs this engine version or later.
+
+Forms:
+- Remove `readonly` from fields that users should change. The server now
+  ignores what users enter there.
+- Make a multi select or dynamic list optional if it may stay empty.
+  Required now means at least one entry.
+- Check `hide-if` conditions that compare with text in quotes, like
+  `= "false"`. They now match, so the field may hide and its value is
+  removed.
+- Rewrite `hide-if` conditions that use `<`, `>`, `<=` or `>=` with text, or
+  a chain like `1 < x < 5`. They now raise an error.
+
+Gateways:
+- Guards like `="x" not in globals() or x is None` still work. You can write
+  `=x = null` instead.
+- Check variable names in conditions. A typo no longer fails; the condition
+  is just false.
+
+Tests:
+- Send real values for required fields. `""` or only spaces now fail.
 
 ## [0.1.44] - 2026-09-23
 
