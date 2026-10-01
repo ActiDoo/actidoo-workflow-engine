@@ -81,8 +81,19 @@ def _format_error_date(error_at, locale: str) -> str:
         return local_dt.date().isoformat()
 
 
+def text_or_empty(value) -> str:
+    """Default filter of every mail template: a value that is not there (an emptied
+    form field is null) prints as nothing, never as "None"."""
+    return "" if value is None else str(value)
+
+
 def compile_email_template(template: str, params: dict, locale: str | None = None, template_dir=MAIL_TEMPLATE_DIR) -> str:
-    mylookup = TemplateLookup(directories=[template_dir], strict_undefined=True)
+    mylookup = TemplateLookup(
+        directories=[template_dir],
+        strict_undefined=True,
+        default_filters=["text_or_empty"],
+        imports=["from actidoo_wfe.wf.mail import text_or_empty"],
+    )
     mytemplate = mylookup.get_template(template)
     try:
         return mytemplate.render_unicode(

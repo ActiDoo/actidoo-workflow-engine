@@ -13,9 +13,10 @@ import json
 import logging
 import re
 from collections import defaultdict
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Callable
+from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -38,10 +39,20 @@ from actidoo_wfe.wf.constants import (
 )
 from actidoo_wfe.wf.exceptions import AttachmentNotFoundException, NumberAllocationFailedError, TaskNotFoundException
 from actidoo_wfe.wf.models import WorkflowInstanceTask, WorkflowInstanceTaskAttachment
+from actidoo_wfe.wf.service_form import is_blank_value
 from actidoo_wfe.wf.types import Attachment, TaskToUserMapping, UploadedAttachmentRepresentation, UserRepresentation
 from actidoo_wfe.wf.views import get_single_task
 
 log = logging.getLogger(__name__)
+
+
+def get_value(data: Mapping, key: str, default: Any = "") -> Any:
+    """The value under ``key``, or ``default`` when there is none: the key is missing,
+    holds null, or holds a blank text. An emptied form field is null and a field that
+    was never filled has no key - both mean "no value", as in a form's hide-if. Use it
+    for a dynamic-list row as well as for the task data."""
+    value = data.get(key) if isinstance(data, Mapping) else None
+    return default if is_blank_value(value) else value
 
 
 class ServiceTaskHelper:
@@ -430,6 +441,11 @@ class ServiceTaskHelper:
 
         return get_users_of_role(self.db, role_name)
 
+    def get_value(self, key: str, default: Any = "") -> Any:
+        """The task data's value under ``key``, or ``default`` when there is none
+        (missing, null or blank) - see the module-level ``get_value``."""
+        return get_value(self.task_data, key, default)
+
     def get_label_from_form(self, form_id, form_key, default_value=""):
         """
         Retrieves the label associated with a value from a specified form based on the provided form ID and key.
@@ -444,7 +460,7 @@ class ServiceTaskHelper:
 
         If the chosen value by the user is not found in the form data, the method logs an exception and returns the default value.
         """
-        chosen_by_user = self.task_data.get(form_key, None)
+        chosen_by_user = self.get_value(form_key, None)
 
         if chosen_by_user is None:
             return default_value
