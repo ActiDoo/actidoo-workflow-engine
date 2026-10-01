@@ -8,6 +8,7 @@ This module contains customizations to the SpiffWorkflow BPMN engine.
 - script engine customization
 """
 
+import builtins
 import logging
 import re
 import traceback
@@ -21,7 +22,7 @@ import orjson
 from SpiffWorkflow.bpmn.exceptions import WorkflowDataException
 from SpiffWorkflow.bpmn.parser.BpmnParser import BpmnParser, full_tag
 from SpiffWorkflow.bpmn.parser.ProcessParser import ProcessParser
-from SpiffWorkflow.bpmn.script_engine.feel_engine import FeelLikeScriptEngine
+from SpiffWorkflow.bpmn.script_engine.feel_engine import FeelLikeScriptEngine, externalFuncs
 from SpiffWorkflow.bpmn.script_engine.python_engine import PythonScriptEngine
 from SpiffWorkflow.bpmn.script_engine.python_environment import TaskDataEnvironment
 from SpiffWorkflow.bpmn.serializer.config import ParallelMultiInstanceTask, SequentialMultiInstanceTask
@@ -34,6 +35,7 @@ from SpiffWorkflow.bpmn.serializer.default.task_spec import (
 from SpiffWorkflow.bpmn.serializer.helpers.bpmn_converter import BpmnConverter
 from SpiffWorkflow.bpmn.serializer.workflow import BpmnWorkflowSerializer
 from SpiffWorkflow.bpmn.specs import BpmnProcessSpec
+from SpiffWorkflow.bpmn.specs.bpmn_task_spec import _BpmnCondition
 from SpiffWorkflow.bpmn.specs.data_spec import TaskDataReference
 from SpiffWorkflow.bpmn.specs.defaults import IntermediateCatchEvent, IntermediateThrowEvent, ServiceTask, StartEvent
 from SpiffWorkflow.bpmn.specs.event_definitions.timer import TimerEventDefinition
@@ -617,6 +619,17 @@ def get_serializer():
     return serializer
 
 
+class _NullForMissingNames(dict):
+    """Name scope for FEEL expressions: an unknown name reads as None. Builtins are
+    left to Python (raising KeyError sends the lookup on to the globals and builtins),
+    so ``len`` and ``True`` keep working."""
+
+    def __missing__(self, key):
+        if hasattr(builtins, key):
+            raise KeyError(key)
+        return None  # noqa: RET501, PLR1711 - the None is the point
+
+
 class MyScriptEngine(FeelLikeScriptEngine):
     def __init__(self, environment):
         super().__init__(environment=environment)
@@ -660,14 +673,28 @@ class MyScriptEngine(FeelLikeScriptEngine):
     def execute(self, task, script, external_context=None):
         return PythonScriptEngine.execute(self, task, script, external_context)
 
-    def _evaluate(self, expression, context, external_context=None):
+    def evaluate_condition(self, task, expression, external_context=None):
+        """Evaluate a sequence-flow condition. In a FEEL condition a name the task data
+        does not hold reads as null, as in FEEL and in a form's hide-if - so a gateway
+        on a field that was never filled routes instead of failing the task. Every
+        other expression (collections, timers, correlation keys) stays strict: a
+        missing name there is a modelling error and must surface."""
+        return self._evaluate(expression, task.data, external_context=external_context, missing_as_null=True)
+
+    def _evaluate(self, expression, context, external_context=None, missing_as_null=False):
         if expression.startswith("="):
-            return FeelLikeScriptEngine._evaluate(
-                self,
-                expression.lstrip("= "),
-                context,
-                external_context=external_context,
-            )
+            if not missing_as_null:
+                return FeelLikeScriptEngine._evaluate(
+                    self,
+                    expression.lstrip("= "),
+                    context,
+                    external_context=external_context,
+                )
+            scope = dict(self.environment.globals)
+            scope.update(external_context or {})
+            scope.update(externalFuncs)
+            scope.update(context)
+            return eval(self.patch_expression(expression.lstrip("= ")), scope, _NullForMissingNames(scope))  # eval, as Spiff's own engine does
         else:
             return self.environment.evaluate(expression, context, external_context)
             # return PythonScriptEngine.evaluate(
@@ -689,6 +716,22 @@ class MyScriptEngine(FeelLikeScriptEngine):
             if user is not None:
                 mapping[task] = user
         return mapping
+
+
+_spiff_condition_matches = _BpmnCondition._matches
+
+
+def _match_sequence_flow_condition(condition: _BpmnCondition, task: Task):
+    # Spiff builds a sequence-flow condition in two places (parsing and restoring a
+    # stored workflow) and evaluates it only here, so this is the one point where a
+    # condition can be told apart from the other expressions.
+    engine = task.workflow.script_engine
+    if isinstance(engine, MyScriptEngine):
+        return engine.evaluate_condition(task, condition.args[0], external_context=task.workflow.data_objects)
+    return _spiff_condition_matches(condition, task)
+
+
+_BpmnCondition._matches = _match_sequence_flow_condition
 
 
 def get_script_engine(workflow_name):
