@@ -23,7 +23,6 @@ import jsonschema._utils
 import jsonschema.exceptions
 import jsonschema.validators
 from pydantic_core import ValidationError
-from SpiffWorkflow.bpmn.script_engine.feel_engine import fixes as feel_fixes
 
 from actidoo_wfe.helpers.collections import remove_item, set_item
 from actidoo_wfe.helpers.datauri import DATA_URI_RE
@@ -35,6 +34,7 @@ from actidoo_wfe.wf.exceptions import (
     OptionsFileNotExistsException,
 )
 from actidoo_wfe.wf.constants import ROW_ID_KEY, UI_FIELD_LAYOUT, TemplateMode
+from actidoo_wfe.wf.feel_expressions import feel_to_python
 from actidoo_wfe.wf.form_transformation import _get_subschema
 from actidoo_wfe.wf.option_task_helper import OptionTaskHelper
 from actidoo_wfe.wf.types import (
@@ -199,7 +199,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
                 patched: str = hideif.lstrip("= ").strip(" ")
                 patched = patched.replace("\n", " ")
-                patched = _patch_expression(patched)
+                patched = feel_to_python(patched)
                 ast_tree = ast.parse(patched, mode="eval")
 
                 # Prüfen, dass der Ausdruck ein Vergleich ist.
@@ -279,31 +279,6 @@ def _hide_if_level_groups(node: ast.expr, global_jsonschema, path):
         for group_path, schemas in groups.items()
     ]
     return parts, ("or" if isinstance(node.op, ast.Or) else "and")
-
-
-def _patch_expression(invalid_python, lhs=""):
-    # This is taken from SpiffWorkflow.bpmn.FeelLikeScriptEngine::FeelLikeScriptEngine.patch_expression
-    if invalid_python is None:
-        raise Exception("Expression to patch is None")
-    proposed_python = invalid_python
-    for transformation in feel_fixes:
-        if isinstance(transformation[1], str):
-            proposed_python = re.sub(
-                transformation[0],
-                transformation[1],
-                proposed_python,
-            )
-        else:
-            for x in re.findall(transformation[0], proposed_python):
-                if "." in (x):
-                    proposed_python = proposed_python.replace(x, transformation[1](x))
-    if lhs is not None:
-        proposed_python = lhs + proposed_python
-
-    # This is added by us (replace single "=" with double "==")
-    patched = re.sub(r"(?<!=|<|>|\!)=(?!=|<|>|\!)", "==", proposed_python)
-
-    return patched
 
 
 # JSON Schema keyword for each ordering comparison of a hide-if: 'x > 10' holds when x is
