@@ -116,6 +116,11 @@ def _find_property_upwards(
     return found_path
 
 
+# A hide-if that mixes fields of different levels (a list row and outside it) becomes a
+# decision tree whose size grows exponentially with its comparisons.
+MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS = 10
+
+
 def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None):
     # hier haben wir das jsonschema schon aufgebaut und in den properties zusätzlich "hideif" definiert
     # das müssen wir nun in allOf/if/then konstruke umwandeln
@@ -214,6 +219,14 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                     (comparison, *_camunda_hide_if_expression_ast_to_jsonschema(comparison, global_jsonschema, path)) for comparison in ast.walk(ast_tree.body) if isinstance(comparison, ast.Compare)
                 ]
                 if len({tuple(level) for _, _, level in comparisons}) > 1:
+                    # The decision tree grows with every comparison (about threefold per
+                    # added pair), so a condition that mixes levels has a fixed limit.
+                    if len(comparisons) > MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS:
+                        raise NotImplementedError(
+                            f"hide-if of {key} mixes fields of different levels in {len(comparisons)} comparisons; "
+                            f"at most {MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS} are supported. Split the condition, "
+                            "for example with a helper field set by a service task."
+                        )
                     # Evaluate parent comparisons before entering rows. Each branch keeps
                     # the remaining boolean expression, including its parentheses.
                     outer_ifthenschema.clear()
