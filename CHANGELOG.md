@@ -7,7 +7,14 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- A workflow whose last step has no end event behind it was shown as
+  completed when that step failed, and the admin retry of the step then
+  crashed with an `UnboundLocalError`. An instance with an erroneous task now
+  stays open until the task succeeds or the instance is cancelled;
+  `completed_at` follows `is_completed`. Instances already stored as completed
+  are corrected on their next save, e.g. the retry.
 
 ## [0.1.44] - 2026-09-23
 

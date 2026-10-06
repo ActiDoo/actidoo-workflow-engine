@@ -57,6 +57,7 @@ from actidoo_wfe.wf.service_workflow import (
     get_task_data,
     get_task_deadline_times,
     get_task_roles,
+    is_workflow_completed,
     restore,
 )
 from actidoo_wfe.wf.spiff_customized import MyIntermediateCatchEvent
@@ -77,7 +78,6 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
 
     created_by_id = get_created_by_id(workflow=workflow)
     subtitle = get_subtitle(workflow=workflow)
-    instance_was_completed = db_workflow.is_completed if db_workflow is not None else False
 
     if db_workflow is None:
         db_workflow = WorkflowInstance()
@@ -89,8 +89,10 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
 
     db_workflow.subtitle = subtitle
     db_workflow.data = dump(workflow=workflow)
-    db_workflow.is_completed = workflow.is_completed()
-    if db_workflow.is_completed and not instance_was_completed:
+    db_workflow.is_completed = is_workflow_completed(workflow)
+    if not db_workflow.is_completed:
+        db_workflow.completed_at = None
+    elif db_workflow.completed_at is None:
         # instance has just been set completed
         db_workflow.completed_at = dt_now_naive()
 

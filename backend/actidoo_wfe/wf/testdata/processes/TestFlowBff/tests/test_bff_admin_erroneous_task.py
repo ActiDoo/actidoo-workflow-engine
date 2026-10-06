@@ -225,6 +225,54 @@ class TestRetryOutcome:
             assert probe.runs == 1, "the step must not run a second time"
 
 
+class TestErroneousLastStep:
+    """A failing step right before the end event leaves nothing unfinished in
+    the engine's sense, since an erroneous task counts as finished there."""
+
+    def test_an_instance_with_an_erroneous_task_is_not_completed(self, db_engine_ctx, probe):
+        with db_engine_ctx():
+            workflow, crash_task_id = _start_with_erroneous_task(SessionLocal())
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                probe.external_down = False
+                _edit_task_data(client, crash_task_id, crash_script=True)
+                status, body = _retry(client, crash_task_id)
+                assert (status, body["code"]) == (409, "follow_up_task_failed")
+                script_step = next(
+                    item
+                    for item in _all_tasks(client, f_workflow_instance___id=str(workflow.workflow_instance_id))
+                    if item.name == "ScriptStep"
+                )
+
+            assert script_step.state_error
+            assert not script_step.workflow_instance.is_completed
+            assert script_step.workflow_instance.completed_at is None
+
+    def test_a_retry_of_the_last_step_completes_the_instance(self, db_engine_ctx, probe):
+        with db_engine_ctx():
+            workflow, crash_task_id = _start_with_erroneous_task(SessionLocal())
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                probe.external_down = False
+                _edit_task_data(client, crash_task_id, crash_script=True)
+                _retry(client, crash_task_id)
+                script_step = next(
+                    item
+                    for item in _all_tasks(client, f_workflow_instance___id=str(workflow.workflow_instance_id))
+                    if item.name == "ScriptStep"
+                )
+                _edit_task_data(client, script_step.id, crash_script=False)
+                status, _ = _retry(client, script_step.id)
+                task = _get_task(client, script_step.id)
+
+            assert status == 200
+            assert task.state_completed
+            assert task.workflow_instance.is_completed
+            assert task.workflow_instance.completed_at is not None
+
+
 class TestOverlappingRetries:
     def test_two_overlapping_retries_run_the_step_once_and_both_get_an_answer(self, db_engine_ctx, probe):
         """The first retry is slow (a long external call) and holds the instance
