@@ -24,6 +24,7 @@ import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/C
 import { isAttachmentMultiSchema } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
+import CustomTextWidget from '@/rjsf-customs/custom-widgets/CustomTextWidget';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
 import CustomFieldErrorTemplate from '@/rjsf-customs/templates/CustomFieldErrorTemplate';
 import CustomDescriptionFieldTemplate from '@/rjsf-customs/templates/CustomDescriptionFieldTemplate';
@@ -58,6 +59,7 @@ const customWidgets: RegistryWidgetsType = {
   combobox: CustomComboBox,
   SelectWidget: CustomSelect,
   CheckboxWidget: CustomCheckbox,
+  TextWidget: CustomTextWidget,
   CurrencyNumberWidget,
   MultiSelectDynamic,
   MultiSelectStatic,
