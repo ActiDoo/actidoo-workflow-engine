@@ -30,7 +30,7 @@ import pytest
 from actidoo_wfe.wf.constants import ROW_ID_KEY
 from actidoo_wfe.wf.exceptions import UnsupportedHideIfException
 from actidoo_wfe.wf.form_transformation import transform_camunda_form
-from actidoo_wfe.wf.service_form import MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS, check_hide_if_conditions, normalize_blank_values, validate_task_data
+from actidoo_wfe.wf.service_form import MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS, check_hide_if_conditions, drop_hidden_fields, normalize_blank_values, validate_task_data
 from actidoo_wfe.wf.service_workflow import update
 
 OPTIONS_FOLDER = Path(__file__).parent / "options"
@@ -145,6 +145,52 @@ def test__value_submitted_for_hidden_field_is_stripped_without_error():
 
     assert not result.error_schema
     assert "approval" not in result.task_data
+
+
+def _optional_hidden_field_form() -> dict:
+    """An optional text field and an optional multi select, hidden while category is "a"."""
+    hidden = {"hide": '=category = "a"'}
+    return {
+        "components": [
+            {"type": "select", "key": "category", "values": AB_OPTIONS},
+            {"type": "textfield", "key": "detail", "conditional": hidden},
+            {"type": "select", "key": "tags", "values": AB_OPTIONS, "properties": {"custom_type": "select_multi"}, "conditional": hidden},
+        ],
+    }
+
+
+def test__an_empty_value_submitted_for_a_hidden_field_is_dropped_too():
+    """A submit writes nothing into a hidden field, also not null or an empty list - the
+    browser sends them for a field the user cleared before a condition hid it. The
+    stored values stay."""
+    stored = {"category": "b", "detail": "abc", "tags": ["b"]}
+    result = _validate(_optional_hidden_field_form(), {"category": "a", "detail": None, "tags": []}, stored=stored)
+
+    update(stored, result.task_data)
+
+    assert not result.error_schema
+    assert stored == {"category": "a", "detail": "abc", "tags": ["b"]}
+
+
+def _handed_out(stored: dict) -> dict:
+    """The task data after the hand-out cleanup, which cleans stored data as trusted."""
+    form = transform_camunda_form(_optional_hidden_field_form())
+    return validate_task_data(form=form, task_data=stored, options_folder=OPTIONS_FOLDER, functions_env={}, preserve_unknown_fields=True).task_data
+
+
+def test__an_empty_value_of_a_hidden_field_stays_when_the_task_is_handed_out():
+    """The value of a hidden field is removed when its task is handed out, but null and
+    an empty list stay: a field the user cleared stays cleared while it is hidden."""
+    assert _handed_out({"category": "a", "detail": None, "tags": []}) == {"category": "a", "detail": None, "tags": []}
+    assert _handed_out({"category": "a", "detail": "abc", "tags": ["a"]}) == {"category": "a"}
+
+
+def test__a_form_template_takes_nothing_from_a_hidden_field():
+    """Template data comes from the browser, not from stored task data. Like a
+    submission, it takes nothing from a hidden field, an empty value included."""
+    form = transform_camunda_form(_optional_hidden_field_form())
+
+    assert drop_hidden_fields(form, {"category": "a", "detail": None, "tags": [], "extra": 1}) == {"category": "a", "extra": 1}
 
 
 def test__submitted_disabled_value_cannot_override_stored_one():
