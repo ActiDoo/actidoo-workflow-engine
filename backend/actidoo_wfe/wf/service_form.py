@@ -33,6 +33,7 @@ from actidoo_wfe.wf.exceptions import (
     OptionFunctionNotFound,
     OptionsFileCouldNotBeReadException,
     OptionsFileNotExistsException,
+    UnsupportedHideIfException,
 )
 from actidoo_wfe.wf.feel_expressions import feel_to_python
 from actidoo_wfe.wf.form_transformation import _get_subschema
@@ -135,6 +136,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
     # Die aktuelle Node (jsonschema) sollte direkt "properties" Kinder haben
     for key in jsonschema["properties"]:
+        hideif = None
         try:
             node = jsonschema["properties"][key]
 
@@ -257,6 +259,10 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
         except Exception as error:
             log.exception(f"{type(error).__name__}: {error.args}. Raised in convert_hide_if_props_to_declarative_jsonschema for key={key}")
+            if hideif is not None:
+                # The server cannot evaluate this hide-if: say which field and condition.
+                reason = str(error) or type(error).__name__
+                raise UnsupportedHideIfException(f"field {'.'.join([*path, key])}: the server cannot evaluate the hide-if {hideif!r} ({reason})") from error
             raise error
 
 
@@ -538,6 +544,18 @@ def get_jsonschema_for_validation(
     schema = setAdditionalProperties(schema, True)  # type: ignore
     assert isinstance(schema, dict)
     return schema
+
+
+def check_hide_if_conditions(form: ReactJsonSchemaFormData, location: str) -> None:
+    """Raise ``UnsupportedHideIfException`` for a hide-if the server cannot evaluate,
+    with ``location`` - the workflow and the form - in the message. Runs when a workflow
+    definition is loaded, so such a form fails there instead of in a task."""
+    # Disabled fields do not change what a condition means, so the plain schema covers
+    # every hide-if the validation converts.
+    try:
+        convert_hide_if_props_to_declarative_jsonschema(copy.deepcopy(form.jsonschema), [])
+    except UnsupportedHideIfException as error:
+        raise UnsupportedHideIfException(f"{location}, {error}") from error
 
 
 def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None):

@@ -8,7 +8,6 @@ This module contains customizations to the SpiffWorkflow BPMN engine.
 - script engine customization
 """
 
-import builtins
 import logging
 import re
 import traceback
@@ -63,10 +62,19 @@ from actidoo_wfe.wf.constants import (
 from actidoo_wfe.wf.exceptions import FormNotFoundException
 from actidoo_wfe.wf.feel_expressions import compile_feel_condition, feel_to_python
 from actidoo_wfe.wf.form_transformation import empty_form, transform_camunda_form_from_file
+from actidoo_wfe.wf.service_form import check_hide_if_conditions
 from actidoo_wfe.wf.service_task_helper import ServiceTaskHelper
 from actidoo_wfe.wf.types import TaskToUserMapping
 
 log = logging.getLogger(__name__)
+
+
+def _load_form(form_file_path: Path, process_id: str):
+    """The engine's form for a form file. A hide-if the server cannot evaluate makes the
+    workflow definition invalid here, with workflow, form and field in the message."""
+    form = transform_camunda_form_from_file(form_file_path)
+    check_hide_if_conditions(form, f"workflow {process_id}, form {form_file_path.name}")
+    return form
 
 
 class MyUserTask(UserTask):
@@ -104,7 +112,7 @@ class MyCamundaUserTaskParser(CamundaTaskParser):
             raise FormNotFoundException(
                 f"form file not found for process {self.process_parser.bpmn_id} and usertask {self.bpmn_id}: {str(form_file_path)}",
             )
-        form = transform_camunda_form_from_file(form_file_path)
+        form = _load_form(form_file_path, self.process_parser.bpmn_id)
         return form
 
 
@@ -120,7 +128,7 @@ class MyCamundaStartEventParser(CamundaStartEventParser):
         if self.filename is None:
             return empty_form()
         form_file_path = Path(self.filename).parent / (self.bpmn_id + ".form")
-        form = transform_camunda_form_from_file(form_file_path)
+        form = _load_form(form_file_path, self.process_parser.bpmn_id)
         return form
 
 
@@ -243,7 +251,7 @@ class MyCamundaIntermediateCatchEventParser(CamundaIntermediateCatchEventParser)
         if self.filename is None:
             return empty_form()
         form_file_path = Path(self.filename).parent / (self.bpmn_id + ".form")
-        form = transform_camunda_form_from_file(form_file_path)
+        form = _load_form(form_file_path, self.process_parser.bpmn_id)
         return form
 
 
@@ -620,14 +628,12 @@ def get_serializer():
 
 
 class _NullForMissingNames(dict):
-    """Name scope for FEEL expressions: an unknown name reads as None. Builtins are
-    left to Python (raising KeyError sends the lookup on to the globals and builtins),
-    so ``len`` and ``True`` keep working."""
+    """Name scope for FEEL conditions: a name the scope does not hold reads as None,
+    also one named like a Python builtin (``type``, ``id``, ``max``). The condition
+    reaches builtins as functions or function arguments, see ``compile_feel_condition``."""
 
     def __missing__(self, key):
-        if hasattr(builtins, key):
-            raise KeyError(key)
-        return None  # noqa: RET501, PLR1711 - the None is the point
+        return None
 
 
 class MyScriptEngine(FeelLikeScriptEngine):

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_uh" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_uh">
+    <bpmn:participant id="Participant_uh" name="Unsupported hide-if" processRef="TestFlowUnsupportedHideIf" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlowUnsupportedHideIf" name="Unsupported hide-if" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_uh">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_uh</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form010_EnterData</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_uh</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_uh">
+      <bpmn:outgoing>Flow_start_enter</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Form010_EnterData" name="Enter data">
+      <bpmn:incoming>Flow_start_enter</bpmn:incoming>
+      <bpmn:outgoing>Flow_enter_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_uh">
+      <bpmn:incoming>Flow_enter_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_enter" sourceRef="StartEvent_uh" targetRef="Form010_EnterData" />
+    <bpmn:sequenceFlow id="Flow_enter_end" sourceRef="Form010_EnterData" targetRef="EndEvent_uh" />
+  </bpmn:process>
+</bpmn:definitions>
