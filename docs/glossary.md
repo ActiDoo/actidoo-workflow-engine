@@ -58,6 +58,10 @@ The VS Code development container in which the engine and extensions are develop
 
 A form component that repeats a group of fields as a list of rows; the user can add and remove rows. Every row carries a row id. See [ADR 010](adr/adr_010_dynamic_list_row_identity.md).
 
+## empty value
+
+A form field without a value: its key is missing from the task data, because the field was never filled or is hidden, or it holds `null`, because the user cleared it. Text that is empty or only whitespace (blank text) is an empty value too, and in conditions so is a multi select with nothing chosen. An empty value does not satisfy `required`, and a comparison with `null` or `""` matches it.
+
 ## engine
 
 The workflow engine itself: the backend that runs workflows, the browser application, the scheduler and the REST endpoints, shipped together as the runtime image. Extensions build on top of it. Also called workflow engine, WFE, core (avoid).
@@ -84,7 +88,7 @@ A named preset of form input that a user saves for a form and can apply again la
 
 ## hide-if
 
-A FEEL condition on a form field (Camunda `conditional.hide`). While it is true, the browser hides the field and the server removes the field's value from the task data, so a hidden field never blocks a submit. Also called conditional hide, hidden field condition (avoid).
+A FEEL condition on a form field (Camunda `conditional.hide`). While it is true, the browser hides the field and the server removes the field's value from the task data, so a hidden field never blocks a submit. A field the user emptied, a multi select or list included, stays empty. Also called conditional hide, hidden field condition (avoid).
 
 ## IdP
 

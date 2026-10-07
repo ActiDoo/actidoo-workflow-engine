@@ -48,7 +48,8 @@ server now apply the same rules.
     select or dynamic list could be empty.
   - Now: empty is empty, also only spaces. Browser and server check the same
     way. A multi select or dynamic list needs at least one entry. Spaces
-    around a real value are kept.
+    around a real value are kept. This also applies while a required field
+    with a `hide-if` is visible.
 - **When** a `hide-if` checks if a field is empty, with `= null` or `= ""`:
   - Before: `= null` did not match empty text, and `= ""` did not match
     `null`. For a field that was never filled, `= ""` hid the field on the
@@ -66,9 +67,18 @@ server now apply the same rules.
     all expressions. A missing name can make a condition true or false,
     depending on the comparison. An ordering comparison (`<`, `>`, `<=`,
     `>=`) with `null` is false. Timers, multi-instance collections and
-    correlation keys still fail when a variable is missing.
+    correlation keys still fail when a variable is missing. A missing field
+    named `type`, `id` or `max` counts as `null` too; Python builtins remain
+    available as functions and function arguments.
+- **When** a gateway condition with a leading `=` checks a stored empty
+  value:
+  - Before: blank text and an empty list did not match `null`. Ordering blank
+    text against a number could fail the task.
+  - Now: `= null` and `= ""` match missing values, `null`, empty or
+    whitespace-only text and empty lists. `!= null` and `!= ""` are false
+    for them, and ordering comparisons are false.
 - **When** a field or a whole dynamic list is marked `readonly` or `disabled`:
-  - Before: `readonly` only locked the field in the browser; the server took
+  - Before: `readonly` had no effect; users could edit it and the server took
     what the browser sent. Individual `disabled` fields were already protected
     on the server. Neither mark locked a whole dynamic list.
   - Now: the server keeps the stored value and ignores what the browser
@@ -88,6 +98,15 @@ server now apply the same rules.
 
 ### Fixed
 
+- **When** a user uploads a file after an earlier task removed it:
+  - Before: uploading onto the stored `null` failed the submit.
+  - Now: the new file replaces `null`, also inside a dynamic-list row.
+- **When** a later task hides a field the user cleared:
+  - Before: hiding removed a stored empty list. A later form could fill
+    the field with its default again. An empty value sent for a hidden
+    field could also overwrite stored data.
+  - Now: stored `null` and empty lists stay empty while hidden. A submit
+    writes nothing into a hidden field, including `null` or an empty list.
 - **When** a `hide-if` compares a field that was never filled, like
   `=category = "a"`:
   - Before: the server said true and hid the dependent field. It dropped what
@@ -105,7 +124,27 @@ server now apply the same rules.
   - Before: the server read them as `=`. For `amount > 10`, the server hid the
     field at 10 and showed it at 20. The browser did the opposite.
   - Now: browser and server compare numbers the same way. A comparison with
-    text, or a chain like `1 < amount < 5`, is an error.
+    text, or a chain like `1 < amount < 5`, is rejected when the definition
+    loads, as described below.
+- **When** a form has a `hide-if` outside the supported subset, for example
+  `contains(...)`, `in` or `not(...)`:
+  - Before: the server could read the condition incorrectly or fail when
+    the form was used.
+  - Now: the workflow definition fails to load and is not offered for
+    start. The log identifies the workflow, form and field.
+- **When** a dynamic-list overview checks a row's `hide-if` against `""`:
+  - Before: the overview could show a field that the form hid.
+  - Now: the overview and the form use the same empty-value comparison.
+- **When** a gateway condition with a leading `=` uses `not(...)`,
+  one-argument `contains(...)` or a range outside `=` or `!=`:
+  - Before: the condition could be true regardless of the data or fail
+    without a useful explanation.
+  - Now: the gateway enters the error state with a message explaining
+    how to rewrite the condition.
+- **When** a gateway condition compares with an open range, like
+  `=amount = (1..5]`:
+  - Before: the open endpoint could be treated as closed.
+  - Now: the range excludes 1 and includes 5. `!=` respects the endpoints too.
 - **When** a condition contains text in quotes, like `"true_positive"` or
   `"a=b"`:
   - Before: the engine changed the text before it checked the condition, to
@@ -133,8 +172,9 @@ Forms:
 - Check `hide-if` conditions that compare with text in quotes, like
   `= "false"`. They now match, so the field may hide and its value is
   removed.
-- Rewrite `hide-if` conditions that use `<`, `>`, `<=` or `>=` with text, or
-  a chain like `1 < x < 5`. They now raise an error.
+- Rewrite `hide-if` conditions outside the supported subset, including
+  ordering comparisons with text, chains like `1 < x < 5`, `contains(...)`,
+  `in` and `not(...)`. Their workflow definitions now fail to load.
 - Split a `hide-if` that mixes list-row fields with other fields in more than
   10 comparisons, for example with a helper field set by a service task. It
   now raises an error.
@@ -142,6 +182,9 @@ Forms:
 Gateways:
 - Guards like `="x" not in globals() or x is None` still work. You can write
   `=x = null` instead.
+- Rewrite `not(x = 1)` as `x != 1`, use two arguments for `contains`, and
+  write `x >= 1 and x <= 5` instead of `x in [1..5]` in conditions with a
+  leading `=`.
 - Check variable names in conditions. A missing name reads as `null`, so a
   typo can change the route. For example, `=aprover = null` is true when
   `aprover` is missing, even if `approver` has a value.

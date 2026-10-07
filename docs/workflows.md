@@ -80,6 +80,16 @@ The engine evaluates expressions in sequence-flow conditions, timer definitions,
 An expression with a leading `=` is rewritten to Python by text replacement — not run by a real FEEL engine — and everything without `=` is plain Python. So a numeric comparison like `=amount > 1000` is correct here. Keep to simple comparisons and boolean logic, for example `=approve="yes"` or `=amount>1000 and category="Travel"`. A single `=` is equality; `null` and `None` both spell the missing value. In a sequence-flow condition a variable the task data does not hold reads as `null`, as in a form's hide-if: `=approve="yes"` is then false and `=approve=null` true. Anywhere else — timers, multi-instance collections, correlation keys — a reference to a missing variable puts the task into state error, and so does an exclusive gateway with no matching flow and no default.
 :::
 
+A sequence-flow condition reads [empty values](glossary.md#empty-value) the way a form's hide-if does:
+
+| In a sequence-flow condition | Result |
+|---|---|
+| a variable the task data does not hold | reads as `null` |
+| `x = null` or `x = ""` | true for every empty value: missing, `null`, empty or whitespace-only text, an empty list; `x != null` and `x != ""` are false for it |
+| `<`, `>`, `<=` or `>=` with an empty value | false |
+| a missing variable named like a Python builtin, such as `type`, `id` or `max` | reads as `null`; builtins remain available as functions and function arguments, like `len(items)` and `isinstance(amount, int)` |
+| `not(...)`, `contains(...)` with one argument, or a range like `[1..5]`, other than on one side of `=` or `!=` | the gateway goes to state error with a message that says what to write instead |
+
 Remember this for the next section: `=` expressions on gateways and flows are Python and may use any comparison; form hide-if expressions use a smaller subset.
 
 ## Forms
@@ -94,7 +104,7 @@ The example has two forms. `EnterExpense` collects `title` (text, required), `am
 
 Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, single and multi attachment, and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
 
-An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared, for a cleared select and for a removed optional file, and the task data stores it - so clearing a field in a later task really removes the earlier value, and a field with a default stays empty once the user cleared it. A key missing from a submission changes nothing. `required` therefore means that a value was entered: `null`, an empty string and a whitespace-only string do not satisfy it, in the browser and on the server alike - and for a multi select or a dynamic list it means at least one entry. A checkbox is always `true` or `false` while it is shown. Code that reads an optional field must therefore expect a missing key as well as `null`; `sth.get_value` handles both (see [What the task helper offers](#what-the-task-helper-offers)), and mail templates print `null` as nothing.
+An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared, for a cleared select and for a removed optional file, and the task data stores it - so clearing a field in a later task really removes the earlier value, and a field with a default stays empty once the user cleared it. A key missing from a submission changes nothing. `required` therefore means that a value was entered: an [empty value](glossary.md#empty-value) does not satisfy it, in the browser and on the server alike - and for a multi select or a dynamic list it means at least one entry. A checkbox is always `true` or `false` while it is shown. Code that reads an optional field must therefore expect a missing key as well as `null`; `sth.get_value` handles both (see [What the task helper offers](#what-the-task-helper-offers)), and mail templates print `null` as nothing.
 
 ### Custom properties
 
@@ -121,7 +131,9 @@ A dynamic list stores an array of row objects; the fields inside it are the row'
 Set a component's "Hide if" condition to an expression starting with `=`. The browser hides the field while the condition is true and re-evaluates on every change; the server drops the values of hidden fields on submit, so a hidden field never reaches the task data and never blocks the submit. In `EnterExpense`, `travel_details` is shown only for travel expenses, with the hide-if `=category != "Travel"`; in `ApproveExpense`, `reason` is shown only for a rejection, with `=decision != "reject"`.
 
 :::{warning}
-The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, `<`, `>`, `<=` and `>=` against a number, references with `this.` and `parent.`, and string, number, boolean and `null` literals. The browser evaluates full FEEL. Keep hide-if expressions inside the subset, otherwise browser and server disagree; an ordering comparison against text, or a chain like `1 < amount < 5`, is an error on the server. A comparison with `null` (or `""`) matches every empty field: missing, `null`, empty or whitespace-only text, and a multi select with nothing chosen. Text in quotes is compared exactly as written. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row. A condition may mix fields of a row with fields outside it, also nested in `and` and `or`; such a condition may contain at most 10 comparisons.
+The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, `<`, `>`, `<=` and `>=` against a number, references with `this.` and `parent.`, and string, number, boolean and `null` literals. The browser evaluates full FEEL. Keep hide-if expressions inside the subset. A comparison with `null` (or `""`) matches every empty field: missing, `null`, empty or whitespace-only text, and a multi select with nothing chosen. Text in quotes is compared exactly as written. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row. A condition may mix fields of a row with fields outside it, also nested in `and` and `or`; such a condition may contain at most 10 comparisons.
+
+A form with a hide-if outside the subset - for example an ordering comparison against text such as a date in quotes, a chain like `1 < amount < 5`, `contains(...)`, `in` or `not(...)` - makes the workflow definition fail to load. The workflow is then not offered for start, and the log names the workflow, the form and the field.
 :::
 
 How the field-level flags interact with hide-if:
@@ -215,7 +227,7 @@ When the function raises, when no function of that name exists, or when the retu
 | data models | `get_model("<name>")` opens a model listed in `DATA_MODELS`, and `attach_files` / `clear_files` manage its file fields; see [data-models.md](data-models.md) |
 | connectors | `get_connector("<type>", "<instance>")` in a `with` block opens a configured connection; see [connectors.md](connectors.md) |
 
-Keep service functions short; long-running work belongs in a background task. Task data must stay JSON-serialisable, and values of hidden form fields are removed after every run, so do not rely on them later.
+Keep service functions short; long-running work belongs in a background task. Task data must stay JSON-serialisable, and values of hidden form fields are removed after every run, so do not rely on them later. A field the user emptied stays empty: its `null`, or the empty list of a multi select or list, is kept.
 
 ## Messages and timers
 
