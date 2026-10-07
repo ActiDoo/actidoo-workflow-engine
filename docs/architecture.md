@@ -44,7 +44,7 @@ The engine runs BPMN on top of the SpiffWorkflow library. When an employee start
 
 Form rendering is a distinct layer: form transformation to RJSF. The Enter-Expense `.form` file is transformed once into a JSON schema (the data) and a UI schema (the layout and widgets), and the frontend renders and validates that with RJSF (react-jsonschema-form). The transformed schemas travel frozen with the workflow instance.
 
-Conditional field visibility (hide-if) — for example a travel-details field shown only when the category is Travel — is split across the two sides. The browser evaluates the full FEEL condition on every change and hides the field; on submit the backend re-checks it and drops the values of hidden fields, but with only a subset of FEEL. That subset is equality and boolean logic (`=`, `!=`, `and`, `or`) — no `<` or `>` as the gateway uses. Keep hide-if expressions inside it so browser and backend agree; the how-to and the exact subset are on [workflows.md](workflows.md).
+Conditional field visibility (hide-if) — for example a travel-details field shown only when the category is Travel — is split across the two sides. The browser evaluates the full FEEL condition on every change and hides the field; on submit the backend re-checks it and drops the values of hidden fields, but with only a subset of FEEL. That subset is equality, boolean logic and number comparisons (`=`, `!=`, `and`, `or`, and `<`, `>`, `<=`, `>=` against a number). Keep hide-if expressions inside it so browser and backend agree; a form with one outside it makes its workflow fail to load. The how-to and the exact subset are on [workflows.md](workflows.md).
 
 ## Workflow projects
 
