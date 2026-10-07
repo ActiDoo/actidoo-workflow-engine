@@ -2,27 +2,21 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React, { ReactElement } from 'react';
-import { evaluateHideIfAndFeel, normalizeEmptyStringComparisons } from '@/services/FeelService';
+import {
+  evaluateHideIfAndFeel,
+  evaluateHideIfExpression as evaluateHideIf,
+} from '@/services/FeelService';
 import {
   buildEvaluationContext,
   buildMaskedParentContext,
   resolveHiddenFields,
 } from '@/services/feelContext';
-import { InterpreterContext, unaryTest } from 'feelin';
 import { FieldProps } from '@rjsf/utils';
 import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 
 // Conventions:
 // No key may be named "root", "this", "parent"
 // No key of a Dynamic List may include a "-"
-
-const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
-  try {
-    return unaryTest(normalizeEmptyStringComparisons(expression), { ...(context ?? {}) });
-  } catch {
-    return false;
-  }
-};
 
 const CustomArraySchemaField = (props: FieldProps): ReactElement => {
   const { formData, uiSchema, schema } = props;
