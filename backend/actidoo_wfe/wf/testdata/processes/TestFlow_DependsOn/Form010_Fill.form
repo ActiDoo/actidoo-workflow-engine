@@ -1,0 +1,100 @@
+{
+  "components": [
+    {
+      "label": "CAR type",
+      "values": [
+        {
+          "label": "Car",
+          "value": "car"
+        },
+        {
+          "label": "Truck",
+          "value": "truck"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_car",
+        "columns": 8
+      },
+      "id": "Field_car_type",
+      "key": "car_type"
+    },
+    {
+      "label": "CAR Sub Type",
+      "values": [],
+      "type": "select",
+      "layout": {
+        "row": "Row_car",
+        "columns": 8
+      },
+      "id": "Field_car_sub_type",
+      "key": "car_sub_type",
+      "properties": {
+        "options_function": "get_car_sub_type_options",
+        "depends_on": "car_type"
+      }
+    },
+    {
+      "label": "Vehicles",
+      "components": [
+        {
+          "label": "CAR type",
+          "values": [
+            {
+              "label": "Car",
+              "value": "car"
+            },
+            {
+              "label": "Truck",
+              "value": "truck"
+            }
+          ],
+          "type": "select",
+          "layout": {
+            "row": "Row_vehicle",
+            "columns": 8
+          },
+          "id": "Field_vehicle_car_type",
+          "key": "car_type"
+        },
+        {
+          "label": "CAR Sub Type",
+          "values": [],
+          "type": "select",
+          "layout": {
+            "row": "Row_vehicle",
+            "columns": 8
+          },
+          "id": "Field_vehicle_car_sub_type",
+          "key": "car_sub_type",
+          "properties": {
+            "options_function": "get_car_sub_type_options",
+            "depends_on": "car_type"
+          }
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_vehicles",
+        "columns": 16
+      },
+      "id": "Field_vehicles",
+      "path": "vehicles",
+      "disableCollapse": true
+    }
+  ],
+  "type": "default",
+  "id": "Form010_Fill",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.6.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.38.1"
+  },
+  "schemaVersion": 19
+}

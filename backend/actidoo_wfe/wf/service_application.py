@@ -926,7 +926,7 @@ def search_property_options(
     db: Session,
     user_id: uuid.UUID,
     task_id: uuid.UUID,
-    property_path: list[str],
+    property_path: list[str | int],
     search: str,
     include_value: str | list[str] | None,
     form_data: dict | None,

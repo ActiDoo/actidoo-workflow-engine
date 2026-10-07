@@ -97,7 +97,7 @@ class UserDummy:
             workflow_instance_id=workflow_instance_id,
         )
 
-    def search_options(self, property_path: list[str], search: str, task_id):
+    def search_options(self, property_path: list[str | int], search: str, task_id, form_data: dict | None = None):
         return service_application.search_property_options(
             db=self.db,
             task_id=task_id,

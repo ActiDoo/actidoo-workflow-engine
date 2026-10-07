@@ -170,6 +170,8 @@ def _get_subschema(global_jsonschema: dict, path: list[str]):
     """
     jsonschema = global_jsonschema
     for p in path:
+        if isinstance(p, int):
+            continue
         if "properties" in jsonschema:
             jsonschema = jsonschema["properties"]
         if "items" in jsonschema and "properties" in jsonschema["items"]:

@@ -11,5 +11,8 @@
   },
   "test-flow-dynamic-list-hidden/form010-fill.fixture.json": {
     "form": "TestFlow_DynamicListHidden/Form010_Fill.form"
+  },
+  "test-flow-depends-on/form010-fill.fixture.json": {
+    "form": "TestFlow_DependsOn/Form010_Fill.form"
   }
 }

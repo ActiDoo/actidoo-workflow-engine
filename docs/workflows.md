@@ -103,7 +103,7 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `custom_type` | `select_multi`, `attachment_single`, `attachment_multi` | turns a select into a multi-select, or a field into a single or multi file upload | multiple choices, or file uploads |
 | `options_file` | `<name>.csv` | takes the select's options from `options/<name>.csv` in the workflow directory | a fixed lookup list kept out of the form |
 | `options_function` | function name | takes the select's options from a function `<name>(oth)` in the workflow module | options computed at fill time, e.g. from a data model or connector |
-| `depends_on` | comma-separated top-level keys | the select clears and reloads its options when one of those fields changes | options that depend on another field |
+| `depends_on` | comma-separated keys; inside a dynamic list a key of the same row, otherwise top-level | the select clears and reloads its options when one of those fields changes | options that depend on another field |
 | `options_limit` | integer, default 15, `0` = unlimited | page size of the dynamic-option search | show more or fewer matches |
 | `validation_function` | function name | calls `<name>(vth)` on submit, which can reject the field with a message | checks the schema cannot express, e.g. a lookup |
 | `currency` | symbol, e.g. `EUR` | renders a number field as a currency input | monetary amounts |

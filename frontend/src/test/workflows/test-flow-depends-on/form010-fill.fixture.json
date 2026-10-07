@@ -1,0 +1,151 @@
+{
+  "jsonschema": {
+    "definitions": {},
+    "type": "object",
+    "properties": {
+      "car_type": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "CAR type",
+        "oneOf": [
+          {
+            "const": "car",
+            "title": "Car"
+          },
+          {
+            "const": "truck",
+            "title": "Truck"
+          },
+          {
+            "const": null,
+            "title": "(null)"
+          }
+        ]
+      },
+      "car_sub_type": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "CAR Sub Type",
+        "custom_properties": {
+          "options_function": "get_car_sub_type_options",
+          "depends_on": "car_type"
+        }
+      },
+      "vehicles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "car_type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "CAR type",
+              "oneOf": [
+                {
+                  "const": "car",
+                  "title": "Car"
+                },
+                {
+                  "const": "truck",
+                  "title": "Truck"
+                },
+                {
+                  "const": null,
+                  "title": "(null)"
+                }
+              ]
+            },
+            "car_sub_type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "CAR Sub Type",
+              "custom_properties": {
+                "options_function": "get_car_sub_type_options",
+                "depends_on": "car_type"
+              }
+            }
+          }
+        },
+        "title": "Vehicles"
+      }
+    }
+  },
+  "uischema": {
+    "ui:field": "layout",
+    "ui:layout": {
+      "Row_car": [
+        "car_type",
+        "car_sub_type"
+      ],
+      "vehicles": [
+        "vehicles"
+      ]
+    },
+    "car_type": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "car_type"
+      ],
+      "ui:widget": "SelectStatic"
+    },
+    "car_sub_type": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "car_sub_type"
+      ],
+      "ui:widget": "SelectDynamic",
+      "ui:dependsOn": [
+        "car_type"
+      ]
+    },
+    "vehicles": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_vehicle": [
+            "car_type",
+            "car_sub_type"
+          ]
+        },
+        "car_type": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "vehicles",
+            "car_type"
+          ],
+          "ui:widget": "SelectStatic"
+        },
+        "car_sub_type": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "vehicles",
+            "car_sub_type"
+          ],
+          "ui:widget": "SelectDynamic",
+          "ui:dependsOn": [
+            "car_type"
+          ]
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "True",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": 1,
+      "ui:label": "Vehicles",
+      "ui:copyable": true
+    },
+    "ui:templateMode": "blacklist"
+  }
+}
