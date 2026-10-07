@@ -1,0 +1,42 @@
+{
+  "components": [
+    {
+      "label": "flag_a Label",
+      "type": "checkbox",
+      "key": "flag_a"
+    },
+    {
+      "label": "text_a Label (hidden while flag_a is true)",
+      "type": "textfield",
+      "key": "text_a",
+      "defaultValue": "default text",
+      "conditional": {
+        "hide": "=flag_a = true"
+      }
+    },
+    {
+      "label": "tags_a Label (hidden while flag_a is true)",
+      "values": [
+        {
+          "label": "Value a",
+          "value": "a"
+        },
+        {
+          "label": "Value b",
+          "value": "b"
+        }
+      ],
+      "type": "select",
+      "key": "tags_a",
+      "defaultValue": [
+        "a"
+      ],
+      "properties": {
+        "custom_type": "select_multi"
+      },
+      "conditional": {
+        "hide": "=flag_a = true"
+      }
+    }
+  ]
+}

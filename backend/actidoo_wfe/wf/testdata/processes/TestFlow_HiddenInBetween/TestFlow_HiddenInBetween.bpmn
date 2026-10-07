@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_hb" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_hb">
+    <bpmn:participant id="Participant_hb" name="Hidden in between" processRef="TestFlow_HiddenInBetween" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_HiddenInBetween" name="Hidden in between" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_hb">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_hb</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form010_Clear</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form020_Hide</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form030_Show</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_hb</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_hb">
+      <bpmn:outgoing>Flow_start_clear</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Form010_Clear" name="1 - Clear">
+      <bpmn:incoming>Flow_start_clear</bpmn:incoming>
+      <bpmn:outgoing>Flow_clear_hide</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form020_Hide" name="2 - Hidden">
+      <bpmn:incoming>Flow_clear_hide</bpmn:incoming>
+      <bpmn:outgoing>Flow_hide_show</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form030_Show" name="3 - Shown again">
+      <bpmn:incoming>Flow_hide_show</bpmn:incoming>
+      <bpmn:outgoing>Flow_show_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_hb">
+      <bpmn:incoming>Flow_show_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_clear" sourceRef="StartEvent_hb" targetRef="Form010_Clear" />
+    <bpmn:sequenceFlow id="Flow_clear_hide" sourceRef="Form010_Clear" targetRef="Form020_Hide" />
+    <bpmn:sequenceFlow id="Flow_hide_show" sourceRef="Form020_Hide" targetRef="Form030_Show" />
+    <bpmn:sequenceFlow id="Flow_show_end" sourceRef="Form030_Show" targetRef="EndEvent_hb" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_hb">
+      <bpmndi:BPMNShape id="Participant_hb_di" bpmnElement="Participant_hb" isHorizontal="true">
+        <dc:Bounds x="160" y="100" width="762" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InitLane_di" bpmnElement="InitLane" isHorizontal="true">
+        <dc:Bounds x="190" y="100" width="732" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_hb_di" bpmnElement="StartEvent_hb">
+        <dc:Bounds x="230" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form010_Clear_di" bpmnElement="Form010_Clear">
+        <dc:Bounds x="326" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form020_Hide_di" bpmnElement="Form020_Hide">
+        <dc:Bounds x="486" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form030_Show_di" bpmnElement="Form030_Show">
+        <dc:Bounds x="646" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_hb_di" bpmnElement="EndEvent_hb">
+        <dc:Bounds x="806" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_clear_di" bpmnElement="Flow_start_clear">
+        <di:waypoint x="266" y="200" />
+        <di:waypoint x="326" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_clear_hide_di" bpmnElement="Flow_clear_hide">
+        <di:waypoint x="426" y="200" />
+        <di:waypoint x="486" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_hide_show_di" bpmnElement="Flow_hide_show">
+        <di:waypoint x="586" y="200" />
+        <di:waypoint x="646" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_show_end_di" bpmnElement="Flow_show_end">
+        <di:waypoint x="746" y="200" />
+        <di:waypoint x="806" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
