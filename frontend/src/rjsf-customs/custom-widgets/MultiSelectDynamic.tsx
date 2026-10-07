@@ -11,11 +11,12 @@ import { useParams } from 'react-router-dom';
 import { FilterOptionOption } from 'react-select/dist/declarations/src/filters';
 import { WeComboBox } from '@/utils/components/WeComboBox';
 import { PcValueLabelItem } from '@/models/models';
-import { debounce } from 'lodash';
+import { debounce, isEqual } from 'lodash';
 import { useDispatch } from 'react-redux';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
 import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
+import { getPropertyPath, useDependencyValues } from '@/rjsf-customs/custom-widgets/dependsOn';
 
 const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   const [options, setOptions] = useState<PcValueLabelItem[] | undefined>(undefined);
@@ -23,7 +24,6 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   const [selectedOptions, setSelectedOptions] = useState<PcValueLabelItem[]>([]);
   const [search, setSearch] = useState<string>('');
   const isDisabled = props.disabled ?? props.readonly;
-  const lastValueChangeRef = useRef(Date.now());
   const dispatch = useDispatch();
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
@@ -42,7 +42,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
 
       const res = await fetchPost(getApiUrl('user/search_property_options'), {
         task_id: effectiveTaskId,
-        property_path: props.uiSchema['ui:path'],
+        property_path: getPropertyPath(props.id, props.uiSchema['ui:path']),
         search,
         include_value: props?.value,
         form_data: stripAttachmentPayload((props.registry as any)?.formContext?.formData),
@@ -103,9 +103,6 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   };
 
   useEffect(() => {
-    const now = Date.now();
-    lastValueChangeRef.current = now;
-
     if (!optionsLoaded) {
       debouncedMutate();
       setOptionsLoaded(true);
@@ -115,34 +112,27 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
     // no return value with clean-up code like "debouncedMutate.cancel()"", because that's done in the other useEffect() definition
   }, [props.value, options, optionsLoaded]);
 
-  if (props.uiSchema && 'ui:dependsOn' in props.uiSchema) {
-    const dependsOn = props.uiSchema['ui:dependsOn'];
-    const formContextFormData = (props.registry as any)?.formContext?.formData;
-    // Create the dependency array directly using map and includes methods
-    const effectDeps = dependsOn.map((dep: string) =>
-      formContextFormData && Object.prototype.hasOwnProperty.call(formContextFormData, dep)
-        ? formContextFormData[dep]
-        : null
-    );
+  const effectDeps = useDependencyValues(
+    props.uiSchema?.['ui:dependsOn'],
+    (props.registry as any)?.formContext
+  );
+  const prevDepsRef = useRef(effectDeps);
+  const prevValueRef = useRef(props.value);
 
-    useEffect(() => {
-      const now = Date.now();
-      const timeSinceLastValueChange = now - (lastValueChangeRef.current || 0);
-      // When the data is first filled into the form and there are already values for these fields, then all fields are filled "simultaneously".
-      // Then all Change Events are processed "simultaneously".
-      // Then it is determined that the Dependency field (e.g. Car Type) has changed and the dependent field (e.g. "Car Sub Type") is reset,
-      // so the initial value is gone.
-      // I have solved this with a time check that checks whether the two fields have changed in quick succession and then does not perform a reset.
+  useEffect(() => {
+    const changed = !isEqual(effectDeps, prevDepsRef.current);
+    prevDepsRef.current = effectDeps;
+    if (!changed) return;
+    setSelectedOptions([]);
+    setOptionsLoaded(false);
+    setSearch('');
+    setOptions([]);
+    if (props.value?.length && isEqual(props.value, prevValueRef.current)) props.onChange([]);
+  }, effectDeps);
 
-      if (timeSinceLastValueChange > 1000) {
-        setSelectedOptions([]);
-        setOptionsLoaded(false);
-        setSearch('');
-        setOptions([]);
-        props.onChange('');
-      }
-    }, effectDeps);
-  }
+  useEffect(() => {
+    prevValueRef.current = props.value;
+  });
 
   return (
     <div>

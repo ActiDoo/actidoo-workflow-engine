@@ -7,7 +7,12 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- Forms: `depends_on` works inside dynamic lists. The select reacts to the
+  field of its own row, and the `options_function` sees that row's values.
+  The reset no longer depends on timing: it skipped changes made within a
+  second of the last option load, and so missed quick edits.
 
 ## [0.1.44] - 2026-09-23
 

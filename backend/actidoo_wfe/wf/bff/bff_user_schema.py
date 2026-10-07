@@ -226,7 +226,7 @@ class SearchPropertyOptionsRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     task_id: uuid.UUID
-    property_path: list[str]
+    property_path: list[str | int]
     search: str = Field(default_factory=lambda: "")
     include_value: str | list[str] | None = Field(default_factory=lambda: None)
     form_data: dict | None = Field(default_factory=lambda: None)

@@ -1114,7 +1114,7 @@ def get_lane_mapping(workflow: BpmnWorkflow) -> dict[str, dict]:
 def get_options_for_property(
     workflow: BpmnWorkflow,
     task_id: uuid.UUID,
-    property_path: list[str],
+    property_path: list[str | int],
     form_data: dict | None,
 ) -> list[tuple[str, str]]:
     options_folder = workflow_providers.get_workflow_directory(workflow.spec.name) / "options"
