@@ -1163,6 +1163,16 @@ def test__removing_an_optional_file_clears_the_stored_reference():
     assert stored == {"receipt": None}
 
 
+def test__a_new_file_replaces_a_stored_null():
+    """An earlier step removed the file, so null is stored. A new upload in a later
+    step replaces the null in the merge, at the root and inside a list row."""
+    stored = {"receipt": None, "rows": [{ROW_ID_KEY: "r1", "scan": None}]}
+
+    update(stored, {"receipt": dict(REFERENCE), "rows": [{ROW_ID_KEY: "r1", "scan": dict(REFERENCE)}]})
+
+    assert stored == {"receipt": REFERENCE, "rows": [{ROW_ID_KEY: "r1", "scan": REFERENCE}]}
+
+
 def test__a_required_file_cannot_be_removed():
     result = _validate(_single_upload_form(required=True), {"receipt": None})
 
