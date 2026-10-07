@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_ru" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_ru">
+    <bpmn:participant id="Participant_ru" name="Replace an upload" processRef="TestFlow_ReplaceUpload" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_ReplaceUpload" name="Replace an upload" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_ru">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_ru</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form010_Upload</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form020_Remove</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form030_UploadAgain</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ru</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_ru">
+      <bpmn:outgoing>Flow_start_upload</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Form010_Upload" name="1 - Upload">
+      <bpmn:incoming>Flow_start_upload</bpmn:incoming>
+      <bpmn:outgoing>Flow_upload_remove</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form020_Remove" name="2 - Remove">
+      <bpmn:incoming>Flow_upload_remove</bpmn:incoming>
+      <bpmn:outgoing>Flow_remove_again</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form030_UploadAgain" name="3 - Upload again">
+      <bpmn:incoming>Flow_remove_again</bpmn:incoming>
+      <bpmn:outgoing>Flow_again_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_ru">
+      <bpmn:incoming>Flow_again_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_upload" sourceRef="StartEvent_ru" targetRef="Form010_Upload" />
+    <bpmn:sequenceFlow id="Flow_upload_remove" sourceRef="Form010_Upload" targetRef="Form020_Remove" />
+    <bpmn:sequenceFlow id="Flow_remove_again" sourceRef="Form020_Remove" targetRef="Form030_UploadAgain" />
+    <bpmn:sequenceFlow id="Flow_again_end" sourceRef="Form030_UploadAgain" targetRef="EndEvent_ru" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_ru">
+      <bpmndi:BPMNShape id="Participant_ru_di" bpmnElement="Participant_ru" isHorizontal="true">
+        <dc:Bounds x="160" y="100" width="762" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InitLane_di" bpmnElement="InitLane" isHorizontal="true">
+        <dc:Bounds x="190" y="100" width="732" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_ru_di" bpmnElement="StartEvent_ru">
+        <dc:Bounds x="230" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form010_Upload_di" bpmnElement="Form010_Upload">
+        <dc:Bounds x="326" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form020_Remove_di" bpmnElement="Form020_Remove">
+        <dc:Bounds x="486" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Form030_UploadAgain_di" bpmnElement="Form030_UploadAgain">
+        <dc:Bounds x="646" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_ru_di" bpmnElement="EndEvent_ru">
+        <dc:Bounds x="806" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_upload_di" bpmnElement="Flow_start_upload">
+        <di:waypoint x="266" y="200" />
+        <di:waypoint x="326" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_upload_remove_di" bpmnElement="Flow_upload_remove">
+        <di:waypoint x="426" y="200" />
+        <di:waypoint x="486" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_remove_again_di" bpmnElement="Flow_remove_again">
+        <di:waypoint x="586" y="200" />
+        <di:waypoint x="646" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_again_end_di" bpmnElement="Flow_again_end">
+        <di:waypoint x="746" y="200" />
+        <di:waypoint x="806" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
