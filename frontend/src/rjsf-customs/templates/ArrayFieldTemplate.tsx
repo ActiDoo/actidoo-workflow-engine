@@ -25,8 +25,7 @@ import {
   RJSFSchema,
   StrictRJSFSchema,
 } from '@rjsf/utils';
-import { InterpreterContext } from 'feelin';
-import { memoizedUnaryTest } from '@/services/feelMemo';
+import { evaluateHideIfExpression as evaluateHideIf } from '@/services/FeelService';
 import { fetchPost } from '@/ui5-components';
 import { useTranslation } from '@/i18n';
 import { addToast } from '@/store/ui/actions';
@@ -97,14 +96,6 @@ const loadOverviewLabels = async (
     )
   );
   return labels;
-};
-
-const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
-  try {
-    return memoizedUnaryTest(expression, { ...(context ?? {}) });
-  } catch {
-    return false;
-  }
 };
 
 export default function CustomArrayFieldTemplate<
