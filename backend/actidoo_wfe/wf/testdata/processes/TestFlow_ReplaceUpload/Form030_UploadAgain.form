@@ -1,0 +1,31 @@
+{
+  "components": [
+    {
+      "label": "file_a Label",
+      "type": "textfield",
+      "key": "file_a",
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    },
+    {
+      "label": "Dynamic list (my_list)",
+      "components": [
+        {
+          "label": "file_b Label",
+          "type": "textfield",
+          "key": "file_b",
+          "properties": {
+            "custom_type": "attachment_single"
+          }
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "path": "my_list"
+    }
+  ]
+}

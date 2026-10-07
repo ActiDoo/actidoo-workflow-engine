@@ -252,8 +252,10 @@ def update(dest, upd):
     try:
         for k, v in upd.items():
             if isinstance(v, collections.abc.Mapping):
-                # if the new value is a Mapping too, let's do a simple recursion
-                dest[k] = update(dest.get(k, {}), v)
+                # A new mapping merges into a stored one. Anything else stored there is
+                # replaced - null for an emptied field or a removed file included.
+                stored = dest.get(k)
+                dest[k] = update(stored if isinstance(stored, collections.abc.Mapping) else {}, v)
             elif isinstance(v, list):
                 # consider an empty list [] first:
                 if len(v) == 0:

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_ru" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_ru">
+    <bpmn:participant id="Participant_ru" name="Replace an upload" processRef="TestFlow_ReplaceUpload" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_ReplaceUpload" name="Replace an upload" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_ru">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_ru</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form010_Upload</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form020_Remove</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form030_UploadAgain</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ru</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_ru">
+      <bpmn:outgoing>Flow_start_upload</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Form010_Upload" name="1 - Upload">
+      <bpmn:incoming>Flow_start_upload</bpmn:incoming>
+      <bpmn:outgoing>Flow_upload_remove</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form020_Remove" name="2 - Remove">
+      <bpmn:incoming>Flow_upload_remove</bpmn:incoming>
+      <bpmn:outgoing>Flow_remove_again</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form030_UploadAgain" name="3 - Upload again">
+      <bpmn:incoming>Flow_remove_again</bpmn:incoming>
+      <bpmn:outgoing>Flow_again_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_ru">
+      <bpmn:incoming>Flow_again_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_upload" sourceRef="StartEvent_ru" targetRef="Form010_Upload" />
+    <bpmn:sequenceFlow id="Flow_upload_remove" sourceRef="Form010_Upload" targetRef="Form020_Remove" />
+    <bpmn:sequenceFlow id="Flow_remove_again" sourceRef="Form020_Remove" targetRef="Form030_UploadAgain" />
+    <bpmn:sequenceFlow id="Flow_again_end" sourceRef="Form030_UploadAgain" targetRef="EndEvent_ru" />
+  </bpmn:process>
+</bpmn:definitions>
