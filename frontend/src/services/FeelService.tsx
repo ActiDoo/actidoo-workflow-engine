@@ -293,7 +293,12 @@ export function evaluateHideIfAndFeel(
 /** A path into the form data: property names, list indexes for rows. */
 export type FormPath = Array<string | number>;
 
-const evaluateHideIfForMasking: HideIfEvaluator = (expression, context) => {
+/**
+ * Evaluates one hide-if expression (without its leading '=') the way the form does: a
+ * comparison against "" reads as one against null, and an expression that cannot be
+ * evaluated hides nothing. The rows of a dynamic list and its overview use it too.
+ */
+export const evaluateHideIfExpression: HideIfEvaluator = (expression, context) => {
   try {
     return unaryTest(normalizeEmptyStringComparisons(expression), { ...(context ?? {}) });
   } catch {
@@ -325,7 +330,7 @@ export function collectHiddenPaths(
       ? (formData as Record<string, any>)
       : {};
   const maskedRoot =
-    resolveHiddenFields(uiSchema, rootData, evaluateHideIfForMasking).maskedContext ?? rootData;
+    resolveHiddenFields(uiSchema, rootData, evaluateHideIfExpression).maskedContext ?? rootData;
 
   const walk = (
     levelUiSchema: Record<string, any>,
@@ -357,7 +362,7 @@ export function collectHiddenPaths(
         const { hiddenFields } = resolveHiddenFields(
           itemUiSchema,
           rowContext,
-          evaluateHideIfForMasking
+          evaluateHideIfExpression
         );
         const maskedRow = applyHiddenMask(row, hiddenFields) ?? row;
         walk(itemUiSchema, itemSchema, row, [...path, key, index], rowContext, {

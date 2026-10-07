@@ -22,9 +22,9 @@ import {
   RJSFSchema,
   StrictRJSFSchema,
 } from '@rjsf/utils';
-import { InterpreterContext, unaryTest } from 'feelin';
 import { fetchPost } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
+import { evaluateHideIfExpression as evaluateHideIf } from '@/services/FeelService';
 import {
   buildEvaluationContext,
   buildMaskedParentContext,
@@ -33,14 +33,6 @@ import {
 import { PcValueLabelItem } from '@/models/models';
 import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import _ from 'lodash';
-
-const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
-  try {
-    return unaryTest(expression, { ...(context ?? {}) });
-  } catch {
-    return false;
-  }
-};
 
 export default function CustomArrayFieldTemplate<
   T = any,

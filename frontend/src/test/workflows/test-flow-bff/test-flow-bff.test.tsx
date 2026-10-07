@@ -107,6 +107,20 @@ describe('Test Flow BFF — Form1', () => {
     await expect.element(page.getByText('This field is required')).toBeVisible();
   });
 
+  it('blocks submission when a shown required field with a hide-if holds only whitespace', async () => {
+    const withHideIf = structuredClone(form1);
+    withHideIf.jsonschema.required.push('optional_note');
+    Object.assign(withHideIf.uischema.optional_note, { 'ui:hideif': '=trigger_error = true' });
+    const { submitted, field, submit } = renderTaskForm(withHideIf);
+
+    await field('required_text').fill('Hello BFF');
+    await field('optional_note').fill('   ');
+    await submit();
+
+    expect(submitted).not.toHaveBeenCalled();
+    await expect.element(page.getByText('This field is required')).toBeVisible();
+  });
+
   it('sends an emptied optional field as null, so the stored value is cleared', async () => {
     const { submitted, field, submit } = renderTaskForm(form1);
 

@@ -14,6 +14,7 @@ import {
   collectHiddenPaths,
   dropErrorsOfHiddenFields,
   evaluateHideIfAndFeel,
+  evaluateHideIfExpression,
 } from './FeelService';
 import {
   buildEvaluationContext,
@@ -301,6 +302,29 @@ describe('normalizeEmptyStringComparisons', () => {
 
   it('leaves other string literals alone', () => {
     expect(normalizeEmptyStringComparisons('x = "a" or y != ""')).toBe('x = "a" or y != null');
+  });
+});
+
+describe('evaluateHideIfExpression', () => {
+  // The one evaluator of a single hide-if outside the root rendering: list rows and the
+  // list overview both use it, so the overview hides exactly what the form hides.
+  it('reads a comparison against "" as one against null', () => {
+    expect(evaluateHideIfExpression('comment = ""', {})).toBe(true);
+    expect(evaluateHideIfExpression('comment = ""', { comment: 'x' })).toBe(false);
+    expect(evaluateHideIfExpression('comment != ""', { comment: 'x' })).toBe(true);
+  });
+
+  it('hides nothing for an expression it cannot evaluate', () => {
+    expect(evaluateHideIfExpression('comment = (', {})).toBe(false);
+  });
+
+  it('hides a row field of the overview that the form hides with = ""', () => {
+    const rowUiSchema: any = { note: { 'ui:hideif': '=this.comment = ""' } };
+    const rowContext = buildEvaluationContext({}, { comment: '  ' }, undefined);
+
+    expect(
+      resolveHiddenFields(rowUiSchema, rowContext, evaluateHideIfExpression).hiddenFields
+    ).toEqual(new Set(['note']));
   });
 });
 
@@ -1026,5 +1050,49 @@ describe('collectBlankRequiredPaths', () => {
   it('tolerates data that is not an object', () => {
     expect(collectBlankRequiredPaths(schema, {}, undefined, [])).toEqual([]);
     expect(collectBlankRequiredPaths(schema, {}, 'junk', [])).toEqual([]);
+  });
+
+  it('reports a shown required field with a hide-if, whose required lives in ui:required', () => {
+    const withHideIf: any = {
+      type: 'object',
+      required: ['reason'],
+      properties: {
+        flag: { type: 'boolean' },
+        reason: { type: ['string', 'null'] },
+        rows: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['note'],
+            properties: { skip: { type: 'boolean' }, note: { type: ['string', 'null'] } },
+          },
+        },
+      },
+    };
+    const uiSchema: any = {
+      flag: {},
+      reason: { 'ui:hideif': '=flag = true' },
+      rows: { items: { skip: {}, note: { 'ui:hideif': '=this.skip = true' } } },
+    };
+    // What the task view does before rendering: required moves to ui:required.
+    changeRequiredDefinitionForFieldsWithHideIfDefinition(withHideIf, uiSchema);
+    const blankIn = (data: any): unknown[] =>
+      collectBlankRequiredPaths(
+        withHideIf,
+        uiSchema,
+        data,
+        collectHiddenPaths(uiSchema, withHideIf, data)
+      );
+
+    const shown = {
+      flag: false,
+      reason: '   ',
+      rows: [
+        { skip: false, note: ' ' },
+        { skip: true, note: ' ' },
+      ],
+    };
+    expect(blankIn(shown)).toEqual([['reason'], ['rows', 0, 'note']]);
+    expect(blankIn({ flag: true, reason: '   ', rows: [] })).toEqual([]);
   });
 });
