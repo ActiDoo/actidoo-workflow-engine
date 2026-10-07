@@ -1,0 +1,31 @@
+{
+  "components": [
+    {
+      "label": "text_a Label",
+      "type": "textfield",
+      "key": "text_a",
+      "defaultValue": "default text"
+    },
+    {
+      "label": "tags_a Label",
+      "values": [
+        {
+          "label": "Value a",
+          "value": "a"
+        },
+        {
+          "label": "Value b",
+          "value": "b"
+        }
+      ],
+      "type": "select",
+      "key": "tags_a",
+      "defaultValue": [
+        "a"
+      ],
+      "properties": {
+        "custom_type": "select_multi"
+      }
+    }
+  ]
+}

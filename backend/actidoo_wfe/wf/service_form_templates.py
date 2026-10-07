@@ -80,9 +80,10 @@ def _resolve_task_for_user(db: Session, user_id: uuid.UUID, task_id: uuid.UUID) 
 
 
 def _drop_hidden_fields(resolved: ResolvedTask, data: dict) -> dict:
-    """Drop values of currently hidden fields so they never enter a template."""
+    """Drop values of currently hidden fields so they never enter a template, an empty
+    value included."""
     form_spec = ReactJsonSchemaFormData(jsonschema=resolved.jsonschema, uischema=resolved.uischema)
-    return service_workflow.strip_hidden_field_values(resolved.workflow_name, form_spec, data)
+    return service_form.drop_hidden_fields(form_spec, data)
 
 
 def list_templates(db: Session, user_id: uuid.UUID, task_id: uuid.UUID) -> tuple[list[WorkflowUserFormTemplate], str]:

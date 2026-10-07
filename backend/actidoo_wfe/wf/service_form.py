@@ -121,8 +121,22 @@ def _find_property_upwards(
 # decision tree whose size grows exponentially with its comparisons.
 MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS = 10
 
+# What a hidden field admits in the validation schema. In stored data an empty value
+# only - null, or the empty list of a multi select or list - so a field the user cleared
+# stays cleared while it is hidden; any other value is removed. A submission writes
+# nothing into a hidden field, so the stored value stays. (JSON Schema's false says
+# that too, but jsonschema reports its errors without the path.)
+HIDDEN_FIELD_KEEPS_EMPTY = {"type": ["null", "array"], "maxItems": 0}
+HIDDEN_FIELD_KEEPS_NOTHING = {"not": {}}
 
-def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None):
+
+def _is_removed_value(error) -> bool:
+    """A value the validation removes instead of reporting it: one a hidden field does
+    not admit, or one in a text view, which carries no data (type null)."""
+    return error.schema in (HIDDEN_FIELD_KEEPS_EMPTY, HIDDEN_FIELD_KEEPS_NOTHING) or (error.validator == "type" and error.validator_value == "null")
+
+
+def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None, hidden_field_schema=HIDDEN_FIELD_KEEPS_EMPTY):
     # hier haben wir das jsonschema schon aufgebaut und in den properties zusätzlich "hideif" definiert
     # das müssen wir nun in allOf/if/then konstruke umwandeln
     # Wir iterieren über all properties und gehen rekursiv in array/objects rein.
@@ -152,6 +166,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                     + [
                         key,
                     ],
+                    hidden_field_schema=hidden_field_schema,
                 )
 
             if node.get("hideif", None) is not None:
@@ -159,9 +174,8 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                 # der path zeigt auf den container, in dem die property ist
                 hideif = node.get("hideif")
 
-                else_property = {
-                    "type": "null",
-                }  # Im negativen Fall, setzen wir den Typen auf null, dadurch wird das Feld nicht angezeigt
+                # In the negative case the field is hidden; hidden_field_schema says what it still admits.
+                else_property = dict(hidden_field_schema)
 
                 # A hidden field is replaced by "True" and re-declared inside the allOf then-branch.
                 # A list stays where it is: additionalProperties cleaning and the row-id injection walk
@@ -500,6 +514,7 @@ def _build_nested_schema_for_path(path: list[str], inner_schema: dict):
 def get_jsonschema_for_validation(
     form: ReactJsonSchemaFormData,
     opaque_disabled_fields: bool = False,
+    hidden_field_schema=HIDDEN_FIELD_KEEPS_EMPTY,
 ) -> dict[Any, Any]:
     """Returns the jsonschma used for validation.
     The validation schema needs to be slightly different (remove null fields; do not allow additional properties)
@@ -507,7 +522,7 @@ def get_jsonschema_for_validation(
 
     With ``opaque_disabled_fields`` the content of ``ui:disabled`` fields is not
     validated, but stays visible to hide-if conditions; without it they are
-    treated like regular fields.
+    treated like regular fields. ``hidden_field_schema`` is what a hidden field admits.
     """
 
     schema = copy.deepcopy(form.jsonschema)
@@ -517,7 +532,7 @@ def get_jsonschema_for_validation(
             global_jsonschema=schema,
             global_uischema=uischema,
         )
-    convert_hide_if_props_to_declarative_jsonschema(schema, [])
+    convert_hide_if_props_to_declarative_jsonschema(schema, [], hidden_field_schema=hidden_field_schema)
 
     remove_data_uri_fields(schema)  # type: ignore
 
@@ -1161,6 +1176,10 @@ def validate_task_data(
     value feeds the hide-if evaluation (matching the frontend's FEEL evaluation),
     is not content-validated, and stays in the result so the merge persists it.
 
+    A submission writes nothing into a hidden field. Trusted data keeps an empty value
+    there - null or an empty list - so a field the user cleared stays cleared while it
+    is hidden.
+
     The function returns the cleaned task data together with an error payload."""
 
     log.debug("> validate_task_data")
@@ -1188,9 +1207,11 @@ def validate_task_data(
                 default=default,
             )
 
+    submission = authoritative_disabled_values is not None
     validation_schema = get_jsonschema_for_validation(
         form,
-        opaque_disabled_fields=authoritative_disabled_values is not None,
+        opaque_disabled_fields=submission,
+        hidden_field_schema=HIDDEN_FIELD_KEEPS_NOTHING if submission else HIDDEN_FIELD_KEEPS_EMPTY,
     )
     if authoritative_disabled_values is not None:
         # Submissions legitimately carry row IDs for dynamic-list items. The
@@ -1228,10 +1249,10 @@ def validate_task_data(
     removed = []
     while run_again:
         run_again = False
-        # Remove hidden (type: null) fields via iter_errors, not validate(): an unrelated error
-        # (e.g. a missing required field) must not short-circuit removal of deeper null fields.
+        # Remove values of hidden fields via iter_errors, not validate(): an unrelated error
+        # (e.g. a missing required field) must not short-circuit removal of deeper hidden fields.
         for ex in validator_instance.iter_errors(tracked_task_data):
-            if ex.validator == "type" and ex.validator_value == "null":
+            if _is_removed_value(ex):
                 tracked_task_data = remove_item(tracked_task_data, ex.absolute_path)
                 removed.append(list(ex.absolute_path))
                 run_again = True
@@ -1279,6 +1300,19 @@ def validate_task_data(
         log.debug("< validate_task_data")
 
     return ValidationResult(task_data=untracked_task_data, error_schema=error_schema)
+
+
+def drop_hidden_fields(form: ReactJsonSchemaFormData, data: dict) -> dict:
+    """``data`` without anything in a hidden field, an empty value included - the rule of
+    a submission, for data from the browser that is not stored task data, such as a form
+    template."""
+    validator = jsonschema.Draft202012Validator(get_jsonschema_for_validation(form, hidden_field_schema=HIDDEN_FIELD_KEEPS_NOTHING))
+    data = copy.deepcopy(data)
+    while True:
+        hidden = next((error for error in validator.iter_errors(data) if _is_removed_value(error)), None)
+        if hidden is None:
+            return data
+        data = remove_item(data, hidden.absolute_path)
 
 
 def iterate_and_replace_datauri(json_data, replace_function):

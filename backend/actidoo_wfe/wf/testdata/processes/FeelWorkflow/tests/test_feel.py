@@ -311,14 +311,16 @@ def test_hideif_parent_scope_hides_number_c_in_nested_list(db_engine_ctx, mock_s
 
 
 def test_template_save_and_preview_drop_hidden_fields(db_engine_ctx, mock_send_text_mail):
-    """Conditionally hidden fields must not enter a template, at root and inside nested lists."""
+    """Conditionally hidden fields must not enter a template, at root and inside nested lists,
+    an empty hidden list included."""
     with db_engine_ctx():
         workflow = _start_workflow()
         user_id = workflow.user("initiator").user.id
         task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
         template_data = {
-            "globalA": 1,  # hides globalB (root)
+            "globalA": 1,  # hides globalB and hidden_list (root)
             "globalB": 99,
+            "hidden_list": [],
             "my_list": [
                 {"number_a": 7, "number_b": 1, "my_list_B": [{"number_c": 32, "number_d": 123}]},
             ],
@@ -331,6 +333,7 @@ def test_template_save_and_preview_drop_hidden_fields(db_engine_ctx, mock_send_t
             template_data=template_data,
         )
         assert "globalB" not in preview.applicable_data
+        assert "hidden_list" not in preview.applicable_data
         # Hidden (not "excluded by template rules"), so it is not surfaced as a skipped field either.
         assert "globalB" not in {item["key"] for item in preview.skipped_fields}
         assert "number_c" not in preview.applicable_data["my_list"][0]["my_list_B"][0]
@@ -343,6 +346,7 @@ def test_template_save_and_preview_drop_hidden_fields(db_engine_ctx, mock_send_t
             template_data=template_data,
         )
         assert "globalB" not in row.template_data
+        assert "hidden_list" not in row.template_data
         assert "number_c" not in row.template_data["my_list"][0]["my_list_B"][0]
 
 

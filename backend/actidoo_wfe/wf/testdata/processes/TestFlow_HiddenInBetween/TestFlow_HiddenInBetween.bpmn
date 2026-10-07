@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_hb" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_hb">
+    <bpmn:participant id="Participant_hb" name="Hidden in between" processRef="TestFlow_HiddenInBetween" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_HiddenInBetween" name="Hidden in between" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_hb">
+      <bpmn:lane id="InitLane" name="Init Lane">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent_hb</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form010_Clear</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form020_Hide</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Form030_Show</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_hb</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_hb">
+      <bpmn:outgoing>Flow_start_clear</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Form010_Clear" name="1 - Clear">
+      <bpmn:incoming>Flow_start_clear</bpmn:incoming>
+      <bpmn:outgoing>Flow_clear_hide</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form020_Hide" name="2 - Hidden">
+      <bpmn:incoming>Flow_clear_hide</bpmn:incoming>
+      <bpmn:outgoing>Flow_hide_show</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Form030_Show" name="3 - Shown again">
+      <bpmn:incoming>Flow_hide_show</bpmn:incoming>
+      <bpmn:outgoing>Flow_show_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_hb">
+      <bpmn:incoming>Flow_show_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_clear" sourceRef="StartEvent_hb" targetRef="Form010_Clear" />
+    <bpmn:sequenceFlow id="Flow_clear_hide" sourceRef="Form010_Clear" targetRef="Form020_Hide" />
+    <bpmn:sequenceFlow id="Flow_hide_show" sourceRef="Form020_Hide" targetRef="Form030_Show" />
+    <bpmn:sequenceFlow id="Flow_show_end" sourceRef="Form030_Show" targetRef="EndEvent_hb" />
+  </bpmn:process>
+</bpmn:definitions>
