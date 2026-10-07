@@ -5,10 +5,13 @@
 
 A sequence-flow condition reads a field the data does not hold - never filled, or
 hidden - as null, the way FEEL and a form's hide-if read it, so the gateway routes
-instead of failing the task. Every other expression stays strict: a missing name in
-a collection, a timer or a correlation key is a modelling error and must surface.
-``null`` is the FEEL literal everywhere; ``None`` keeps working too. Expressions
-without a leading ``=`` are plain Python and unchanged.
+instead of failing the task. As in a hide-if, a comparison with null or ``""`` matches
+every empty value: no key, null, blank text and an empty list. Every other expression
+stays strict: a missing name in a collection, a timer or a correlation key is a
+modelling error and must surface. ``null`` is the FEEL literal everywhere; ``None``
+keeps working too. A condition the engine cannot translate correctly fails with a
+message instead of routing. Expressions without a leading ``=`` are plain Python and
+unchanged.
 """
 
 from types import SimpleNamespace
@@ -18,7 +21,7 @@ from SpiffWorkflow.bpmn.script_engine.python_environment import TaskDataEnvironm
 from SpiffWorkflow.bpmn.workflow import BpmnWorkflow
 from SpiffWorkflow.util.task import TaskState
 
-import actidoo_wfe.wf.service_workflow  # noqa: F401 - settles the import order of spiff_customized
+from actidoo_wfe.wf import service_workflow  # also settles the import order of spiff_customized
 from actidoo_wfe.wf.spiff_customized import MyScriptEngine, get_parser, get_serializer
 
 
@@ -121,6 +124,43 @@ def test__null_and_none_are_the_same_literal():
     assert _condition("=approver = null", {"approver": "x"}) is False
 
 
+EMPTY_VALUES = [{}, {"comment": None}, {"comment": ""}, {"comment": "   "}]
+
+
+@pytest.mark.parametrize("data", EMPTY_VALUES)
+@pytest.mark.parametrize("expression", ["=comment = null", '=comment = ""', '="" = comment', "=comment is None"])
+def test__a_comparison_with_null_or_empty_text_matches_every_empty_value(expression, data):
+    """The comment was never filled (no key), emptied (null), or older data holds
+    blank text. A comparison with null or "" treats them all as empty, as a form's
+    hide-if does."""
+    assert _condition(expression, data) is True
+
+
+@pytest.mark.parametrize("data", EMPTY_VALUES)
+@pytest.mark.parametrize("expression", ["=comment != null", '=comment != ""', '="comment" in globals() and comment != ""'])
+def test__a_check_for_a_value_is_false_for_every_empty_value(expression, data):
+    """The other direction, including the guard older workflows use."""
+    assert _condition(expression, data) is False
+
+
+def test__a_check_for_a_value_holds_for_a_value():
+    assert _condition('=comment != ""', {"comment": "x"}) is True
+    assert _condition('="comment" in globals() and comment != ""', {"comment": "x"}) is True
+    assert _condition('=comment = ""', {"comment": "x"}) is False
+
+
+def test__an_empty_list_reads_as_null():
+    """A multi select with nothing chosen is empty, as in a form's hide-if."""
+    assert _condition("=tags = null", {"tags": []}) is True
+    assert _condition("=tags != null", {"tags": ["a"]}) is True
+
+
+@pytest.mark.parametrize("data", [{"amount": ""}, {"amount": "  "}])
+def test__ordering_a_blank_value_is_false(data):
+    """Blank text reads as null, so an ordering comparison with it is false."""
+    assert _condition("=amount > 10", data) is False
+
+
 def test__null_inside_a_string_literal_is_text():
     assert _condition('=status = "null"', {"status": "null"}) is True
     assert _condition("=status = 'null'", {"status": "null"}) is True
@@ -150,6 +190,79 @@ def test__builtins_and_workflow_functions_are_still_reachable():
     assert _condition("=len(items) = 2", {"items": [1, 2]}) is True
     assert _condition("=flag = true", {"flag": True}) is True
     assert _condition('=label() = "x"', {}, label=lambda: "x") is True
+
+
+@pytest.mark.parametrize("name", ["type", "id", "zip", "max", "format", "license", "input", "property"])
+def test__a_missing_field_named_like_a_builtin_reads_as_null(name):
+    """Fields called type or id are common. Missing, such a field is null like any
+    other missing field, not the Python builtin of that name."""
+    assert _condition(f"={name} = null", {}) is True
+    assert _condition(f"={name} != null", {}) is False
+    assert _condition(f"={name} > 5", {}) is False
+    assert not _condition(f"={name}", {})
+
+
+def test__a_builtin_is_reached_by_calling_it():
+    """A call such as max(a, b) still reaches the builtin, and a field the data holds
+    wins over a builtin of the same name."""
+    assert _condition("=max(a, b) = 3", {"a": 1, "b": 3}) is True
+    assert _condition("=any(x > 1 for x in items)", {"items": [1, 2]}) is True
+    assert _condition('=type = "invoice"', {"type": "invoice"}) is True
+
+
+@pytest.mark.parametrize("expression", ["=isinstance(amount, int)", "=isinstance(amount, (int, float))", '=list(map(str, tags)) = ["1", "2"]'])
+def test__builtins_remain_available_as_function_arguments(expression):
+    assert _condition(expression, {"amount": 2, "tags": [1, 2]}) is True
+
+
+@pytest.mark.parametrize("expression", ["=any(len(x) = 99 for len in funcs)", "=all([len(x) = 99 for len in funcs])", "=any(len(x) = 99 for len in funcs if len(x) = 99)", "=(lambda len: len(x))(funcs[0]) = 99"])
+def test__local_bindings_take_precedence_over_builtins(expression):
+    assert _condition(expression, {"funcs": [lambda x: 99], "x": "a"}) is True
+
+
+def test__a_local_binding_does_not_shadow_a_builtin_outside_its_scope():
+    assert _condition("=any(len(x) = 99 for len in funcs) and len(x) = 1", {"funcs": [lambda x: 99], "x": "a"}) is True
+    assert _condition("=isinstance(amount, int)", {"amount": 2, "int": str}) is False
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "=not(approved = true)",
+        "=approved = true and not(rejected = true)",
+        '=not contains("a")',
+        '=contains("a")',
+        "=amount in [1..5]",
+        "=amount in (1..5]",
+    ],
+)
+def test__a_condition_the_engine_cannot_translate_fails_instead_of_routing(expression):
+    """not(...), contains(...) with one argument and ranges become objects that only
+    compare correctly with = or !=. Anywhere else they were always true, or - an open
+    range, 'not contains' - compared the wrong way without a word. Now the condition
+    fails with a message saying what to write instead."""
+    with pytest.raises(ValueError, match="Cannot evaluate the condition .* only works on one side of = or !=; write"):
+        _condition(expression, {"approved": True, "rejected": False, "amount": 3})
+
+
+@pytest.mark.parametrize(
+    ("expression", "amount", "expected"),
+    [
+        ("=amount = (1..5]", 1, False),
+        ("=amount = (1..5]", 5, True),
+        ("=amount = [1..5)", 5, False),
+        ("=amount = [1..5)", 1, True),
+        ("=amount != (1..5]", 1, True),
+    ],
+)
+def test__a_range_on_one_side_of_an_equality_keeps_its_open_ends(expression, amount, expected):
+    """With = or != a range works, and an open end stays open - it used to read as closed."""
+    assert _condition(expression, {"amount": amount}) is expected
+
+
+def test__not_contains_with_two_arguments_is_a_plain_negation():
+    assert _condition('=not contains(comment, "x")', {"comment": "abc"}) is True
+    assert _condition('=not contains(comment, "a")', {"comment": "abc"}) is False
 
 
 def test__any_other_expression_stays_strict_about_missing_names():
@@ -235,6 +348,26 @@ def test__a_gateway_on_a_field_that_was_never_filled_routes(restored):
     assert _reached_end(_gateway_workflow({}, restored)) == "skipped"
     assert _reached_end(_gateway_workflow({"approver": None}, restored)) == "skipped"
     assert _reached_end(_gateway_workflow({"approver": "a@example.com"}, restored)) == "approval"
+
+
+@pytest.mark.parametrize("restored", [False, True])
+def test__a_gateway_on_a_blank_value_routes_like_on_an_empty_field(restored):
+    """Older data can hold blank text where an emptied field is null today."""
+    for data in [{"approver": ""}, {"approver": "  "}]:
+        assert _reached_end(_gateway_workflow(data, restored, '=approver = ""')) == "skipped"
+    assert _reached_end(_gateway_workflow({"approver": "a@example.com"}, restored, '=approver = ""')) == "approval"
+
+
+@pytest.mark.parametrize("restored", [False, True])
+def test__a_gateway_whose_condition_cannot_be_translated_goes_to_error(restored):
+    """The engine puts the gateway in error, where an administrator sees the message
+    and can retry once the model is fixed, instead of taking a route."""
+    workflow = _gateway_workflow({}, restored, "=not(approver = null)")
+
+    assert service_workflow.run_workflow(workflow) is False
+    faulty = service_workflow.get_faulty_tasks(workflow)
+    assert [task.task_spec.bpmn_id for task in faulty] == ["gateway"]
+    assert "Cannot evaluate the condition 'not(approver = null)'" in service_workflow.get_stacktrace(workflow, faulty[0].id)
 
 
 @pytest.mark.parametrize("restored", [False, True])

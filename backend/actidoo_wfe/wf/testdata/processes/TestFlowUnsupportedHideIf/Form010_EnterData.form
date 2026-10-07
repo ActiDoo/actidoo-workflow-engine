@@ -1,0 +1,18 @@
+{
+  "components": [
+    {
+      "subtype": "date",
+      "dateLabel": "due Label",
+      "type": "datetime",
+      "key": "due"
+    },
+    {
+      "label": "detail Label (hidden while due > \"2024-01-01\" - the server cannot evaluate that)",
+      "type": "textfield",
+      "key": "detail",
+      "conditional": {
+        "hide": "=due > \"2024-01-01\""
+      }
+    }
+  ]
+}

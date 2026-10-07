@@ -11,7 +11,8 @@ next to its neighbours. Sections:
    is true, and only a comparison against the ``null`` literal matches the unset case.
    Disabled references take their effective value from the stored data (ADR 010).
    Values submitted for hidden fields are dropped without errors, while visible
-   required fields stay required.
+   required fields stay required. A hide-if the server cannot evaluate fails its
+   form when the workflow definition loads.
 2. Empty values - an emptied field is null, a blank never satisfies ``required``,
    and values are never trimmed.
 
@@ -27,8 +28,9 @@ from pathlib import Path
 import pytest
 
 from actidoo_wfe.wf.constants import ROW_ID_KEY
+from actidoo_wfe.wf.exceptions import UnsupportedHideIfException
 from actidoo_wfe.wf.form_transformation import transform_camunda_form
-from actidoo_wfe.wf.service_form import MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS, normalize_blank_values, validate_task_data
+from actidoo_wfe.wf.service_form import MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS, check_hide_if_conditions, normalize_blank_values, validate_task_data
 from actidoo_wfe.wf.service_workflow import update
 
 OPTIONS_FOLDER = Path(__file__).parent / "options"
@@ -648,12 +650,13 @@ def _mixed_level_form(comparisons: int) -> dict:
 def test__a_mixed_level_condition_has_a_limit_of_comparisons():
     """A condition across levels becomes a decision tree that grows with every
     comparison. Up to the limit it works; above it, the form fails with a clear
-    message instead of building a huge schema."""
+    message when its definition loads instead of building a huge schema."""
     within = _validate(_mixed_level_form(MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS), {"rows": [{"n0": 1, "note": "x"}]})
     assert "note" not in within.task_data["rows"][0]
 
-    with pytest.raises(NotImplementedError, match="at most"):
-        _validate(_mixed_level_form(MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS + 1), {"rows": [{"n0": 1}]})
+    above = transform_camunda_form(_mixed_level_form(MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS + 1))
+    with pytest.raises(UnsupportedHideIfException, match="field rows.note: .*at most"):
+        check_hide_if_conditions(above, "workflow W, form F.form")
 
 
 @pytest.mark.parametrize(
@@ -1011,12 +1014,29 @@ def test__a_number_comparison_on_an_unset_field_does_not_match(condition):
     assert _required_errors(_validate(_amount_form(condition), {})) == {"detail"}
 
 
-@pytest.mark.parametrize("condition", ['=amount > "b"', "=1 < amount < 5"])
-def test__an_unsupported_comparison_is_an_error_not_a_silent_guess(condition):
-    """Ordering against text, or a chain of comparisons, has no server-side meaning.
-    It fails loudly instead of being evaluated as something else."""
-    with pytest.raises(NotImplementedError):
-        _validate(_amount_form(condition), {"amount": 2})
+def _unsupported_form(condition: str) -> dict:
+    return {
+        "components": [
+            {"type": "datetime", "subtype": "date", "dateLabel": "Due", "key": "due"},
+            {"type": "number", "key": "amount"},
+            {"type": "textfield", "key": "name"},
+            {"type": "textfield", "key": "detail", "validate": {"required": True}, "conditional": {"hide": condition}},
+        ],
+    }
+
+
+UNSUPPORTED_CONDITIONS = ['=due > "2024-01-01"', "=1 < amount < 5", '=contains(name,"x")', '="x" in name']
+
+
+@pytest.mark.parametrize("condition", UNSUPPORTED_CONDITIONS)
+def test__a_hide_if_the_server_cannot_evaluate_fails_when_the_definition_loads(condition):
+    """Ordering against text, a chain of comparisons, contains and 'in' have no
+    server-side meaning; they used to be read as '='. The check that runs when a
+    workflow definition is loaded rejects them and names workflow, form and field."""
+    form = transform_camunda_form(_unsupported_form(condition))
+
+    with pytest.raises(UnsupportedHideIfException, match=r"^workflow W, form F\.form, field detail: "):
+        check_hide_if_conditions(form, "workflow W, form F.form")
 
 
 def _tags_form(condition: str) -> dict:
