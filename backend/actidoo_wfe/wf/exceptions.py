@@ -26,6 +26,10 @@ class FormNotFoundException(Exception):
     pass
 
 
+class UnsupportedHideIfException(Exception):
+    """A form holds a hide-if the server cannot evaluate."""
+
+
 class TaskNotFoundException(Exception):
     pass
 
