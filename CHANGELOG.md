@@ -7,6 +7,10 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.45] - 2026-10-08
+
 ### Added
 
 - **When** a user needs the values of one column of a dynamic list in
@@ -338,7 +342,8 @@ releases correspond to the git tags of this repository.
 Last release before this changelog was introduced. See the git history for
 earlier changes.
 
-[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.44...HEAD
+[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.45...HEAD
+[0.1.45]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.44...v0.1.45
 [0.1.44]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.43...v0.1.44
 [0.1.43]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.42...v0.1.43
 [0.1.42]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.41...v0.1.42
