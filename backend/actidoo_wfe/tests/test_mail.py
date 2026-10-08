@@ -65,7 +65,8 @@ def test_graph_transport_gives_up_on_a_gateway_that_never_answers(silent_server,
 
     def send() -> None:
         try:
-            mail._send_via_graph("subject", "content", ["someone@example.com"], {})
+            with mail._graph_transport("subject", mail.MailBody(text="content", html=None), {}) as send:
+                send(["someone@example.com"], [])
             outcome["error"] = None
         except BaseException as error:  # noqa: BLE001 - inspected in the main thread
             outcome["error"] = error
@@ -129,6 +130,7 @@ def test_smtp_sets_cc_header(smtp_server):
         recipient_or_recipients_list=["to@example.com"],
         attachments={},
         cc_recipient_or_recipients_list=["cc1@example.com", "cc2@example.com"],
+        recipients_see_each_other=True,
     )
 
     assert sent is True
@@ -138,7 +140,7 @@ def test_smtp_sets_cc_header(smtp_server):
 
 
 def test_smtp_accepts_single_cc_string_and_omits_header_without_cc(smtp_server):
-    mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list="cc@example.com")
+    mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list="cc@example.com", recipients_see_each_other=True)
     assert _sent_message(smtp_server)["Cc"] == "cc@example.com"
 
     smtp_server.reset_mock()
@@ -155,7 +157,7 @@ def test_smtp_ignores_empty_cc(smtp_server, cc):
 def test_override_recipients_drop_cc(smtp_server, monkeypatch):
     monkeypatch.setattr(settings, "email_override_recipients_list", ["dev@example.com"])
 
-    mail.send_text_mail("Hi", "Body", ["to@example.com"], {}, cc_recipient_or_recipients_list=["cc@example.com"])
+    mail.send_text_mail("Hi", "Body", ["to@example.com"], {}, cc_recipient_or_recipients_list=["cc@example.com"], recipients_see_each_other=True)
 
     message = _sent_message(smtp_server)
     assert message["To"] == "dev@example.com"
@@ -173,13 +175,14 @@ def test_graph_without_cc_sends_one_mail_per_recipient(graph_client):
     assert all(p["ccRecipients"] == [] for p in payloads)
 
 
-def test_graph_with_cc_sends_single_mail_with_all_recipients(graph_client):
+def test_graph_with_recipients_see_each_other_sends_single_mail_with_all_recipients(graph_client):
     mail.send_text_mail(
         "Hi",
         "Body",
         ["a@example.com", "b@example.com"],
         {"file.txt": io.BytesIO(b"data")},
         cc_recipient_or_recipients_list="cc@example.com",
+        recipients_see_each_other=True,
     )
 
     graph_client.post.assert_called_once()
@@ -201,13 +204,40 @@ def test_graph_ignores_empty_cc(graph_client, cc):
     assert all(p["ccRecipients"] == [] for p in payloads)
 
 
+def test_smtp_without_recipients_see_each_other_sends_one_mail_per_recipient(smtp_server):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {})
+
+    assert [call.args[0]["To"] for call in smtp_server.send_message.call_args_list] == ["a@example.com", "b@example.com"]
+
+
+def test_smtp_with_recipients_see_each_other_sends_single_mail_with_all_recipients(smtp_server):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {}, recipients_see_each_other=True)
+
+    assert _sent_message(smtp_server)["To"] == "a@example.com, b@example.com"
+
+
+def test_cc_without_recipients_see_each_other_is_rejected_also_on_test_systems(monkeypatch):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
+    monkeypatch.setattr(settings, "email_override_recipients_list", ["dev@example.com"])
+
+    with pytest.raises(ValueError, match="recipients_see_each_other"):
+        mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list="cc@example.com")
+
+
+@pytest.mark.parametrize("recipients", ["", " ", [], [""], [None]])
+def test_mail_without_recipient_is_rejected(smtp_server, recipients):
+    with pytest.raises(ValueError):
+        mail.send_text_mail("Hi", "Body", recipients, {})
+    smtp_server.send_message.assert_not_called()
+
+
 def test_skipped_sending_logs_cc(monkeypatch, caplog):
     monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
     monkeypatch.setattr(settings, "email_override_recipients_enable", False)
     monkeypatch.setattr(settings, "email_override_recipients_list", [])
 
     with caplog.at_level("INFO", logger="actidoo_wfe.helpers.mail"):
-        sent = mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list=["cc@example.com"])
+        sent = mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list=["cc@example.com"], recipients_see_each_other=True)
 
     assert sent is False
     assert "cc: 'cc@example.com'" in caplog.text

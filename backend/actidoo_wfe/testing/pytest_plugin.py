@@ -181,6 +181,8 @@ def mock_send_text_mail():
         cc_recipient_or_recipients_list=None,
         body_format="text",
         text_alternative=None,
+        *,
+        recipients_see_each_other=False,
     ):
         email = {
             "subject": subject,
@@ -190,6 +192,7 @@ def mock_send_text_mail():
             "attachments": attachments,
             "body_format": body_format,
             "text_alternative": text_alternative,
+            "recipients_see_each_other": recipients_see_each_other,
         }
         emails.append(email)
         log_email(subject, content, recipient_or_recipients_list, attachments, cc_recipient_or_recipients_list, body_format)

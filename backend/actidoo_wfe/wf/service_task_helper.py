@@ -145,11 +145,14 @@ class ServiceTaskHelper:
         cc_recipient_or_recipients_list: list[str] | str | None = None,
         body_format: mail_helpers.BodyFormat = "text",
         text_alternative: str | None = None,
+        *,
+        recipients_see_each_other: bool = False,
     ):
         """
         Sends a mail. With body_format="markdown" the content is rendered to HTML, raw HTML in it is
         escaped and links can be written as [text](url). Escape values taken from task data with
         escape_markdown() so they render literally. body_format="html" sends the content unchanged.
+        Each recipient gets a mail of their own unless recipients_see_each_other is set; cc needs it.
         """
         return mail_helpers.send_mail(
             subject=subject,
@@ -159,6 +162,7 @@ class ServiceTaskHelper:
             cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
             body_format=body_format,
             text_alternative=text_alternative,
+            recipients_see_each_other=recipients_see_each_other,
         )
 
     def send_text_mail(
@@ -168,6 +172,8 @@ class ServiceTaskHelper:
         recipient_or_recipients_list: list[str] | str,
         attachments: dict[str, io.BytesIO],
         cc_recipient_or_recipients_list: list[str] | str | None = None,
+        *,
+        recipients_see_each_other: bool = False,
     ):
         return self.send_mail(
             subject=subject,
@@ -176,6 +182,7 @@ class ServiceTaskHelper:
             attachments=attachments,
             cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
             body_format="text",
+            recipients_see_each_other=recipients_see_each_other,
         )
 
     @staticmethod

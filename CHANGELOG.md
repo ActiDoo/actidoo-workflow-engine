@@ -32,10 +32,11 @@ releases correspond to the git tags of this repository.
   of:
   - Before: a mail had only direct recipients.
   - Now: `sth.send_mail` and `sth.send_text_mail` take cc recipients, one
-    address or a list. Empty cc values are ignored. A mail with cc goes out
-    once to all recipients, so everyone sees who got it. Without cc, the
-    Graph transport still sends one mail per recipient. When the recipient
-    override of a test system is on, the cc recipients are dropped too.
+    address or a list, together with `recipients_see_each_other=True`. The
+    mail then goes out once to all recipients, so everyone sees who got it.
+    Cc without that flag fails. Empty cc values are ignored. When the
+    recipient override of a test system is on, the cc recipients are
+    dropped too.
 - **When** a mail from a service task should show a long link, for example
   to a OneDrive or SharePoint document:
   - Before: mails were plain text. The long link stood in the text as it is.
@@ -78,8 +79,18 @@ releases correspond to the git tags of this repository.
   fixture:
   - Before: it recorded subject, content, recipients and attachments of
     plain-text mails.
-  - Now: it records mails of every body format, and also their body format
-    and cc recipients.
+  - Now: it records mails of every body format, and also their body format,
+    cc recipients and `recipients_see_each_other`.
+- **When** a mail goes to several recipients over the SMTP transport:
+  - Before: it went out as one mail, so every recipient saw all addresses.
+    The Graph transport sent one mail per recipient.
+  - Now: SMTP also sends one mail per recipient. `recipients_see_each_other=True`
+    sends one mail to everyone, with both transports.
+- **When** a mail has no recipient left, for example only empty addresses:
+  - Before: Graph sent nothing and reported success; SMTP handed a mail with
+    an empty recipient to the server.
+  - Now: sending fails with an error, also on test systems with the
+    recipient override and when sending is skipped.
 
 ### Fixed
 
