@@ -7,7 +7,25 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **When** a select gets its options from a file or a function:
+  - Before: it showed at most 15 options (or `options_limit`). Other matches
+    appeared only after typing a search.
+  - Now: it loads 50 options at a time (or `options_limit`) and loads the
+    next ones when the user scrolls to the end of the list.
+    `options_limit: 0` still loads all options at once.
+- **When** the fields of a form row have a width set in the Modeler:
+  - Before: the width was ignored. The fields shared the row equally, and a
+    row of four fields showed one field per line.
+  - Now: each field gets its width from the Modeler. Fields without a width
+    share the rest of the row; a row of four such fields sits side by side.
+    On small screens every field still takes the full width.
+- **When** a text view contains Markdown headings:
+  - Before: headings of level 4 to 6 had the same small size and looked much
+    like field labels.
+  - Now: every level has its own size or style, so headings stand out from
+    field labels.
 
 ## [0.1.44] - 2026-09-23
 

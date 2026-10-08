@@ -104,7 +104,7 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `options_file` | `<name>.csv` | takes the select's options from `options/<name>.csv` in the workflow directory | a fixed lookup list kept out of the form |
 | `options_function` | function name | takes the select's options from a function `<name>(oth)` in the workflow module | options computed at fill time, e.g. from a data model or connector |
 | `depends_on` | comma-separated top-level keys | the select clears and reloads its options when one of those fields changes | options that depend on another field |
-| `options_limit` | integer, default 15, `0` = unlimited | page size of the dynamic-option search | show more or fewer matches |
+| `options_limit` | integer, default 50, `0` = all at once | how many dynamic options the select loads at a time | load fewer options at a time, or all at once |
 | `validation_function` | function name | calls `<name>(vth)` on submit, which can reject the field with a message | checks the schema cannot express, e.g. a lookup |
 | `currency` | symbol, e.g. `EUR` | renders a number field as a currency input | monetary amounts |
 | `template_field` | `true` / `false` | includes or excludes the field from saved form templates | control what a [form template](glossary.md#form-template) captures |
@@ -152,7 +152,7 @@ def categories(oth):
     return [("cat_alpha", "Alpha Category"), ("cat_beta", "Beta Category")]
 ```
 
-Dynamic options are searched on the server and cut to `options_limit`. On submit the value must be one of the options; for a function, the function runs again with the submitted data. Option labels from files and functions are not translated by the engine.
+Dynamic options are searched on the server and sent in pages of `options_limit` options. The select loads the next page when the user scrolls to the end of the list. For every page the server reads the whole file or runs the whole function again and sends only that page. On submit the value must be one of the options; for a function, the function runs again with the submitted data. Option labels from files and functions are not translated by the engine.
 
 ### Validation functions
 
