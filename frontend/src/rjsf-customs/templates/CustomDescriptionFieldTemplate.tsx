@@ -31,7 +31,7 @@ export default function CustomDescriptionFieldTemplate<
 
   if (uiOptions.enableMarkdownInDescription && typeof description === 'string') {
     return (
-      <div id={id} className="mb-3">
+      <div id={id} className="mb-3 pc-markdown">
         <Markdown>{description}</Markdown>
       </div>
     );

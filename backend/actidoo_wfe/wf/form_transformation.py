@@ -199,6 +199,7 @@ def _insert_single_component(
         _handle_default_value(component, jsonschema, key)
         _handle_layout(component, uischema, key)
         _create_ui_schema_key(component, jsonschemapath, uischema, key, markdown=False)
+        _handle_columns(component, uischema, key)
         _handle_conditional_hide(component, uischema, jsonschema, key)
         _handle_disable(component, uischema, jsonschema, key)
 
@@ -234,6 +235,7 @@ def _insert_single_component(
         _handle_validate(component, jsonschema, key)
         _handle_layout(component, uischema, key)
         _create_ui_schema_key(component, jsonschemapath, uischema, key, markdown=False)
+        _handle_columns(component, uischema, key)
         _handle_conditional_hide(component, uischema, jsonschema, key)
         _handle_disable(component, uischema, jsonschema, key)
         uischema[key].update(
@@ -264,6 +266,8 @@ def _insert_single_component(
     _handle_layout(component, uischema, key)
 
     _create_ui_schema_key(component, jsonschemapath, uischema, key)
+
+    _handle_columns(component, uischema, key)
 
     _handle_conditional_hide(component, uischema, jsonschema, key)
 
@@ -459,6 +463,14 @@ def _handle_layout(component, uischema, key):
     if row not in uischema["ui:layout"]:
         uischema["ui:layout"][row] = []
     uischema["ui:layout"][row].append(key)
+
+
+def _handle_columns(component, uischema, key):
+    columns = (component.get("layout") or {}).get("columns")
+    if isinstance(columns, str) and columns.isdigit():
+        columns = int(columns)
+    if isinstance(columns, int) and not isinstance(columns, bool) and columns > 0:
+        uischema[key]["ui:columns"] = columns
 
 
 def _handle_validate(component, jsonschema, key):

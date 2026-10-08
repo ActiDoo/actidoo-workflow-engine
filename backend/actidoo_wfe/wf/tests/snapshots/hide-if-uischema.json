@@ -44,7 +44,8 @@
                 "ui:path": [
                     "employees",
                     "employee"
-                ]
+                ],
+                "ui:columns": 5
             },
             "region": {
                 "ui:description": "",
@@ -53,6 +54,7 @@
                     "employees",
                     "region"
                 ],
+                "ui:columns": 5,
                 "ui:hideif": "=this.employee=\"intern\"\nor this.employee = null"
             }
         },
@@ -77,7 +79,8 @@
                 "ui:path": [
                     "assets",
                     "asset"
-                ]
+                ],
+                "ui:columns": 5
             }
         },
         "ui:arrayAddButtonText": "Add",

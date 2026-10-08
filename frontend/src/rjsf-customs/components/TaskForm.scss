@@ -102,6 +102,45 @@
     font-size: var(--sapFontHeader3Size);
   }
 
+  .pc-markdown {
+    h1 {
+      font-size: var(--sapFontHeader3Size);
+    }
+
+    h2 {
+      font-size: var(--sapFontHeader4Size);
+    }
+
+    h3 {
+      font-size: 1.125rem;
+    }
+
+    h4 {
+      font-size: var(--sapFontHeader5Size);
+    }
+
+    h4,
+    h5,
+    h6 {
+      margin-top: 16px;
+    }
+
+    h5,
+    h6 {
+      font-size: var(--sapFontHeader6Size);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    h6 {
+      color: var(--color-neutral-700);
+    }
+
+    > :first-child {
+      margin-top: 0;
+    }
+  }
+
   .rjsf-field-null {
     label {
       display: none;

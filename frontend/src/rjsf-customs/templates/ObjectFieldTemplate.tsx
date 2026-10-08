@@ -11,6 +11,7 @@ import {
   titleId,
 } from '@rjsf/utils';
 import React, { ReactElement } from 'react';
+import { computeColumnClasses } from '@/rjsf-customs/templates/layoutColumns';
 
 export function CustomObjectFieldTemplate<
   T = any,
@@ -28,9 +29,6 @@ export function CustomObjectFieldTemplate<
     options
   );
   const layout = uiSchema ? uiSchema['ui:layout'] : undefined;
-  const generateClassCol = (length: number): string =>
-    length > 4 ? 'col-lg-3' : length === 3 ? 'col-lg-4' : length === 2 ? 'col-lg-6' : 'col-md-12';
-
   return (
     <div>
       {title && (
@@ -50,12 +48,14 @@ export function CustomObjectFieldTemplate<
             const items = itemNames.map(name => {
               return properties.find(p => p.name === name);
             });
-            const classColl = generateClassCol(items.length);
+            const columnClasses = computeColumnClasses(
+              itemNames.map(name => uiSchema?.[name]?.['ui:columns'])
+            );
             return items.some(i => !i?.hidden) ? (
-              <div className="row" key={`pc-row-${rowId}`}>
+              <div className="row align-items-end" key={`pc-row-${rowId}`}>
                 {items.map((item, index) => {
                   return (
-                    <div className={classColl} key={`pc-col-${item?.name}-${index}`}>
+                    <div className={columnClasses[index]} key={`pc-col-${item?.name}-${index}`}>
                       {item?.content}
                     </div>
                   );
