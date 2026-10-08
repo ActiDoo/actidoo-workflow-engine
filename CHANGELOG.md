@@ -9,9 +9,14 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
-- Forms: a number field selects its value on focus, so typing replaces a
-  prefilled default. Emptying the field no longer brings the default back
-  right away; it only returns when the field is left empty.
+- **When** a user clicks or tabs into a number field that already has a
+  value:
+  - Before: typing added to the value, so the user had to delete it first.
+  - Now: the value is selected, so typing replaces it.
+- **When** a user empties a number field that has a default value:
+  - Before: the default came back at once, so the field could not be emptied.
+  - Now: the field stays empty while the user is in it. The default comes
+    back only when the user leaves the field empty.
 
 ## [0.1.44] - 2026-09-23
 
