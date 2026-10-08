@@ -9,12 +9,18 @@ releases correspond to the git tags of this repository.
 
 ### Added
 
-- Forms: the Camunda Modeler's file picker is supported as upload field -
-  single or multiple files, required, disabled and hide-if. Its "Supported
-  file formats" (`accept`) restricts the file types in the browser and on
-  submit; a text field upload (`custom_type: attachment_*`) takes the same
-  `accept` as custom property. FEEL expressions in `multiple` / `accept` are
-  rejected when the form is loaded. Demo workflow: `TestFlowDemoFormUpload`.
+- **When** a form needs a file upload:
+  - Before: only a text field with the custom property
+    `custom_type: attachment_single` or `attachment_multi` became an upload
+    field. The Modeler's file picker showed up as a plain text field. The
+    allowed file types could not be limited.
+  - Now: the Modeler's file picker is an upload field for one or several
+    files. Required, disabled and hide-if work as for other fields. Its
+    "Supported file formats" limits the file types: the browser offers only
+    those files, and on submit the server checks each file's name and
+    declared type. A text field upload takes the same list as the custom
+    property `accept`. A FEEL expression in "Upload multiple files" or
+    "Supported file formats" makes the workflow fail to load.
 
 ## [0.1.44] - 2026-09-23
 
