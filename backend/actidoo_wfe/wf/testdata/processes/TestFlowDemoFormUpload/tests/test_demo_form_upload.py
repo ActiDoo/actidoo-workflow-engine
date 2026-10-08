@@ -66,4 +66,4 @@ def test__a_file_type_outside_accept_is_rejected(db_engine_ctx, mock_send_text_m
                 task_data={**FORM_DATA, field: value},
                 workflow_instance_id=workflow.workflow_instance_id,
             )
-        assert field in exc_info.value.error_schema
+        assert "__errors" in exc_info.value.error_schema[field]
