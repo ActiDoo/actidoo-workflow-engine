@@ -1,4 +1,4 @@
-# ADR 013: Mail Body Formats
+# ADR 014: Mail Body Formats
 
 **Status:** Implemented
 **Date:** 2026-09-17

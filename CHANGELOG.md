@@ -17,7 +17,7 @@ releases correspond to the git tags of this repository.
   one per recipient; without cc the Graph transport still sends one mail per
   recipient as before. The recipient override for dev environments drops the
   cc addresses along with the recipients.
-- Mails from service tasks can carry Markdown or HTML (ADR 013).
+- Mails from service tasks can carry Markdown or HTML (ADR 014).
   `sth.send_mail(..., body_format="markdown")` renders the body to HTML,
   so a long OneDrive or SharePoint link can sit behind a short link text;
   the Markdown source travels as the plain-text alternative. Raw HTML in a
