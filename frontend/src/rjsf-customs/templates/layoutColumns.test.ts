@@ -4,62 +4,44 @@
 import { computeColumnClasses } from '@/rjsf-customs/templates/layoutColumns';
 
 describe('computeColumnClasses', () => {
-  it('keeps equal widths when no field has explicit columns', () => {
-    expect(computeColumnClasses([undefined])).toEqual(['col-md-12']);
-    expect(computeColumnClasses([undefined, undefined])).toEqual(['col-lg-6', 'col-lg-6']);
-    expect(computeColumnClasses([undefined, undefined, undefined])).toEqual([
-      'col-lg-4',
-      'col-lg-4',
-      'col-lg-4',
+  it('gives a field with columns exactly that many sixteenths', () => {
+    expect(computeColumnClasses([2, 2, 2, 2])).toEqual([
+      'pc-col-2',
+      'pc-col-2',
+      'pc-col-2',
+      'pc-col-2',
     ]);
-    expect(computeColumnClasses([undefined, undefined, undefined, undefined])).toEqual([
-      'col-lg-3',
-      'col-lg-3',
-      'col-lg-3',
-      'col-lg-3',
-    ]);
-  });
-
-  it('converts 16th ratios to 12th ratios', () => {
-    expect(computeColumnClasses([12, 4])).toEqual(['col-lg-9', 'col-lg-3']);
-    expect(computeColumnClasses([3, 13])).toEqual(['col-lg-2', 'col-lg-10']);
-    expect(computeColumnClasses([8, 8])).toEqual(['col-lg-6', 'col-lg-6']);
-    expect(computeColumnClasses([4, 4, 4, 4])).toEqual([
-      'col-lg-3',
-      'col-lg-3',
-      'col-lg-3',
-      'col-lg-3',
-    ]);
+    expect(computeColumnClasses([12, 4])).toEqual(['pc-col-12', 'pc-col-4']);
+    expect(computeColumnClasses([3, 13])).toEqual(['pc-col-3', 'pc-col-13']);
   });
 
   it('does not stretch fields that do not fill the row', () => {
-    expect(computeColumnClasses([4])).toEqual(['col-lg-3']);
-    expect(computeColumnClasses([8])).toEqual(['col-lg-6']);
-    expect(computeColumnClasses([7, 7])).toEqual(['col-lg-5', 'col-lg-5']);
+    expect(computeColumnClasses([4])).toEqual(['pc-col-4']);
+    expect(computeColumnClasses([7, 7])).toEqual(['pc-col-7', 'pc-col-7']);
   });
 
-  it('lets fields without columns share the remaining space', () => {
-    expect(computeColumnClasses([4, undefined])).toEqual(['col-lg-3', 'col-lg-9']);
+  it('lets fields without columns share the rest of the row', () => {
+    expect(computeColumnClasses([undefined])).toEqual(['pc-col']);
+    expect(computeColumnClasses([undefined, undefined, undefined, undefined])).toEqual([
+      'pc-col',
+      'pc-col',
+      'pc-col',
+      'pc-col',
+    ]);
     expect(computeColumnClasses([undefined, 4, undefined])).toEqual([
-      'col-lg-5',
-      'col-lg-3',
-      'col-lg-4',
+      'pc-col',
+      'pc-col-4',
+      'pc-col',
     ]);
     expect(computeColumnClasses([5, 5, 4, undefined])).toEqual([
-      'col-lg-4',
-      'col-lg-4',
-      'col-lg-3',
-      'col-lg-1',
+      'pc-col-5',
+      'pc-col-5',
+      'pc-col-4',
+      'pc-col',
     ]);
   });
 
-  it('falls back to equal widths when explicit columns leave no room for auto fields', () => {
-    expect(computeColumnClasses([16, undefined])).toEqual(['col-lg-6', 'col-lg-6']);
-  });
-
-  it('never exceeds twelve columns per row', () => {
-    const classes = computeColumnClasses([5, 5, 6]);
-    const total = classes.reduce((sum, c) => sum + Number(c.replace('col-lg-', '')), 0);
-    expect(total).toBe(12);
+  it('caps a width at the full row', () => {
+    expect(computeColumnClasses([20])).toEqual(['pc-col-16']);
   });
 });

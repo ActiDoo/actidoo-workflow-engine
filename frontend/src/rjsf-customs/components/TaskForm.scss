@@ -30,6 +30,21 @@
     margin-bottom: 1rem !important;
   }
 
+  // Field widths from the Camunda Modeler, which lays out a row on 16 columns (see
+  // layoutColumns.ts). Below Bootstrap's lg breakpoint every field takes the full width.
+  @media (min-width: 992px) {
+    .pc-col {
+      flex: 1 0 0%;
+    }
+
+    @for $n from 1 through 16 {
+      .pc-col-#{$n} {
+        flex: 0 0 auto;
+        width: calc(100% * #{$n} / 16);
+      }
+    }
+  }
+
   .form-control:focus {
     box-shadow: inherit !important;
     border-color: var(--color-brand-primary);
