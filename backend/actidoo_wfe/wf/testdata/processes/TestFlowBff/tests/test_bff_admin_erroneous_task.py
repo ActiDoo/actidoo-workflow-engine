@@ -226,7 +226,7 @@ class TestRetryOutcome:
 
 
 class TestErroneousLastStep:
-    """A failing step right before the end event leaves nothing unfinished in
+    """A failing step with no end event behind it leaves nothing unfinished in
     the engine's sense, since an erroneous task counts as finished there."""
 
     def test_an_instance_with_an_erroneous_task_is_not_completed(self, db_engine_ctx, probe):
