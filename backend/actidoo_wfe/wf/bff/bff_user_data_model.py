@@ -11,9 +11,10 @@ responses. The list and version-chain routes build their typed table-query schem
 (sorting/filter fields) per request from the model's schema — a single dynamic
 route per endpoint, no per-model route generation or startup wiring.
 
-Route order matters: the literal sub-paths (``export.csv``, ``processes``) are
-declared before the ``/{model_name}/{row_id}`` version-chain route so a path like
-``/DemoExpense/export.csv`` is never captured by the version-chain parameter.
+Route order matters: the literal sub-path ``processes`` is declared before the
+``/{model_name}/{row_id}`` version-chain route so it is never captured by the
+version-chain parameter. The downloads live on their own router, which is
+included first, so ``/DemoExpense/export.csv`` is matched before that route too.
 """
 
 from __future__ import annotations
@@ -87,6 +88,18 @@ workflow_data_router = APIRouter(
     ],
 )
 
+# The browser opens these by navigation (a link, a new tab), which cannot carry
+# the version header. They only read, and the bundle never parses what they
+# return, so they stay outside the version check (ADR 011).
+workflow_data_download_router = APIRouter(
+    prefix="/workflow-data",
+    tags=["workflow-data"],
+    dependencies=[
+        Depends(require_realm_role("wf-user")),
+        Depends(_map_domain_errors),
+    ],
+)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -139,7 +152,7 @@ def list_models(
 # ---------------------------------------------------------------------------
 
 
-@workflow_data_router.get("/{model_name}/export.csv", name="export_data_model_csv")
+@workflow_data_download_router.get("/{model_name}/export.csv", name="export_data_model_csv")
 def export_data_model_csv(
     data_model: Annotated[DataModelDescriptor, Depends(get_data_model)],
     request: Request,
@@ -174,7 +187,7 @@ def list_data_model_processes(
     return service_data_model.list_processes_for_model(db=db, user_id=user.id, data_model=data_model)
 
 
-@workflow_data_router.get(
+@workflow_data_download_router.get(
     "/{model_name}/{row_id}/versions/{version}/attachments/{file_hash}",
     name="download_data_model_attachment",
 )

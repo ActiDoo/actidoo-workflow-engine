@@ -24,7 +24,7 @@ The general shape of the problem outlives this one change: whenever the data con
 
 The comparison is equality rather than a minimum, so a bundle *newer* than the engine is refused too. That is the rollback case: after the engine is rolled back, the browsers still hold the newer bundle, and a minimum check would wave it through to speak a contract the engine no longer knows.
 
-Authentication, the machine-to-machine API and the version endpoint itself stay ungated. A blocked client has to remain able to find out that it is blocked, and why.
+Authentication, the machine-to-machine API and the version endpoint itself stay ungated. A blocked client has to remain able to find out that it is blocked, and why. File downloads that the browser opens directly, as a link or in a new tab, stay ungated too. Such a request cannot carry the header, it only reads, and the bundle never interprets what comes back.
 
 **The client also asks, rather than only being told.** The engine publishes its contract version on an unauthenticated endpoint, and a running tab polls it, so a stale tab is gated before the user invests more work into a form that can no longer be submitted. A failed request proves nothing about the contract and is ignored. Once a client has established that it is stale it stays gated until it is reloaded: during a rolling deploy a poll can reach old and new instances in turn, and a gate that reopens is worse than one that asks for a reload once.
 
@@ -37,3 +37,7 @@ Authentication, the machine-to-machine API and the version endpoint itself stay 
 ## Consequences
 
 - Bumping the version deliberately locks out every tab that is still open. That is the point, and it is the cost: a breaking deploy produces a wave of users who have to reload.
+
+## Amendments
+
+**2026-10-08:** File downloads that the browser opens directly are exempt from the check. They were gated from the start, which broke the CSV export and attachment downloads of the data view: a link or a new tab cannot send the header.

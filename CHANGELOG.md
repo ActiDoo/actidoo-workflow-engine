@@ -101,6 +101,10 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
+- **When** a user exports a data table as CSV or downloads a file from it:
+  - Before: since 0.1.42 the server refused the request, because the browser
+    opens it directly and cannot send the client version (ADR 011).
+  - Now: both work again. They only read, so they need no version.
 - **When** a user clicks or tabs into a number field that already has a
   value:
   - Before: typing added to the value, so the user had to delete it first.
