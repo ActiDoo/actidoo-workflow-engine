@@ -146,6 +146,7 @@ class ServiceTaskHelper:
         body_format: mail_helpers.BodyFormat = "text",
         text_alternative: str | None = None,
         *,
+        bcc_recipient_or_recipients_list: list[str] | str | None = None,
         recipients_see_each_other: bool = False,
     ):
         """
@@ -153,6 +154,7 @@ class ServiceTaskHelper:
         escaped and links can be written as [text](url). Escape values taken from task data with
         escape_markdown() so they render literally. body_format="html" sends the content unchanged.
         Each recipient gets a mail of their own unless recipients_see_each_other is set; cc needs it.
+        Bcc recipients get a copy of every mail that goes out.
         """
         return mail_helpers.send_mail(
             subject=subject,
@@ -162,6 +164,7 @@ class ServiceTaskHelper:
             cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
             body_format=body_format,
             text_alternative=text_alternative,
+            bcc_recipient_or_recipients_list=bcc_recipient_or_recipients_list,
             recipients_see_each_other=recipients_see_each_other,
         )
 
@@ -173,6 +176,7 @@ class ServiceTaskHelper:
         attachments: dict[str, io.BytesIO],
         cc_recipient_or_recipients_list: list[str] | str | None = None,
         *,
+        bcc_recipient_or_recipients_list: list[str] | str | None = None,
         recipients_see_each_other: bool = False,
     ):
         return self.send_mail(
@@ -182,6 +186,7 @@ class ServiceTaskHelper:
             attachments=attachments,
             cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
             body_format="text",
+            bcc_recipient_or_recipients_list=bcc_recipient_or_recipients_list,
             recipients_see_each_other=recipients_see_each_other,
         )
 

@@ -37,6 +37,13 @@ releases correspond to the git tags of this repository.
     Cc without that flag fails. Empty cc values are ignored. When the
     recipient override of a test system is on, the cc recipients are
     dropped too.
+- **When** a service task sends a mail that someone should get a hidden copy
+  of, for example an archive mailbox:
+  - Before: there was no bcc.
+  - Now: `sth.send_mail` and `sth.send_text_mail` take bcc recipients, one
+    address or a list. Nobody sees them. They get a copy of every mail that
+    goes out: one mail with `recipients_see_each_other=True`, otherwise one
+    per recipient. The recipient override drops them like cc.
 - **When** a mail from a service task should show a long link, for example
   to a OneDrive or SharePoint document:
   - Before: mails were plain text. The long link stood in the text as it is.
@@ -80,7 +87,7 @@ releases correspond to the git tags of this repository.
   - Before: it recorded subject, content, recipients and attachments of
     plain-text mails.
   - Now: it records mails of every body format, and also their body format,
-    cc recipients and `recipients_see_each_other`.
+    cc and bcc recipients and `recipients_see_each_other`.
 - **When** a mail goes to several recipients over the SMTP transport:
   - Before: it went out as one mail, so every recipient saw all addresses.
     The Graph transport sent one mail per recipient.

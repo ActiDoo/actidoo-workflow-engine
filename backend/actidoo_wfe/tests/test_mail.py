@@ -157,11 +157,20 @@ def test_smtp_ignores_empty_cc(smtp_server, cc):
 def test_override_recipients_drop_cc(smtp_server, monkeypatch):
     monkeypatch.setattr(settings, "email_override_recipients_list", ["dev@example.com"])
 
-    mail.send_text_mail("Hi", "Body", ["to@example.com"], {}, cc_recipient_or_recipients_list=["cc@example.com"], recipients_see_each_other=True)
+    mail.send_text_mail(
+        "Hi",
+        "Body",
+        ["to@example.com"],
+        {},
+        cc_recipient_or_recipients_list=["cc@example.com"],
+        bcc_recipient_or_recipients_list=["bcc@example.com"],
+        recipients_see_each_other=True,
+    )
 
     message = _sent_message(smtp_server)
     assert message["To"] == "dev@example.com"
     assert message["Cc"] is None
+    assert message["Bcc"] is None
 
 
 def test_graph_without_cc_sends_one_mail_per_recipient(graph_client):
@@ -216,6 +225,28 @@ def test_smtp_with_recipients_see_each_other_sends_single_mail_with_all_recipien
     assert _sent_message(smtp_server)["To"] == "a@example.com, b@example.com"
 
 
+def test_smtp_hands_bcc_to_send_message(smtp_server):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {}, bcc_recipient_or_recipients_list="bcc@example.com")
+
+    assert _sent_message(smtp_server)["Bcc"] == "bcc@example.com"
+
+
+def test_graph_without_recipients_see_each_other_copies_bcc_into_every_mail(graph_client):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {}, bcc_recipient_or_recipients_list="bcc@example.com")
+
+    payloads = [call.kwargs["json"]["message"] for call in graph_client.post.call_args_list]
+    assert [p["bccRecipients"] for p in payloads] == [[{"emailAddress": {"address": "bcc@example.com"}}]] * 2
+
+
+def test_graph_with_recipients_see_each_other_sends_bcc_once(graph_client):
+    mail.send_text_mail(
+        "Hi", "Body", ["a@example.com", "b@example.com"], {}, bcc_recipient_or_recipients_list="bcc@example.com", recipients_see_each_other=True
+    )
+
+    graph_client.post.assert_called_once()
+    assert graph_client.post.call_args.kwargs["json"]["message"]["bccRecipients"] == [{"emailAddress": {"address": "bcc@example.com"}}]
+
+
 def test_cc_without_recipients_see_each_other_is_rejected_also_on_test_systems(monkeypatch):
     monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
     monkeypatch.setattr(settings, "email_override_recipients_list", ["dev@example.com"])
@@ -237,10 +268,19 @@ def test_skipped_sending_logs_cc(monkeypatch, caplog):
     monkeypatch.setattr(settings, "email_override_recipients_list", [])
 
     with caplog.at_level("INFO", logger="actidoo_wfe.helpers.mail"):
-        sent = mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list=["cc@example.com"], recipients_see_each_other=True)
+        sent = mail.send_text_mail(
+            "Hi",
+            "Body",
+            "to@example.com",
+            {},
+            cc_recipient_or_recipients_list=["cc@example.com"],
+            bcc_recipient_or_recipients_list=["bcc@example.com"],
+            recipients_see_each_other=True,
+        )
 
     assert sent is False
     assert "cc: 'cc@example.com'" in caplog.text
+    assert "bcc: 'bcc@example.com'" in caplog.text
 
 
 MARKDOWN = "Hello **Jens**,\n\nplease check the [document](https://tenant.sharepoint.com/very/long/link?x=1).\n\nRaw <b>html</b> stays literal."

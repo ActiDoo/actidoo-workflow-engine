@@ -182,6 +182,7 @@ def mock_send_text_mail():
         body_format="text",
         text_alternative=None,
         *,
+        bcc_recipient_or_recipients_list=None,
         recipients_see_each_other=False,
     ):
         email = {
@@ -189,13 +190,14 @@ def mock_send_text_mail():
             "content": content,
             "recipients": recipient_or_recipients_list,
             "cc": cc_recipient_or_recipients_list,
+            "bcc": bcc_recipient_or_recipients_list,
             "attachments": attachments,
             "body_format": body_format,
             "text_alternative": text_alternative,
             "recipients_see_each_other": recipients_see_each_other,
         }
         emails.append(email)
-        log_email(subject, content, recipient_or_recipients_list, attachments, cc_recipient_or_recipients_list, body_format)
+        log_email(subject, content, recipient_or_recipients_list, attachments, cc_recipient_or_recipients_list, body_format, bcc_recipient_or_recipients_list)
         return True
 
     with patch("actidoo_wfe.helpers.mail.send_mail", new=mock_send):
