@@ -172,6 +172,7 @@ export const en = {
     processDraft: 'Draft is being processed',
     submitSuccess: 'Form successfully submitted',
     submitError: 'An error occurred while submitting the form',
+    optionsLoadError: 'Could not load options. Please try again.',
   },
   taskActions: {
     reset: 'Reset',

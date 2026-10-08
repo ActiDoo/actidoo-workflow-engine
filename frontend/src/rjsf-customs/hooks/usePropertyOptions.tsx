@@ -6,6 +6,7 @@ import { useDispatch } from 'react-redux';
 import { debounce } from 'lodash';
 import { fetchPost } from '@/ui5-components';
 import { getApiUrl } from '@/services/ApiService';
+import { useTranslation } from '@/i18n';
 import { PcValueLabelItem } from '@/models/models';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
@@ -50,6 +51,7 @@ export const usePropertyOptions = (params: UsePropertyOptionsParams): UsePropert
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   const paramsRef = useRef(params);
   paramsRef.current = params;
@@ -79,8 +81,8 @@ export const usePropertyOptions = (params: UsePropertyOptionsParams): UsePropert
   );
 
   const reportError = useCallback(() => {
-    dispatch(addToast(<WeToastContent text={`Could not load options. Please try again.`} />));
-  }, [dispatch]);
+    dispatch(addToast(<WeToastContent text={t('taskContent.optionsLoadError')} />));
+  }, [dispatch, t]);
 
   const loadFirstPage = useCallback(async () => {
     const requestId = ++requestIdRef.current;

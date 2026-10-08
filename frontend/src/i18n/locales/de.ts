@@ -173,6 +173,7 @@ export const de = {
     processDraft: 'Entwurf wird verarbeitet',
     submitSuccess: 'Formular erfolgreich übermittelt',
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
+    optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
   },
   taskActions: {
     reset: 'Zurücksetzen',
