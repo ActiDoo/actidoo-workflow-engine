@@ -103,7 +103,7 @@ export const usePropertyOptions = (params: UsePropertyOptionsParams): UsePropert
     }
   }, [fetchPage, reportError]);
 
-  const reload = useMemo(
+  const debouncedLoadFirstPage = useMemo(
     () =>
       debounce(() => {
         loadFirstPage().catch(() => undefined);
@@ -113,9 +113,17 @@ export const usePropertyOptions = (params: UsePropertyOptionsParams): UsePropert
 
   useEffect(() => {
     return () => {
-      reload.cancel();
+      debouncedLoadFirstPage.cancel();
     };
-  }, [reload]);
+  }, [debouncedLoadFirstPage]);
+
+  // Until the first page arrives, the list shown belongs to the old search: page it no
+  // further, and drop a page that is still on its way.
+  const reload = useCallback(() => {
+    requestIdRef.current += 1;
+    setNextOffset(null);
+    debouncedLoadFirstPage();
+  }, [debouncedLoadFirstPage]);
 
   const loadMore = useCallback(() => {
     if (nextOffset === null || isLoading || loadingMoreRef.current) return;
@@ -143,19 +151,19 @@ export const usePropertyOptions = (params: UsePropertyOptionsParams): UsePropert
 
   const clear = useCallback(() => {
     requestIdRef.current += 1;
-    reload.cancel();
+    debouncedLoadFirstPage.cancel();
     loadingMoreRef.current = false;
     setOptions([]);
     setNextOffset(null);
     setIsLoading(false);
-  }, [reload]);
+  }, [debouncedLoadFirstPage]);
 
   return {
     options,
     isLoading,
     hasMore: nextOffset !== null,
     reload,
-    cancelReload: reload.cancel,
+    cancelReload: debouncedLoadFirstPage.cancel,
     loadMore,
     clear,
   };

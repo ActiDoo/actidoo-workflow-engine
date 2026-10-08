@@ -130,4 +130,32 @@ describe('usePropertyOptions', () => {
     expect(result.current.options).toEqual([opt('b')]);
     expect(result.current.hasMore).toBe(false);
   });
+
+  it('does not page the old list while a new search waits for its first page', async () => {
+    const { result, rerender } = await renderWithFirstPage();
+    act(() => {
+      result.current.loadMore();
+    });
+    await waitFor(() => {
+      expect(requests).toHaveLength(2);
+    });
+
+    // The user types while page 2 of the old search is on its way.
+    rerender({ ...PARAMS, search: 'x' });
+    act(() => {
+      result.current.reload();
+    });
+    await requests[1].answer(page([opt('c')], 3));
+    act(() => {
+      result.current.loadMore();
+    });
+
+    expect(requests).toHaveLength(2);
+    expect(result.current.options).toEqual([opt('a'), opt('b')]);
+
+    await waitFor(() => {
+      expect(requests).toHaveLength(3);
+    });
+    expect(requests[2].body).toMatchObject({ search: 'x', offset: 0 });
+  });
 });
