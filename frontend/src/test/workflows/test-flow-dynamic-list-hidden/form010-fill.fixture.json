@@ -104,6 +104,7 @@
       "ui:path": [
         "create_set"
       ],
+      "ui:columns": 9,
       "ui:widget": "SelectStatic"
     },
     "outer_list": {

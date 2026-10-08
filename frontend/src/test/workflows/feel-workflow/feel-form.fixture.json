@@ -125,7 +125,8 @@
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "globalA"
-      ]
+      ],
+      "ui:columns": 7
     },
     "globalB": {
       "ui:description": "",
@@ -133,6 +134,7 @@
       "ui:path": [
         "globalB"
       ],
+      "ui:columns": 7,
       "ui:hideif": "=globalA=1"
     },
     "Field_1aff9sg": {
@@ -163,6 +165,7 @@
             "my_list",
             "number_a"
           ],
+          "ui:columns": 5,
           "ui:hideif": "=globalA=3"
         },
         "number_b": {
@@ -172,6 +175,7 @@
             "my_list",
             "number_b"
           ],
+          "ui:columns": 5,
           "ui:hideif": "=this.number_a=9"
         },
         "number_or": {
@@ -181,6 +185,7 @@
             "my_list",
             "number_or"
           ],
+          "ui:columns": 4,
           "ui:hideif": "=this.number_a=9\nor this.number_a=null"
         },
         "Field_13cwx6x": {
@@ -267,7 +272,8 @@
           "ui:path": [
             "hidden_list",
             "number_e"
-          ]
+          ],
+          "ui:columns": 5
         }
       },
       "ui:arrayAddButtonText": "Add",
