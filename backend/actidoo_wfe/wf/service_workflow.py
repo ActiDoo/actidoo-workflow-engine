@@ -155,10 +155,14 @@ def get_faulty_tasks(workflow: BpmnWorkflow):
 
 def is_workflow_completed(workflow: BpmnWorkflow) -> bool:
     """Spiff counts an erroneous task as finished, so a process whose last step
-    failed would pass as completed. It is not, unless it was cancelled."""
+    failed would pass as completed. It is not, unless it was cancelled or the
+    process moved on past the failed task, e.g. through a terminate end event or
+    an interrupting boundary event; then a child of the failed task is cancelled."""
     if not workflow.is_completed():
         return False
-    return not workflow.success or not get_faulty_tasks(workflow)
+    if not workflow.success:
+        return True
+    return all(any(c.has_state(TaskState.CANCELLED) for c in t.children) for t in get_faulty_tasks(workflow))
 
 
 def run_workflow(workflow: BpmnWorkflow):
