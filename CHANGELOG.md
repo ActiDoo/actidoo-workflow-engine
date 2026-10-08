@@ -9,13 +9,19 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
-- Statistics: after a workflow was renamed, the graph labelled the workflow
-  with the title stored on one of its instances, often the old name. It now
-  shows the current, translated title, like the table below it.
+- **When** a workflow was renamed and an admin opens the statistics page:
+  - Before: the graph labelled the workflow with the title stored on one of
+    its instances, often the old name.
+  - Now: the graph shows the current, translated title, like the table below
+    it. A workflow whose definition is gone keeps the title stored on its
+    newest completed instance.
 
-### Added
-
-- Docs: what happens when a workflow is renamed.
+- **When** a user who does not administer a workflow asks the server for the
+  data of the statistics graph:
+  - Before: the server returned the completed instances of all workflows to
+    every logged-in user.
+  - Now: it returns only the workflows the user administers, as global admin
+    or as workflow owner, like the other admin lists.
 
 ## [0.1.44] - 2026-09-23
 
