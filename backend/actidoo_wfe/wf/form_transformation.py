@@ -452,6 +452,8 @@ def _handle_accept(component, jsonschema, key):
         if "/" not in token and not token.startswith("."):
             token = "." + token
         normalized.append(token)
+    if ".*" in normalized or "*/*" in normalized:
+        return  # any file type is allowed
     if normalized:
         jsonschema["properties"][key]["accept"] = normalized
 

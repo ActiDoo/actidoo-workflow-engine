@@ -32,6 +32,11 @@ def test__accept_is_normalized():
     assert _transform(_textfield_upload("attachment_multi", accept="pdf, .XML ,image/*,"))[0]["properties"]["upload"]["accept"] == expected
 
 
+@pytest.mark.parametrize("accept", ["*/*", "pdf, *"])
+def test__accept_with_a_wildcard_allows_any_file(accept):
+    assert "accept" not in _transform(_filepicker(accept=accept))[0]["properties"]["upload"]
+
+
 @pytest.mark.parametrize("attrs", [{"multiple": "=allowMany"}, {"accept": "=allowedTypes"}])
 def test__feel_expressions_are_rejected(attrs):
     with pytest.raises(ValueError, match="FEEL expressions are not supported"):
