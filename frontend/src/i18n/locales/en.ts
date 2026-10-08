@@ -230,6 +230,11 @@ export const en = {
       error: 'Template could not be deleted. Please try again.',
     },
   },
+  listOverview: {
+    copyColumn: 'Copy column',
+    columnCopied: 'Column copied',
+    copyFailed: 'Could not copy the column.',
+  },
   singleTaskHeader: {
     readonlyDefinitionMissing:
       'This workflow definition is no longer available. The instance is read-only.',

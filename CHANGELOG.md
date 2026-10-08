@@ -7,6 +7,16 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Added
+
+- **When** a user needs the values of one column of a dynamic list in
+  another program:
+  - Before: the overview of the list only showed the values. The user had to
+    copy them one by one.
+  - Now: a copy icon in the column header copies the whole column, one value
+    per line, as Excel does. It can be pasted into Excel or SAP. File columns
+    have no copy icon.
+
 ### Changed
 
 - **When** a select gets its options from a file or a function:
