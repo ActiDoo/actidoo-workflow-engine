@@ -27,6 +27,7 @@ import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
 import CustomFieldErrorTemplate from '@/rjsf-customs/templates/CustomFieldErrorTemplate';
 import CustomDescriptionFieldTemplate from '@/rjsf-customs/templates/CustomDescriptionFieldTemplate';
+import CustomFieldTemplate from '@/rjsf-customs/templates/CustomFieldTemplate';
 import MultiSelectDynamic from '@/rjsf-customs/custom-widgets/MultiSelectDynamic';
 import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
@@ -71,6 +72,7 @@ const customTemplates = {
   ArrayFieldItemTemplate: CustomArrayFieldItemTemplate,
   FieldErrorTemplate: CustomFieldErrorTemplate,
   DescriptionFieldTemplate: CustomDescriptionFieldTemplate,
+  FieldTemplate: CustomFieldTemplate,
 };
 
 type BaseFormProps = React.ComponentProps<typeof Form>;

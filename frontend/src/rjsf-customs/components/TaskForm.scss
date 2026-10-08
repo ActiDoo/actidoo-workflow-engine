@@ -30,18 +30,31 @@
     margin-bottom: 1rem !important;
   }
 
-  // Field widths from the Camunda Modeler, which lays out a row on 16 columns (see
-  // layoutColumns.ts). Below Bootstrap's lg breakpoint every field takes the full width.
+  // A form row (ui:layout) is a grid from Bootstrap's lg breakpoint up; its columns come from
+  // the Camunda Modeler widths (layoutColumns.ts). Each field spans two grid rows, its label
+  // and the block below it (CustomFieldTemplate.tsx), which subgrid passes down through the
+  // field's wrappers: the labels of a row share one height, so the inputs start on one line
+  // and descriptions and errors stay under their own field. Below lg the fields stack.
   @media (min-width: 992px) {
-    .pc-col {
-      flex: 1 0 0%;
+    .pc-row {
+      display: grid;
     }
 
-    @for $n from 1 through 16 {
-      .pc-col-#{$n} {
-        flex: 0 0 auto;
-        width: calc(100% * #{$n} / 16);
-      }
+    .pc-row > *,
+    .pc-row > * > *,
+    .pc-row > * > * > * {
+      display: grid;
+      grid-row: span 2;
+      grid-template-rows: subgrid;
+    }
+
+    .pc-field-content {
+      grid-row: 2;
+    }
+
+    // A short label sits right above its input, not at the top of the shared label row.
+    .pc-row > * > * > * > .form-label {
+      align-self: end;
     }
   }
 

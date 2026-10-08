@@ -11,7 +11,7 @@ import {
   titleId,
 } from '@rjsf/utils';
 import React, { ReactElement } from 'react';
-import { computeColumnClasses } from '@/rjsf-customs/templates/layoutColumns';
+import { computeGridTemplate } from '@/rjsf-customs/templates/layoutColumns';
 
 export function CustomObjectFieldTemplate<
   T = any,
@@ -48,17 +48,13 @@ export function CustomObjectFieldTemplate<
             const items = itemNames.map(name => {
               return properties.find(p => p.name === name);
             });
-            const columnClasses = computeColumnClasses(
+            const gridTemplateColumns = computeGridTemplate(
               itemNames.map(name => uiSchema?.[name]?.['ui:columns'])
             );
             return items.some(i => !i?.hidden) ? (
-              <div className="row align-items-end" key={`pc-row-${rowId}`}>
+              <div className="row pc-row" style={{ gridTemplateColumns }} key={`pc-row-${rowId}`}>
                 {items.map((item, index) => {
-                  return (
-                    <div className={columnClasses[index]} key={`pc-col-${item?.name}-${index}`}>
-                      {item?.content}
-                    </div>
-                  );
+                  return <div key={`pc-col-${item?.name}-${index}`}>{item?.content}</div>;
                 })}
               </div>
             ) : null;
