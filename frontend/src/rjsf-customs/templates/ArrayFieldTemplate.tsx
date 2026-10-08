@@ -37,7 +37,10 @@ import {
   resolveHiddenFields,
 } from '@/services/feelContext';
 import { PcValueLabelItem } from '@/models/models';
-import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
+import {
+  isAttachmentSingleSchema,
+  stripAttachmentPayload,
+} from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import _ from 'lodash';
 
 const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
@@ -330,24 +333,25 @@ export default function CustomArrayFieldTemplate<
       <TableColumn key={`column-${index}`}>
         <div className="flex items-center gap-1">
           <Label>{properties[key].title}</Label>
-          {(properties[key]?.type !== 'array' || dynamicSelectConfigs[key]) && (
-            <Icon
-              name="copy"
-              accessibleName={t('listOverview.copyColumn')}
-              interactive
-              showTooltip
-              className="!w-3.5 !h-3.5 shrink-0 cursor-pointer !text-brand-primary"
-              onClick={() => {
-                copyColumn(
-                  rows.map((data, rowIndex) =>
-                    hiddenKeysPerRow[rowIndex]?.has(key)
-                      ? ''
-                      : cellText(properties[key], key, data[key]) ?? ''
-                  )
-                );
-              }}
-            />
-          )}
+          {(properties[key]?.type !== 'array' || dynamicSelectConfigs[key]) &&
+            !isAttachmentSingleSchema(properties[key]) && (
+              <Icon
+                name="copy"
+                accessibleName={t('listOverview.copyColumn')}
+                interactive
+                showTooltip
+                className="!w-3.5 !h-3.5 shrink-0 cursor-pointer !text-brand-primary"
+                onClick={() => {
+                  copyColumn(
+                    rows.map((data, rowIndex) =>
+                      hiddenKeysPerRow[rowIndex]?.has(key)
+                        ? ''
+                        : cellText(properties[key], key, data[key]) ?? ''
+                    )
+                  );
+                }}
+              />
+            )}
         </div>
       </TableColumn>
     ));
