@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_failed_step_timer" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_failed_step_timer">
+    <bpmn:participant id="Participant_failed_step_timer" name="TestFlow_FailedStepTimer" processRef="TestFlow_FailedStepTimer" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_FailedStepTimer" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_initiator" name="Initiator">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>FailingStep</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>TimeoutEndEvent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Timeout</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent">
+      <bpmn:outgoing>Flow_start_to_failing</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="FailingStep" name="Failing step">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="failing_step" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_start_to_failing</bpmn:incoming>
+      <bpmn:outgoing>Flow_failing_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent">
+      <bpmn:incoming>Flow_failing_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="TimeoutEndEvent">
+      <bpmn:incoming>Flow_timeout_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Timeout" attachedToRef="FailingStep">
+      <bpmn:outgoing>Flow_timeout_to_end</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="PT1H"</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_failing" sourceRef="StartEvent" targetRef="FailingStep" />
+    <bpmn:sequenceFlow id="Flow_failing_to_end" sourceRef="FailingStep" targetRef="EndEvent" />
+    <bpmn:sequenceFlow id="Flow_timeout_to_end" sourceRef="Timeout" targetRef="TimeoutEndEvent" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_failed_step_timer">
+      <bpmndi:BPMNShape id="Participant_failed_step_timer_di" bpmnElement="Participant_failed_step_timer" isHorizontal="true">
+        <dc:Bounds x="100" y="60" width="480" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_initiator_di" bpmnElement="Lane_initiator" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="450" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
+        <dc:Bounds x="182" y="112" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FailingStep_di" bpmnElement="FailingStep">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_di" bpmnElement="EndEvent">
+        <dc:Bounds x="462" y="112" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TimeoutEndEvent_di" bpmnElement="TimeoutEndEvent">
+        <dc:Bounds x="462" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timeout_di" bpmnElement="Timeout">
+        <dc:Bounds x="312" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_to_failing_di" bpmnElement="Flow_start_to_failing">
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_failing_to_end_di" bpmnElement="Flow_failing_to_end">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="462" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_timeout_to_end_di" bpmnElement="Flow_timeout_to_end">
+        <di:waypoint x="330" y="188" />
+        <di:waypoint x="330" y="240" />
+        <di:waypoint x="462" y="240" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

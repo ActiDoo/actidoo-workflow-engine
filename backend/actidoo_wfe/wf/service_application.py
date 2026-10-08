@@ -1323,8 +1323,7 @@ def is_completed(
     workflow_instance_id: uuid.UUID,
 ) -> bool:
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
-    unfinished_tasks = service_workflow.get_unfinished_tasks(workflow)
-    return len(unfinished_tasks) == 0
+    return service_workflow.is_workflow_completed(workflow)
 
 
 def is_faulty(

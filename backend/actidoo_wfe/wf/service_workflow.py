@@ -153,14 +153,26 @@ def get_faulty_tasks(workflow: BpmnWorkflow):
     return [t for t in workflow.get_tasks() if t.has_state(TaskState.ERROR)]
 
 
+def is_workflow_completed(workflow: BpmnWorkflow) -> bool:
+    """Spiff counts an erroneous task as finished, so a process whose last step
+    failed would pass as completed. It is not, unless it was cancelled or the
+    process moved on past the failed task, e.g. through a terminate end event or
+    an interrupting boundary event; then a child of the failed task is cancelled."""
+    if not workflow.is_completed():
+        return False
+    if not workflow.success:
+        return True
+    return all(any(c.has_state(TaskState.CANCELLED) for c in t.children) for t in get_faulty_tasks(workflow))
+
+
 def run_workflow(workflow: BpmnWorkflow):
     """Runs all possible tasks and finally auto-assigns if possible"""
 
     # TODO: This logic could be moved to application service, as we might want to persist after each step?!?
 
+    result = True
     if not workflow.is_completed():
         engine_tasks = [t for t in workflow.get_tasks(task_filter=TaskFilter(state=TaskState.READY, manual=False))]
-        result = True
         while len(engine_tasks) > 0:
             for task in engine_tasks:
                 set_stacktrace(

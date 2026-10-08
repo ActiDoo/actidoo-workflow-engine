@@ -16,6 +16,12 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
+- **When** the last step of a workflow fails and no end event follows it:
+  - Before: the instance was shown as completed. An administrator's retry of
+    the step ended in a server error.
+  - Now: the instance stays open until the step succeeds or the instance is
+    cancelled. The retry works, and the instance is completed once the step
+    succeeds.
 - Unassigning a completed task. The service layer already refused it, but the
   exception reached the client as a 500; it is a 409 `task_cannot_be_unassigned`
   now. The task header no longer offers the button for a completed task - the
