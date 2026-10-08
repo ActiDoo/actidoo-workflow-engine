@@ -9,12 +9,12 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
-- A workflow whose last step has no end event behind it was shown as
-  completed when that step failed, and the admin retry of the step then
-  crashed with an `UnboundLocalError`. An instance with an erroneous task now
-  stays open until the task succeeds or the instance is cancelled;
-  `completed_at` follows `is_completed`. Instances already stored as completed
-  are corrected on their next save, e.g. the retry.
+- **When** the last step of a workflow fails and no end event follows it:
+  - Before: the instance was shown as completed. An administrator's retry of
+    the step ended in a server error.
+  - Now: the instance stays open until the step succeeds or the instance is
+    cancelled. The retry works, and the instance is completed once the step
+    succeeds.
 
 ## [0.1.44] - 2026-09-23
 
