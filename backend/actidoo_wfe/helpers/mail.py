@@ -268,7 +268,7 @@ def send_mail(
     override_recipients_list = settings.email_override_recipients_list
     override_recipients_enable = settings.email_override_recipients_enable
     recipients_list = _normalize_recipients(recipient_or_recipients_list)
-    cc_list = _normalize_recipients(cc_recipient_or_recipients_list)
+    cc_list = [address for address in _normalize_recipients(cc_recipient_or_recipients_list) if address]
 
     if override_recipients_enable or len(override_recipients_list) > 0:
         recipients_list = override_recipients_list

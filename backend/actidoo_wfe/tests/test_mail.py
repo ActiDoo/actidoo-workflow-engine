@@ -146,6 +146,12 @@ def test_smtp_accepts_single_cc_string_and_omits_header_without_cc(smtp_server):
     assert _sent_message(smtp_server)["Cc"] is None
 
 
+@pytest.mark.parametrize("cc", ["", [""], [None]])
+def test_smtp_ignores_empty_cc(smtp_server, cc):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list=cc)
+    assert _sent_message(smtp_server)["Cc"] is None
+
+
 def test_override_recipients_drop_cc(smtp_server, monkeypatch):
     monkeypatch.setattr(settings, "email_override_recipients_list", ["dev@example.com"])
 
@@ -184,6 +190,15 @@ def test_graph_with_cc_sends_single_mail_with_all_recipients(graph_client):
     ]
     assert message["ccRecipients"] == [{"emailAddress": {"address": "cc@example.com"}}]
     assert message["attachments"][0]["name"] == "file.txt"
+
+
+@pytest.mark.parametrize("cc", ["", [""], [None]])
+def test_graph_ignores_empty_cc(graph_client, cc):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {}, cc_recipient_or_recipients_list=cc)
+
+    payloads = [call.kwargs["json"]["message"] for call in graph_client.post.call_args_list]
+    assert len(payloads) == 2
+    assert all(p["ccRecipients"] == [] for p in payloads)
 
 
 def test_skipped_sending_logs_cc(monkeypatch, caplog):
