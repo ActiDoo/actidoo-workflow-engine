@@ -280,6 +280,26 @@ def test_admin_statistics_graph_shows_current_title(db_engine_ctx):
         assert titles[removed_new.workflow_instance_id] == "Second title"
 
 
+def test_admin_statistics_graph_only_shows_administered_workflows(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _create_completed_workflow(db=db)
+        client = Client()
+
+        items = {}
+        for name in ("initiator", "admin"):
+            with override_get_user(client=client, user=workflow.user(name).user), disable_role_check(client):
+                _, json_resp = client.post(
+                    name="bff_admin_get_statistics_information",
+                    json={},
+                    cls=ReducedWorkflowInstanceResponse,
+                )
+            items[name] = [item.id for item in json_resp.ITEMS]
+
+        assert items["initiator"] == []
+        assert items["admin"] == [workflow.workflow_instance_id]
+
+
 def test_admin_get_all_users_endpoint(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()

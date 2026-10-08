@@ -1595,7 +1595,8 @@ def admin_get_task_states_per_workflow(db: Session, wf_name: str, admin_user_id:
 def admin_get_statistics_graph_timestamps(db: Session, user_id: uuid.UUID) -> ReducedWorkflowInstanceResponse:
     """Completed instances for the graph, labelled with the current workflow title; the newest stored title if the definition is gone."""
     locale = repository.load_user(db=db, user_id=user_id).locale
-    instances = views.bff_admin_get_graph_workflow_instances(db=db)
+    allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
+    instances = views.bff_admin_get_graph_workflow_instances(db=db, allowed_workflow_names=allowed_workflow_names)
 
     titles = {instance.name: instance.title for instance in instances.ITEMS}
     for name in titles:
