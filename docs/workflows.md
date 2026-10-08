@@ -113,11 +113,13 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `itemgroup_addbutton` | text, default `Add` | label of the list's add button | a clearer button text |
 | `itemgroup_overviewbutton` | text, default `Overview` | label of the list's overview button | a clearer button text |
 
+A dynamic list stores an array of row objects; the fields inside it are the row's fields, and the engine stamps a technical [row id](glossary.md#row-id) into every row automatically — you never model it. Its key must not contain `-`. Row-level and backend-owned values survive when the user reorders or deletes rows; the reasoning is in [ADR 010](adr/adr_010_dynamic_list_row_identity.md). Nested lists work the same way.
+
 ### File uploads
 
-Use the Modeler's **file picker** component. Without "Upload multiple files" it stores one attachment, with it a list of attachments. "Supported file formats" (`accept`) takes a comma-separated list of file extensions (`pdf`, `.pdf`) and MIME types (`application/pdf`, `image/*`); the browser offers only those files and the server rejects any other file on submit. `required`, `disabled` and hide-if work as for other fields. Both settings must be fixed values: a FEEL expression (`=...`) in "Upload multiple files" or "Supported file formats" makes the form invalid. A text field with `custom_type: attachment_single` / `attachment_multi` still works the same way and takes `accept` as a custom property. The `TestFlowDemoFormUpload` workflow shows every variant.
+Use the Modeler's file picker component. Without "Upload multiple files" it stores one attachment, with it a list of attachments. "Supported file formats" (`accept`) takes a comma-separated list of file extensions (`pdf`, `.pdf`) and MIME types (`application/pdf`, `image/*`); `*` or `*/*` allows any file. The browser offers only matching files. On submit the server checks each file's name and declared type against the list, not its content. `required`, `disabled` and hide-if work as for other fields.
 
-A dynamic list stores an array of row objects; the fields inside it are the row's fields, and the engine stamps a technical [row id](glossary.md#row-id) into every row automatically — you never model it. Its key must not contain `-`. Row-level and backend-owned values survive when the user reorders or deletes rows; the reasoning is in [ADR 010](adr/adr_010_dynamic_list_row_identity.md). Nested lists work the same way.
+"Upload multiple files" and "Supported file formats" must be fixed values. A FEEL expression (`=...`) in either makes the workflow fail to load. A text field with `custom_type: attachment_single` / `attachment_multi` still works the same way and takes `accept` as a custom property.
 
 ### Conditional fields (hide-if)
 
