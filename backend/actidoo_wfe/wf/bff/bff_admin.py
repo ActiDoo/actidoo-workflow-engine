@@ -516,6 +516,12 @@ def cancel_workflow_instance(
             "This workflow is already finished and cannot be cancelled.",
             workflow_instance_id=str(error.workflow_instance_id),
         )
+    except WorkflowInstanceBusyException as error:
+        return _conflict(
+            "workflow_instance_busy",
+            "Another request is still working on this workflow instance.",
+            workflow_instance_id=str(error.workflow_instance_id),
+        )
 
 
 @router.get("/system_information", name="bff_admin_system_information")

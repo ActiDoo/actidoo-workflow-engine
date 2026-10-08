@@ -341,3 +341,28 @@ class TestOverlappingRetries:
             assert results["second"][0] in (200, 409), f"the second retry answered {results['second']}"
             assert probe.runs == 1, f"the step ran {probe.runs} times instead of once"
             assert task.state_completed and not task.state_error
+
+    def test_a_cancel_while_a_retry_holds_the_instance_is_answered_busy(self, db_engine_ctx, probe):
+        """The retry holds the instance row for longer than the lock wait
+        timeout. The cancel must get a 409 it can explain, not a 500."""
+        with db_engine_ctx():
+            workflow, task_id = _start_with_erroneous_task(SessionLocal())
+            probe.external_down = False
+            release = threading.Event()
+            probe.hold_until = release
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                retry = threading.Thread(target=_retry, args=(Client(), task_id))
+                try:
+                    retry.start()
+                    assert probe.started.wait(timeout=10), "the retry never reached the step"
+                    status, body = client.post(
+                        name="bff_admin_cancel_workflow_instance",
+                        json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                    )
+                finally:
+                    release.set()
+                retry.join(timeout=30)
+
+            assert (status, body["code"]) == (409, "workflow_instance_busy")

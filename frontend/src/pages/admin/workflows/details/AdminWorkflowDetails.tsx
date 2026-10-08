@@ -47,10 +47,14 @@ const AdminWorkflowDetails: React.FC = () => {
   // store keeps the error body in `data`.
   const cancelErrorText = (): string => {
     const errorBody = cancelWorkflow?.data as { code?: string } | undefined;
-    if (errorBody?.code === 'workflow_instance_already_finished') {
-      return t('admin.cancelWorkflowAlreadyFinished');
+    switch (errorBody?.code) {
+      case 'workflow_instance_already_finished':
+        return t('admin.cancelWorkflowAlreadyFinished');
+      case 'workflow_instance_busy':
+        return t('admin.cancelWorkflowBusy');
+      default:
+        return t('admin.cancelWorkflowError');
     }
-    return t('admin.cancelWorkflowError');
   };
 
   useEffect(() => {

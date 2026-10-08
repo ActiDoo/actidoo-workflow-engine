@@ -308,6 +308,8 @@ export const de = {
     cancelWorkflowError: 'Aufgabe konnte nicht ausgeführt werden. Bitte versuche es erneut.',
     cancelWorkflowAlreadyFinished:
       'Dieser Workflow ist bereits beendet und kann nicht mehr abgebrochen werden.',
+    cancelWorkflowBusy:
+      'Der Workflow wird gerade durch einen anderen Aufruf bearbeitet. Bitte warte kurz und versuche es erneut.',
     keepWorkflowTitle: 'Workflow behalten',
     tasksHeadline: 'Aufgaben',
     noSelectedTaskTitle: 'Keine Aufgabe ausgewählt',
