@@ -10,6 +10,7 @@ from markupsafe import Markup
 _INLINE_SPECIALS = re.compile(r"([\\`*_\[\]<>~|])")
 _LINE_START_MARKERS = re.compile(r"^(\s*)(#{1,6}(?=\s|$)|[+\-](?=\s|$)|[-=]+(?=\s*$))", re.MULTILINE)
 _LINE_START_ORDERED = re.compile(r"^(\s*\d{1,9})([.)])(?=\s|$)", re.MULTILINE)
+_URL_AUTOLINK = re.compile(r"[a-zA-Z][a-zA-Z0-9+.\-]{1,31}:[^<>\x00-\x20]*")
 
 HTML_DOCUMENT_STYLE = "font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #1f2937;"
 
@@ -33,11 +34,18 @@ def markdown_to_html_document(content: str) -> str:
 
 
 def escape_markdown(value) -> str:
-    """Escape a value so it renders literally when embedded in Markdown. Markup values pass unchanged."""
+    """Escape a value so it renders literally when embedded in Markdown. URLs in it stay links. Markup values pass unchanged."""
     if value is None:
         return ""
     if isinstance(value, Markup):
         return str(value)
-    text = _INLINE_SPECIALS.sub(r"\\\1", str(value))
-    text = _LINE_START_MARKERS.sub(r"\1\\\2", text)
+    text = str(value)
+    # A URL becomes an autolink: escaping inside it would break the link, and an autolink always shows its own target.
+    parts, end = [], 0
+    for match in _parser().linkify.match(text) or []:
+        if match.schema != "mailto:" and _URL_AUTOLINK.fullmatch(match.url):
+            parts += [_INLINE_SPECIALS.sub(r"\\\1", text[end : match.index]), f"<{match.url}>"]
+            end = match.last_index
+    parts.append(_INLINE_SPECIALS.sub(r"\\\1", text[end:]))
+    text = _LINE_START_MARKERS.sub(r"\1\\\2", "".join(parts))
     return _LINE_START_ORDERED.sub(r"\1\\\2", text)
