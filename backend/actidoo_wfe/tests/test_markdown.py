@@ -4,7 +4,7 @@
 import re
 
 import pytest
-from markupsafe import Markup
+from markupsafe import escape
 
 from actidoo_wfe.helpers.markdown import escape_markdown, markdown_to_html_document, render_markdown
 
@@ -48,7 +48,7 @@ def test_escaped_value_cannot_form_a_link_with_own_text_or_an_image(value):
 
 def test_escape_handles_none_and_markup():
     assert escape_markdown(None) == ""
-    assert escape_markdown(Markup("https://example.com/a_b")) == "https://example.com/a_b"
+    assert ">x</a>" not in render_markdown(escape_markdown(escape("[x](https://evil.com)")))
 
 
 def test_render_escapes_raw_html_and_keeps_links_and_breaks():

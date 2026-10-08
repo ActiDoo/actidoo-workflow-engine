@@ -5,7 +5,6 @@ import re
 from functools import cache
 
 from markdown_it import MarkdownIt
-from markupsafe import Markup
 
 _INLINE_SPECIALS = re.compile(r"([\\`*_\[\]<>~|])")
 _LINE_START_MARKERS = re.compile(r"^(\s*)(#{1,6}(?=\s|$)|[+\-](?=\s|$)|[-=]+(?=\s*$))", re.MULTILINE)
@@ -34,11 +33,9 @@ def markdown_to_html_document(content: str) -> str:
 
 
 def escape_markdown(value) -> str:
-    """Escape a value so it renders literally when embedded in Markdown. URLs in it stay links. Markup values pass unchanged."""
+    """Escape a value so it renders literally when embedded in Markdown. URLs in it stay links."""
     if value is None:
         return ""
-    if isinstance(value, Markup):
-        return str(value)
     text = str(value)
     # A URL becomes an autolink: escaping inside it would break the link, and an autolink always shows its own target.
     parts, end = [], 0
