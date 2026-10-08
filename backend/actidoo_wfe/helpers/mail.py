@@ -251,11 +251,11 @@ def send_mail(
             sees every address. Otherwise each recipient gets a mail of their own.
 
     Returns:
-        bool: True if the mail was handed to a transport, False if sending was skipped
-            (test/debug mode or email_skip).
+        bool: True if the mail was handed to a transport, False if nothing was sent
+            (no recipient, test/debug mode or email_skip).
 
     Raises:
-        ValueError: If no recipient is left, or cc recipients are given without recipients_see_each_other.
+        ValueError: If cc recipients are given without recipients_see_each_other.
         Exception: If sending the email fails with an exception.
     """
 
@@ -279,10 +279,11 @@ def send_mail(
     cc_list = _normalize_recipients(cc_recipient_or_recipients_list)
     bcc_list = _normalize_recipients(bcc_recipient_or_recipients_list)
 
-    if not recipients_list:
-        raise ValueError("A mail needs at least one recipient.")
     if cc_list and not recipients_see_each_other:
         raise ValueError("Cc recipients are visible to everyone in the mail. Pass recipients_see_each_other=True to send them.")
+    if not recipients_list:
+        log.warning(f"Not sending email '{subject}': no recipient.")
+        return False
 
     if override_recipients_enable or len(override_recipients_list) > 0:
         recipients_list = override_recipients_list

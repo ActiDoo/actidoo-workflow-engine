@@ -256,10 +256,13 @@ def test_cc_without_recipients_see_each_other_is_rejected_also_on_test_systems(m
 
 
 @pytest.mark.parametrize("recipients", ["", " ", [], [""], [None]])
-def test_mail_without_recipient_is_rejected(smtp_server, recipients):
-    with pytest.raises(ValueError):
-        mail.send_text_mail("Hi", "Body", recipients, {})
+def test_mail_without_recipient_is_not_sent(smtp_server, recipients, caplog):
+    with caplog.at_level("WARNING", logger="actidoo_wfe.helpers.mail"):
+        sent = mail.send_text_mail("Hi", "Body", recipients, {})
+
+    assert sent is False
     smtp_server.send_message.assert_not_called()
+    assert "no recipient" in caplog.text
 
 
 def test_skipped_sending_logs_cc(monkeypatch, caplog):

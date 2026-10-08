@@ -96,8 +96,8 @@ releases correspond to the git tags of this repository.
 - **When** a mail has no recipient left, for example only empty addresses:
   - Before: Graph sent nothing and reported success; SMTP handed a mail with
     an empty recipient to the server.
-  - Now: sending fails with an error, also on test systems with the
-    recipient override and when sending is skipped.
+  - Now: neither transport sends anything. The engine logs a warning, and
+    `sth.send_mail` returns `False`.
 
 ### Fixed
 
