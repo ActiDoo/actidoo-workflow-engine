@@ -7,12 +7,16 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- Completed tasks show when they were submitted. `my_usertasks/{state}` carries
-  the task's `completed_at`, and the task header prints date and time under the
-  title. The admin workflow details page shows the same date per task in the
-  task list, plus the instance's own start and completion time in its header.
+- **When** someone looks at a completed task or at the details of a workflow
+  instance:
+  - Before: the task did not show when it was completed. The admin details
+    page did not show when the instance was started or completed.
+  - Now: the task header shows the date and time the task was completed. On
+    the admin details page, the task list shows date and time for each
+    completed task, and the header shows when the instance was started and
+    completed.
 
 ### Fixed
 
@@ -22,16 +26,23 @@ releases correspond to the git tags of this repository.
   - Now: the instance stays open until the step succeeds or the instance is
     cancelled. The retry works, and the instance is completed once the step
     succeeds.
-- Unassigning a completed task. The service layer already refused it, but the
-  exception reached the client as a 500; it is a 409 `task_cannot_be_unassigned`
-  now. The task header no longer offers the button for a completed task - the
-  delegate cases used to show it although the task could not be handed back.
-- Cancelling a workflow that is already finished. `cancel_workflow_instance`
-  answers a completed or already cancelled instance with 409
-  `workflow_instance_already_finished` instead of reporting success and
-  marking the closed instance as unsuccessful. The admin workflow details page
-  no longer offers the button for a finished instance, and the task header
-  hides it once the task or its instance is done.
+- **When** a user unassigns a task that is already completed:
+  - Before: in some delegate cases the task header still offered "Unassign
+    from me", and the request ended in a server error.
+  - Now: the task header does not offer it for a completed task. A request
+    that still arrives is refused, and the page says that the task is already
+    completed.
+- **When** an administrator cancels a workflow instance that is already
+  finished:
+  - Before: the server reported success and marked the instance as
+    unsuccessful.
+  - Now: the server refuses it, and the page says that the workflow is already
+    finished. The admin details page no longer offers the button for a
+    finished instance.
+- **When** an administrator cancels a workflow instance while another request
+  is still working on it:
+  - Before: the cancel ended in a server error.
+  - Now: the page says that the workflow is busy and asks to try again.
 
 ## [0.1.44] - 2026-09-23
 
