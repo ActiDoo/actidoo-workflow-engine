@@ -101,6 +101,11 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
+- **When** a user downloads a task's file through the admin interface:
+  - Before: every logged-in user could download any file of any task, given
+    the task id and the file hash.
+  - Now: only an administrator of that workflow gets the file. Everyone else
+    gets 403.
 - **When** a user exports a data table as CSV or downloads a file from it:
   - Before: since 0.1.42 the server refused the request, because the browser
     opens it directly and cannot send the client version (ADR 011).

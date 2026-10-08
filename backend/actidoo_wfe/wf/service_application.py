@@ -1537,6 +1537,11 @@ def admin_get_single_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     return task
 
 
+def admin_download_attachment(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, hash: str) -> Attachment:
+    require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
+    return download_attachment(db=db, task_id=task_id, hash=hash)
+
+
 def admin_replace_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, task_data: dict):
 
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)

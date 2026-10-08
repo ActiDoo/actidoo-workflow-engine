@@ -521,6 +521,14 @@ def test_admin_download_attachment(db_engine_ctx):
         assert response.status_code == 200
         assert "content-disposition" in {k.lower() for k in response.headers}
 
+        # A user who does not administer the workflow must not get the file.
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            response = client.root_client.post(
+                url, json={"task_id": str(task_id), "hash": attachments[0].hash},
+            )
+
+        assert response.status_code == 403
+
 
 def test_admin_search_wf_users(db_engine_ctx):
     with db_engine_ctx():

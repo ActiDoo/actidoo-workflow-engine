@@ -406,12 +406,16 @@ def download_attachment(
     user: Annotated[WorkflowUser, Depends(get_user)],
     reqdata: DownloadAttachmentRequest,
 ) -> Response:
-
-    attachment: Attachment = service_application.download_attachment(
-        db=db,
-        task_id=reqdata.task_id,
-        hash=reqdata.hash,
-    )
+    try:
+        attachment: Attachment = service_application.admin_download_attachment(
+            db=db,
+            user_id=user.id,
+            task_id=reqdata.task_id,
+            hash=reqdata.hash,
+        )
+    except UserMayNotAdministrateThisWorkflowException:
+        log.warning(f"User {user.username} is not allowed to call download_attachment for task_id {reqdata.task_id}")
+        raise HTTPException(status_code=403)
 
     return streaming_response_with_filecontent(
         binary=attachment.data,
