@@ -72,6 +72,12 @@ releases correspond to the git tags of this repository.
     every logged-in user.
   - Now: it returns only the workflows the user administers, as global admin
     or as workflow owner, like the other admin lists.
+- **When** the last step of a workflow fails and no end event follows it:
+  - Before: the instance was shown as completed. An administrator's retry of
+    the step ended in a server error.
+  - Now: the instance stays open until the step succeeds or the instance is
+    cancelled. The retry works, and the instance is completed once the step
+    succeeds.
 
 ## [0.1.44] - 2026-09-23
 

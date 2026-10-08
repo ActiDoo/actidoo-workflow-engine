@@ -174,7 +174,7 @@ The state of a task in a workflow instance. The docs use these names:
 | error | The task failed; it is an erroneous task. |
 | cancelled | The task was cancelled, usually because the workflow instance was cancelled or a boundary event fired. |
 
-A workflow instance is completed when no task is ready or waiting any more; a cancelled instance therefore counts as completed.
+A workflow instance is completed when no task is ready or waiting any more; a cancelled instance therefore counts as completed. An erroneous task keeps the instance open until the task succeeds or the instance is cancelled. This does not apply when the instance has moved on past the task, for example through a terminate end event or a boundary event.
 
 ## timer
 
