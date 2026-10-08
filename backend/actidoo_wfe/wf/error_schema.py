@@ -43,6 +43,9 @@ def set_nested_error(errors_dict, path, message):
 def validate_and_create_error_dict(validator, instance):
     errors_dict = {}
     for error in validator.iter_errors(instance):
-        path = list(error.absolute_path) + (list(error.validator_value) if isinstance(error.validator_value, list) else [])
+        path = list(error.absolute_path)
+        if error.validator == "required":
+            # The error sits on the object; put it under the one missing property it names.
+            path += [name for name in error.validator_value if error.message == f"{name!r} is a required property"][:1]
         set_nested_error(errors_dict, path, error.message)
     return dict(errors_dict) if errors_dict != {} else None

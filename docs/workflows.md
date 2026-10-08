@@ -98,7 +98,7 @@ Every user task needs a form file named `<task id>.form` next to the BPMN file, 
 
 The example has two forms. `EnterExpense` collects `title` (text, required), `amount` (number, required), `category` (a select), an optional `travel_details` text, a `receipt` file upload and a `description` textarea. `ApproveExpense` shows the same `title`, `amount`, `category` and `description` back to the approver, adds a required `decision` select (`approve` / `reject`) and a `reason` text.
 
-Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, single and multi attachment, and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
+Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, file picker (single and multi attachment), and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
 
 ### Custom properties
 
@@ -106,7 +106,8 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 
 | Property | Value | What it does | Why you would use it |
 |---|---|---|---|
-| `custom_type` | `select_multi`, `attachment_single`, `attachment_multi` | turns a select into a multi-select, or a field into a single or multi file upload | multiple choices, or file uploads |
+| `custom_type` | `select_multi`, `attachment_single`, `attachment_multi` | turns a select into a multi-select, or a text field into a single or multi file upload | multiple choices, or file uploads in forms from before the file picker |
+| `accept` | comma-separated file types, e.g. `pdf, xml` or `image/*` | restricts a text field upload (`custom_type: attachment_*`) to these file types, like the file picker's "Supported file formats" | only certain documents |
 | `options_file` | `<name>.csv` | takes the select's options from `options/<name>.csv` in the workflow directory | a fixed lookup list kept out of the form |
 | `options_function` | function name | takes the select's options from a function `<name>(oth)` in the workflow module | options computed at fill time, e.g. from a data model or connector |
 | `depends_on` | comma-separated top-level keys | the select clears and reloads its options when one of those fields changes | options that depend on another field |
@@ -119,6 +120,12 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `itemgroup_overviewbutton` | text, default `Overview` | label of the list's overview button | a clearer button text |
 
 A dynamic list stores an array of row objects; the fields inside it are the row's fields, and the engine stamps a technical [row id](glossary.md#row-id) into every row automatically — you never model it. Its key must not contain `-`. Row-level and backend-owned values survive when the user reorders or deletes rows; the reasoning is in [ADR 010](adr/adr_010_dynamic_list_row_identity.md). Nested lists work the same way.
+
+### File uploads
+
+Use the Modeler's file picker component. Without "Upload multiple files" it stores one attachment, with it a list of attachments. "Supported file formats" (`accept`) takes a comma-separated list of file extensions (`pdf`, `.pdf`) and MIME types (`application/pdf`, `image/*`); `*` or `*/*` allows any file. The browser offers only matching files. On submit the server checks each file's name and declared type against the list, not its content. `required`, `disabled` and hide-if work as for other fields.
+
+"Upload multiple files" and "Supported file formats" must be fixed values. A FEEL expression (`=...`) in either makes the workflow fail to load. A text field with `custom_type: attachment_single` / `attachment_multi` still works the same way and takes `accept` as a custom property.
 
 ### Conditional fields (hide-if)
 

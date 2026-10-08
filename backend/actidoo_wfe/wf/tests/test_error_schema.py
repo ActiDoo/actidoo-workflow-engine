@@ -207,3 +207,48 @@ def test_if_then_else():
         },
     }
     assert validate_and_create_error_dict(get_validator(schema), instance) == expected
+
+
+def test_required_error_lands_at_the_missing_property():
+    schema = {
+        "type": "object",
+        "properties": {
+            "a": {"type": "string"},
+            "b": {"type": "string"},
+            "c": {"type": "string"},
+        },
+        "required": ["a", "b", "c"],
+    }
+    instance = {"a": "x", "c": "z"}
+    expected = {
+        "b": {
+            "__errors": [
+                "'b' is a required property",
+            ],
+        },
+    }
+    assert validate_and_create_error_dict(get_validator(schema), instance) == expected
+
+
+def test_list_valued_keyword_error_lands_at_the_field():
+    schema = {
+        "type": "object",
+        "properties": {
+            "amount": {"type": ["number", "null"]},
+            "choice": {"enum": ["x", "y"]},
+        },
+    }
+    instance = {"amount": "abc", "choice": "z"}
+    expected = {
+        "amount": {
+            "__errors": [
+                "'abc' is not of type 'number', 'null'",
+            ],
+        },
+        "choice": {
+            "__errors": [
+                "'z' is not one of ['x', 'y']",
+            ],
+        },
+    }
+    assert validate_and_create_error_dict(get_validator(schema), instance) == expected

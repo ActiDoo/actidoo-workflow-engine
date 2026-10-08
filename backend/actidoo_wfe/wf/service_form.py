@@ -1024,6 +1024,32 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
     return custom_properties_validator
 
 
+def file_matches_accept(filename: str | None, mimetype: str | None, accept: list[str]) -> bool:
+    filename = (filename or "").lower()
+    mimetype = (mimetype or "").lower()
+    for token in accept:
+        if token.startswith("."):
+            if filename.endswith(token):
+                return True
+        elif token.endswith("/*"):
+            if mimetype.startswith(token[:-1]):
+                return True
+        elif mimetype == token:
+            return True
+    return False
+
+
+def accept_validator(validator, accept, instance, schema):
+    files = instance if isinstance(instance, list) else [instance]
+    for file in files:
+        if not isinstance(file, dict) or not file.get("filename"):
+            continue
+        if not file_matches_accept(file.get("filename"), file.get("mimetype"), accept):
+            yield jsonschema.exceptions.ValidationError(
+                f"File type of {file['filename']} not allowed, allowed: {', '.join(accept)}",
+            )
+
+
 @dataclass
 class ValidationResult:
     task_data: dict
@@ -1107,6 +1133,7 @@ def validate_task_data(
                 property_path=position,
                 form=form,
             ),
+            "accept": accept_validator,
         },
     )
 
