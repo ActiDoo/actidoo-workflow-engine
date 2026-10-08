@@ -32,6 +32,12 @@ A running workflow instance keeps the BPMN and forms it was started with; changi
 
 Model the process in the Camunda Modeler (Camunda 8 profile) and save it into the workflow directory. Set the process id to the folder name (`ExpenseApproval`), mark it executable, and give it a name — the name becomes the workflow title in lists and mails, so "Expense approval". Put every user task into a named lane; give each user task an id you recognise, because the id names its form file and is the key service functions use (here, `EnterExpense` and `ApproveExpense`).
 
+### Renaming a workflow
+
+To rename a workflow, change only the process name; keep the process id and the folder name. The process id is the workflow's identity: a new id is a new workflow, and the existing instances and their statistics stay with the old one.
+
+Every instance stores the title it was started with. The admin workflow and task lists show that stored title, so after a rename older instances appear under the old name and newer ones under the new name. The statistics page counts per workflow: the table and the graph add up old and new instances and show them under the current name. The current name takes effect after a backend restart, because the title is cached.
+
 ### Lanes, roles and ownership
 
 Custom properties on lanes, the process and user tasks decide who sees, starts and administrates the workflow. Set them in the Modeler's "Extension properties" panel. The example has two lanes: an "Employee" lane that anyone may start, and a "Finance" lane whose tasks only the `expense-approver` role sees.

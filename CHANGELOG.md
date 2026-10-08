@@ -47,6 +47,19 @@ releases correspond to the git tags of this repository.
   - Before: the default came back at once, so the field could not be emptied.
   - Now: the field stays empty while the user is in it. The default comes
     back only when the user leaves the field empty.
+- **When** a workflow was renamed and an admin opens the statistics page:
+  - Before: the graph labelled the workflow with the title stored on one of
+    its instances, often the old name.
+  - Now: the graph shows the current, translated title, like the table below
+    it. A workflow whose definition is gone keeps the title stored on its
+    newest completed instance.
+
+- **When** a user who does not administer a workflow asks the server for the
+  data of the statistics graph:
+  - Before: the server returned the completed instances of all workflows to
+    every logged-in user.
+  - Now: it returns only the workflows the user administers, as global admin
+    or as workflow owner, like the other admin lists.
 
 ## [0.1.44] - 2026-09-23
 

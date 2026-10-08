@@ -13,7 +13,7 @@ from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff import bff_admin
-from actidoo_wfe.wf.models import WorkflowInstanceTask
+from actidoo_wfe.wf.models import WorkflowInstance, WorkflowInstanceTask
 from actidoo_wfe.wf.bff.bff_admin_schema import (
     CancelWorkflowInstanceResponse,
     GetAllTasksResponse,
@@ -247,6 +247,57 @@ def test_admin_get_statistic_information(db_engine_ctx):
             )
 
         assert status == 200
+
+
+def test_admin_statistics_graph_shows_current_title(db_engine_ctx):
+    """Instances are labelled with the current workflow title, not the stored one.
+    A workflow without definition keeps its newest stored title."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        renamed = _create_completed_workflow(db=db)
+        removed_old = _create_completed_workflow(db=db)
+        removed_new = _create_completed_workflow(db=db)
+
+        db.get(WorkflowInstance, renamed.workflow_instance_id).title = "Old title"
+        for workflow, title, age in ((removed_old, "First title", timedelta(days=2)), (removed_new, "Second title", timedelta(days=1))):
+            instance = db.get(WorkflowInstance, workflow.workflow_instance_id)
+            instance.name = "RemovedFlow"
+            instance.title = title
+            instance.created_at = dt_now_naive() - age
+        db.commit()
+
+        client = Client()
+        with override_get_user(client=client, user=renamed.user("admin").user), disable_role_check(client):
+            status, json_resp = client.post(
+                name="bff_admin_get_statistics_information",
+                json={},
+                cls=ReducedWorkflowInstanceResponse,
+            )
+
+        titles = {item.id: item.title for item in json_resp.ITEMS}
+        assert titles[renamed.workflow_instance_id] == "Test Flow BFF"
+        assert titles[removed_old.workflow_instance_id] == "Second title"
+        assert titles[removed_new.workflow_instance_id] == "Second title"
+
+
+def test_admin_statistics_graph_only_shows_administered_workflows(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _create_completed_workflow(db=db)
+        client = Client()
+
+        items = {}
+        for name in ("initiator", "admin"):
+            with override_get_user(client=client, user=workflow.user(name).user), disable_role_check(client):
+                _, json_resp = client.post(
+                    name="bff_admin_get_statistics_information",
+                    json={},
+                    cls=ReducedWorkflowInstanceResponse,
+                )
+            items[name] = [item.id for item in json_resp.ITEMS]
+
+        assert items["initiator"] == []
+        assert items["admin"] == [workflow.workflow_instance_id]
 
 
 def test_admin_get_all_users_endpoint(db_engine_ctx):
