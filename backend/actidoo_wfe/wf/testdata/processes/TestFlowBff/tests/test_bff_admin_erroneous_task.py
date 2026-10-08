@@ -272,6 +272,24 @@ class TestErroneousLastStep:
             assert task.workflow_instance.is_completed
             assert task.workflow_instance.completed_at is not None
 
+    def test_an_instance_with_an_erroneous_last_step_can_be_cancelled(self, db_engine_ctx, probe):
+        with db_engine_ctx():
+            workflow, crash_task_id = _start_with_erroneous_task(SessionLocal())
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                probe.external_down = False
+                _edit_task_data(client, crash_task_id, crash_script=True)
+                _retry(client, crash_task_id)
+                status, _ = client.post(
+                    name="bff_admin_cancel_workflow_instance",
+                    json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                )
+                task = _get_task(client, crash_task_id)
+
+            assert status == 200
+            assert task.workflow_instance.is_completed
+
 
 class TestOverlappingRetries:
     def test_two_overlapping_retries_run_the_step_once_and_both_get_an_answer(self, db_engine_ctx, probe):

@@ -1557,10 +1557,10 @@ def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id:
 
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id, for_update=True)
 
-    # An instance without unfinished tasks has nothing left to cancel: it either reached
-    # its end event or was cancelled before. Cancelling it again would only flip the
-    # instance to unsuccessful and report success to the caller.
-    if len(service_workflow.get_unfinished_tasks(workflow)) == 0:
+    # A completed instance has nothing left to cancel: it either reached its end or
+    # was cancelled before. Cancelling it again would only flip the instance to
+    # unsuccessful and report success to the caller.
+    if service_workflow.is_workflow_completed(workflow):
         raise WorkflowInstanceAlreadyFinishedException(workflow_instance_id)
 
     service_workflow.cancel_workflow(workflow=workflow)

@@ -494,9 +494,9 @@ def cancel_workflow_instance(
 ) -> CancelWorkflowInstanceResponse:
     """Cancels a running instance.
 
-    An instance that has no unfinished tasks left - completed or already
-    cancelled - is answered with 409 ``workflow_instance_already_finished``
-    instead of being silently "cancelled" a second time.
+    An instance that is already completed or cancelled is answered with 409
+    ``workflow_instance_already_finished`` instead of being silently
+    "cancelled" a second time.
     """
 
     try:

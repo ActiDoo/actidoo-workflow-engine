@@ -86,7 +86,7 @@ class TaskIsNotErroneousException(Exception):
 
 
 class WorkflowInstanceAlreadyFinishedException(Exception):
-    """Raised when a write path is asked to change an instance that has no unfinished tasks left.
+    """Raised when a write path is asked to change an instance that is already completed.
 
     A finished instance is either completed or already cancelled - cancelling it
     again would rewrite a closed history, so the request is refused instead.
