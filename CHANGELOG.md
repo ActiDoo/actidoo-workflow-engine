@@ -9,9 +9,13 @@ releases correspond to the git tags of this repository.
 
 ### Added
 
-- Forms: the overview of a dynamic list copies a column to the clipboard
-  (icon in the column header), one value per line as Excel does, so it can be
-  pasted into SAP.
+- **When** a user needs the values of one column of a dynamic list in
+  another program:
+  - Before: the overview of the list only showed the values. The user had to
+    copy them one by one.
+  - Now: a copy icon in the column header copies the whole column, one value
+    per line, as Excel does. It can be pasted into Excel or SAP. File columns
+    have no copy icon.
 
 ## [0.1.44] - 2026-09-23
 
