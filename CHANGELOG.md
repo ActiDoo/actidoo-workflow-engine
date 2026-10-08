@@ -9,26 +9,33 @@ releases correspond to the git tags of this repository.
 
 ### Added
 
-- Mails from service tasks can carry cc recipients.
-  `sth.send_mail(..., cc_recipient_or_recipients_list=[...])` accepts a single
-  address or a list; `send_text_mail` takes the same argument. SMTP sets the
-  `Cc` header, Graph fills `ccRecipients`. A mail with cc goes out as one
-  message to all recipients, so a cc recipient receives one copy instead of
-  one per recipient; without cc the Graph transport still sends one mail per
-  recipient as before. The recipient override for dev environments drops the
-  cc addresses along with the recipients.
-- Mails from service tasks can carry Markdown or HTML (ADR 014).
-  `sth.send_mail(..., body_format="markdown")` renders the body to HTML,
-  so a long OneDrive or SharePoint link can sit behind a short link text;
-  the Markdown source travels as the plain-text alternative. Raw HTML in a
-  Markdown body is escaped and `javascript:` links are dropped;
-  `sth.escape_markdown(value)` makes form values render literally.
-  `send_text_mail` and the engine's own notification mails are unchanged.
+- **When** a service task sends a mail that other people should get a copy
+  of:
+  - Before: a mail had only direct recipients.
+  - Now: `sth.send_mail` and `sth.send_text_mail` take cc recipients, one
+    address or a list. Empty cc values are ignored. A mail with cc goes out
+    once to all recipients, so everyone sees who got it. Without cc, the
+    Graph transport still sends one mail per recipient. When the recipient
+    override of a test system is on, the cc recipients are dropped too.
+- **When** a mail from a service task should show a long link, for example
+  to a OneDrive or SharePoint document:
+  - Before: mails were plain text. The long link stood in the text as it is.
+  - Now: the service task can write the body in Markdown or HTML (ADR 014).
+    A link can then have a short text. A Markdown body is sent as HTML,
+    together with the Markdown text for mail programs without HTML. HTML
+    typed into a Markdown body shows as text, and `javascript:` links are
+    dropped. `sth.escape_markdown` makes a form value show exactly as typed;
+    a web address in it stays a link. Plain-text mails and the engine's own
+    notification mails do not change.
 
 ### Changed
 
-- `mock_send_text_mail` captures every body format and records
-  `body_format` and `cc` per mail.
+- **When** a workflow test checks sent mails with the `mock_send_text_mail`
+  fixture:
+  - Before: it recorded subject, content, recipients and attachments of
+    plain-text mails.
+  - Now: it records mails of every body format, and also their body format
+    and cc recipients.
 
 ## [0.1.43] - 2026-09-14
 
