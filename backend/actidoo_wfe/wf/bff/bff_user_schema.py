@@ -102,6 +102,7 @@ class GetUserTasksResponseUserTasks(BaseModel):
     completed_by_delegate_user: Optional["InlineUserResponse"]
     delegate_submit_comment: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
+    completed_at: datetime.datetime | None = Field(default=None)
 
 
 class StartWorkflowWithDataResponse(BaseModel):

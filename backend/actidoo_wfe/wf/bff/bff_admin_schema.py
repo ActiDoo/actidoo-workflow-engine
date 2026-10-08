@@ -100,6 +100,7 @@ class GetAllWorkflowInstancesResponseItem(BaseModel):
     has_task_in_error_state: bool
     created_by: InlineUserResponse
     created_at: datetime.datetime
+    completed_at: datetime.datetime | None = Field(default=None)
     deadline: WorkflowDeadlineResponse | None = None
 
 

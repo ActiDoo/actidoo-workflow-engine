@@ -36,9 +36,26 @@ const AdminWorkflowDetails: React.FC = () => {
     'POST'
   );
 
+  // A finished instance has nothing left to cancel - the backend refuses it with 409.
+  const canCancelWorkflow = workflow !== undefined && !workflow.is_completed;
+
   useEffect(() => {
     if (!workflow) getWorkflow();
   }, []);
+
+  // A 409 carries a `code` that says why the workflow was not cancelled; the
+  // store keeps the error body in `data`.
+  const cancelErrorText = (): string => {
+    const errorBody = cancelWorkflow?.data as { code?: string } | undefined;
+    switch (errorBody?.code) {
+      case 'workflow_instance_already_finished':
+        return t('admin.cancelWorkflowAlreadyFinished');
+      case 'workflow_instance_busy':
+        return t('admin.cancelWorkflowBusy');
+      default:
+        return t('admin.cancelWorkflowError');
+    }
+  };
 
   useEffect(() => {
     handleResponse(
@@ -46,10 +63,16 @@ const AdminWorkflowDetails: React.FC = () => {
       WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE,
       cancelWorkflow?.postResponse,
       t('admin.cancelWorkflowSuccess'),
-      t('admin.cancelWorkflowError'),
+      cancelErrorText(),
       () => {
         setCancelDialogOpen(false);
         navigate('/admin/all-workflows', { replace: true });
+      },
+      () => {
+        // The instance may have finished while this page was open - reload so the
+        // header and the cancel button match the server again.
+        setCancelDialogOpen(false);
+        getWorkflow();
       }
     );
   }, [cancelWorkflow?.postResponse]);
@@ -113,7 +136,7 @@ const AdminWorkflowDetails: React.FC = () => {
           ? `${t('admin.workflowDetailsTitle')}: ${workflow.title}`
           : t('admin.workflowDetailsTitle'),
         showBack: true,
-        actionSection: (
+        actionSection: canCancelWorkflow ? (
           <Button
             design={ButtonDesign.Negative}
             title={t('admin.cancelWorkflowTitle')}
@@ -122,7 +145,7 @@ const AdminWorkflowDetails: React.FC = () => {
             }}>
             {t('admin.cancelWorkflowTitle')}
           </Button>
-        ),
+        ) : undefined,
       }}
       showHideHeaderButton={false}
       headerContentPinnable={false}

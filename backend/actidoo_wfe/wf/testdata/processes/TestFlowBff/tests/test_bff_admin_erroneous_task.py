@@ -272,6 +272,24 @@ class TestErroneousLastStep:
             assert task.workflow_instance.is_completed
             assert task.workflow_instance.completed_at is not None
 
+    def test_an_instance_with_an_erroneous_last_step_can_be_cancelled(self, db_engine_ctx, probe):
+        with db_engine_ctx():
+            workflow, crash_task_id = _start_with_erroneous_task(SessionLocal())
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                probe.external_down = False
+                _edit_task_data(client, crash_task_id, crash_script=True)
+                _retry(client, crash_task_id)
+                status, _ = client.post(
+                    name="bff_admin_cancel_workflow_instance",
+                    json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                )
+                task = _get_task(client, crash_task_id)
+
+            assert status == 200
+            assert task.workflow_instance.is_completed
+
 
 class TestOverlappingRetries:
     def test_two_overlapping_retries_run_the_step_once_and_both_get_an_answer(self, db_engine_ctx, probe):
@@ -323,3 +341,28 @@ class TestOverlappingRetries:
             assert results["second"][0] in (200, 409), f"the second retry answered {results['second']}"
             assert probe.runs == 1, f"the step ran {probe.runs} times instead of once"
             assert task.state_completed and not task.state_error
+
+    def test_a_cancel_while_a_retry_holds_the_instance_is_answered_busy(self, db_engine_ctx, probe):
+        """The retry holds the instance row for longer than the lock wait
+        timeout. The cancel must get a 409 it can explain, not a 500."""
+        with db_engine_ctx():
+            workflow, task_id = _start_with_erroneous_task(SessionLocal())
+            probe.external_down = False
+            release = threading.Event()
+            probe.hold_until = release
+
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+                retry = threading.Thread(target=_retry, args=(Client(), task_id))
+                try:
+                    retry.start()
+                    assert probe.started.wait(timeout=10), "the retry never reached the step"
+                    status, body = client.post(
+                        name="bff_admin_cancel_workflow_instance",
+                        json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                    )
+                finally:
+                    release.set()
+                retry.join(timeout=30)
+
+            assert (status, body["code"]) == (409, "workflow_instance_busy")

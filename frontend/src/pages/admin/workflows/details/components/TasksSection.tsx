@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { List, StandardListItem, Text, Title, TitleLevel } from '@ui5/webcomponents-react';
+import { PcDateString } from '@/ui5-components';
 import { WeTaskStateIcons } from '@/utils/components/WeStateIcon';
 import WeEditableDataSection from '@/utils/components/WeEditableDataSection';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
@@ -66,7 +67,14 @@ const AdminWorkflowDetailsTasksSection: React.FC = () => {
                   <div className="inline-block w-4">
                     <WeTaskStateIcons data={task} showEmptyCircle />
                   </div>
-                  <Text>{task.title}</Text>
+                  <div className="flex flex-col">
+                    <Text>{task.title}</Text>
+                    {task.completed_at ? (
+                      <Text className="text-xs text-neutral-700">
+                        <PcDateString val={task.completed_at.toString()} />
+                      </Text>
+                    ) : null}
+                  </div>
                 </div>
               </StandardListItem>
             ))}

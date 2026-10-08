@@ -48,6 +48,14 @@ releases correspond to the git tags of this repository.
     like field labels.
   - Now: every level has its own size or style, so headings stand out from
     field labels.
+- **When** someone looks at a completed task or at the details of a workflow
+  instance:
+  - Before: the task did not show when it was completed. The admin details
+    page did not show when the instance was started or completed.
+  - Now: the task header shows the date and time the task was completed. On
+    the admin details page, the task list shows date and time for each
+    completed task, and the header shows when the instance was started and
+    completed.
 
 ### Fixed
 
@@ -65,7 +73,6 @@ releases correspond to the git tags of this repository.
   - Now: the graph shows the current, translated title, like the table below
     it. A workflow whose definition is gone keeps the title stored on its
     newest completed instance.
-
 - **When** a user who does not administer a workflow asks the server for the
   data of the statistics graph:
   - Before: the server returned the completed instances of all workflows to
@@ -78,6 +85,23 @@ releases correspond to the git tags of this repository.
   - Now: the instance stays open until the step succeeds or the instance is
     cancelled. The retry works, and the instance is completed once the step
     succeeds.
+- **When** a user unassigns a task that is already completed:
+  - Before: in some delegate cases the task header still offered "Unassign
+    from me", and the request ended in a server error.
+  - Now: the task header does not offer it for a completed task. A request
+    that still arrives is refused, and the page says that the task is already
+    completed.
+- **When** an administrator cancels a workflow instance that is already
+  finished:
+  - Before: the server reported success and marked the instance as
+    unsuccessful.
+  - Now: the server refuses it, and the page says that the workflow is already
+    finished. The admin details page no longer offers the button for a
+    finished instance.
+- **When** an administrator cancels a workflow instance while another request
+  is still working on it:
+  - Before: the cancel ended in a server error.
+  - Now: the page says that the workflow is busy and asks to try again.
 
 ## [0.1.44] - 2026-09-23
 

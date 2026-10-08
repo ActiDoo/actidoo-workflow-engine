@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { WeDetailsTable } from '@/utils/components/WeDetailsTable';
+import { PcDateString } from '@/ui5-components';
 import { WeStateCompletedIcon, WeStateErrorIcon } from '@/utils/components/WeStateIcon';
 import { AdminWorkflowInstance } from '@/models/models';
 import { useTranslation } from '@/i18n';
@@ -34,6 +35,10 @@ const AdminWorkflowDetailsHeader: React.FC<{ workflow?: AdminWorkflowInstance }>
             content: workflow?.is_completed ? <WeStateCompletedIcon /> : '',
           },
           {
+            label: t('adminDetailsHeader.completedAt'),
+            content: workflow?.completed_at ? <PcDateString val={workflow.completed_at} /> : '',
+          },
+          {
             label: t('adminDetailsHeader.hasError'),
             content: workflow?.has_task_in_error_state ? <WeStateErrorIcon /> : '',
           },
@@ -44,6 +49,10 @@ const AdminWorkflowDetailsHeader: React.FC<{ workflow?: AdminWorkflowInstance }>
           {
             label: t('adminDetailsHeader.createdBy'),
             content: workflow?.created_by ? <>{workflow.created_by.full_name}</> : '',
+          },
+          {
+            label: t('adminDetailsHeader.createdAt'),
+            content: workflow?.created_at ? <PcDateString val={workflow.created_at} /> : '',
           },
         ]}
       />
