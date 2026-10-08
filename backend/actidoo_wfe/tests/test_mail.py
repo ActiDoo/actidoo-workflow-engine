@@ -290,6 +290,13 @@ def test_unknown_body_format_is_rejected(smtp_server):
     smtp_server.send_message.assert_not_called()
 
 
+def test_unknown_body_format_is_rejected_when_sending_is_skipped(monkeypatch):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
+
+    with pytest.raises(ValueError):
+        mail.send_mail("Hi", "Body", "to@example.com", {}, body_format="rtf")  # type: ignore[arg-type]
+
+
 def test_skipped_sending_logs_body_format(monkeypatch, caplog):
     monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
     monkeypatch.setattr(settings, "email_override_recipients_enable", False)

@@ -274,12 +274,12 @@ def send_mail(
         recipients_list = override_recipients_list
         cc_list = []
 
+    body = MailBody.from_content(content, body_format, text_alternative)
+
     # Skip sending email in test/debug mode or when email_skip is set
     if shall_skip_sending_email():
         log_email(subject, content, recipients_list, attachments, cc_list, body_format)
         return False
-
-    body = MailBody.from_content(content, body_format, text_alternative)
 
     transport = (settings.email_transport or "GRAPH").upper()
     if transport == "SMTP":
