@@ -225,7 +225,7 @@ def service_notify_approver(sth: ServiceTaskHelper):
         "",
         f"please review **{summary}**.",
         "",
-        f"[Offer document]({sth.task_data['offer_url']})",
+        f"[Offer document]({sth.escape_markdown(sth.task_data['offer_url'])})",
     ])
     sth.send_mail("Review required", body, sth.task_data["approver_email"], body_format="markdown")
 ```
