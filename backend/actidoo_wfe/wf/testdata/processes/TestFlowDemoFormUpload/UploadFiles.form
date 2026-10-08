@@ -58,7 +58,7 @@
       "type": "filepicker",
       "layout": {
         "row": "Row_08sg40l",
-        "columns": 2
+        "columns": null
       },
       "id": "Field_0s7t7uq",
       "key": "file_required",
