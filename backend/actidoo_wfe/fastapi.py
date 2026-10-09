@@ -131,7 +131,6 @@ class ORJSONRoute(APIRoute):
 
 app: FastAPI = FastAPI(
     lifespan=lifespan,
-    debug=True,
     title="Workflow Engine",
     version="0.1.0",
     docs_url="/api/docs",

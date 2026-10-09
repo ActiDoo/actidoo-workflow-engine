@@ -105,6 +105,12 @@ Nothing yet.
 
 ### Fixed
 
+- **When** a request fails with an unexpected error:
+  - Before: the server answered with the full traceback, including file
+    paths and source lines.
+  - Now: it answers `500 Internal Server Error` only. The traceback is still
+    in the server log. Errors in service tasks are not affected; they are
+    shown on the erroneous task as before.
 - **When** a user downloads a task's file through the admin interface:
   - Before: every logged-in user could download any file of any task, given
     the task id and the file hash.
