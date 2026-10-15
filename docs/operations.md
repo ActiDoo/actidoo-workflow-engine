@@ -45,7 +45,7 @@ docker run -p 8080:8080 \
 The `WORKFLOWS` list is what makes `ExpenseApproval` appear in the start list and be startable; a workflow the image ships but the list omits stays installed and invisible. At start the container:
 
 1. Checks `BASE_URL`, `FRONTEND_PATH`, `API_PATH` and derives the base URLs.
-2. Renders the runtime assets: writes the base URLs, `ENVIRONMENT_LABEL` and `APP_TITLE` into the browser application, applies branding, and fills the path placeholders in the assets and the nginx config.
+2. Renders the runtime assets: writes the base URLs, `ENVIRONMENT_LABEL`, `APP_TITLE` and `PAGE_TITLE` into the browser application, applies branding, and fills the path placeholders in the assets and the nginx config.
 3. Starts the backend and nginx under a supervisor that restarts either process when it exits.
 
 The backend then runs its own startup (migrations, storage, extension scan, scheduler) and answers requests only after that finishes. It needs the database from the first step, so start the container after MySQL accepts connections.
@@ -61,7 +61,7 @@ Port 8080 is nginx; it serves the browser application and proxies the API. The b
 
 nginx honours `X-Forwarded-For`, `-Proto`, `-Host` and `-Port` only from the networks in `NGINX_REAL_IP_FROM`. Because the login callback URL the engine sends to the IdP is built from these values, a reverse proxy that terminates TLS must sit in a trusted network and forward `X-Forwarded-Proto: https` and the public host. Expense receipts travel inline in the form submit, so a single request can be large; `CLIENT_MAX_BODY_SIZE` (default `256m`) is the ceiling in the container, and the limit of your reverse proxy must be at least as high.
 
-To brand the application, set `BRAND_PRIMARY_COLOR`, `APP_TITLE` and `ENVIRONMENT_LABEL`, and mount a logo at `/srv/frontend.template/branding/logo.svg` and a help page at `/srv/frontend.template/branding/help.<lang>.md`. Mount into the template folder, not `/srv/frontend`: that folder is wiped and re-copied at every start. Help markdown is rendered as raw HTML, so mount only trusted content.
+To brand the application, set `BRAND_PRIMARY_COLOR`, `APP_TITLE`, `PAGE_TITLE` and `ENVIRONMENT_LABEL`, and mount a logo at `/srv/frontend.template/branding/logo.svg` and a help page at `/srv/frontend.template/branding/help.<lang>.md`. Mount into the template folder, not `/srv/frontend`: that folder is wiped and re-copied at every start. Help markdown is rendered as raw HTML, so mount only trusted content.
 
 ### Run more than one container
 
@@ -243,6 +243,7 @@ These are read by the container's start script when it renders the browser appli
 | `BRAND_PRIMARY_COLOR` | unset | Six-digit hex colour that overrides the brand colour; an invalid value is ignored with a warning. |
 | `ENVIRONMENT_LABEL` | unset | Short label such as `STAGING`, shown in red next to the start button. |
 | `APP_TITLE` | unset | Title shown next to the logo; unset shows `Workflow Engine`. |
+| `PAGE_TITLE` | unset | Browser tab title, e.g. `Workflow Engine QAS`, so a pasted link shows which environment it points to; unset shows `Workflow Engine`. |
 
 `PROXY_TRUSTED_NETWORKS` is fixed by the container to `["127.0.0.1/32"]`, so a value you set on the backend is overwritten; only the container-local nginx is trusted for forwarded headers, and nginx in turn trusts your proxy through `NGINX_REAL_IP_FROM`.
 

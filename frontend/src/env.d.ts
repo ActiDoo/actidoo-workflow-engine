@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_BUILD_NUMBER: string;
   readonly VITE_ENVIRONMENT_LABEL?: string;
   readonly VITE_APP_TITLE?: string;
+  readonly VITE_PAGE_TITLE?: string;
 }
 
 interface ImportMeta {

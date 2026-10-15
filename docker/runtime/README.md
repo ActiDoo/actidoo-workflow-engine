@@ -24,6 +24,7 @@ This image bundles the workflow engine frontend (static assets + nginx) and the 
   - `RENDER_RUNTIME_WRITE`: forces rendering at start (`1`, `true`, …) or skips it (`0`, `false`, …). If unset, `start.sh` defaults to `0` when `RENDER_RUNTIME_AT_BUILD=true`, otherwise to `1`.
   - `RENDER_RUNTIME_AT_BUILD`: persisted in the image when baking was enabled; used only for the defaulting behavior described above.
   - `RENDER_RUNTIME_WRITE=0` is recommended for read-only runtime.
+  - `PAGE_TITLE`: optional browser tab title (e.g., `Workflow Engine QAS`), injected into `env.js` and `index.html`. Defaults to `Workflow Engine`.
   - `ENVIRONMENT_LABEL`: optional short label (e.g., `STAGING`, `Customer-QA`) injected into `env.js` and shown inside the app header for easy environment identification. Falls back to hostname heuristics when omitted.
   - `NGINX_REAL_IP_FROM`: space- or comma-separated CIDRs for nginx `set_real_ip_from`. Defaults to private ranges (`10.0.0.0/8 172.16.0.0/12 192.168.0.0/16`).
   - `CLIENT_MAX_BODY_SIZE`: nginx request body-size limit. Defaults to `256m`. In baked/read-only images this must be set at build time, unless runtime rendering is forced.
