@@ -116,7 +116,7 @@ def translate_form_data(
     def _translate_uischema(node: Any):
         if isinstance(node, dict):
             for k, v in list(node.items()):
-                if k in ("ui:description", "ui:label", "ui:arrayAddButtonText", "ui:arrayOverviewButtonText") and isinstance(v, str):
+                if k in ("ui:description", "ui:label", "ui:arrayAddButtonText", "ui:arrayOverviewButtonText", "ui:patternMessage") and isinstance(v, str):
                     node[k] = _translate(v)
                 else:
                     _translate_uischema(v)
@@ -171,6 +171,9 @@ def extract_strings_from_form(form_json: dict) -> List[Tuple[str, str]]:
                     # Text-Views Fields have a label of "Text view" which we never show. These should not be translated.
                     continue
                 entries.append((msgid, msgctxt))
+        pattern_message = component.get("properties", {}).get("pattern_message")
+        if pattern_message:
+            entries.append((pattern_message.strip(), f"{prefix}{strid}.pattern_message"))
         if "values" in component:
             for entry in component["values"]:
                 if "label" in entry:

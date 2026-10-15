@@ -34,6 +34,8 @@ import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
 import { collectHiddenPaths, dropErrorsOfHiddenFields } from '@/services/FeelService';
+import { replacePatternErrorMessages } from '@/rjsf-customs/patternErrors';
+import { useTranslation } from '@/i18n';
 
 const validator = customizeValidator();
 
@@ -94,6 +96,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
   children,
   ...rest
 }) => {
+  const { t } = useTranslation();
+
   // Errors of fields the form does not show must not block the submit: the backend treats
   // a hidden field and everything below it as absent, and so does this filter. Visibility
   // is read from the same data the hide-if rendering uses (formContext.formData).
@@ -101,7 +105,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
     const formData =
       (rest.formContext as { formData?: unknown } | undefined)?.formData ?? rest.formData;
     const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
-    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths);
+    const visibleErrors = replacePatternErrorMessages(
+      dropErrorsOfHiddenFields(errors, hiddenPaths),
+      uiSchema ?? rest.uiSchema,
+      t('taskForm.patternMismatch')
+    );
     return providedTransformErrors
       ? providedTransformErrors(visibleErrors, uiSchema)
       : visibleErrors;
