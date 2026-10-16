@@ -174,6 +174,9 @@ export const en = {
     submitError: 'An error occurred while submitting the form',
     optionsLoadError: 'Could not load options. Please try again.',
   },
+  taskForm: {
+    patternMismatch: 'The input does not have the expected format',
+  },
   taskActions: {
     reset: 'Reset',
     submit: 'Submit',

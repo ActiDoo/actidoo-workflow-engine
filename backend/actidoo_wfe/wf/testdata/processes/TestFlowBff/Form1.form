@@ -48,6 +48,17 @@
       "key": "optional_note"
     },
     {
+      "label": "Cost center",
+      "type": "textfield",
+      "layout": {"row": "Row_4b", "columns": null},
+      "id": "Field_cost_center",
+      "key": "cost_center",
+      "validate": {"pattern": "^CC-[0-9]{4}$"},
+      "properties": {
+        "pattern_message": "Cost center like CC-1234"
+      }
+    },
+    {
       "label": "Trigger error",
       "type": "checkbox",
       "layout": {"row": "Row_5", "columns": null},

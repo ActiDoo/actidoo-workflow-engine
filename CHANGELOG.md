@@ -7,7 +7,17 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **When** a text field must have a certain format, e.g. a cost center
+  `CC-1234`:
+  - Before: the Modeler's "Custom regular expression" was ignored. The form
+    accepted any text, and a wrong value was only found later in the process.
+  - Now: the regex is checked in the browser while typing and again on submit.
+    The custom property `pattern_message` on the field sets the error the
+    user sees, e.g. "Cost center like CC-1234"; it is translatable like a
+    label. Without it a generic "expected format" message is shown, never the
+    regex itself.
 
 ## [0.1.45] - 2026-10-08
 

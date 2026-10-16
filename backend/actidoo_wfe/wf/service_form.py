@@ -1152,7 +1152,7 @@ def validate_task_data(
                 run_again = True
                 break  # re-validate after each removal to keep the remaining paths valid
 
-    error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data)
+    error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data, uischema=form.uischema)
     # log.debug("removed = %s", removed)
 
     untracked_task_data = copy.deepcopy(tracked_task_data)
