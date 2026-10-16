@@ -12,6 +12,7 @@ Prepares the Docker container for execution by:
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import re
@@ -58,6 +59,7 @@ class RuntimeContext:
     brand_primary_color: Optional[str]  # e.g., "ff6600"
     environment_label: Optional[str]  # e.g., "QAS" or "Staging"
     app_title: Optional[str]  # e.g., "Workflow Engine"; shown next to the brand logo
+    page_title: Optional[str]  # e.g., "Workflow Engine QAS"; the browser tab title
 
     @property
     def frontend_env_js_path(self) -> Path:
@@ -167,6 +169,7 @@ def write_frontend_env_js(
     api_base_url: str,
     environment_label: Optional[str],
     app_title: Optional[str],
+    page_title: Optional[str],
 ) -> None:
     """Generates the window.__ACTIDOO_RUNTIME_CONFIG__ object for the SPA."""
     target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -177,6 +180,7 @@ def write_frontend_env_js(
             "API_BASE_URL": api_base_url,
             "ENVIRONMENT_LABEL": environment_label or "",
             "APP_TITLE": app_title or "",
+            "PAGE_TITLE": page_title or "",
         },
         separators=(",", ":"),
     )
@@ -187,6 +191,28 @@ def write_frontend_env_js(
         "window.dispatchEvent(new Event('actidoo:runtime-config-ready'));"
     )
     target_path.write_text(script_content, encoding="utf-8")
+
+
+def apply_page_title(frontend_dist: Path, page_title: Optional[str]) -> None:
+    """
+    Writes PAGE_TITLE into the <title> of index.html so link previews and
+    bookmarks show it even before the SPA has run.
+    """
+    if not page_title:
+        return
+    index_html = frontend_dist / "index.html"
+    if not index_html.is_file():
+        return
+    content = index_html.read_text(encoding="utf-8")
+    updated, count = re.subn(
+        r"<title>.*?</title>",
+        f"<title>{html.escape(page_title)}</title>",
+        content,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if count:
+        index_html.write_text(updated, encoding="utf-8")
 
 
 def hydrate_frontend_paths(target: Path, replacements: dict[str, str]) -> None:
@@ -344,6 +370,7 @@ def main() -> int:
         brand_primary_color=get_config("BRAND_PRIMARY_COLOR"),
         environment_label=get_config("ENVIRONMENT_LABEL"),
         app_title=get_config("APP_TITLE"),
+        page_title=get_config("PAGE_TITLE"),
     )
 
     real_ip_raw = os.environ.get("NGINX_REAL_IP_FROM")
@@ -372,7 +399,9 @@ def main() -> int:
         ctx.api_base_url,
         ctx.environment_label,
         ctx.app_title,
+        ctx.page_title,
     )
+    apply_page_title(ctx.frontend_dist, ctx.page_title)
 
     replacements = {
         FRONTEND_PATH_PLACEHOLDER: ctx.frontend_base_path,

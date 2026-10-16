@@ -19,9 +19,14 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { WeDialog } from '@/utils/components/WeDialog';
 import { WeToast } from '@/utils/components/WeToast';
 import { I18nProvider } from '@/i18n';
+import { environment } from '@/environment';
 
 // set theme of ui5 webcomponents
 void setTheme('sap_horizon').then(); // no effect?
+
+if (environment.pageTitle) {
+  document.title = environment.pageTitle;
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 const queryClient = new QueryClient();
