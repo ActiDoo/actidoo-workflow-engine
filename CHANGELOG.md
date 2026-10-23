@@ -7,7 +7,13 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **When** a user presses Enter in a single-line field of a task form:
+  - Before: the form was submitted, as if the submit button had been
+    clicked.
+  - Now: nothing happens. A task is only submitted with its submit button.
+    Enter in a multi-line field still adds a line break.
 
 ## [0.1.45] - 2026-10-08
 
