@@ -7,7 +7,15 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **When** a user resets a form to its initial state or leaves the user
+  settings with unsaved changes:
+  - Before: the buttons read "Cancel / Reset" and "Stay / Leave". It was not
+    clear at first sight which button keeps the data.
+  - Now: they read "Keep / Reset" and "Stay / Discard changes", and the
+    unsaved-changes text says what happens: "If you leave, your changes will
+    be discarded." The admin user details page uses the same dialog.
 
 ## [0.1.45] - 2026-10-08
 
