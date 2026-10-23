@@ -7,7 +7,17 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **When** an administrator wants to get rid of a workflow instance, for
+  example one that was started by mistake to test on production:
+  - Before: the instance could only be cancelled. It stayed in the lists and
+    in the statistics. Deleting was only possible for the assigned user of a
+    form with `can_user_delete_workflow`.
+  - Now: users with the role `wf-admin` can delete an instance on its admin
+    details page, running or finished. The instance is removed with all its
+    tasks and attachments. The dialog asks to type a confirmation word
+    first. Workflow owners can still only cancel.
 
 ## [0.1.45] - 2026-10-08
 

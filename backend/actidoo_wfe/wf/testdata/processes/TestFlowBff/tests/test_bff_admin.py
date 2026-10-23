@@ -217,6 +217,96 @@ def test_cancel_workflow_with_erroneous_task(db_engine_ctx):
         assert any(t.state_cancelled for t in _tasks_of(client=client, workflow=workflow))
 
 
+# ---------------------------------------------------------------------------
+# delete workflow
+# ---------------------------------------------------------------------------
+
+
+def _delete(client, workflow, user_name="admin"):
+    with override_get_user(client=client, user=workflow.user(user_name).user), disable_role_check(client):
+        return client.post(
+            name="bff_admin_delete_workflow_instance",
+            json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+        )
+
+
+def _instance_exists(db, workflow) -> bool:
+    db.commit()
+    instance = db.execute(select(WorkflowInstance.id).where(WorkflowInstance.id == workflow.workflow_instance_id)).scalar_one_or_none()
+    task = db.execute(select(WorkflowInstanceTask.id).where(WorkflowInstanceTask.workflow_instance_id == workflow.workflow_instance_id)).first()
+    assert (instance is None) == (task is None)
+    return instance is not None
+
+
+def test_delete_running_workflow(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow)
+
+        assert status == 200
+        assert not _instance_exists(db, workflow)
+        assert _tasks_of(client=client, workflow=workflow) == []
+
+
+def test_delete_completed_workflow(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _create_completed_workflow(db=db)
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow)
+
+        assert status == 200
+        assert not _instance_exists(db, workflow)
+
+
+def test_delete_workflow_is_refused_for_workflow_owner(db_engine_ctx, monkeypatch):
+    monkeypatch.setattr(
+        service_application.service_workflow,
+        "get_wf_owner_role_to_workflow_mapping",
+        lambda: {"wf-owner-bff": [WF_NAME]},
+    )
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "owner": ["wf-user", "wf-owner-bff"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow, user_name="owner")
+
+        assert status == 403
+        assert _instance_exists(db, workflow)
+
+
+def test_delete_workflow_is_refused_for_user(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow, user_name="initiator")
+
+        assert status == 403
+        assert _instance_exists(db, workflow)
+
+
 def test_admin_assign(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
