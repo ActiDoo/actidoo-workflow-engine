@@ -44,6 +44,8 @@ export const de = {
     logout: 'Abmelden',
   },
   common: {
+    cancelReason: 'Grund für den Abbruch',
+    cancelledBy: 'Abgebrochen von {{name}}: {{reason}}',
     actions: {
       search: 'Suchen',
       searchUser: 'Benutzer suchen',
@@ -430,6 +432,7 @@ export const de = {
     createdBy: 'Erstellt von',
     createdAt: 'Erstellt am',
     completedAt: 'Abgeschlossen am',
+    cancelledBy: 'Abgebrochen von',
   },
   statistics: {
     title: 'Workflow-Statistiken',

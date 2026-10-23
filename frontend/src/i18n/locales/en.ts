@@ -43,6 +43,8 @@ export const en = {
     logout: 'Logout',
   },
   common: {
+    cancelReason: 'Reason for cancelling',
+    cancelledBy: 'Cancelled by {{name}}: {{reason}}',
     actions: {
       search: 'Search',
       searchUser: 'Search User',
@@ -426,6 +428,7 @@ export const en = {
     createdBy: 'Created by',
     createdAt: 'Created at',
     completedAt: 'Completed at',
+    cancelledBy: 'Cancelled by',
   },
   statistics: {
     title: 'Workflow Statistics',

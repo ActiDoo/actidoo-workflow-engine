@@ -915,6 +915,12 @@ def get_subscriptions_by_message_name_and_correlation_key(db: Session, message_n
     return subscriptions
 
 
+def set_workflow_instance_cancelled(db: Session, workflow_instance_id: uuid.UUID, cancelled_by_id: uuid.UUID, reason: str):
+    db_workflow = db.execute(select(WorkflowInstance).where(WorkflowInstance.id == workflow_instance_id)).scalar_one()
+    db_workflow.cancelled_by_id = cancelled_by_id
+    db_workflow.cancel_reason = reason
+
+
 def delete_workflow_instance(db: Session, workflow: BpmnWorkflow):
     """Deletes a workflow instance comletely.
 

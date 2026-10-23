@@ -966,11 +966,37 @@ def test_cancel_workflow(db_engine_ctx):
         with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
             status, _json = client.post(
                 name="cancel_workflow",
-                json={"task_id": str(task.id)},
+                json={"task_id": str(task.id), "reason": "test"},
                 cls=CancelWorkflowResponse,
             )
 
         assert status == 200
+
+
+def test_cancel_workflow_shows_who_and_why_in_my_workflows(db_engine_ctx, monkeypatch):
+    monkeypatch.setattr(service_application.service_workflow, "can_user_cancel_workflow", lambda **_: True)
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            status, _ = client.post(
+                name="cancel_workflow",
+                json={"task_id": str(task.id), "reason": "no longer needed"},
+            )
+            assert status == 200
+            _, json_resp = client.post(
+                name="get_my_initiated_workflow_instances",
+                json={},
+                cls=GetWorkflowInstancesResponse,
+            )
+
+        item = next(i for i in json_resp.ITEMS if i.id == workflow.workflow_instance_id)
+        assert item.is_completed
+        assert item.cancelled_by.id == workflow.user("initiator").user.id
+        assert item.cancel_reason == "no longer needed"
 
 
 def test_delete_workflow(db_engine_ctx):

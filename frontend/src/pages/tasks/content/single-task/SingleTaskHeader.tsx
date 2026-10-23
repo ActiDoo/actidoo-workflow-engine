@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Bar,
   BusyIndicator,
@@ -11,6 +11,7 @@ import {
   MessageStripDesign,
   Modals,
   Text,
+  TextArea,
   Title,
   TitleLevel,
 } from '@ui5/webcomponents-react';
@@ -33,6 +34,39 @@ interface TaskItemHeaderProps {
   reloadTask: () => void;
   backToList: () => void;
 }
+
+const CancelWorkflowDialogContent: React.FC<{
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}> = ({ onClose, onConfirm }) => {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState('');
+
+  return (
+    <div className="flex flex-column gap-2">
+      <span
+        dangerouslySetInnerHTML={{
+          __html: t('singleTaskHeader.cancelWorkflowDialogText'),
+        }}
+      />
+      <TextArea
+        placeholder={t('common.cancelReason')}
+        value={reason}
+        onInput={e => {
+          setReason(e.target.value ?? '');
+        }}
+      />
+      <Bar
+        startContent={<Button onClick={onClose}>{t('singleTaskHeader.closeDialog')}</Button>}
+        endContent={
+          <Button disabled={!reason.trim()} onClick={() => onConfirm(reason.trim())}>
+            {t('singleTaskHeader.cancelWorkflowAction')}
+          </Button>
+        }
+      />
+    </div>
+  );
+};
 
 export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const { t } = useTranslation();
@@ -183,8 +217,8 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     dispatch(postRequest(WeDataKey.UNASSIGN_TASK_FROM_ME, { task_id: taskId }));
   };
 
-  const handleCancelWorkflow = (taskId: string): void => {
-    dispatch(postRequest(WeDataKey.CANCEL_WORKFLOW, { task_id: taskId }));
+  const handleCancelWorkflow = (taskId: string, reason: string): void => {
+    dispatch(postRequest(WeDataKey.CANCEL_WORKFLOW, { task_id: taskId, reason }));
   };
 
   const showDialog = Modals.useShowDialog();
@@ -286,35 +320,12 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                   onClick={() => {
                     const { close } = showDialog({
                       children: (
-                        <span
-                          dangerouslySetInnerHTML={{
-                            __html: t('singleTaskHeader.cancelWorkflowDialogText'),
+                        <CancelWorkflowDialogContent
+                          onClose={() => close()}
+                          onConfirm={reason => {
+                            handleCancelWorkflow(task.id, reason);
+                            close();
                           }}
-                        />
-                      ),
-                      footer: (
-                        <Bar
-                          startContent={
-                            <div>
-                              <Button
-                                onClick={() => {
-                                  close();
-                                }}>
-                                {t('singleTaskHeader.closeDialog')}
-                              </Button>
-                            </div>
-                          }
-                          endContent={
-                            <div>
-                              <Button
-                                onClick={() => {
-                                  handleCancelWorkflow(task.id);
-                                  close();
-                                }}>
-                                {t('singleTaskHeader.cancelWorkflowAction')}
-                              </Button>
-                            </div>
-                          }
                         />
                       ),
                     });
