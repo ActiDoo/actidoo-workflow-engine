@@ -306,7 +306,7 @@ def test_cancelWorkflowInstance_MustRespectWFOwner(db_engine_ctx, mock_send_text
             workflow, db_session = start_my_workflow()
             assert workflow.workflow_instance_id is not None
             if should_be_allowed:
-                service_application.admin_cancel_workflow(db=db_session, user_id=workflow.user(name).user.id, workflow_instance_id=workflow.workflow_instance_id)
+                service_application.admin_cancel_workflow(db=db_session, user_id=workflow.user(name).user.id, workflow_instance_id=workflow.workflow_instance_id, reason="test")
             else:
                 with pytest.raises(UserMayNotAdministrateThisWorkflowException):
-                    service_application.admin_cancel_workflow(db=db_session, user_id=workflow.user(name).user.id, workflow_instance_id=workflow.workflow_instance_id)
+                    service_application.admin_cancel_workflow(db=db_session, user_id=workflow.user(name).user.id, workflow_instance_id=workflow.workflow_instance_id, reason="test")

@@ -111,6 +111,7 @@ class WorkflowUser(Base):
 
     created_workflows: Mapped["WorkflowInstance"] = relationship(
         back_populates="created_by",
+        foreign_keys="WorkflowInstance.created_by_id",
     )
 
 
@@ -451,7 +452,14 @@ class WorkflowInstance(Base):
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("workflow_users.id"),
     )
-    created_by: Mapped[WorkflowUser] = relationship(back_populates="created_workflows")
+    created_by: Mapped[WorkflowUser] = relationship(back_populates="created_workflows", foreign_keys=[created_by_id])
+
+    cancelled_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workflow_users.id"),
+        nullable=True,
+    )
+    cancelled_by: Mapped[WorkflowUser | None] = relationship(foreign_keys=[cancelled_by_id])
+    cancel_reason: Mapped[str | None] = mapped_column(ty.Text, nullable=True)
 
     tasks: Mapped[List["WorkflowInstanceTask"]] = relationship(
         back_populates="workflow_instance",

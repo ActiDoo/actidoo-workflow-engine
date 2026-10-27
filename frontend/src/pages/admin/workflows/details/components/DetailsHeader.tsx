@@ -56,6 +56,17 @@ const AdminWorkflowDetailsHeader: React.FC<{ workflow?: AdminWorkflowInstance }>
           },
         ]}
       />
+      {workflow?.cancelled_by ? (
+        <WeDetailsTable
+          data={[
+            {
+              label: t('adminDetailsHeader.cancelledBy'),
+              content: <>{workflow.cancelled_by.full_name}</>,
+            },
+            { label: t('common.cancelReason'), content: workflow.cancel_reason },
+          ]}
+        />
+      ) : null}
     </div>
   );
 };

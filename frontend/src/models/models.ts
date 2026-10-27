@@ -178,6 +178,8 @@ export interface AdminWorkflowInstance {
   is_completed?: boolean;
   has_task_in_error_state?: boolean;
   created_by?: User;
+  cancelled_by?: User | null;
+  cancel_reason?: string | null;
   is_readonly?: boolean;
 }
 
@@ -189,6 +191,8 @@ export interface MyInitiatedWorkflowInstance {
   active_tasks?: ActiveTaskInstance[];
   created_at?: Date;
   completed_at?: Date;
+  cancelled_by?: User | null;
+  cancel_reason?: string | null;
   is_readonly?: boolean;
   deadline?: WorkflowDeadline | null;
 }

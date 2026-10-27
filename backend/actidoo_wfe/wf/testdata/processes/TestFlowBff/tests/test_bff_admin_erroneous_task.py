@@ -283,7 +283,7 @@ class TestErroneousLastStep:
                 _retry(client, crash_task_id)
                 status, _ = client.post(
                     name="bff_admin_cancel_workflow_instance",
-                    json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                    json={"workflow_instance_id": str(workflow.workflow_instance_id), "reason": "test"},
                 )
                 task = _get_task(client, crash_task_id)
 
@@ -359,7 +359,7 @@ class TestOverlappingRetries:
                     assert probe.started.wait(timeout=10), "the retry never reached the step"
                     status, body = client.post(
                         name="bff_admin_cancel_workflow_instance",
-                        json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                        json={"workflow_instance_id": str(workflow.workflow_instance_id), "reason": "test"},
                     )
                 finally:
                     release.set()

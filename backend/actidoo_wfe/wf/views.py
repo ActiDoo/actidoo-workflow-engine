@@ -170,6 +170,7 @@ def _instance_list_loader_options():
         selectinload(WorkflowInstance.active_tasks).options(*inline_task_options),
         selectinload(WorkflowInstance.completed_tasks).options(*inline_task_options),
         selectinload(WorkflowInstance.created_by),
+        selectinload(WorkflowInstance.cancelled_by),
     )
 
 

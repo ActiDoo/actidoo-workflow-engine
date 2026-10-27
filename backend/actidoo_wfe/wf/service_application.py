@@ -1353,7 +1353,7 @@ def is_faulty(
     return len(faulty_tasks) > 0
 
 
-def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
+def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, reason: str):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id, for_update=True)
     can_cancel = service_workflow.can_user_cancel_workflow(
         workflow=workflow,
@@ -1363,6 +1363,7 @@ def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     if can_cancel:
         service_workflow.cancel_workflow(workflow=workflow)
         repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
+        repository.set_workflow_instance_cancelled(db=db, workflow_instance_id=workflow.task_tree.id, cancelled_by_id=user_id, reason=reason)
 
 
 def user_delete_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
@@ -1574,7 +1575,7 @@ def admin_execute_erroneous_task(db: Session, user_id: uuid.UUID, task_id: uuid.
     return workflow.task_tree.id, outcome
 
 
-def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID):
+def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID, reason: str):
 
     require_workflow_admin_by_instance_id(db=db, user_id=user_id, instance_id=workflow_instance_id)
 
@@ -1588,6 +1589,7 @@ def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id:
 
     service_workflow.cancel_workflow(workflow=workflow)
     repository.store_workflow_instance(db=db, workflow=workflow)
+    repository.set_workflow_instance_cancelled(db=db, workflow_instance_id=workflow_instance_id, cancelled_by_id=user_id, reason=reason)
 
 
 def admin_assign_task_to_user_without_checks(
