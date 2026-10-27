@@ -8,7 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest } from '@/store/generic-data/actions';
-import { Text, Button, ButtonDesign, DynamicPageHeader } from '@ui5/webcomponents-react';
+import { Text, Button, ButtonDesign, DynamicPageHeader, Input } from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/activity-items.js';
 import { useSelectCurrentAdminWorkflow } from '@/store/generic-data/selectors';
 import AdminWorkflowDetailsHeader from '@/pages/admin/workflows/details/components/DetailsHeader';
@@ -26,6 +26,8 @@ const AdminWorkflowDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
 
   const workflow = useSelectCurrentAdminWorkflow(workflowId);
   const cancelWorkflow = useSelector(
@@ -36,8 +38,19 @@ const AdminWorkflowDetails: React.FC = () => {
     'POST'
   );
 
+  const deleteWorkflow = useSelector(
+    (state: State) => state.data[WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE]
+  );
+  const deleteWorkflowLoadState = useSelectUiLoading(
+    WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE,
+    'POST'
+  );
+  const loginState = useSelector((state: State) => state.auth.loginState.data);
+
   // A finished instance has nothing left to cancel - the backend refuses it with 409.
   const canCancelWorkflow = workflow !== undefined && !workflow.is_completed;
+  const canDeleteWorkflow = workflow !== undefined && !!loginState?.can_access_wf_admin;
+  const deleteConfirmWord = t('admin.deleteWorkflowConfirmWord');
 
   useEffect(() => {
     if (!workflow) getWorkflow();
@@ -76,6 +89,31 @@ const AdminWorkflowDetails: React.FC = () => {
       }
     );
   }, [cancelWorkflow?.postResponse]);
+
+  useEffect(() => {
+    handleResponse(
+      dispatch,
+      WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE,
+      deleteWorkflow?.postResponse,
+      t('admin.deleteWorkflowSuccess'),
+      t('admin.deleteWorkflowError'),
+      () => {
+        setDeleteDialogOpen(false);
+        navigate('/admin/all-workflows', { replace: true });
+      }
+    );
+  }, [deleteWorkflow?.postResponse]);
+
+  const openDeleteDialog = (): void => {
+    setDeleteConfirmInput('');
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteWorkflow = (): void => {
+    dispatch(
+      postRequest(WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE, { workflow_instance_id: workflowId })
+    );
+  };
 
   const handleCancelWorkflow = (): void => {
     dispatch(
@@ -128,6 +166,53 @@ const AdminWorkflowDetails: React.FC = () => {
     );
   };
 
+  const renderDeleteWorkflowDialog = (): React.ReactElement => {
+    const isLoading = deleteWorkflowLoadState;
+    const isConfirmed = deleteConfirmInput.trim() === deleteConfirmWord;
+
+    return (
+      <WeAlertDialog
+        isDialogOpen={deleteDialogOpen}
+        setDialogOpen={setDeleteDialogOpen}
+        isLoading={isLoading}
+        title={t('admin.deleteWorkflowTitle')}
+        buttons={
+          <>
+            <Button
+              disabled={isLoading}
+              className="transparent-button-gray"
+              design={ButtonDesign.Transparent}
+              tooltip={t('admin.keepWorkflowTitle')}
+              onClick={() => {
+                setDeleteDialogOpen(false);
+              }}>
+              {t('admin.keepWorkflowTitle')}
+            </Button>
+            <Button
+              disabled={isLoading || !isConfirmed}
+              design={ButtonDesign.Negative}
+              tooltip={t('admin.deleteWorkflowTitle')}
+              onClick={() => {
+                handleDeleteWorkflow();
+              }}>
+              {t('admin.deleteWorkflowTitle')}
+            </Button>
+          </>
+        }>
+        <div className="flex flex-column gap-2">
+          <Text>{t('admin.deleteWorkflowWarning')}</Text>
+          <Text>{t('admin.deleteWorkflowConfirmLabel', { word: deleteConfirmWord })}</Text>
+          <Input
+            value={deleteConfirmInput}
+            onInput={e => {
+              setDeleteConfirmInput(e.target.value ?? '');
+            }}
+          />
+        </div>
+      </WeAlertDialog>
+    );
+  };
+
   return (
     <PcDynamicPage
       id="admin-workflow-details"
@@ -136,16 +221,29 @@ const AdminWorkflowDetails: React.FC = () => {
           ? `${t('admin.workflowDetailsTitle')}: ${workflow.title}`
           : t('admin.workflowDetailsTitle'),
         showBack: true,
-        actionSection: canCancelWorkflow ? (
-          <Button
-            design={ButtonDesign.Negative}
-            title={t('admin.cancelWorkflowTitle')}
-            onClick={() => {
-              setCancelDialogOpen(true);
-            }}>
-            {t('admin.cancelWorkflowTitle')}
-          </Button>
-        ) : undefined,
+        actionSection:
+          canCancelWorkflow || canDeleteWorkflow ? (
+            <div className="flex gap-2">
+              {canCancelWorkflow ? (
+                <Button
+                  design={ButtonDesign.Negative}
+                  title={t('admin.cancelWorkflowTitle')}
+                  onClick={() => {
+                    setCancelDialogOpen(true);
+                  }}>
+                  {t('admin.cancelWorkflowTitle')}
+                </Button>
+              ) : null}
+              {canDeleteWorkflow ? (
+                <Button
+                  design={ButtonDesign.Negative}
+                  title={t('admin.deleteWorkflowTitle')}
+                  onClick={openDeleteDialog}>
+                  {t('admin.deleteWorkflowTitle')}
+                </Button>
+              ) : null}
+            </div>
+          ) : undefined,
       }}
       showHideHeaderButton={false}
       headerContentPinnable={false}
@@ -156,6 +254,7 @@ const AdminWorkflowDetails: React.FC = () => {
       }>
       <AdminWorkflowDetailsTasksSection />
       {renderCancelWorkflowDialog()}
+      {renderDeleteWorkflowDialog()}
     </PcDynamicPage>
   );
 };

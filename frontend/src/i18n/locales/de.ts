@@ -317,6 +317,13 @@ export const de = {
     cancelWorkflowBusy:
       'Der Workflow wird gerade durch einen anderen Aufruf bearbeitet. Bitte warte kurz und versuche es erneut.',
     keepWorkflowTitle: 'Workflow behalten',
+    deleteWorkflowTitle: 'Workflow löschen',
+    deleteWorkflowWarning:
+      'Der Workflow wird mit allen Aufgaben, Daten und Anhängen endgültig gelöscht und taucht auch in der Statistik nicht mehr auf. Das kann nicht rückgängig gemacht werden.',
+    deleteWorkflowConfirmWord: 'LÖSCHEN',
+    deleteWorkflowConfirmLabel: 'Gib zur Bestätigung {{word}} ein:',
+    deleteWorkflowSuccess: 'Workflow endgültig gelöscht',
+    deleteWorkflowError: 'Workflow konnte nicht gelöscht werden. Bitte versuche es erneut.',
     tasksHeadline: 'Aufgaben',
     noSelectedTaskTitle: 'Keine Aufgabe ausgewählt',
     noSelectedTaskText: 'Bitte links eine Aufgabe auswählen',

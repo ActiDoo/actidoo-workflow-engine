@@ -19,6 +19,8 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     AssignUserRequest,
     CancelWorkflowInstanceRequest,
     CancelWorkflowInstanceResponse,
+    DeleteWorkflowInstanceRequest,
+    DeleteWorkflowInstanceResponse,
     DownloadAttachmentRequest,
     ExecuteErroneousTaskRequest,
     GetAllTasksResponse,
@@ -521,6 +523,35 @@ def cancel_workflow_instance(
             "This workflow is already finished and cannot be cancelled.",
             workflow_instance_id=str(error.workflow_instance_id),
         )
+    except WorkflowInstanceBusyException as error:
+        return _conflict(
+            "workflow_instance_busy",
+            "Another request is still working on this workflow instance.",
+            workflow_instance_id=str(error.workflow_instance_id),
+        )
+
+
+# delete workflow
+
+
+@router.post("/delete_workflow_instance", name="bff_admin_delete_workflow_instance")
+def delete_workflow_instance(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    reqdata: DeleteWorkflowInstanceRequest,
+) -> DeleteWorkflowInstanceResponse:
+
+    try:
+        service_application.admin_delete_workflow(
+            db=db,
+            user_id=user.id,
+            workflow_instance_id=reqdata.workflow_instance_id,
+        )
+        return DeleteWorkflowInstanceResponse()
+
+    except UserMayNotAdministrateThisWorkflowException as ex:
+        log.warning(f"User {user.username} is not allowed to call delete_workflow_instance for workflow_instance_id {reqdata.workflow_instance_id}")
+        raise HTTPException(status_code=403)
     except WorkflowInstanceBusyException as error:
         return _conflict(
             "workflow_instance_busy",

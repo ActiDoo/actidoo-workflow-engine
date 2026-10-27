@@ -1590,6 +1590,15 @@ def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id:
     repository.store_workflow_instance(db=db, workflow=workflow)
 
 
+def admin_delete_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID):
+    if not is_global_admin(db=db, user_id=user_id):
+        raise UserMayNotAdministrateThisWorkflowException("Only a global admin may delete a workflow instance")
+
+    workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id, for_update=True)
+    repository.delete_workflow_instance(db=db, workflow=workflow)
+    log.info(f"User {user_id} deleted workflow instance {workflow_instance_id} ({workflow.spec.name})")
+
+
 def admin_assign_task_to_user_without_checks(
     db: Session,
     task_id: uuid.UUID,

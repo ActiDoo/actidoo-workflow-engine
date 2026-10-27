@@ -315,6 +315,13 @@ export const en = {
     cancelWorkflowBusy:
       'The workflow is being processed by another request. Please wait a moment and try again.',
     keepWorkflowTitle: 'Keep Workflow',
+    deleteWorkflowTitle: 'Delete Workflow',
+    deleteWorkflowWarning:
+      'The workflow is deleted for good, with all its tasks, data and attachments, and no longer shows up in the statistics. This cannot be undone.',
+    deleteWorkflowConfirmWord: 'DELETE',
+    deleteWorkflowConfirmLabel: 'Type {{word}} to confirm:',
+    deleteWorkflowSuccess: 'Workflow deleted for good',
+    deleteWorkflowError: 'Workflow could not be deleted. Please try again.',
     tasksHeadline: 'Tasks',
     noSelectedTaskTitle: 'No selected task',
     noSelectedTaskText: 'Please select task on left side',

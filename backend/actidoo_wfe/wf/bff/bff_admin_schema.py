@@ -174,6 +174,15 @@ class CancelWorkflowInstanceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DeleteWorkflowInstanceRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    workflow_instance_id: uuid.UUID
+
+
+class DeleteWorkflowInstanceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
 class GetSystemInformationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     build_number: str = Field(default_factory=lambda: "dev")
