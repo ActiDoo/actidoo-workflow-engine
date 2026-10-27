@@ -167,7 +167,8 @@ class MyServiceTask(ServiceTask):
             return False
 
         parsed_result = orjson.loads(result)
-        task.data[self._result_variable(task)] = parsed_result
+        if parsed_result is not None:
+            task.data[self._result_variable(task)] = parsed_result
         return True
 
 
@@ -210,7 +211,8 @@ class MyIntermediateThrowEvent(IntermediateThrowEvent):
             return False
 
         parsed_result = orjson.loads(result)
-        task.data[self._result_variable(task)] = parsed_result
+        if parsed_result is not None:
+            task.data[self._result_variable(task)] = parsed_result
         return True
 
     def _run_hook(self, task):

@@ -7,7 +7,14 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **When** a workflow owner looks at the data of a task:
+  - Before: the data also contained empty entries such as `Field_1hx5en6`
+    (static texts of the form) and `result_Activity_1jt7n0b` (service tasks
+    without a return value).
+  - Now: these empty entries are no longer stored. A service task that
+    returns a value still stores it as `result_<task id>`.
 
 ## [0.1.45] - 2026-10-08
 

@@ -716,6 +716,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data):
         log.error("Errors during validation of submitted task data" + str(validation_result.error_schema))
         raise ValidationResultContainsErrors(message="Errors during validation of submitted task data", error_schema=validation_result.error_schema)
 
+    service_form.remove_static_text_fields(validation_result.task_data, task.jsonschema)
     return validation_result.task_data
 
 
