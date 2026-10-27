@@ -131,9 +131,9 @@ export const en = {
     },
     unsavedChanges: {
       title: 'Unsaved changes',
-      message: 'Are you sure you want to leave? Your changes will be lost.',
+      message: 'If you leave, your changes will be discarded.',
       stay: 'Stay',
-      leave: 'Leave',
+      leave: 'Discard changes',
       hint: "You have unsaved changes. Don't forget to save!",
     },
     delegations: {
@@ -163,6 +163,7 @@ export const en = {
     unassigned: 'Unassigned',
     resetDialogTitle: 'Reset to Initial State',
     resetDialogText: 'This will reset all form data to the initial state.',
+    resetDialogKeep: 'Keep',
     deleteDialogTitle: 'Delete workflow',
     deleteDialogText:
       'This will PERMANENTLY DELETE the workflow.\n\nIf you have started this workflow by mistake, you can delete it without any problems.',
