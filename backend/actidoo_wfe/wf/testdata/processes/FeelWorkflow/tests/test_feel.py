@@ -426,3 +426,42 @@ def test_visible_dynamic_list_with_hide_if_is_persisted(db_engine_ctx, mock_send
         task_data = service_workflow.get_completed_usertasks(completed_workflow)[0].data
 
         assert task_data["hidden_list"][0]["number_e"] == 42
+
+
+def test_static_texts_and_empty_service_results_are_not_stored(db_engine_ctx, mock_send_text_mail):
+    with db_engine_ctx():
+        workflow = _start_workflow()
+
+        workflow.user("initiator").submit(
+            task_data={
+                "globalA": 2,
+                "globalB": 4,
+                "Field_1aff9sg": None,
+                "Field_0ik1grh": None,
+                "my_list": [
+                    {
+                        "number_a": 7,
+                        "number_b": 1,
+                        "number_or": 5,
+                        "Field_13cwx6x": None,
+                        "my_list_B": [{"number_c": 1, "number_d": 2, "Field_0jqepgf": None}],
+                    }
+                ],
+            },
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        completed_workflow = repository.load_workflow_instance(
+            db=workflow.db,
+            workflow_id=workflow.workflow_instance_id,
+        )
+        task_data = service_workflow.get_completed_usertasks(completed_workflow)[0].data
+
+        assert "Field_1aff9sg" not in task_data
+        assert "Field_0ik1grh" not in task_data
+        assert "Field_13cwx6x" not in task_data["my_list"][0]
+        assert "Field_0jqepgf" not in task_data["my_list"][0]["my_list_B"][0]
+        assert task_data["my_list"][0]["number_b"] == 1
+
+        service_task = next(t for t in completed_workflow.get_tasks() if t.task_spec.name == "Activity_06zk4v0")
+        assert "result_Activity_06zk4v0" not in service_task.data

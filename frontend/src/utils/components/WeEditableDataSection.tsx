@@ -12,6 +12,8 @@ import {
 } from '@ui5/webcomponents-react';
 
 import '@ui5/webcomponents-icons/dist/syntax';
+import '@ui5/webcomponents-icons/dist/edit';
+import '@ui5/webcomponents-icons/dist/tree';
 import { useDispatch, useSelector } from 'react-redux';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest } from '@/store/generic-data/actions';
@@ -21,6 +23,7 @@ import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { handleResponse } from '@/services/HelperService';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import { useTranslation } from '@/i18n';
+import { WeJsonTree } from '@/utils/components/WeJsonTree';
 
 interface AdminJsonSchemaSectionProps {
   taskId?: string;
@@ -39,6 +42,7 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
 
   const [value, setValue] = useState(getJsonString());
   const [showError, setShowError] = useState(false);
+  const [showTree, setShowTree] = useState(false);
 
   useEffect(() => {
     handleResponse(
@@ -80,44 +84,71 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
 
   return props?.data && Object.keys(props.data).length > 1 ? (
     <>
-      <TextArea
-        rows={20}
-        value={value}
-        ref={textAreaRef}
-        onInput={e => {
-          validateValue(e.target.value);
-          if (e.target.value) setValue(e.target.value);
-        }}
-      />
-      <div className="flex justify-end mt-2 gap-2">
-        {showError ? (
-          <MessageStrip
-            design={MessageStripDesign.Warning}
-            hideCloseButton
-            className="max-w-[400px]">
-            {t('editableData.noValidJson')}
-          </MessageStrip>
-        ) : null}
-        <Button
-          disabled={getJsonString() === value}
-          design={ButtonDesign.Transparent}
-          onClick={() => {
-            handleReset();
-          }}>
-          {t('editableData.reset')}
-        </Button>
-        <BusyIndicator active={saveLoadingState} delay={0} className="text-white">
-          <Button
-            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
-            disabled={saveLoadingState || showError}
-            design={ButtonDesign.Emphasized}
-            onClick={() => {
-              handleSaveChanges();
-            }}>
-            {t('editableData.saveChanges')}
-          </Button>
-        </BusyIndicator>
-      </div>
+      {showTree ? (
+        <>
+          <WeJsonTree data={props.data} />
+          <div className="flex justify-end mt-2">
+            <Button
+              icon="edit"
+              design={ButtonDesign.Transparent}
+              onClick={() => {
+                setShowTree(false);
+              }}>
+              {t('editableData.editJson')}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <TextArea
+            className="mt-2"
+            rows={20}
+            value={value}
+            ref={textAreaRef}
+            onInput={e => {
+              validateValue(e.target.value);
+              if (e.target.value) setValue(e.target.value);
+            }}
+          />
+          <div className="flex justify-end mt-2 gap-2">
+            {showError ? (
+              <MessageStrip
+                design={MessageStripDesign.Warning}
+                hideCloseButton
+                className="max-w-[400px]">
+                {t('editableData.noValidJson')}
+              </MessageStrip>
+            ) : null}
+            <Button
+              icon="tree"
+              design={ButtonDesign.Transparent}
+              onClick={() => {
+                setShowTree(true);
+              }}>
+              {t('editableData.treeView')}
+            </Button>
+            <Button
+              disabled={getJsonString() === value}
+              design={ButtonDesign.Transparent}
+              onClick={() => {
+                handleReset();
+              }}>
+              {t('editableData.reset')}
+            </Button>
+            <BusyIndicator active={saveLoadingState} delay={0} className="text-white">
+              <Button
+                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
+                disabled={saveLoadingState || showError}
+                design={ButtonDesign.Emphasized}
+                onClick={() => {
+                  handleSaveChanges();
+                }}>
+                {t('editableData.saveChanges')}
+              </Button>
+            </BusyIndicator>
+          </div>
+        </>
+      )}
     </>
   ) : (
     <div className="bg-neutral-50">

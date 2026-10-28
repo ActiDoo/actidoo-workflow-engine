@@ -514,6 +514,8 @@ export const en = {
     },
   },
   editableData: {
+    treeView: 'Tree view',
+    editJson: 'Edit JSON',
     saveSuccess: 'JSON Schema successfully saved',
     saveError: 'Could not save JSON Schema. Please try again',
     noValidJson: 'No valid JSON',
