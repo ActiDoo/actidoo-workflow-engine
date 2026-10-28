@@ -7,7 +7,12 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **When** a text in a form contains a FEEL expression `{{ … }}` that spans
+  several lines:
+  - Before: the expression was shown as plain text instead of its result.
+  - Now: the expression is evaluated, as in the Camunda Modeler.
 
 ## [0.1.45] - 2026-10-08
 
