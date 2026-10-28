@@ -7,6 +7,14 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Added
+
+- **When** an admin looks at the data of a task:
+  - Before: the data was only shown as JSON text.
+  - Now: the "Tree view" button switches to a view with collapsible
+    objects and lists, as in the browser dev tools. "Edit JSON" switches
+    back to the text view.
+
 ### Changed
 
 - **When** a workflow owner looks at the data of a task:

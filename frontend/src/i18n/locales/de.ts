@@ -518,6 +518,8 @@ export const de = {
     },
   },
   editableData: {
+    treeView: 'Baumansicht',
+    editJson: 'JSON bearbeiten',
     saveSuccess: 'JSON-Schema erfolgreich gespeichert',
     saveError: 'JSON-Schema konnte nicht gespeichert werden. Bitte versuche es erneut',
     noValidJson: 'Kein gültiges JSON',
