@@ -127,6 +127,17 @@ describe('evaluateHideIfAndFeel', () => {
     expect(newUiSchema?.a['ui:description']).toBe('Summe: 6,00 Euro');
   });
 
+  it('evaluates multiline FEEL expressions in ui:description', () => {
+    const uiSchema = {
+      a: { 'ui:description': 'Summe: {{\nif numberA > 1\nthen numberA * numberB\nelse 0\n}} Euro' },
+    };
+    const schema: RJSFSchema = { type: 'object', properties: { a: { type: 'string' } } };
+
+    const { newUiSchema } = evaluateHideIfAndFeel({ numberA: 3, numberB: 2 }, uiSchema, schema);
+
+    expect(newUiSchema?.a['ui:description']).toBe('Summe: 6,00 Euro');
+  });
+
   it('replaces unevaluable description expressions with an empty string', () => {
     const uiSchema = { a: { 'ui:description': 'Summe: {{ missing * 2 }} Euro' } };
     const schema: RJSFSchema = { type: 'object', properties: { a: { type: 'string' } } };
