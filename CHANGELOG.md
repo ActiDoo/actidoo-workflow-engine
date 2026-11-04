@@ -7,7 +7,14 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **When** an extension keeps its own settings in the same dotenv file as the
+  engine:
+  - Before: a key the engine did not know stopped the backend with a
+    validation error.
+  - Now: unknown keys in dotenv files are ignored, like unknown OS environment
+    variables.
 
 ## [0.1.45] - 2026-10-08
 
