@@ -16,6 +16,11 @@ releases correspond to the git tags of this repository.
   - Now: every command of the i18n CLI loads the installed extensions first
     and finds their workflows.
 
+- **When** a text in a form contains a FEEL expression `{{ … }}` that spans
+  several lines:
+  - Before: the expression was shown as plain text instead of its result.
+  - Now: the expression is evaluated, as in the Camunda Modeler.
+
 ## [0.1.46] - 2026-11-04
 
 ### Fixed
