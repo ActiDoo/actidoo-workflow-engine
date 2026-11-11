@@ -7,6 +7,16 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Changed
+
+- **When** a user resets a form to its initial state or leaves the user
+  settings with unsaved changes:
+  - Before: the buttons read "Cancel / Reset" and "Stay / Leave". It was not
+    clear at first sight which button keeps the data.
+  - Now: they read "Keep / Reset" and "Stay / Discard changes", and the
+    unsaved-changes text says what happens: "If you leave, your changes will
+    be discarded." The admin user details page uses the same dialog.
+
 ### Fixed
 
 - **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
