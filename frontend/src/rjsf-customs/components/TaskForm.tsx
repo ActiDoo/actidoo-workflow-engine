@@ -77,6 +77,23 @@ const customTemplates = {
   FieldTemplate: CustomFieldTemplate,
 };
 
+// Enter in a single-line field would submit the form implicitly; a task is only submitted
+// via its submit button. Textareas, buttons and widgets that handle Enter themselves
+// (react-select picks an option) still get the key.
+const preventSubmitOnEnter = (event: React.KeyboardEvent<HTMLFormElement>) => {
+  if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+    event.preventDefault();
+  }
+};
+
+const FormWithoutEnterSubmit = React.forwardRef<
+  HTMLFormElement,
+  React.FormHTMLAttributes<HTMLFormElement> & { as?: React.ElementType }
+>(({ as: FormTag = 'form', ...props }, ref) => (
+  <FormTag {...props} ref={ref} onKeyDown={preventSubmitOnEnter} />
+));
+FormWithoutEnterSubmit.displayName = 'FormWithoutEnterSubmit';
+
 type BaseFormProps = React.ComponentProps<typeof Form>;
 
 export type TaskFormProps = Omit<BaseFormProps, 'validator'> & {
@@ -110,6 +127,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   return (
     <Form
       {...rest}
+      _internalFormWrapper={FormWithoutEnterSubmit}
       validator={providedValidator ?? validator}
       transformErrors={transformErrors}
       templates={templates ?? customTemplates}

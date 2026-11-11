@@ -17,6 +17,12 @@ releases correspond to the git tags of this repository.
     unsaved-changes text says what happens: "If you leave, your changes will
     be discarded." The admin user details page uses the same dialog.
 
+- **When** a user presses Enter in a single-line field of a task form:
+  - Before: the form was submitted, as if the submit button had been
+    clicked.
+  - Now: nothing happens. A task is only submitted with its submit button.
+    Enter in a multi-line field still adds a line break.
+
 ### Fixed
 
 - **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
