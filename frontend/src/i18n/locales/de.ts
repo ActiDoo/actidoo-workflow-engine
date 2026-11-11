@@ -175,6 +175,13 @@ export const de = {
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
     optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
   },
+  formErrors: {
+    required: 'Bitte fülle dieses Feld aus.',
+    minLength: 'Bitte gib mindestens {{limit}} Zeichen ein.',
+    maxLength: 'Bitte gib höchstens {{limit}} Zeichen ein.',
+    minimum: 'Der Wert muss mindestens {{limit}} sein.',
+    maximum: 'Der Wert darf höchstens {{limit}} sein.',
+  },
   taskActions: {
     reset: 'Zurücksetzen',
     submit: 'Absenden',

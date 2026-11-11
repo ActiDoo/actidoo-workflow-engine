@@ -3,6 +3,8 @@
 
 // Workflow: backend/actidoo_wfe/wf/testdata/processes/TestFlowBff — see ../README.md.
 
+import { page } from 'vitest/browser';
+
 import { renderTaskForm } from '@/test/workflows/support/renderTaskForm';
 import { useFakeBackend } from '@/test/support/fakeFetchService';
 import form1 from './form1.fixture.json';
@@ -67,6 +69,21 @@ describe('Test Flow BFF — Form1', () => {
     await submit();
 
     expect(submitted).not.toHaveBeenCalled();
+  });
+
+  it('marks all invalid fields at once', async () => {
+    const { submitted, field, submit } = renderTaskForm(form1);
+
+    await field('short_code').fill('ABCD');
+    await submit();
+
+    expect(submitted).not.toHaveBeenCalled();
+    await expect
+      .element(page.getById('root_required_text__error'))
+      .toHaveTextContent('Please fill in this field.');
+    await expect
+      .element(page.getById('root_short_code__error'))
+      .toHaveTextContent('Please enter at most 3 characters.');
   });
 
   it('blocks submission when minLength is violated', async () => {

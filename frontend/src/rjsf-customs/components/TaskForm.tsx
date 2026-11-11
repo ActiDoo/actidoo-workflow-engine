@@ -34,8 +34,11 @@ import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
 import { collectHiddenPaths, dropErrorsOfHiddenFields } from '@/services/FeelService';
+import { useTranslation } from '@/i18n';
 
 const validator = customizeValidator();
+
+const TRANSLATED_ERRORS = new Set(['required', 'minLength', 'maxLength', 'minimum', 'maximum']);
 
 // Restore rjsf v5 semantics: selects/radios are rendered as oneOf of {const, title},
 // and v6's const-as-defaults would otherwise prefill them with their first option.
@@ -94,6 +97,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   children,
   ...rest
 }) => {
+  const { t } = useTranslation();
   // Errors of fields the form does not show must not block the submit: the backend treats
   // a hidden field and everything below it as absent, and so does this filter. Visibility
   // is read from the same data the hide-if rendering uses (formContext.formData).
@@ -101,7 +105,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
     const formData =
       (rest.formContext as { formData?: unknown } | undefined)?.formData ?? rest.formData;
     const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
-    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths);
+    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths).map(error =>
+      error.name && TRANSLATED_ERRORS.has(error.name)
+        ? { ...error, message: t(`formErrors.${error.name}`, { limit: error.params?.limit ?? '' }) }
+        : error
+    );
     return providedTransformErrors
       ? providedTransformErrors(visibleErrors, uiSchema)
       : visibleErrors;

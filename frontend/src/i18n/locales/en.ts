@@ -174,6 +174,13 @@ export const en = {
     submitError: 'An error occurred while submitting the form',
     optionsLoadError: 'Could not load options. Please try again.',
   },
+  formErrors: {
+    required: 'Please fill in this field.',
+    minLength: 'Please enter at least {{limit}} characters.',
+    maxLength: 'Please enter at most {{limit}} characters.',
+    minimum: 'The value must be at least {{limit}}.',
+    maximum: 'The value must be at most {{limit}}.',
+  },
   taskActions: {
     reset: 'Reset',
     submit: 'Submit',
