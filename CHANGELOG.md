@@ -9,11 +9,54 @@ releases correspond to the git tags of this repository.
 
 ### Changed
 
+- **When** a user resets a form to its initial state or leaves the user
+  settings with unsaved changes:
+  - Before: the buttons read "Cancel / Reset" and "Stay / Leave". It was not
+    clear at first sight which button keeps the data.
+  - Now: they read "Keep / Reset" and "Stay / Discard changes", and the
+    unsaved-changes text says what happens: "If you leave, your changes will
+    be discarded." The admin user details page uses the same dialog.
+
 - **When** a user presses Enter in a single-line field of a task form:
   - Before: the form was submitted, as if the submit button had been
     clicked.
   - Now: nothing happens. A task is only submitted with its submit button.
     Enter in a multi-line field still adds a line break.
+
+### Fixed
+
+- **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
+  workflow that an extension provides:
+  - Before: `extract` and `update` failed with "No workflow named ... found",
+    and `extract-all` and `update-all` skipped the workflows of extensions.
+  - Now: every command of the i18n CLI loads the installed extensions first
+    and finds their workflows.
+
+- **When** a text in a form contains a FEEL expression `{{ … }}` that spans
+  several lines:
+  - Before: the expression was shown as plain text instead of its result.
+  - Now: the expression is evaluated, as in the Camunda Modeler.
+
+## [0.1.46] - 2026-11-04
+
+### Fixed
+
+- **When** an extension keeps its own settings in the same dotenv file as the
+  engine:
+  - Before: a key the engine did not know stopped the backend with a
+    validation error.
+  - Now: unknown keys in dotenv files are ignored, like unknown OS environment
+    variables.
+
+### Security
+
+- Backend: bumped `starlette` from 1.0.0 to 1.7.0, `python-multipart` from
+  0.0.27 to 0.0.32, `anyio` from 4.13.0 to 4.14.2, `cryptography` from 47.0.0
+  to 50.0.2, `urllib3` from 2.7.0 to 2.8.0, `joserfc` from 1.6.4 to 1.7.5 and
+  `certifi` from 2026.4.22 to 2026.10.19.
+- Frontend: bumped `axios` from 1.15.2 to 1.20.0 and refreshed the transitive
+  dependencies `react-router`, `react-router-dom`, `preact`,
+  `follow-redirects`, `form-data` and `fast-uri` to patched versions.
 
 ## [0.1.45] - 2026-10-08
 
@@ -354,7 +397,8 @@ releases correspond to the git tags of this repository.
 Last release before this changelog was introduced. See the git history for
 earlier changes.
 
-[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.45...HEAD
+[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.46...HEAD
+[0.1.46]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.45...v0.1.46
 [0.1.45]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.44...v0.1.45
 [0.1.44]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.43...v0.1.44
 [0.1.43]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.42...v0.1.43
