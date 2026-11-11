@@ -6,8 +6,7 @@ import userEvent from '@testing-library/user-event';
 import type { RJSFSchema } from '@rjsf/utils';
 
 import { I18nProvider } from '@/i18n';
-
-import TaskForm from './TaskForm';
+import TaskForm from '@/rjsf-customs/components/TaskForm';
 
 const schema: RJSFSchema = {
   type: 'object',
