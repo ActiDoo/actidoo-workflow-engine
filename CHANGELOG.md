@@ -15,6 +15,12 @@ releases correspond to the git tags of this repository.
     validation error.
   - Now: unknown keys in dotenv files are ignored, like unknown OS environment
     variables.
+- **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
+  workflow that an extension provides:
+  - Before: `extract` and `update` failed with "No workflow named ... found",
+    and `extract-all` and `update-all` skipped the workflows of extensions.
+  - Now: every command of the i18n CLI loads the installed extensions first
+    and finds their workflows.
 
 ## [0.1.45] - 2026-10-08
 
