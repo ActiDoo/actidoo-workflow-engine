@@ -19,6 +19,13 @@ releases correspond to the git tags of this repository.
     label. Without it a generic "expected format" message is shown, never the
     regex itself.
 
+- **When** a link to the engine is shared, e.g. in a chat:
+  - Before: every environment showed the same title "Workflow Engine", so the
+    reader could not tell whether the link pointed to DEV, QAS or production
+    and often opened the wrong one from their bookmarks.
+  - Now: the environment variable `PAGE_TITLE` sets the browser tab title,
+    e.g. "Workflow Engine QAS". Unset keeps "Workflow Engine".
+
 ### Changed
 
 - **When** a user resets a form to its initial state or leaves the user
