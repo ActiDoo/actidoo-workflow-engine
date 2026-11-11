@@ -5,6 +5,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { RJSFSchema } from '@rjsf/utils';
 
+import { I18nProvider } from '@/i18n';
+
 import TaskForm from './TaskForm';
 
 const schema: RJSFSchema = {
@@ -17,13 +19,15 @@ const schema: RJSFSchema = {
 
 const renderForm = (onSubmit: () => void) =>
   render(
-    <TaskForm
-      schema={schema}
-      uiSchema={{ note: { 'ui:widget': 'textarea' } }}
-      templates={{}}
-      onSubmit={onSubmit}>
-      <button type="submit">Absenden</button>
-    </TaskForm>
+    <I18nProvider>
+      <TaskForm
+        schema={schema}
+        uiSchema={{ note: { 'ui:widget': 'textarea' } }}
+        templates={{}}
+        onSubmit={onSubmit}>
+        <button type="submit">Absenden</button>
+      </TaskForm>
+    </I18nProvider>
   );
 
 describe('TaskForm', () => {
