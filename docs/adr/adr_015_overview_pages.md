@@ -94,12 +94,7 @@ The data for such pages is also hard to query today. Which task ran when and by 
 ## Considered Alternatives
 
 - **A fixed overview page in the engine.** The smallest step, but every further domain would need a change to the engine.
-- **More declared blocks on the Data page.** It reuses what exists, but workflows without a data model would get no page.
-- **A backend session per browser tab.** It gives the developer state between runs, but that state is lost with every deploy.
-- **A separate reporting database.** It needs little work in the engine, but the engine's access rules do not apply to it.
-- **Access declared in the BPMN model.** It would be visible at the workflow, but a page can read several workflows, and a model cannot express which rows a user sees.
 - **Deriving business facts in the database.** Consistent by construction, but the rules of every extension would sit on the engine's tables.
-- **A service task in each workflow writes the rows.** It needs nothing new, but existing workflow instances would have no rows.
 - **A failing projection only marks its rows as stale.** A bug would not stop a workflow, but pages would show wrong numbers.
 
 ## Consequences
