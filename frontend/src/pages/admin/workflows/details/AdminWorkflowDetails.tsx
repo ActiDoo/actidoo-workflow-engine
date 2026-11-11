@@ -117,7 +117,7 @@ const AdminWorkflowDetails: React.FC = () => {
               {t('admin.keepWorkflowTitle')}
             </Button>
             <Button
-              disabled={isLoading || !cancelReason.trim()}
+              disabled={!!isLoading || !cancelReason.trim()}
               design={ButtonDesign.Negative}
               tooltip={t('admin.cancelWorkflowTitle')}
               onClick={() => {

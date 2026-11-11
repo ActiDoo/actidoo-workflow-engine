@@ -59,7 +59,11 @@ const CancelWorkflowDialogContent: React.FC<{
       <Bar
         startContent={<Button onClick={onClose}>{t('singleTaskHeader.closeDialog')}</Button>}
         endContent={
-          <Button disabled={!reason.trim()} onClick={() => onConfirm(reason.trim())}>
+          <Button
+            disabled={!reason.trim()}
+            onClick={() => {
+              onConfirm(reason.trim());
+            }}>
             {t('singleTaskHeader.cancelWorkflowAction')}
           </Button>
         }
@@ -321,7 +325,9 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                     const { close } = showDialog({
                       children: (
                         <CancelWorkflowDialogContent
-                          onClose={() => close()}
+                          onClose={() => {
+                            close();
+                          }}
                           onConfirm={reason => {
                             handleCancelWorkflow(task.id, reason);
                             close();
