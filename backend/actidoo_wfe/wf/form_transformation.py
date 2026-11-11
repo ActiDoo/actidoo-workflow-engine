@@ -269,6 +269,8 @@ def _insert_single_component(
 
     _create_ui_schema_key(component, jsonschemapath, uischema, key)
 
+    _handle_pattern_message(component, uischema, key)
+
     _handle_columns(component, uischema, key)
 
     _handle_conditional_hide(component, uischema, jsonschema, key)
@@ -520,10 +522,21 @@ def _handle_validate(component, jsonschema, key):
         jsonschema["required"] = jsonschema.get("required", []) + [
             key,
         ]
-    if validate.get("minLength", None) is not None:
-        jsonschema["properties"][key]["minLength"] = validate.get("minLength")
-    if validate.get("maxLength", None) is not None:
-        jsonschema["properties"][key]["maxLength"] = validate.get("maxLength")
+    for camunda_keyword, schema_keyword in (("minLength", "minLength"), ("maxLength", "maxLength"), ("min", "minimum"), ("max", "maximum")):
+        value = validate.get(camunda_keyword, None)
+        if value is None:
+            continue
+        if isinstance(value, str):
+            raise ValueError(f"field '{key}': FEEL expressions are not supported for '{camunda_keyword}' ({value!r})")
+        jsonschema["properties"][key][schema_keyword] = value
+    if validate.get("pattern"):
+        jsonschema["properties"][key]["pattern"] = validate.get("pattern")
+
+
+def _handle_pattern_message(component, uischema, key):
+    message = component.get("properties", {}).get("pattern_message")
+    if message:
+        uischema[key]["ui:patternMessage"] = message
 
 
 def _is_required(component):

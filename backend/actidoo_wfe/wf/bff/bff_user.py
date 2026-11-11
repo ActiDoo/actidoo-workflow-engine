@@ -612,6 +612,7 @@ def cancel_workflow(
         db=db,
         user_id=user.id,
         task_id=reqdata.task_id,
+        reason=reqdata.reason,
     )
 
     return CancelWorkflowResponse()

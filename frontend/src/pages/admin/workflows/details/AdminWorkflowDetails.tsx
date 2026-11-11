@@ -8,7 +8,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest } from '@/store/generic-data/actions';
-import { Text, Button, ButtonDesign, DynamicPageHeader, Input } from '@ui5/webcomponents-react';
+import {
+  Text,
+  Button,
+  ButtonDesign,
+  DynamicPageHeader,
+  Input,
+  TextArea,
+} from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/activity-items.js';
 import { useSelectCurrentAdminWorkflow } from '@/store/generic-data/selectors';
 import AdminWorkflowDetailsHeader from '@/pages/admin/workflows/details/components/DetailsHeader';
@@ -26,6 +33,7 @@ const AdminWorkflowDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
 
@@ -117,7 +125,10 @@ const AdminWorkflowDetails: React.FC = () => {
 
   const handleCancelWorkflow = (): void => {
     dispatch(
-      postRequest(WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE, { workflow_instance_id: workflowId })
+      postRequest(WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE, {
+        workflow_instance_id: workflowId,
+        reason: cancelReason.trim(),
+      })
     );
   };
 
@@ -151,7 +162,7 @@ const AdminWorkflowDetails: React.FC = () => {
               {t('admin.keepWorkflowTitle')}
             </Button>
             <Button
-              disabled={isLoading}
+              disabled={!!isLoading || !cancelReason.trim()}
               design={ButtonDesign.Negative}
               tooltip={t('admin.cancelWorkflowTitle')}
               onClick={() => {
@@ -161,7 +172,16 @@ const AdminWorkflowDetails: React.FC = () => {
             </Button>
           </>
         }>
-        <Text>{t('admin.cancelWorkflowConfirm')}</Text>
+        <div className="flex flex-column gap-2">
+          <Text>{t('admin.cancelWorkflowConfirm')}</Text>
+          <TextArea
+            placeholder={t('common.cancelReason')}
+            value={cancelReason}
+            onInput={e => {
+              setCancelReason(e.target.value ?? '');
+            }}
+          />
+        </div>
       </WeAlertDialog>
     );
   };
@@ -189,7 +209,7 @@ const AdminWorkflowDetails: React.FC = () => {
               {t('admin.keepWorkflowTitle')}
             </Button>
             <Button
-              disabled={isLoading || !isConfirmed}
+              disabled={!!isLoading || !isConfirmed}
               design={ButtonDesign.Negative}
               tooltip={t('admin.deleteWorkflowTitle')}
               onClick={() => {
@@ -229,6 +249,7 @@ const AdminWorkflowDetails: React.FC = () => {
                   design={ButtonDesign.Negative}
                   title={t('admin.cancelWorkflowTitle')}
                   onClick={() => {
+                    setCancelReason('');
                     setCancelDialogOpen(true);
                   }}>
                   {t('admin.cancelWorkflowTitle')}

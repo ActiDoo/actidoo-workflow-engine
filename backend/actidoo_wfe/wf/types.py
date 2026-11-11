@@ -144,6 +144,8 @@ class WorkflowInstanceRepresentation(BaseModel):
     completed_at: datetime.datetime | None = Field(default=None)
     created_at: datetime.datetime
     created_by: InlineUserRepresentation
+    cancelled_by: InlineUserRepresentation | None = Field(default=None)
+    cancel_reason: str | None = Field(default=None)
     has_task_in_error_state: bool
     is_readonly: bool = Field(default=False)
     deadline: TaskDeadlineRepresentation | None = Field(default=None)

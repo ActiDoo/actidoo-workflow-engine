@@ -39,13 +39,26 @@ def set_nested_error(errors_dict, path, message):
         errors_dict[path[-1]]["__errors"].append(message)
 
 
+def pattern_message_for_path(uischema, path):
+    """The field's ``ui:patternMessage`` for a data path (list indices step into ``items``), else None."""
+    node = uischema
+    for segment in path:
+        if not isinstance(node, dict):
+            return None
+        node = node.get("items") if isinstance(segment, int) else node.get(segment)
+    return node.get("ui:patternMessage") if isinstance(node, dict) else None
+
+
 # Function to validate instance and generate errors dict
-def validate_and_create_error_dict(validator, instance):
+def validate_and_create_error_dict(validator, instance, uischema=None):
     errors_dict = {}
     for error in validator.iter_errors(instance):
         path = list(error.absolute_path)
+        message = error.message
         if error.validator == "required":
             # The error sits on the object; put it under the one missing property it names.
             path += [name for name in error.validator_value if error.message == f"{name!r} is a required property"][:1]
-        set_nested_error(errors_dict, path, error.message)
+        elif error.validator == "pattern" and uischema is not None:
+            message = pattern_message_for_path(uischema, path) or message
+        set_nested_error(errors_dict, path, message)
     return dict(errors_dict) if errors_dict != {} else None

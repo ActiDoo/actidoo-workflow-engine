@@ -9,12 +9,13 @@ from actidoo_wfe.wf import service_i18n
 app = typer.Typer(help="i18n CLI for WFE processes and data models (extract and update catalogs; the engine reads .po files directly)")
 
 
+@app.callback()
 def _scan_extensions() -> None:
-    """Fill the data-model registry by scanning the engine + extension modules.
+    """Fill the workflow-provider and data-model registries before any command runs.
 
-    Mirrors the app-startup venusian scan (registration happens at import via the
-    ``register_data_model`` decorator); needed because the CLI runs without the
-    FastAPI lifespan.
+    Mirrors the app-startup venusian scan (extensions register their workflow
+    providers and data models through decorators); needed because the CLI runs
+    without the FastAPI lifespan.
     """
     from actidoo_wfe.venusian_scan import run_venusian_scan
 
@@ -41,7 +42,6 @@ def extract_datamodels():
     """Extract .pot files with the declared labels of every API-exposed data model"""
     from actidoo_wfe.wf.registry_data_model import data_model_registry
 
-    _scan_extensions()
     for descriptor in data_model_registry.list_models():
         if descriptor.api is None or descriptor.i18n_dir is None:
             continue
@@ -69,7 +69,6 @@ def update_datamodel(name: str, locale: str):
     """Update or create the .po file of a data model for a locale"""
     from actidoo_wfe.wf.registry_data_model import data_model_registry
 
-    _scan_extensions()
     po_path = service_i18n.update_datamodel(data_model_registry.get(name), locale)
     typer.echo(f"Updated catalog: {po_path}")
 
