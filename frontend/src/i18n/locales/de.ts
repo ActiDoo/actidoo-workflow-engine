@@ -132,9 +132,9 @@ export const de = {
     },
     unsavedChanges: {
       title: 'Ungespeicherte Änderungen',
-      message: 'Möchtest du die Seite wirklich verlassen? Deine Änderungen gehen verloren.',
+      message: 'Wenn du die Seite verlässt, gehen die Änderungen verloren.',
       stay: 'Bleiben',
-      leave: 'Verlassen',
+      leave: 'Änderungen verwerfen',
       hint: 'Du hast ungespeicherte Änderungen. Vergiss nicht zu speichern!',
     },
     delegations: {
@@ -164,6 +164,7 @@ export const de = {
     unassigned: 'Nicht zugewiesen',
     resetDialogTitle: 'Auf Anfangszustand zurücksetzen',
     resetDialogText: 'Dadurch werden alle Formulardaten auf den Anfangszustand zurückgesetzt.',
+    resetDialogKeep: 'Behalten',
     deleteDialogTitle: 'Workflow löschen',
     deleteDialogText:
       'Dadurch wird der Workflow dauerhaft gelöscht.\n\nWenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
@@ -174,6 +175,9 @@ export const de = {
     submitSuccess: 'Formular erfolgreich übermittelt',
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
     optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
+  },
+  taskForm: {
+    patternMismatch: 'Die Eingabe hat nicht das erwartete Format',
   },
   taskActions: {
     reset: 'Zurücksetzen',

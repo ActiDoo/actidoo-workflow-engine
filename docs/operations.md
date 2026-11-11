@@ -105,7 +105,7 @@ Every backend setting is an environment variable of the same name. The backend r
 | Booleans | `1`/`0`, `true`/`false`, `yes`/`no`, `on`/`off`; case-insensitive. |
 | Fixed choices (`STORAGE_MODE`, `EMAIL_TRANSPORT`) | Any other value stops the startup. |
 | Nested keys | Two underscores separate the levels; only `CONNECTORS__…` uses this. |
-| Unknown key in a dotenv file | Stops the startup with a validation error. Unknown OS environment variables are ignored. |
+| Unknown key in a dotenv file | Ignored, like unknown OS environment variables. |
 | `${VAR}` inside a dotenv value | Replaced by the OS environment variable `VAR`; empty when `VAR` is unset. |
 
 ### General and paths

@@ -11,7 +11,6 @@
       "args": [
         "actidoo_wfe.fastapi:app",
         "--reload",
-        "--reload-dir", ".",
         "--reload-dir", "${workspaceFolder}/src",
         "--reload-include", "*.form",
         "--reload-include", "*.bpmn",
@@ -19,12 +18,11 @@
         "--no-proxy-headers",
         "--no-access-log"
       ],
-      "cwd": "/opt/app",
+      "cwd": "${workspaceFolder}",
       "jinja": true,
       "justMyCode": false,
       "env": {
-        "PYDEVD_DISABLE_FILE_VALIDATION": "1",
-        "ENV_FILE": "/workspace/.env.devcontainer"
+        "PYDEVD_DISABLE_FILE_VALIDATION": "1"
       }
     },
     {
@@ -37,7 +35,7 @@
       "args": [
         "reset-db"
       ],
-      "cwd": "/opt/app",
+      "cwd": "${workspaceFolder}",
       "jinja": true,
       "justMyCode": false,
       "env": {
