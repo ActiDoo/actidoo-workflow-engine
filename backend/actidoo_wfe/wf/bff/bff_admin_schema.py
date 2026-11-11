@@ -170,7 +170,7 @@ class UnassignUserRequest(BaseModel):
 class CancelWorkflowInstanceRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     workflow_instance_id: uuid.UUID
-    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
 
 
 class CancelWorkflowInstanceResponse(BaseModel):

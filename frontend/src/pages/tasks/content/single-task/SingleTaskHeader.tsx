@@ -51,6 +51,7 @@ const CancelWorkflowDialogContent: React.FC<{
       />
       <TextArea
         placeholder={t('common.cancelReason')}
+        maxlength={1000}
         value={reason}
         onInput={e => {
           setReason(e.target.value ?? '');

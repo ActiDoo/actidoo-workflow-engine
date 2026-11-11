@@ -176,6 +176,7 @@ const AdminWorkflowDetails: React.FC = () => {
           <Text>{t('admin.cancelWorkflowConfirm')}</Text>
           <TextArea
             placeholder={t('common.cancelReason')}
+            maxlength={1000}
             value={cancelReason}
             onInput={e => {
               setCancelReason(e.target.value ?? '');

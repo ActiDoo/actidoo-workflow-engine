@@ -6,6 +6,7 @@ import logging
 from datetime import timedelta
 from pathlib import Path
 
+import pytest
 from sqlalchemy import select
 
 from actidoo_wfe.database import SessionLocal, setup_db
@@ -244,7 +245,8 @@ def test_cancel_workflow_records_who_and_why(db_engine_ctx):
         assert item.completed_at is not None
 
 
-def test_cancel_workflow_without_reason_is_refused(db_engine_ctx):
+@pytest.mark.parametrize("reason", ["  ", "x" * 1001])
+def test_cancel_workflow_without_reason_or_with_too_long_reason_is_refused(db_engine_ctx, reason):
     with db_engine_ctx():
         db = SessionLocal()
         workflow = WorkflowDummy(
@@ -255,7 +257,7 @@ def test_cancel_workflow_without_reason_is_refused(db_engine_ctx):
         )
         client = Client()
 
-        status, _ = _cancel(client=client, workflow=workflow, reason="  ")
+        status, _ = _cancel(client=client, workflow=workflow, reason=reason)
 
         assert status == 422
         assert not any(t.state_cancelled for t in _tasks_of(client=client, workflow=workflow))

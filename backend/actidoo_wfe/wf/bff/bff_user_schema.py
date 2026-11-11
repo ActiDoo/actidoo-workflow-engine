@@ -310,7 +310,7 @@ class WorkflowSpecResponse(BaseModel):
 class CancelWorkflowRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     task_id: uuid.UUID
-    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
 
 
 class CancelWorkflowResponse(BaseModel):
