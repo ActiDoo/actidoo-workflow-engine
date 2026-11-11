@@ -3,9 +3,9 @@
 
 import datetime
 import uuid
-from typing import Any, List, Optional
+from typing import Annotated, Any, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataSchema
 from actidoo_wfe.wf.constants import TemplateMode
@@ -140,6 +140,8 @@ class GetWorkflowInstancesResponseItem(BaseModel):
     is_completed: bool
     created_at: datetime.datetime
     completed_at: datetime.datetime | None
+    cancelled_by: Optional["InlineUserResponse"] = None
+    cancel_reason: str | None = None
     active_tasks: list[GetWorkflowInstancesResponseItemTask] = Field(
         default_factory=lambda: [],
     )
@@ -308,6 +310,7 @@ class WorkflowSpecResponse(BaseModel):
 class CancelWorkflowRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     task_id: uuid.UUID
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class CancelWorkflowResponse(BaseModel):

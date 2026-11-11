@@ -509,6 +509,7 @@ def cancel_workflow_instance(
             db=db,
             user_id=user.id,
             workflow_instance_id=reqdata.workflow_instance_id,
+            reason=reqdata.reason,
         )
         return CancelWorkflowInstanceResponse()
 

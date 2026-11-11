@@ -105,6 +105,7 @@ def test_admin_get_all_workflow_instances(db_engine_ctx):
         assert item.is_completed
         assert item.completed_at is not None
         assert item.created_at <= item.completed_at
+        assert item.cancelled_by is None
 
 
 def test_cancel_workflow(db_engine_ctx):
@@ -123,7 +124,7 @@ def test_cancel_workflow(db_engine_ctx):
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
                 name="bff_admin_cancel_workflow_instance",
-                json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                json={"workflow_instance_id": str(workflow.workflow_instance_id), "reason": "test"},
                 cls=CancelWorkflowInstanceResponse,
             )
 
@@ -140,11 +141,11 @@ def test_cancel_workflow(db_engine_ctx):
         assert any(x.state_cancelled for x in json_resp.ITEMS)
 
 
-def _cancel(client, workflow):
+def _cancel(client, workflow, reason="test"):
     with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
         return client.post(
             name="bff_admin_cancel_workflow_instance",
-            json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+            json={"workflow_instance_id": str(workflow.workflow_instance_id), "reason": reason},
         )
 
 
@@ -215,6 +216,49 @@ def test_cancel_workflow_with_erroneous_task(db_engine_ctx):
 
         assert status == 200
         assert any(t.state_cancelled for t in _tasks_of(client=client, workflow=workflow))
+
+
+def test_cancel_workflow_records_who_and_why(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow, reason="started by mistake")
+        assert status == 200
+
+        with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+            _, json_resp = client.post(
+                name="bff_admin_get_all_workflow_instances",
+                json={},
+                cls=GetAllWorkflowInstancesResponse,
+            )
+        item = next(x for x in json_resp.ITEMS if x.id == workflow.workflow_instance_id)
+        assert item.cancelled_by.id == workflow.user("admin").user.id
+        assert item.cancel_reason == "started by mistake"
+        assert item.completed_at is not None
+
+
+def test_cancel_workflow_without_reason_is_refused(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow, reason="  ")
+
+        assert status == 422
+        assert not any(t.state_cancelled for t in _tasks_of(client=client, workflow=workflow))
 
 
 def test_admin_assign(db_engine_ctx):

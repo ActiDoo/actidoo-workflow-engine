@@ -42,6 +42,18 @@ releases correspond to the git tags of this repository.
   - Now: nothing happens. A task is only submitted with its submit button.
     Enter in a multi-line field still adds a line break.
 
+- **When** a workflow is cancelled, by a user from a form or by an
+  administrator:
+  - Before: nobody could tell later who cancelled it and why. In the
+    workflow lists a cancelled workflow looked like one that had finished
+    normally.
+  - Now: cancelling asks for a reason, which is required. The workflow
+    stores who cancelled it and the reason; the time is its completion time.
+    "My workflows" and the admin workflow list show a cancel icon instead of
+    the check mark, with who and why as tooltip. The admin details page
+    shows both as well. Workflows cancelled before this release show no
+    cancel icon.
+
 ### Fixed
 
 - **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
