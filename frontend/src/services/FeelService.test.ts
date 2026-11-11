@@ -99,24 +99,6 @@ describe('evaluateHideIfAndFeel', () => {
     expect(newUiSchema?.b['ui:widget']).toBe('hidden');
   });
 
-  it('restores ui:required into the schema for visible fields', () => {
-    const uiSchema = { a: { 'ui:hideif': 'x = true', 'ui:required': true } };
-    const schema: RJSFSchema = { type: 'object', properties: { a: { type: 'string' } } };
-
-    const { newSchema } = evaluateHideIfAndFeel({ x: false }, uiSchema, schema);
-
-    expect(newSchema.required).toEqual(['a']);
-  });
-
-  it('does not mark hidden fields as required', () => {
-    const uiSchema = { a: { 'ui:hideif': 'x = true', 'ui:required': true } };
-    const schema: RJSFSchema = { type: 'object', properties: { a: { type: 'string' } } };
-
-    const { newSchema } = evaluateHideIfAndFeel({ x: true }, uiSchema, schema);
-
-    expect(newSchema.required).toBeUndefined();
-  });
-
   it('masks hidden fields inside this like the bare names', () => {
     // In a list row the row data is reachable both as bare name and as this.<name>; a
     // hidden field must read as null either way.
@@ -232,7 +214,7 @@ describe('evaluateHideIfAndFeel', () => {
 });
 
 describe('changeRequiredDefinitionForFieldsWithHideIfDefinition', () => {
-  it('moves required to ui:required for fields with hideif', () => {
+  it('keeps required for fields with hideif', () => {
     const schema: any = {
       type: 'object',
       properties: { a: { type: 'string' }, b: { type: 'string' } },
@@ -242,11 +224,10 @@ describe('changeRequiredDefinitionForFieldsWithHideIfDefinition', () => {
 
     changeRequiredDefinitionForFieldsWithHideIfDefinition(schema, uiSchema);
 
-    expect(schema.required).toEqual(['b']);
-    expect(uiSchema.a['ui:required']).toBe(true);
+    expect(schema.required).toEqual(['a', 'b']);
   });
 
-  it('handles nested array item properties', () => {
+  it('keeps required for nested array item properties with hideif', () => {
     const schema: any = {
       type: 'object',
       properties: {
@@ -264,22 +245,7 @@ describe('changeRequiredDefinitionForFieldsWithHideIfDefinition', () => {
 
     changeRequiredDefinitionForFieldsWithHideIfDefinition(schema, uiSchema);
 
-    expect(schema.properties.list.items.required).toEqual([]);
-    expect(uiSchema.list.items.inner['ui:required']).toBe(true);
-  });
-
-  it('leaves fields without hideif untouched', () => {
-    const schema: any = {
-      type: 'object',
-      properties: { a: { type: 'string' } },
-      required: ['a'],
-    };
-    const uiSchema: any = { a: {} };
-
-    changeRequiredDefinitionForFieldsWithHideIfDefinition(schema, uiSchema);
-
-    expect(schema.required).toEqual(['a']);
-    expect(uiSchema.a['ui:required']).toBeUndefined();
+    expect(schema.properties.list.items.required).toEqual(['inner']);
   });
 });
 

@@ -133,6 +133,21 @@ describe('Test Flow BFF — Form1', () => {
     expect(submitted.mock.calls[0][0]).toMatchObject({ optional_note: null });
   });
 
+  it('marks all invalid fields at once', async () => {
+    const { submitted, field, submit } = renderTaskForm(form1);
+
+    await field('short_code').fill('ABCD');
+    await submit();
+
+    expect(submitted).not.toHaveBeenCalled();
+    await expect
+      .element(page.getById('root_required_text__error'))
+      .toHaveTextContent('Please fill in this field.');
+    await expect
+      .element(page.getById('root_short_code__error'))
+      .toHaveTextContent('Please enter at most 3 characters.');
+  });
+
   it('blocks submission when minLength is violated', async () => {
     const { submitted, field, submit } = renderTaskForm(form1);
 
