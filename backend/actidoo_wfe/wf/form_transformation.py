@@ -2,6 +2,7 @@
 # Copyright (c) 2025 ActiDoo GmbH
 
 import logging
+import re
 import string
 from functools import cache
 from pathlib import Path
@@ -530,7 +531,12 @@ def _handle_validate(component, jsonschema, key):
             raise ValueError(f"field '{key}': FEEL expressions are not supported for '{camunda_keyword}' ({value!r})")
         jsonschema["properties"][key][schema_keyword] = value
     if validate.get("pattern"):
-        jsonschema["properties"][key]["pattern"] = validate.get("pattern")
+        pattern = validate["pattern"]
+        try:
+            re.compile(pattern)
+        except (TypeError, re.error) as error:
+            raise ValueError(f"field '{key}': invalid pattern: {error}") from error
+        jsonschema["properties"][key]["pattern"] = pattern
 
 
 def _handle_pattern_message(component, uischema, key):

@@ -44,6 +44,7 @@ def _clean_task_data(workflow, task_data):
         workflow=stored_workflow,
         task=task,
         submitted_data=task_data,
+        locale=workflow.user("initiator").user.locale,
     )
 
 

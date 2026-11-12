@@ -98,7 +98,9 @@ Every user task needs a form file named `<task id>.form` next to the BPMN file, 
 
 The example has two forms. `EnterExpense` collects `title` (text, required), `amount` (number, required), `category` (a select), an optional `travel_details` text, a `receipt` file upload and a `description` textarea. `ApproveExpense` shows the same `title`, `amount`, `category` and `description` back to the approver, adds a required `decision` select (`approve` / `reject`) and a `reason` text.
 
-Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, file picker (single and multi attachment), and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` / "Custom regular expression" (`pattern`, checked in the browser and on submit) on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
+Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, file picker (single and multi attachment), and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` / "Custom regular expression" (`pattern`, checked by the server on submit) on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
+
+Patterns use Python regular-expression syntax and are checked by the server when the form is submitted. Typing remains unrestricted. Invalid patterns fail to load with the field name and a description of the problem. Pattern errors use the user's language and show the translated `pattern_message` or a generic format message.
 
 ### Custom properties
 

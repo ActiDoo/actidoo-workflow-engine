@@ -135,6 +135,7 @@ def start_workflow(
                     workflow=workflow,
                     task=first_task,
                     submitted_data=initial_task_data,
+                    locale=user_rep.locale,
                 )
                 service_workflow.update_task_data(
                     workflow=workflow,
@@ -197,6 +198,7 @@ def get_workflow_preview(
             workflow=workflow,
             task=first_task,
             submitted_data=task_data,
+            locale=user_rep.locale,
         )
         service_workflow.update_task_data(
             workflow=workflow,
@@ -292,6 +294,7 @@ def get_workflow_copy_data(
             workflow=workflow_preview,
             task=t_new,
             submitted_data=matching_original_task.data,
+            locale=user_rep.locale,
         )
 
         if idx == 0:
@@ -684,7 +687,7 @@ def get_usertasks_for_user_id(
     return usertasks
 
 
-def _clean_submitted_task_data(workflow, task, submitted_data):
+def _clean_submitted_task_data(workflow, task, submitted_data, locale: str):
     """Validate and clean a payload from a user form submission.
 
     The payload typically only contains the fields the frontend knows about.
@@ -693,6 +696,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data):
 
     assert task.uischema and task.jsonschema
     form = ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema)
+    form = service_i18n.translate_form_data(form_data=form, workflow_name=workflow.spec.name, locale=locale)
     options_folder = workflow_providers.get_workflow_directory(workflow.spec.name) / "options"
 
     module_path = workflow_providers.get_workflow_module_path(workflow.spec.name)
@@ -710,6 +714,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data):
         options_folder=options_folder,
         functions_env=functions_env,
         authoritative_disabled_values=task.data if isinstance(task.data, dict) else {},
+        locale=locale,
     )
 
     if validation_result.error_schema:
@@ -813,6 +818,7 @@ def submit_task_data(
         workflow=workflow,
         task=task,
         submitted_data=task_data,
+        locale=user.locale,
     )  # may raise ValidationResultContainsErrors - nothing has been stored at this point
 
     # Only now, for the references the cleaning kept: a file whose field is disabled,

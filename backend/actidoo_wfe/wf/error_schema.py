@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
+from actidoo_wfe.i18n import make_translator
+
 
 # Function to set nested errors
 def set_nested_error(errors_dict, path, message):
@@ -50,7 +52,8 @@ def pattern_message_for_path(uischema, path):
 
 
 # Function to validate instance and generate errors dict
-def validate_and_create_error_dict(validator, instance, uischema=None):
+def validate_and_create_error_dict(validator, instance, uischema=None, locale=None):
+    _ = make_translator(locale)
     errors_dict = {}
     for error in validator.iter_errors(instance):
         path = list(error.absolute_path)
@@ -58,7 +61,7 @@ def validate_and_create_error_dict(validator, instance, uischema=None):
         if error.validator == "required":
             # The error sits on the object; put it under the one missing property it names.
             path += [name for name in error.validator_value if error.message == f"{name!r} is a required property"][:1]
-        elif error.validator == "pattern" and uischema is not None:
-            message = pattern_message_for_path(uischema, path) or message
+        elif error.validator == "pattern":
+            message = pattern_message_for_path(uischema, path) or _("The input does not have the expected format")
         set_nested_error(errors_dict, path, message)
     return dict(errors_dict) if errors_dict != {} else None

@@ -13,11 +13,12 @@ releases correspond to the git tags of this repository.
   `CC-1234`:
   - Before: the Modeler's "Custom regular expression" was ignored. The form
     accepted any text, and a wrong value was only found later in the process.
-  - Now: the regex is checked in the browser while typing and again on submit.
+  - Now: the regex is checked by the server on submit. Typing remains unrestricted.
     The custom property `pattern_message` on the field sets the error the
     user sees, e.g. "Cost center like CC-1234"; it is translatable like a
     label. Without it a generic "expected format" message is shown, never the
-    regex itself.
+    regex itself. Patterns use Python regex syntax; invalid patterns are rejected
+    when the form is loaded.
 
 - **When** a link to the engine is shared, e.g. in a chat:
   - Before: every environment showed the same title "Workflow Engine", so the

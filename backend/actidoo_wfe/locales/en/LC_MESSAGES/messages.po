@@ -105,3 +105,6 @@ msgstr ""
 "There are also tasks for the groups you are a member of. Feel free to "
 "assign these tasks to yourself:"
 
+
+msgid "The input does not have the expected format"
+msgstr "The input does not have the expected format"

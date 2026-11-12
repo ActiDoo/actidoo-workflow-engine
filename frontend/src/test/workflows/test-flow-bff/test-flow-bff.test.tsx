@@ -3,11 +3,10 @@
 
 // Workflow: backend/actidoo_wfe/wf/testdata/processes/TestFlowBff — see ../README.md.
 
-import { page } from 'vitest/browser';
 import { renderTaskForm } from '@/test/workflows/support/renderTaskForm';
 import { useFakeBackend } from '@/test/support/fakeFetchService';
-import form1 from './form1.fixture.json';
-import categoryOptions from './form1.category-options.fixture.json';
+import form1 from '@/test/workflows/test-flow-bff/form1.fixture.json';
+import categoryOptions from '@/test/workflows/test-flow-bff/form1.category-options.fixture.json';
 
 vi.mock('@/ui5-components/services/FetchService', async () =>
   (await import('@/test/support/fakeFetchService')).mockedFetchService()
@@ -79,16 +78,15 @@ describe('Test Flow BFF — Form1', () => {
     expect(submitted).not.toHaveBeenCalled();
   });
 
-  it('blocks submission when the pattern is violated and shows the author message', async () => {
+  it('sends a pattern mismatch to the backend for validation', async () => {
     const { submitted, field, submit } = renderTaskForm(form1);
 
     await field('required_text').fill('Hello BFF');
     await field('cost_center').fill('CC-12');
     await submit();
 
-    expect(submitted).not.toHaveBeenCalled();
-    await expect.element(page.getByText('Cost center like CC-1234')).toBeVisible();
-    await expect.element(page.getByText(/must match pattern/)).not.toBeInTheDocument();
+    expect(submitted).toHaveBeenCalledTimes(1);
+    expect(submitted.mock.calls[0][0]).toMatchObject({ cost_center: 'CC-12' });
   });
 
   it('submits a value that matches the pattern', async () => {

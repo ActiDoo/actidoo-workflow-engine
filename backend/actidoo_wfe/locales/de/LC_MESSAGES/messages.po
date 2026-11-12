@@ -69,6 +69,9 @@ msgstr ""
 msgid "Hello"
 msgstr "Hallo"
 
+msgid "The input does not have the expected format"
+msgstr "Die Eingabe hat nicht das erwartete Format"
+
 msgid "A new task has been assigned to you:"
 msgstr "Ihnen wurde eine neue Aufgabe zugewiesen:"
 

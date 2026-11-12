@@ -178,9 +178,6 @@ export const de = {
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
     optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
   },
-  taskForm: {
-    patternMismatch: 'Die Eingabe hat nicht das erwartete Format',
-  },
   taskActions: {
     reset: 'Zurücksetzen',
     submit: 'Absenden',

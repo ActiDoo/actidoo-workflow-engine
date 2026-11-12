@@ -7,6 +7,9 @@ import logging
 import uuid
 from pathlib import Path
 
+import pytest
+from babel.messages.catalog import Catalog
+from babel.messages.pofile import write_po
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
@@ -14,6 +17,7 @@ from sqlalchemy import update as sa_update
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.helpers.bff_table import CursorPosition, decode_cursor, encode_cursor
 from actidoo_wfe.helpers.time import dt_now_naive
+from actidoo_wfe.i18n import load_catalog
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff.bff_user_schema import (
@@ -34,6 +38,7 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     UserSettingsResponse,
     WorkflowSpecResponse,
 )
+from actidoo_wfe.wf.models import WorkflowUser
 from actidoo_wfe.wf.tests.helpers.client import Client
 from actidoo_wfe.wf.tests.helpers.overrides import disable_role_check, override_get_user
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
@@ -361,6 +366,38 @@ def test_submit_task_data_happy(db_engine_ctx):
         # not lose the title when this replaces its store data.
         assert parsed.workflow_instance is not None
         assert parsed.workflow_instance.id == workflow.workflow_instance_id
+
+
+@pytest.mark.parametrize("locale, message", [("de-DE", "Kostenstelle wie CC-1234"), ("en-US", "Cost center like CC-1234")])
+def test_submit_400_pattern_message_uses_user_locale(db_engine_ctx, monkeypatch, tmp_path, locale, message):
+    catalog = Catalog(locale="de")
+    catalog.add("Cost center like CC-1234", "Kostenstelle wie CC-1234")
+    po = tmp_path / "Demo.po"
+    with po.open("wb") as output:
+        write_po(output, catalog)
+    load_translations = service_application.service_i18n._load_translations
+    monkeypatch.setattr(
+        service_application.service_i18n, "_load_translations",
+        lambda process, locale, workflow_dir: load_catalog(po) if locale.startswith("de") else load_translations(process, locale, workflow_dir),
+    )
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        user = workflow.user("initiator").user
+        db.get(WorkflowUser, user.id).locale = locale
+        db.commit()
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        client = Client()
+        with override_get_user(client=client, user=user), disable_role_check(client):
+            response = client.root_client.post(
+                client.root_client.app.url_path_for("submit_task_data"),
+                params={"task_id": str(task.id)},
+                json={**FORM1_DATA_MIN, "cost_center": "wrong"},
+            )
+
+        assert response.status_code == 400
+        assert response.json()["error_schema"]["cost_center"]["__errors"] == [message]
 
 
 def test_submit_400_required_missing(db_engine_ctx):

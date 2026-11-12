@@ -1064,6 +1064,7 @@ def validate_task_data(
     preserve_unknown_fields: bool = False,
     authoritative_disabled_values: dict | None = None,
     log_validation_errors: bool = True,
+    locale: str | None = None,
 ) -> ValidationResult:
     """Validate incoming task data against a form definition and clean it up.
 
@@ -1152,7 +1153,7 @@ def validate_task_data(
                 run_again = True
                 break  # re-validate after each removal to keep the remaining paths valid
 
-    error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data, uischema=form.uischema)
+    error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data, uischema=form.uischema, locale=locale)
     # log.debug("removed = %s", removed)
 
     untracked_task_data = copy.deepcopy(tracked_task_data)
