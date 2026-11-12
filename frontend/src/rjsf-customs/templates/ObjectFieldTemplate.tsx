@@ -10,7 +10,7 @@ import {
   StrictRJSFSchema,
   titleId,
 } from '@rjsf/utils';
-import React, { ReactElement } from 'react';
+import React, { ReactElement, useContext } from 'react';
 import { ObjectDataContext } from '@/rjsf-customs/custom-widgets/dependsOn';
 import { computeGridTemplate } from '@/rjsf-customs/templates/layoutColumns';
 
@@ -32,6 +32,7 @@ export function CustomObjectFieldTemplate<
   } = props;
   // console.log("** Object Field Template ********************************************************************************************")
   // console.log(props)
+  const parentScope = useContext(ObjectDataContext);
   const options = getUiOptions<T, S, F>(uiSchema);
   const TitleFieldTemplate = getTemplate<'TitleFieldTemplate', T, S, F>(
     'TitleFieldTemplate',
@@ -40,7 +41,7 @@ export function CustomObjectFieldTemplate<
   );
   const layout = uiSchema ? uiSchema['ui:layout'] : undefined;
   return (
-    <ObjectDataContext.Provider value={{ formData, schema }}>
+    <ObjectDataContext.Provider value={{ formData, schema, parent: parentScope }}>
       <div>
         {title && (
           <TitleFieldTemplate

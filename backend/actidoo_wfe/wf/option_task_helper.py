@@ -19,10 +19,12 @@ class OptionTaskHelper:
         form_data,
         property_path,
         allowed_data_models: set[str] | None = None,
+        jsonschema: dict | None = None,
     ):
         self.db: Session = SessionLocal()
         self.form_data = form_data
         self.property_path = property_path
+        self.jsonschema = jsonschema or {}
         self._allowed_data_models: set[str] = allowed_data_models or set()
 
     def get_connector(self, type_name: str, instance_name: str):
@@ -48,17 +50,20 @@ class OptionTaskHelper:
     def get_form_field_environment(self):
         result = copy.deepcopy(self.form_data) if self.form_data else {}
         current = self.form_data
+        schema = self.jsonschema
 
         for key in self.property_path:
-            if isinstance(current, list) and isinstance(key, int):
-                current = current[key]
-            elif isinstance(current, dict) and key in current:
+            schema = schema.get("items", {}) if isinstance(key, int) else schema.get("properties", {}).get(key, {})
+            if isinstance(current, list) and isinstance(key, int) or isinstance(current, dict) and key in current:
                 current = current[key]
             else:
                 current = {}
                 # raise ValueError("Invalid property path or data structure")
 
             if isinstance(current, dict):
+                # A field declared in this row shadows outer values even before it
+                # has been filled in. Keep missing and explicitly null values equal.
+                result.update(dict.fromkeys(schema.get("properties", {})))
                 result.update(current)
 
         return result

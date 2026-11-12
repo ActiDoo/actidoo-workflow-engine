@@ -16,7 +16,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   const [optionsLoaded, setOptionsLoaded] = useState<boolean>(false);
   const [selectedOptions, setSelectedOptions] = useState<PcValueLabelItem[]>([]);
   const [search, setSearch] = useState<string>('');
-  const isDisabled = props.disabled ?? props.readonly;
+  const isDisabled = Boolean(props.disabled || props.readonly);
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
@@ -52,7 +52,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   };
 
   const getSelectionOptions = function () {
-    const opts = options?.filter(o => props.value.indexOf(o.value) !== -1);
+    const opts = options?.filter(o => props.value?.includes(o.value));
     if (opts === undefined)
       return []; // prevent returning undefined, otherwise cleared data from a selection is not included in the JSON payload
     else return opts;
@@ -77,7 +77,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   useEffect(() => {
     const changed = !isEqual(effectDeps, prevDepsRef.current);
     prevDepsRef.current = effectDeps;
-    if (!changed) return;
+    if (!changed || isDisabled) return;
     setSelectedOptions([]);
     setOptionsLoaded(false);
     setSearch('');
@@ -92,6 +92,7 @@ const MultiSelectDynamic = (props: WidgetProps): ReactElement => {
   return (
     <div>
       <WeComboBox
+        inputId={props.id}
         value={selectedOptions || ''}
         required={props.required}
         isLoading={isLoading}

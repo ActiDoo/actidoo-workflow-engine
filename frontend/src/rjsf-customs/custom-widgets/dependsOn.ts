@@ -4,9 +4,13 @@
 import { createContext, useContext } from 'react';
 import { escapeRegExp } from 'lodash';
 
-export const ObjectDataContext = createContext<{ formData: any; schema: any } | undefined>(
-  undefined
-);
+interface ObjectDataScope {
+  formData: any;
+  schema: any;
+  parent?: ObjectDataScope;
+}
+
+export const ObjectDataContext = createContext<ObjectDataScope | undefined>(undefined);
 
 export const getPropertyPath = (id: string, uiPath: string[]): Array<string | number> => {
   const match = new RegExp(`^root_${uiPath.map(escapeRegExp).join('_(\\d+)_')}$`).exec(id);
@@ -20,9 +24,12 @@ export const useDependencyValues = (
   formContext: any
 ): unknown[] => {
   const scope = useContext(ObjectDataContext);
-  return (dependsOn ?? []).map(dep =>
-    scope?.schema?.properties && dep in scope.schema.properties
-      ? scope.formData?.[dep] ?? null
-      : formContext?.formData?.[dep] ?? null
-  );
+  return (dependsOn ?? []).map(dep => {
+    for (let current = scope; current; current = current.parent) {
+      if (Object.prototype.hasOwnProperty.call(current.schema?.properties ?? {}, dep)) {
+        return current.formData?.[dep] ?? null;
+      }
+    }
+    return formContext?.formData?.[dep] ?? null;
+  });
 };

@@ -95,6 +95,7 @@
       "ui:path": [
         "car_type"
       ],
+      "ui:columns": 8,
       "ui:widget": "SelectStatic"
     },
     "car_sub_type": {
@@ -103,6 +104,7 @@
       "ui:path": [
         "car_sub_type"
       ],
+      "ui:columns": 8,
       "ui:widget": "SelectDynamic",
       "ui:dependsOn": [
         "car_type"
@@ -124,6 +126,7 @@
             "vehicles",
             "car_type"
           ],
+          "ui:columns": 8,
           "ui:widget": "SelectStatic"
         },
         "car_sub_type": {
@@ -133,6 +136,7 @@
             "vehicles",
             "car_sub_type"
           ],
+          "ui:columns": 8,
           "ui:widget": "SelectDynamic",
           "ui:dependsOn": [
             "car_type"

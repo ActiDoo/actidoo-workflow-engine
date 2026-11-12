@@ -16,7 +16,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
   const [optionsLoaded, setOptionsLoaded] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<PcValueLabelItem | null>(null);
   const [search, setSearch] = useState<string>('');
-  const isDisabled = props.disabled ?? props.readonly;
+  const isDisabled = Boolean(props.disabled || props.readonly);
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
@@ -80,12 +80,12 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
   useEffect(() => {
     const changed = !isEqual(effectDeps, prevDepsRef.current);
     prevDepsRef.current = effectDeps;
-    if (!changed) return;
+    if (!changed || isDisabled) return;
     setSelectedOption(null);
     setOptionsLoaded(false);
     setSearch('');
     clear();
-    if (props.value && props.value === prevValueRef.current) props.onChange('');
+    if (props.value && props.value === prevValueRef.current) props.onChange(null);
   }, effectDeps);
 
   useEffect(() => {
