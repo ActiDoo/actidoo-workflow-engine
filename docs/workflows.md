@@ -98,7 +98,7 @@ Every user task needs a form file named `<task id>.form` next to the BPMN file, 
 
 The example has two forms. `EnterExpense` collects `title` (text, required), `amount` (number, required), `category` (a select), an optional `travel_details` text, a `receipt` file upload and a `description` textarea. `ApproveExpense` shows the same `title`, `amount`, `category` and `description` back to the approver, adds a required `decision` select (`approve` / `reject`) and a `reason` text.
 
-Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, file picker (single and multi attachment), and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
+Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, file picker (single and multi attachment), and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` / "Custom regular expression" (`pattern`, checked in the browser and on submit) on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
 
 ### Custom properties
 
@@ -112,6 +112,7 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `options_function` | function name | takes the select's options from a function `<name>(oth)` in the workflow module | options computed at fill time, e.g. from a data model or connector |
 | `depends_on` | comma-separated top-level keys | the select clears and reloads its options when one of those fields changes | options that depend on another field |
 | `options_limit` | integer, default 50, `0` = all at once | how many dynamic options the select loads at a time | load fewer options at a time, or all at once |
+| `pattern_message` | text, e.g. `Cost center like CC-1234` | the error shown when the field's regex (`pattern`) does not match; translatable like a label | a user cannot act on `must match pattern "^CC-[0-9]{4}$"` |
 | `validation_function` | function name | calls `<name>(vth)` on submit, which can reject the field with a message | checks the schema cannot express, e.g. a lookup |
 | `currency` | symbol, e.g. `EUR` | renders a number field as a currency input | monetary amounts |
 | `template_field` | `true` / `false` | includes or excludes the field from saved form templates | control what a [form template](glossary.md#form-template) captures |

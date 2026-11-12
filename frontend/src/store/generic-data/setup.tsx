@@ -88,6 +88,7 @@ export enum WeDataKey {
   ADMIN_SET_USER_DELEGATIONS = 'admin_set_user_delegations',
   ADMIN_SEARCH_WF_USERS = 'admin_search_wf_users',
   ADMIN_CANCEL_WORKFLOW_INSTANCE = 'admin_cancel_workflow_instance',
+  ADMIN_DELETE_WORKFLOW_INSTANCE = 'admin_delete_workflow_instance',
   ADMIN_GET_SYSTEM_INFORMATION = 'admin_get_system_information',
   ADMIN_GET_NUMBER_RANGES = 'admin_get_number_ranges',
   ADMIN_GET_NUMBER_RANGE_ALLOCATIONS = 'admin_get_number_range_allocations',
@@ -157,6 +158,7 @@ export interface WeDataState {
   [WeDataKey.ADMIN_SET_USER_DELEGATIONS]: GenericDataEntry<GetUserDetailResponse> | null;
   [WeDataKey.ADMIN_SEARCH_WF_USERS]: GenericDataEntry<SearchWfUsersResponse> | null;
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: GenericDataEntry<object> | null;
+  [WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE]: GenericDataEntry<object> | null;
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: GenericDataEntry<GetSystemInformationResponse> | null;
   [WeDataKey.ADMIN_GET_NUMBER_RANGES]: GenericDataEntry<GetNumberRangesResponse> | null;
   [WeDataKey.ADMIN_GET_NUMBER_RANGE_ALLOCATIONS]: GenericDataEntry<NumberRangeAllocationsTable> | null;
@@ -246,6 +248,8 @@ export const WeApiUrl = (
       return 'admin/search_wf_users';
     case WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE:
       return 'admin/cancel_workflow_instance';
+    case WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE:
+      return 'admin/delete_workflow_instance';
     case WeDataKey.ADMIN_GET_SYSTEM_INFORMATION:
       return 'admin/system_information';
     case WeDataKey.ADMIN_GET_NUMBER_RANGES:
@@ -314,6 +318,7 @@ export const initState: WeDataState = {
   [WeDataKey.ADMIN_SET_USER_DELEGATIONS]: null,
   [WeDataKey.ADMIN_SEARCH_WF_USERS]: null,
   [WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE]: null,
+  [WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE]: null,
   [WeDataKey.ADMIN_GET_SYSTEM_INFORMATION]: null,
   [WeDataKey.ADMIN_GET_NUMBER_RANGES]: null,
   [WeDataKey.ADMIN_GET_NUMBER_RANGE_ALLOCATIONS]: null,

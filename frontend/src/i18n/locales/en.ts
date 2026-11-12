@@ -43,6 +43,8 @@ export const en = {
     logout: 'Logout',
   },
   common: {
+    cancelReason: 'Reason for cancelling',
+    cancelledBy: 'Cancelled by {{name}}: {{reason}}',
     actions: {
       search: 'Search',
       searchUser: 'Search User',
@@ -131,9 +133,9 @@ export const en = {
     },
     unsavedChanges: {
       title: 'Unsaved changes',
-      message: 'Are you sure you want to leave? Your changes will be lost.',
+      message: 'If you leave, your changes will be discarded.',
       stay: 'Stay',
-      leave: 'Leave',
+      leave: 'Discard changes',
       hint: "You have unsaved changes. Don't forget to save!",
     },
     delegations: {
@@ -163,6 +165,7 @@ export const en = {
     unassigned: 'Unassigned',
     resetDialogTitle: 'Reset to Initial State',
     resetDialogText: 'This will reset all form data to the initial state.',
+    resetDialogKeep: 'Keep',
     deleteDialogTitle: 'Delete workflow',
     deleteDialogText:
       'This will PERMANENTLY DELETE the workflow.\n\nIf you have started this workflow by mistake, you can delete it without any problems.',
@@ -173,6 +176,9 @@ export const en = {
     submitSuccess: 'Form successfully submitted',
     submitError: 'An error occurred while submitting the form',
     optionsLoadError: 'Could not load options. Please try again.',
+  },
+  taskForm: {
+    patternMismatch: 'The input does not have the expected format',
   },
   taskActions: {
     reset: 'Reset',
@@ -315,6 +321,13 @@ export const en = {
     cancelWorkflowBusy:
       'The workflow is being processed by another request. Please wait a moment and try again.',
     keepWorkflowTitle: 'Keep Workflow',
+    deleteWorkflowTitle: 'Delete Workflow',
+    deleteWorkflowWarning:
+      'The workflow is deleted for good, with all its tasks, data and attachments, and no longer shows up in the statistics. This cannot be undone.',
+    deleteWorkflowConfirmWord: 'DELETE',
+    deleteWorkflowConfirmLabel: 'Type {{word}} to confirm:',
+    deleteWorkflowSuccess: 'Workflow deleted for good',
+    deleteWorkflowError: 'Workflow could not be deleted. Please try again.',
     tasksHeadline: 'Tasks',
     noSelectedTaskTitle: 'No selected task',
     noSelectedTaskText: 'Please select task on left side',
@@ -426,6 +439,7 @@ export const en = {
     createdBy: 'Created by',
     createdAt: 'Created at',
     completedAt: 'Completed at',
+    cancelledBy: 'Cancelled by',
   },
   statistics: {
     title: 'Workflow Statistics',

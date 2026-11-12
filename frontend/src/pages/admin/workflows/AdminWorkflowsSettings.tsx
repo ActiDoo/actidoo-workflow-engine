@@ -12,6 +12,7 @@ import '@ui5/webcomponents-icons/dist/status-negative';
 import '@ui5/webcomponents-icons/dist/status-positive';
 import '@ui5/webcomponents-icons/dist/play';
 import { type useTranslation } from '@/i18n';
+import { WeStateCanceledIcon } from '@/utils/components/WeStateIcon';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
@@ -57,10 +58,22 @@ export const adminWorkflowsColumns = (
     disableFilters: true,
     width: 90,
     hAlign: TextAlign.Center,
-    Cell: (instance: any) =>
-      instance.row.original.is_completed ? (
+    Cell: (instance: any) => {
+      const flow = instance.row.original;
+      if (flow.cancelled_by) {
+        return (
+          <WeStateCanceledIcon
+            title={t('common.cancelledBy', {
+              name: flow.cancelled_by.full_name,
+              reason: flow.cancel_reason,
+            })}
+          />
+        );
+      }
+      return flow.is_completed ? (
         <Icon name="status-positive" design={IconDesign.Positive} />
-      ) : null,
+      ) : null;
+    },
   },
   {
     ...PcInputColumn('has_task_in_error_state', t('adminTables.hasError'), tableData),

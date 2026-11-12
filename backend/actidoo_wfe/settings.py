@@ -181,6 +181,7 @@ Workflow Engine
         env_file=(".env.defaults", env_file, ".env.local"),
         secrets_dir="/run/secrets",
         env_nested_delimiter="__",
+        extra="ignore",
     )
 
     @field_validator("api_path", mode="before")

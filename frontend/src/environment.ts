@@ -6,6 +6,7 @@ interface RuntimeConfig {
   API_BASE_URL?: string;
   ENVIRONMENT_LABEL?: string;
   APP_TITLE?: string;
+  PAGE_TITLE?: string;
 }
 
 declare global {
@@ -105,6 +106,8 @@ const environmentLabel = getOptionalConfigValue(
 );
 // Optional app title shown next to the brand logo; falls back to the i18n default when unset.
 const appTitle = getOptionalConfigValue(runtimeConfig.APP_TITLE, import.meta.env.VITE_APP_TITLE);
+// Optional browser tab title (e.g. "Workflow Engine QAS"); falls back to the title in index.html when unset.
+const pageTitle = getOptionalConfigValue(runtimeConfig.PAGE_TITLE, import.meta.env.VITE_PAGE_TITLE);
 
 export const environment = {
   apiUrl: `${apiBaseUrl}wfe/bff/`, // BFF endpoint for user routes.
@@ -116,4 +119,5 @@ export const environment = {
   buildNumber: import.meta.env.VITE_BUILD_NUMBER,
   environmentLabel, // Environment indicator shown in UI.
   appTitle, // Optional app title shown next to the brand logo.
+  pageTitle, // Optional browser tab title.
 };
