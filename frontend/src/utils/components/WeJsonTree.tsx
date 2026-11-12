@@ -39,10 +39,12 @@ const JsonNode: React.FC<{ name: string; value: unknown }> = ({ name, value }) =
   );
 };
 
-export const WeJsonTree: React.FC<{ data: object }> = ({ data }) => (
+export const WeJsonTree: React.FC<{ data: unknown }> = ({ data }) => (
   <div className="mt-2 font-mono text-sm p-2 max-h-[30rem] overflow-auto border border-solid border-[color:var(--sapField_BorderColor)] rounded-[var(--sapField_BorderCornerRadius)] bg-[var(--sapField_Background)]">
-    {Object.entries(data).map(([key, value]) => (
-      <JsonNode key={key} name={key} value={value} />
-    ))}
+    {data !== null && typeof data === 'object' ? (
+      Object.entries(data).map(([key, value]) => <JsonNode key={key} name={key} value={value} />)
+    ) : (
+      <span className={valueClassName(data)}>{JSON.stringify(data)}</span>
+    )}
   </div>
 );

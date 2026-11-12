@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BusyIndicator,
   Button,
@@ -17,7 +17,6 @@ import '@ui5/webcomponents-icons/dist/tree';
 import { useDispatch, useSelector } from 'react-redux';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest } from '@/store/generic-data/actions';
-import { TextAreaDomRef } from '@ui5/webcomponents-react/dist/webComponents/TextArea';
 import { State } from '@/store';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { handleResponse } from '@/services/HelperService';
@@ -33,7 +32,6 @@ interface AdminJsonSchemaSectionProps {
 const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const textAreaRef = useRef<TextAreaDomRef | null>(null);
   const replaceTaskData = useSelector(
     (state: State) => state.data[WeDataKey.ADMIN_REPLACE_TASK_DATA]
   );
@@ -56,14 +54,15 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
 
   useEffect(() => {
     setValue(getJsonString());
+    setShowError(false);
+    setShowTree(false);
   }, [props?.data]);
 
   const handleSaveChanges = (): void => {
-    const data = textAreaRef?.current?.value;
     dispatch(
       postRequest(WeDataKey.ADMIN_REPLACE_TASK_DATA, {
         task_id: props.taskId,
-        data: JSON.parse(data ?? ''),
+        data: JSON.parse(value),
       })
     );
   };
@@ -82,11 +81,11 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
     setShowError(false);
   };
 
-  return props?.data && Object.keys(props.data).length > 1 ? (
+  return props?.data && Object.keys(props.data).length > 0 ? (
     <>
       {showTree ? (
         <>
-          <WeJsonTree data={props.data} />
+          <WeJsonTree data={JSON.parse(value)} />
           <div className="flex justify-end mt-2">
             <Button
               icon="edit"
@@ -104,10 +103,9 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
             className="mt-2"
             rows={20}
             value={value}
-            ref={textAreaRef}
             onInput={e => {
               validateValue(e.target.value);
-              if (e.target.value) setValue(e.target.value);
+              setValue(e.target.value ?? '');
             }}
           />
           <div className="flex justify-end mt-2 gap-2">
@@ -121,6 +119,7 @@ const WeEditableDataSection: React.FC<AdminJsonSchemaSectionProps> = props => {
             ) : null}
             <Button
               icon="tree"
+              disabled={showError}
               design={ButtonDesign.Transparent}
               onClick={() => {
                 setShowTree(true);

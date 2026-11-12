@@ -428,7 +428,7 @@ def test_visible_dynamic_list_with_hide_if_is_persisted(db_engine_ctx, mock_send
         assert task_data["hidden_list"][0]["number_e"] == 42
 
 
-def test_static_texts_and_empty_service_results_are_not_stored(db_engine_ctx, mock_send_text_mail):
+def test_static_texts_are_removed_but_empty_service_results_are_stored(db_engine_ctx, mock_send_text_mail):
     with db_engine_ctx():
         workflow = _start_workflow()
 
@@ -464,4 +464,4 @@ def test_static_texts_and_empty_service_results_are_not_stored(db_engine_ctx, mo
         assert task_data["my_list"][0]["number_b"] == 1
 
         service_task = next(t for t in completed_workflow.get_tasks() if t.task_spec.name == "Activity_06zk4v0")
-        assert "result_Activity_06zk4v0" not in service_task.data
+        assert service_task.data["result_Activity_06zk4v0"] is None

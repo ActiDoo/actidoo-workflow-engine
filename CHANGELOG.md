@@ -41,8 +41,9 @@ releases correspond to the git tags of this repository.
 
 ### Changed
 
-- Static form texts and service tasks without a return value no longer add
-  empty technical entries to task data. Existing instances are not cleaned up.
+- Static form texts no longer add empty technical entries to submitted task
+  data. Existing instances are not cleaned up. Service results, including
+  `null`, continue to be stored.
 
 - **When** a user resets a form to its initial state or leaves the user
   settings with unsaved changes:
