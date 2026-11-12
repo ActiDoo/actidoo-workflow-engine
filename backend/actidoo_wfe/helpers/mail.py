@@ -8,17 +8,23 @@ import mimetypes
 import smtplib
 import ssl
 import sys
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from email.message import EmailMessage
-from typing import Dict
+from typing import Dict, Literal
 
 from authlib.integrations.requests_client import OAuth2Session
 
 from actidoo_wfe.helpers.http import build_url
+from actidoo_wfe.helpers.markdown import markdown_to_html_document
 from actidoo_wfe.helpers.string import get_boxed_text
-from actidoo_wfe.testing.utils import in_test
 from actidoo_wfe.settings import settings
+from actidoo_wfe.testing.utils import in_test
 
 log = logging.getLogger(__name__)
+
+BodyFormat = Literal["text", "markdown", "html"]
+SendOne = Callable[[list[str], list[str], list[str]], None]
 
 
 def is_debugger_active() -> bool:
@@ -36,21 +42,92 @@ def log_email(
     content: str,
     recipient_or_recipients_list: list[str] | str,
     attachments: Dict[str, io.BytesIO],
+    cc_recipient_or_recipients_list: list[str] | str | None = None,
+    body_format: BodyFormat = "text",
+    bcc_recipient_or_recipients_list: list[str] | str | None = None,
 ):
-    rec_str = recipient_or_recipients_list if isinstance(recipient_or_recipients_list, str) else ", ".join(recipient_or_recipients_list)
+    rec_str = ", ".join(_normalize_recipients(recipient_or_recipients_list))
+    cc_list = _normalize_recipients(cc_recipient_or_recipients_list)
+    cc_str = f" (cc: '{', '.join(cc_list)}')" if cc_list else ""
+    bcc_list = _normalize_recipients(bcc_recipient_or_recipients_list)
+    bcc_str = f" (bcc: '{', '.join(bcc_list)}')" if bcc_list else ""
     attachment_list = "\n\nATTACH: " + ", ".join(attachments.keys()) if attachments.keys() else ""
     log.info(
-        f"Printing email to '{rec_str}':\n" + get_boxed_text(subject + "\n\n" + content + attachment_list) + "\n",
+        f"Printing {body_format} email to '{rec_str}'{cc_str}{bcc_str}:\n" + get_boxed_text(subject + "\n\n" + content + attachment_list) + "\n",
     )
 
 
-def _normalize_recipients(recipient_or_recipients_list: list[str] | str) -> list[str]:
+def _normalize_recipients(recipient_or_recipients_list: list[str] | str | None) -> list[str]:
+    if recipient_or_recipients_list is None:
+        return []
     if isinstance(recipient_or_recipients_list, str):
-        return [recipient_or_recipients_list]
-    return recipient_or_recipients_list
+        recipient_or_recipients_list = [recipient_or_recipients_list]
+    return [address.strip() for address in recipient_or_recipients_list if address and address.strip()]
 
 
-def _send_via_graph(subject: str, content: str, recipients_list: list[str], attachments: Dict[str, io.BytesIO]) -> None:
+def _graph_attachments_payload(attachments: Dict[str, io.BytesIO]) -> list[dict]:
+    attachments_payload = []
+    for name, attachment in attachments.items():
+        attachment.seek(0)
+        content_bytes = base64.b64encode(attachment.read()).decode("utf-8")
+        attachment.seek(0)
+
+        attachments_payload.append(
+            {
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                "name": name,
+                "contentBytes": content_bytes,
+            }
+        )
+    return attachments_payload
+
+
+class MailBody:
+    def __init__(self, text: str | None, html: str | None):
+        if text is None and html is None:
+            raise ValueError("A mail body needs a text or an html part.")
+        self.text = text
+        self.html = html
+
+    @classmethod
+    def from_content(cls, content: str, body_format: BodyFormat, text_alternative: str | None = None) -> "MailBody":
+        if body_format == "text":
+            return cls(text=content, html=None)
+        if body_format == "markdown":
+            return cls(text=content, html=markdown_to_html_document(content))
+        if body_format == "html":
+            return cls(text=text_alternative, html=content)
+        raise ValueError(f"Unsupported mail body format: {body_format}")
+
+    @property
+    def preferred(self) -> str:
+        return self.html if self.html is not None else self.text  # type: ignore[return-value]
+
+    def apply_to(self, message: EmailMessage) -> None:
+        if self.text is not None:
+            message.set_content(self.text)
+            if self.html is not None:
+                message.add_alternative(self.html, subtype="html")
+        else:
+            message.set_content(self.html, subtype="html")
+
+
+def _graph_payload(subject: str, body: MailBody, to_list: list[str], cc_list: list[str], bcc_list: list[str], attachments: Dict[str, io.BytesIO]) -> dict:
+    return {
+        "message": {
+            "subject": subject,
+            "body": {"contentType": "HTML" if body.html is not None else "Text", "content": body.preferred},
+            "toRecipients": [{"emailAddress": {"address": address}} for address in to_list],
+            "ccRecipients": [{"emailAddress": {"address": address}} for address in cc_list],
+            "bccRecipients": [{"emailAddress": {"address": address}} for address in bcc_list],
+            "attachments": _graph_attachments_payload(attachments),
+        },
+        "saveToSentItems": False,
+    }
+
+
+@contextmanager
+def _graph_transport(subject: str, body: MailBody, attachments: Dict[str, io.BytesIO]) -> Iterator[SendOne]:
     token_endpoint_with_key = build_url(
         settings.email_token_endpoint,
         {"Subscription-Key": settings.email_subscription_key},
@@ -74,63 +151,25 @@ def _send_via_graph(subject: str, content: str, recipients_list: list[str], atta
             {"Subscription-Key": settings.email_subscription_key},
         )
 
-        successful_recipients = []
-        try:
-            for recipient in recipients_list:
-                # Create payload for sending email
-                payload = {
-                    "message": {
-                        "subject": subject,
-                        "body": {"contentType": "Text", "content": content},
-                        "toRecipients": [{"emailAddress": {"address": recipient}}],
-                        "ccRecipients": [],
-                    },
-                    "saveToSentItems": False,
-                }
+        def send(to_list: list[str], cc_list: list[str], bcc_list: list[str]) -> None:
+            payload = _graph_payload(subject, body, to_list, cc_list, bcc_list, attachments)
+            response = client.post(url=send_endpoint_with_key, json=payload, timeout=timeout)
+            response.raise_for_status()  # raises an exception for status_code >=400
 
-                # Add attachments to payload
-                attachments_payload = []
-                for name, attachment in attachments.items():
-                    attachment.seek(0)
-                    content_bytes = base64.b64encode(attachment.read()).decode("utf-8")
-                    attachment.seek(0)
-
-                    attachment_payload = {
-                        "@odata.type": "#microsoft.graph.fileAttachment",
-                        "name": name,
-                        "contentBytes": content_bytes,
-                    }
-
-                    attachments_payload.append(attachment_payload)
-
-                payload["message"]["attachments"] = attachments_payload
-
-                # Send email
-                response = client.post(url=send_endpoint_with_key, json=payload, timeout=timeout)
-                response.raise_for_status()  # raises an exception for status_code >=400
-                successful_recipients.append(recipient)
-        except Exception as error:
-            log.error(f"error while sending email to '{recipient}'. Successful before was '{successful_recipients}'. All recipients are '{recipients_list}'. Attachments = {list(attachments.keys())}")
-            raise error
+        yield send
 
 
-def _send_via_smtp(subject: str, content: str, recipients_list: list[str], attachments: Dict[str, io.BytesIO]) -> None:
-    host = settings.email_smtp_host
-    port = settings.email_smtp_port
-    username = settings.email_smtp_username
-    password = settings.email_smtp_password
-    from_address = settings.email_from_address or settings.email_smtp_username
-
-    if not host:
-        raise ValueError("SMTP host is not configured (email_smtp_host).")
-    if not from_address:
-        raise ValueError("No sender configured (email_from_address or email_smtp_username).")
-
+def _smtp_message(subject: str, body: MailBody, from_address: str, to_list: list[str], cc_list: list[str], bcc_list: list[str], attachments: Dict[str, io.BytesIO]) -> EmailMessage:
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = from_address
-    message["To"] = ", ".join(recipients_list)
-    message.set_content(content)
+    message["To"] = ", ".join(to_list)
+    if cc_list:
+        message["Cc"] = ", ".join(cc_list)
+    if bcc_list:
+        # send_message delivers to these addresses but never transmits the header
+        message["Bcc"] = ", ".join(bcc_list)
+    body.apply_to(message)
 
     for name, attachment in attachments.items():
         attachment.seek(0)
@@ -143,48 +182,80 @@ def _send_via_smtp(subject: str, content: str, recipients_list: list[str], attac
             maintype, subtype = mime_type.split("/", 1)
 
         message.add_attachment(data, maintype=maintype, subtype=subtype, filename=name)
+    return message
+
+
+@contextmanager
+def _smtp_transport(subject: str, body: MailBody, attachments: Dict[str, io.BytesIO]) -> Iterator[SendOne]:
+    host = settings.email_smtp_host
+    port = settings.email_smtp_port
+    username = settings.email_smtp_username
+    password = settings.email_smtp_password
+    from_address = settings.email_from_address or settings.email_smtp_username
+
+    if not host:
+        raise ValueError("SMTP host is not configured (email_smtp_host).")
+    if not from_address:
+        raise ValueError("No sender configured (email_from_address or email_smtp_username).")
 
     context = ssl.create_default_context()
     timeout = settings.email_request_timeout_seconds
-    try:
-        if settings.email_smtp_use_ssl:
-            with smtplib.SMTP_SSL(host, port, context=context, timeout=timeout) as server:
-                if username or password:
-                    server.login(username, password)
-                server.send_message(message)
-        else:
-            with smtplib.SMTP(host, port, timeout=timeout) as server:
+    if settings.email_smtp_use_ssl:
+        connection = smtplib.SMTP_SSL(host, port, context=context, timeout=timeout)
+    else:
+        connection = smtplib.SMTP(host, port, timeout=timeout)
+
+    with connection as server:
+        if not settings.email_smtp_use_ssl:
+            server.ehlo()
+            if settings.email_smtp_use_tls:
+                server.starttls(context=context)
                 server.ehlo()
-                if settings.email_smtp_use_tls:
-                    server.starttls(context=context)
-                    server.ehlo()
-                if username or password:
-                    server.login(username, password)
-                server.send_message(message)
-    except Exception as error:
-        log.error(f"error while sending email via SMTP. Recipients: '{recipients_list}'. Attachments = {list(attachments.keys())}")
-        raise error
+        if username or password:
+            server.login(username, password)
+
+        def send(to_list: list[str], cc_list: list[str], bcc_list: list[str]) -> None:
+            server.send_message(_smtp_message(subject, body, from_address, to_list, cc_list, bcc_list, attachments))
+
+        yield send
 
 
-def send_text_mail(
+def send_mail(
     subject: str,
     content: str,
     recipient_or_recipients_list: list[str] | str,
     attachments: Dict[str, io.BytesIO],
+    cc_recipient_or_recipients_list: list[str] | str | None = None,
+    body_format: BodyFormat = "text",
+    text_alternative: str | None = None,
+    *,
+    bcc_recipient_or_recipients_list: list[str] | str | None = None,
+    recipients_see_each_other: bool = False,
 ) -> bool:
-    """Sends a text email via Microsoft Graph API or SMTP.
+    """Sends an email via Microsoft Graph API or SMTP.
 
     Args:
         subject (str): The subject of the email.
-        content (str): The content of the email.
+        content (str): The body of the email in the given body_format.
         recipient_or_recipients_list (list[str] | str): The recipient(s) of the email.
-        attachments (list[io.BytesIO]): The file-like objects to be attached to the email.
+        attachments (dict[str, io.BytesIO]): The file-like objects to be attached to the email, keyed by file name.
+        cc_recipient_or_recipients_list (list[str] | str | None): Optional cc recipient(s) of the email.
+            Needs recipients_see_each_other. Dropped when the recipient override is active.
+        body_format ("text" | "markdown" | "html"): How to interpret content. "markdown" is rendered to HTML
+            with raw HTML escaped and the Markdown source sent as plain-text alternative. "html" is sent as-is;
+            the caller is responsible for escaping any untrusted values.
+        text_alternative (str | None): Plain-text alternative for body_format "html". Ignored otherwise.
+        bcc_recipient_or_recipients_list (list[str] | str | None): Optional hidden recipient(s). They get a copy
+            of every mail that goes out. Dropped when the recipient override is active.
+        recipients_see_each_other (bool): Send one mail to all recipients and cc recipients, so everyone
+            sees every address. Otherwise each recipient gets a mail of their own.
 
     Returns:
-        bool: True if the mail was handed to a transport, False if sending was skipped
-            (test/debug mode or email_skip).
+        bool: True if the mail was handed to a transport, False if nothing was sent
+            (no recipient, test/debug mode or email_skip).
 
     Raises:
+        ValueError: If cc recipients are given without recipients_see_each_other.
         Exception: If sending the email fails with an exception.
     """
 
@@ -205,21 +276,73 @@ def send_text_mail(
     override_recipients_list = settings.email_override_recipients_list
     override_recipients_enable = settings.email_override_recipients_enable
     recipients_list = _normalize_recipients(recipient_or_recipients_list)
+    cc_list = _normalize_recipients(cc_recipient_or_recipients_list)
+    bcc_list = _normalize_recipients(bcc_recipient_or_recipients_list)
+
+    if cc_list and not recipients_see_each_other:
+        raise ValueError("Cc recipients are visible to everyone in the mail. Pass recipients_see_each_other=True to send them.")
+    if not recipients_list:
+        log.warning(f"Not sending email '{subject}': no recipient.")
+        return False
 
     if override_recipients_enable or len(override_recipients_list) > 0:
         recipients_list = override_recipients_list
+        cc_list = []
+        bcc_list = []
+
+    body = MailBody.from_content(content, body_format, text_alternative)
 
     # Skip sending email in test/debug mode or when email_skip is set
     if shall_skip_sending_email():
-        log_email(subject, content, recipients_list, attachments)
+        log_email(subject, content, recipients_list, attachments, cc_list, body_format, bcc_list)
         return False
 
     transport = (settings.email_transport or "GRAPH").upper()
     if transport == "SMTP":
-        _send_via_smtp(subject, content, recipients_list, attachments)
+        open_transport = _smtp_transport
     elif transport == "GRAPH":
-        _send_via_graph(subject, content, recipients_list, attachments)
+        open_transport = _graph_transport
     else:
         raise ValueError(f"Unsupported email transport configured: {settings.email_transport}")
 
+    if recipients_see_each_other:
+        envelopes = [(recipients_list, cc_list, bcc_list)]
+    else:
+        envelopes = [([recipient], [], bcc_list) for recipient in recipients_list]
+
+    successful_recipients: list[str] = []
+    try:
+        with open_transport(subject, body, attachments) as send:
+            for to_list, envelope_cc_list, envelope_bcc_list in envelopes:
+                send(to_list, envelope_cc_list, envelope_bcc_list)
+                successful_recipients.extend(to_list)
+    except Exception as error:
+        log.error(
+            f"error while sending email via {transport} to '{recipients_list}' (cc: '{cc_list}', bcc: '{bcc_list}'). Successful before was '{successful_recipients}'. Attachments = {list(attachments.keys())}"
+        )
+        raise error
+
     return True
+
+
+def send_text_mail(
+    subject: str,
+    content: str,
+    recipient_or_recipients_list: list[str] | str,
+    attachments: Dict[str, io.BytesIO],
+    cc_recipient_or_recipients_list: list[str] | str | None = None,
+    *,
+    bcc_recipient_or_recipients_list: list[str] | str | None = None,
+    recipients_see_each_other: bool = False,
+) -> bool:
+    """Sends a plain text email, see send_mail."""
+    return send_mail(
+        subject=subject,
+        content=content,
+        recipient_or_recipients_list=recipient_or_recipients_list,
+        attachments=attachments,
+        cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
+        body_format="text",
+        bcc_recipient_or_recipients_list=bcc_recipient_or_recipients_list,
+        recipients_see_each_other=recipients_see_each_other,
+    )

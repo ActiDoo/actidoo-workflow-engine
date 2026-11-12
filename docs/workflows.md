@@ -32,6 +32,12 @@ A running workflow instance keeps the BPMN and forms it was started with; changi
 
 Model the process in the Camunda Modeler (Camunda 8 profile) and save it into the workflow directory. Set the process id to the folder name (`ExpenseApproval`), mark it executable, and give it a name — the name becomes the workflow title in lists and mails, so "Expense approval". Put every user task into a named lane; give each user task an id you recognise, because the id names its form file and is the key service functions use (here, `EnterExpense` and `ApproveExpense`).
 
+### Renaming a workflow
+
+To rename a workflow, change only the process name; keep the process id and the folder name. The process id is the workflow's identity: a new id is a new workflow, and the existing instances and their statistics stay with the old one.
+
+Every instance stores the title it was started with. The admin workflow and task lists show that stored title, so after a rename older instances appear under the old name and newer ones under the new name. The statistics page counts per workflow: the table and the graph add up old and new instances and show them under the current name. The current name takes effect after a backend restart, because the title is cached.
+
 ### Lanes, roles and ownership
 
 Custom properties on lanes, the process and user tasks decide who sees, starts and administrates the workflow. Set them in the Modeler's "Extension properties" panel. The example has two lanes: an "Employee" lane that anyone may start, and a "Finance" lane whose tasks only the `expense-approver` role sees.
@@ -92,7 +98,7 @@ Every user task needs a form file named `<task id>.form` next to the BPMN file, 
 
 The example has two forms. `EnterExpense` collects `title` (text, required), `amount` (number, required), `category` (a select), an optional `travel_details` text, a `receipt` file upload and a `description` textarea. `ApproveExpense` shows the same `title`, `amount`, `category` and `description` back to the approver, adds a required `decision` select (`approve` / `reject`) and a `reason` text.
 
-Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, single and multi attachment, and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
+Supported field types: text field, text area, text view (static text), single and multi select, number (optionally with a currency), date and date-time, checkbox, radio, file picker (single and multi attachment), and [dynamic list](glossary.md#dynamic-list). Fields carry a label, a description (Markdown, with `{{ <expression> }}` placeholders evaluated in the browser), an optional default, `required`, and `minLength` / `maxLength` / "Custom regular expression" (`pattern`, checked in the browser and on submit) on text. Other Modeler validation settings are not enforced; unknown keys are dropped on submit.
 
 ### Custom properties
 
@@ -100,11 +106,13 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 
 | Property | Value | What it does | Why you would use it |
 |---|---|---|---|
-| `custom_type` | `select_multi`, `attachment_single`, `attachment_multi` | turns a select into a multi-select, or a field into a single or multi file upload | multiple choices, or file uploads |
+| `custom_type` | `select_multi`, `attachment_single`, `attachment_multi` | turns a select into a multi-select, or a text field into a single or multi file upload | multiple choices, or file uploads in forms from before the file picker |
+| `accept` | comma-separated file types, e.g. `pdf, xml` or `image/*` | restricts a text field upload (`custom_type: attachment_*`) to these file types, like the file picker's "Supported file formats" | only certain documents |
 | `options_file` | `<name>.csv` | takes the select's options from `options/<name>.csv` in the workflow directory | a fixed lookup list kept out of the form |
 | `options_function` | function name | takes the select's options from a function `<name>(oth)` in the workflow module | options computed at fill time, e.g. from a data model or connector |
 | `depends_on` | comma-separated keys; inside a dynamic list a key of the same row, otherwise top-level | the select clears and reloads its options when one of those fields changes | options that depend on another field |
-| `options_limit` | integer, default 15, `0` = unlimited | page size of the dynamic-option search | show more or fewer matches |
+| `options_limit` | integer, default 50, `0` = all at once | how many dynamic options the select loads at a time | load fewer options at a time, or all at once |
+| `pattern_message` | text, e.g. `Cost center like CC-1234` | the error shown when the field's regex (`pattern`) does not match; translatable like a label | a user cannot act on `must match pattern "^CC-[0-9]{4}$"` |
 | `validation_function` | function name | calls `<name>(vth)` on submit, which can reject the field with a message | checks the schema cannot express, e.g. a lookup |
 | `currency` | symbol, e.g. `EUR` | renders a number field as a currency input | monetary amounts |
 | `template_field` | `true` / `false` | includes or excludes the field from saved form templates | control what a [form template](glossary.md#form-template) captures |
@@ -113,6 +121,12 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `itemgroup_overviewbutton` | text, default `Overview` | label of the list's overview button | a clearer button text |
 
 A dynamic list stores an array of row objects; the fields inside it are the row's fields, and the engine stamps a technical [row id](glossary.md#row-id) into every row automatically — you never model it. Its key must not contain `-`. Row-level and backend-owned values survive when the user reorders or deletes rows; the reasoning is in [ADR 010](adr/adr_010_dynamic_list_row_identity.md). Nested lists work the same way.
+
+### File uploads
+
+Use the Modeler's file picker component. Without "Upload multiple files" it stores one attachment, with it a list of attachments. "Supported file formats" (`accept`) takes a comma-separated list of file extensions (`pdf`, `.pdf`) and MIME types (`application/pdf`, `image/*`); `*` or `*/*` allows any file. The browser offers only matching files. On submit the server checks each file's name and declared type against the list, not its content. `required`, `disabled` and hide-if work as for other fields.
+
+"Upload multiple files" and "Supported file formats" must be fixed values. A FEEL expression (`=...`) in either makes the workflow fail to load. A text field with `custom_type: attachment_single` / `attachment_multi` still works the same way and takes `accept` as a custom property.
 
 ### Conditional fields (hide-if)
 
@@ -152,7 +166,7 @@ def categories(oth):
     return [("cat_alpha", "Alpha Category"), ("cat_beta", "Beta Category")]
 ```
 
-Dynamic options are searched on the server and cut to `options_limit`. On submit the value must be one of the options; for a function, the function runs again with the submitted data. Option labels from files and functions are not translated by the engine.
+Dynamic options are searched on the server and sent in pages of `options_limit` options. The select loads the next page when the user scrolls to the end of the list. For every page the server reads the whole file or runs the whole function again and sends only that page. On submit the value must be one of the options; for a function, the function runs again with the submitted data. Option labels from files and functions are not translated by the engine.
 
 ### Validation functions
 
@@ -208,10 +222,29 @@ When the function raises, when no function of that name exists, or when the retu
 | task data | `set_task_data`, `set_task_data_key`; read `task_data["<field key>"]`, `task_data["result_<task id>"]`, `task_data["<event id>_Response"]` |
 | workflow control | `set_workflow_data` (instance-level values forms never see), `set_workflow_instance_subtitle`, `get_task`, `get_last_completed_task`, `get_task_completion_day` |
 | users & assignment | `get_created_by`, `get_users_of_role`, `get_user_by_task_name`, `get_user_by_id`; `assign_user_without_role("<task id>", "<email>")` assigns and hides the next such task; `assign_task_roles("<task id>", [...])` replaces its lane roles |
-| mails | `send_text_mail(subject, content, recipients, attachments)`; `get_mail_attachments("<field key>")` turns uploaded files into the attachments argument |
+| mails | `send_mail(subject, content, recipients, attachments=None, cc_recipient_or_recipients_list=None, body_format="text", bcc_recipient_or_recipients_list=None, recipients_see_each_other=False)` with `body_format` `"text"`, `"markdown"` or `"html"`; `send_text_mail(...)` is the plain-text shorthand; `escape_markdown(value)` makes a task-data value render literally in Markdown; `get_mail_attachments("<field key>")` turns uploaded files into the attachments argument |
 | attachments | `add_attachment_to_task_data(file, "<name>", "<ext>", "<field key>")` stores a generated file like an upload; `get_attachment_by_hash(hash)` reads one back |
 | data models | `get_model("<name>")` opens a model listed in `DATA_MODELS`, and `attach_files` / `clear_files` manage its file fields; see [data-models.md](data-models.md) |
 | connectors | `get_connector("<type>", "<instance>")` in a `with` block opens a configured connection; see [connectors.md](connectors.md) |
+
+Recipients and cc both take a single address or a list. Empty addresses are ignored. A mail without any recipient is not sent; the engine logs a warning. Each recipient gets a mail of their own, so nobody sees the other addresses. Pass `recipients_see_each_other=True` to send one mail to everyone instead; cc only works together with it, because everyone in the mail sees the cc addresses. Bcc recipients stay hidden and get a copy of every mail that goes out, so with three recipients and no `recipients_see_each_other` they get three copies.
+
+A mail body is plain text unless you say otherwise. Pass `body_format="markdown"` to write the body in Markdown: `**bold**`, lists, and above all links with a readable text in place of a long URL, `[Open the offer](https://tenant.sharepoint.com/...)`. The engine renders it to HTML, sends the Markdown source as the plain-text alternative, escapes raw HTML in the body and drops `javascript:` links. Wrap every value that comes from a form in `sth.escape_markdown(...)`, so a user who typed `*` or `[` into a field does not change the layout, and so a typed link cannot pose as one of yours:
+
+```python
+def service_notify_approver(sth: ServiceTaskHelper):
+    summary = sth.escape_markdown(sth.task_data["summary"])
+    body = "\n".join([
+        "Hello,",
+        "",
+        f"please review **{summary}**.",
+        "",
+        f"[Offer document]({sth.escape_markdown(sth.task_data['offer_url'])})",
+    ])
+    sth.send_mail("Review required", body, sth.task_data["approver_email"], body_format="markdown")
+```
+
+`body_format="html"` sends the body unchanged and leaves escaping to you; use it only for a body you control completely.
 
 Keep service functions short; long-running work belongs in a background task. Task data must stay JSON-serialisable, and values of hidden form fields are removed after every run, so do not rely on them later.
 

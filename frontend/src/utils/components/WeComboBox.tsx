@@ -1,14 +1,56 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import Select from 'react-select';
-import React from 'react';
+import Select, { components, MenuListProps } from 'react-select';
+import React, { MutableRefObject, UIEvent, useEffect, useRef } from 'react';
 import { StateManagerProps } from 'react-select/dist/declarations/src/useStateManager';
+
+const SCROLL_TO_BOTTOM_THRESHOLD_PX = 24;
+
+const isScrolledToBottom = (el: HTMLElement): boolean =>
+  el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_TO_BOTTOM_THRESHOLD_PX;
+
+const MenuList = (props: MenuListProps<any, boolean>) => {
+  const { onMenuScrollToBottom, isLoading } = props.selectProps;
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const setRefs = (el: HTMLDivElement | null) => {
+    listRef.current = el;
+    if (typeof props.innerRef === 'function') {
+      props.innerRef(el);
+    } else if (props.innerRef) {
+      (props.innerRef as MutableRefObject<HTMLDivElement | null>).current = el;
+    }
+  };
+
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (onMenuScrollToBottom && isScrolledToBottom(event.currentTarget)) {
+      onMenuScrollToBottom(event.nativeEvent as unknown as WheelEvent);
+    }
+  };
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || !onMenuScrollToBottom || isLoading) return;
+    if (el.scrollHeight <= el.clientHeight) {
+      onMenuScrollToBottom(new WheelEvent('wheel'));
+    }
+  }, [props.options.length, isLoading, onMenuScrollToBottom]);
+
+  return (
+    <components.MenuList
+      {...props}
+      innerRef={setRefs}
+      innerProps={{ ...props.innerProps, onScroll: handleScroll }}
+    />
+  );
+};
 
 export const WeComboBox: React.FC<StateManagerProps> = props => {
   return (
     <Select
       {...props}
+      components={{ MenuList, ...props.components }}
       isClearable={props.isClearable ?? true}
       // Opening a select must not scroll the page — react-select's default made the
       // view jump inside our scrolling layout. When there is no space below, the menu

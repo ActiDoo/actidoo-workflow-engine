@@ -38,6 +38,8 @@ export interface UserTask {
   completed_by_delegate_user?: { id: string; full_name: string } | null;
   delegate_submit_comment?: string | null;
   is_readonly?: boolean;
+  /** When the task was submitted; only set once it is completed. */
+  completed_at?: string | null;
 }
 
 export interface WorkflowInstanceMeta {
@@ -172,9 +174,12 @@ export interface AdminWorkflowInstance {
   title?: string;
   subtitle?: string;
   created_at?: string;
+  completed_at?: string | null;
   is_completed?: boolean;
   has_task_in_error_state?: boolean;
   created_by?: User;
+  cancelled_by?: User | null;
+  cancel_reason?: string | null;
   is_readonly?: boolean;
 }
 
@@ -186,6 +191,8 @@ export interface MyInitiatedWorkflowInstance {
   active_tasks?: ActiveTaskInstance[];
   created_at?: Date;
   completed_at?: Date;
+  cancelled_by?: User | null;
+  cancel_reason?: string | null;
   is_readonly?: boolean;
   deadline?: WorkflowDeadline | null;
 }

@@ -57,6 +57,7 @@ from actidoo_wfe.wf.service_workflow import (
     get_task_data,
     get_task_deadline_times,
     get_task_roles,
+    is_workflow_completed,
     restore,
 )
 from actidoo_wfe.wf.spiff_customized import MyIntermediateCatchEvent
@@ -77,7 +78,6 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
 
     created_by_id = get_created_by_id(workflow=workflow)
     subtitle = get_subtitle(workflow=workflow)
-    instance_was_completed = db_workflow.is_completed if db_workflow is not None else False
 
     if db_workflow is None:
         db_workflow = WorkflowInstance()
@@ -89,8 +89,10 @@ def store_workflow_instance(db: Session, workflow: BpmnWorkflow, triggered_by: u
 
     db_workflow.subtitle = subtitle
     db_workflow.data = dump(workflow=workflow)
-    db_workflow.is_completed = workflow.is_completed()
-    if db_workflow.is_completed and not instance_was_completed:
+    db_workflow.is_completed = is_workflow_completed(workflow)
+    if not db_workflow.is_completed:
+        db_workflow.completed_at = None
+    elif db_workflow.completed_at is None:
         # instance has just been set completed
         db_workflow.completed_at = dt_now_naive()
 
@@ -362,6 +364,20 @@ def get_workflow_instance_names_by_task_ids(db: Session, task_ids: set[uuid.UUID
         select(WorkflowInstanceTask.id, WorkflowInstance.name)
         .join(WorkflowInstance, WorkflowInstance.id == WorkflowInstanceTask.workflow_instance_id)
         .where(WorkflowInstanceTask.id.in_(task_ids)),
+    ).all()
+    return {row[0]: row[1] for row in rows}
+
+
+def get_task_completion_times(db: Session, task_ids: set[uuid.UUID]) -> dict[uuid.UUID, datetime.datetime | None]:
+    """Batch lookup of the moment each task was completed.
+
+    The engine's task objects do not carry it - the timestamp is written to the
+    task row when the task first reaches the completed state.
+    """
+    if not task_ids:
+        return {}
+    rows = db.execute(
+        select(WorkflowInstanceTask.id, WorkflowInstanceTask.completed_at).where(WorkflowInstanceTask.id.in_(task_ids)),
     ).all()
     return {row[0]: row[1] for row in rows}
 
@@ -897,6 +913,12 @@ def get_subscriptions_by_message_name_and_correlation_key(db: Session, message_n
     ).scalars()
 
     return subscriptions
+
+
+def set_workflow_instance_cancelled(db: Session, workflow_instance_id: uuid.UUID, cancelled_by_id: uuid.UUID, reason: str):
+    db_workflow = db.execute(select(WorkflowInstance).where(WorkflowInstance.id == workflow_instance_id)).scalar_one()
+    db_workflow.cancelled_by_id = cancelled_by_id
+    db_workflow.cancel_reason = reason
 
 
 def delete_workflow_instance(db: Session, workflow: BpmnWorkflow):

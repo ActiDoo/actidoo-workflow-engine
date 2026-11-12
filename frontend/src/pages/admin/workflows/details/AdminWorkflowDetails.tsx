@@ -8,7 +8,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest } from '@/store/generic-data/actions';
-import { Text, Button, ButtonDesign, DynamicPageHeader } from '@ui5/webcomponents-react';
+import {
+  Text,
+  Button,
+  ButtonDesign,
+  DynamicPageHeader,
+  Input,
+  TextArea,
+} from '@ui5/webcomponents-react';
 import '@ui5/webcomponents-icons/dist/activity-items.js';
 import { useSelectCurrentAdminWorkflow } from '@/store/generic-data/selectors';
 import AdminWorkflowDetailsHeader from '@/pages/admin/workflows/details/components/DetailsHeader';
@@ -26,6 +33,9 @@ const AdminWorkflowDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
 
   const workflow = useSelectCurrentAdminWorkflow(workflowId);
   const cancelWorkflow = useSelector(
@@ -36,9 +46,37 @@ const AdminWorkflowDetails: React.FC = () => {
     'POST'
   );
 
+  const deleteWorkflow = useSelector(
+    (state: State) => state.data[WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE]
+  );
+  const deleteWorkflowLoadState = useSelectUiLoading(
+    WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE,
+    'POST'
+  );
+  const loginState = useSelector((state: State) => state.auth.loginState.data);
+
+  // A finished instance has nothing left to cancel - the backend refuses it with 409.
+  const canCancelWorkflow = workflow !== undefined && !workflow.is_completed;
+  const canDeleteWorkflow = workflow !== undefined && !!loginState?.can_access_wf_admin;
+  const deleteConfirmWord = t('admin.deleteWorkflowConfirmWord');
+
   useEffect(() => {
     if (!workflow) getWorkflow();
   }, []);
+
+  // A 409 carries a `code` that says why the workflow was not cancelled; the
+  // store keeps the error body in `data`.
+  const cancelErrorText = (): string => {
+    const errorBody = cancelWorkflow?.data as { code?: string } | undefined;
+    switch (errorBody?.code) {
+      case 'workflow_instance_already_finished':
+        return t('admin.cancelWorkflowAlreadyFinished');
+      case 'workflow_instance_busy':
+        return t('admin.cancelWorkflowBusy');
+      default:
+        return t('admin.cancelWorkflowError');
+    }
+  };
 
   useEffect(() => {
     handleResponse(
@@ -46,17 +84,51 @@ const AdminWorkflowDetails: React.FC = () => {
       WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE,
       cancelWorkflow?.postResponse,
       t('admin.cancelWorkflowSuccess'),
-      t('admin.cancelWorkflowError'),
+      cancelErrorText(),
       () => {
         setCancelDialogOpen(false);
         navigate('/admin/all-workflows', { replace: true });
+      },
+      () => {
+        // The instance may have finished while this page was open - reload so the
+        // header and the cancel button match the server again.
+        setCancelDialogOpen(false);
+        getWorkflow();
       }
     );
   }, [cancelWorkflow?.postResponse]);
 
+  useEffect(() => {
+    handleResponse(
+      dispatch,
+      WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE,
+      deleteWorkflow?.postResponse,
+      t('admin.deleteWorkflowSuccess'),
+      t('admin.deleteWorkflowError'),
+      () => {
+        setDeleteDialogOpen(false);
+        navigate('/admin/all-workflows', { replace: true });
+      }
+    );
+  }, [deleteWorkflow?.postResponse]);
+
+  const openDeleteDialog = (): void => {
+    setDeleteConfirmInput('');
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteWorkflow = (): void => {
+    dispatch(
+      postRequest(WeDataKey.ADMIN_DELETE_WORKFLOW_INSTANCE, { workflow_instance_id: workflowId })
+    );
+  };
+
   const handleCancelWorkflow = (): void => {
     dispatch(
-      postRequest(WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE, { workflow_instance_id: workflowId })
+      postRequest(WeDataKey.ADMIN_CANCEL_WORKFLOW_INSTANCE, {
+        workflow_instance_id: workflowId,
+        reason: cancelReason.trim(),
+      })
     );
   };
 
@@ -90,7 +162,7 @@ const AdminWorkflowDetails: React.FC = () => {
               {t('admin.keepWorkflowTitle')}
             </Button>
             <Button
-              disabled={isLoading}
+              disabled={!!isLoading || !cancelReason.trim()}
               design={ButtonDesign.Negative}
               tooltip={t('admin.cancelWorkflowTitle')}
               onClick={() => {
@@ -100,7 +172,64 @@ const AdminWorkflowDetails: React.FC = () => {
             </Button>
           </>
         }>
-        <Text>{t('admin.cancelWorkflowConfirm')}</Text>
+        <div className="flex flex-column gap-2">
+          <Text>{t('admin.cancelWorkflowConfirm')}</Text>
+          <TextArea
+            placeholder={t('common.cancelReason')}
+            maxlength={1000}
+            value={cancelReason}
+            onInput={e => {
+              setCancelReason(e.target.value ?? '');
+            }}
+          />
+        </div>
+      </WeAlertDialog>
+    );
+  };
+
+  const renderDeleteWorkflowDialog = (): React.ReactElement => {
+    const isLoading = deleteWorkflowLoadState;
+    const isConfirmed = deleteConfirmInput.trim() === deleteConfirmWord;
+
+    return (
+      <WeAlertDialog
+        isDialogOpen={deleteDialogOpen}
+        setDialogOpen={setDeleteDialogOpen}
+        isLoading={isLoading}
+        title={t('admin.deleteWorkflowTitle')}
+        buttons={
+          <>
+            <Button
+              disabled={isLoading}
+              className="transparent-button-gray"
+              design={ButtonDesign.Transparent}
+              tooltip={t('admin.keepWorkflowTitle')}
+              onClick={() => {
+                setDeleteDialogOpen(false);
+              }}>
+              {t('admin.keepWorkflowTitle')}
+            </Button>
+            <Button
+              disabled={!!isLoading || !isConfirmed}
+              design={ButtonDesign.Negative}
+              tooltip={t('admin.deleteWorkflowTitle')}
+              onClick={() => {
+                handleDeleteWorkflow();
+              }}>
+              {t('admin.deleteWorkflowTitle')}
+            </Button>
+          </>
+        }>
+        <div className="flex flex-column gap-2">
+          <Text>{t('admin.deleteWorkflowWarning')}</Text>
+          <Text>{t('admin.deleteWorkflowConfirmLabel', { word: deleteConfirmWord })}</Text>
+          <Input
+            value={deleteConfirmInput}
+            onInput={e => {
+              setDeleteConfirmInput(e.target.value ?? '');
+            }}
+          />
+        </div>
       </WeAlertDialog>
     );
   };
@@ -113,16 +242,30 @@ const AdminWorkflowDetails: React.FC = () => {
           ? `${t('admin.workflowDetailsTitle')}: ${workflow.title}`
           : t('admin.workflowDetailsTitle'),
         showBack: true,
-        actionSection: (
-          <Button
-            design={ButtonDesign.Negative}
-            title={t('admin.cancelWorkflowTitle')}
-            onClick={() => {
-              setCancelDialogOpen(true);
-            }}>
-            {t('admin.cancelWorkflowTitle')}
-          </Button>
-        ),
+        actionSection:
+          canCancelWorkflow || canDeleteWorkflow ? (
+            <div className="flex gap-2">
+              {canCancelWorkflow ? (
+                <Button
+                  design={ButtonDesign.Negative}
+                  title={t('admin.cancelWorkflowTitle')}
+                  onClick={() => {
+                    setCancelReason('');
+                    setCancelDialogOpen(true);
+                  }}>
+                  {t('admin.cancelWorkflowTitle')}
+                </Button>
+              ) : null}
+              {canDeleteWorkflow ? (
+                <Button
+                  design={ButtonDesign.Negative}
+                  title={t('admin.deleteWorkflowTitle')}
+                  onClick={openDeleteDialog}>
+                  {t('admin.deleteWorkflowTitle')}
+                </Button>
+              ) : null}
+            </div>
+          ) : undefined,
       }}
       showHideHeaderButton={false}
       headerContentPinnable={false}
@@ -133,6 +276,7 @@ const AdminWorkflowDetails: React.FC = () => {
       }>
       <AdminWorkflowDetailsTasksSection />
       {renderCancelWorkflowDialog()}
+      {renderDeleteWorkflowDialog()}
     </PcDynamicPage>
   );
 };

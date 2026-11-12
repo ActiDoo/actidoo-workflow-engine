@@ -201,6 +201,7 @@ def _insert_single_component(
         _handle_default_value(component, jsonschema, key)
         _handle_layout(component, uischema, key)
         _create_ui_schema_key(component, jsonschemapath, uischema, key, markdown=False)
+        _handle_columns(component, uischema, key)
         _handle_conditional_hide(component, uischema, jsonschema, key)
         _handle_disable(component, uischema, jsonschema, key)
 
@@ -224,6 +225,7 @@ def _insert_single_component(
                 },
             }
         )
+        _handle_accept(component, jsonschema, key)
         # If the attachment_multi field is 'required' we must set the minItems attribute,
         # because in the jsonschema the type is an array, which means we must have at least one file attached.
         # That is also the reaons we do not need call _handle_validate() for this component.
@@ -236,6 +238,7 @@ def _insert_single_component(
         _handle_validate(component, jsonschema, key)
         _handle_layout(component, uischema, key)
         _create_ui_schema_key(component, jsonschemapath, uischema, key, markdown=False)
+        _handle_columns(component, uischema, key)
         _handle_conditional_hide(component, uischema, jsonschema, key)
         _handle_disable(component, uischema, jsonschema, key)
         uischema[key].update(
@@ -255,6 +258,7 @@ def _insert_single_component(
                 },
             }
         )
+        _handle_accept(component, jsonschema, key)
         return
 
     _handle_label(component, jsonschema, key)
@@ -266,6 +270,10 @@ def _insert_single_component(
     _handle_layout(component, uischema, key)
 
     _create_ui_schema_key(component, jsonschemapath, uischema, key)
+
+    _handle_pattern_message(component, uischema, key)
+
+    _handle_columns(component, uischema, key)
 
     _handle_conditional_hide(component, uischema, jsonschema, key)
 
@@ -410,13 +418,52 @@ def _handle_label(component, jsonschema, key):
 
 
 def _is_attachment_single(component):
+    if _is_filepicker(component):
+        return not _is_filepicker_multiple(component)
     custom_properties = component.get("properties", {})
     return custom_properties.get("custom_type", "") == "attachment_single"
 
 
 def _is_attachment_multi(component):
+    if _is_filepicker(component):
+        return _is_filepicker_multiple(component)
     custom_properties = component.get("properties", {})
     return custom_properties.get("custom_type", "") == "attachment_multi"
+
+
+def _is_filepicker(component):
+    return component.get("type") == "filepicker"
+
+
+def _is_filepicker_multiple(component):
+    multiple = component.get("multiple", False)
+    if isinstance(multiple, str):
+        raise ValueError(f"filepicker '{component.get('key')}': FEEL expressions are not supported for 'multiple' ({multiple!r})")
+    return bool(multiple)
+
+
+def _handle_accept(component, jsonschema, key):
+    if _is_filepicker(component):
+        accept = component.get("accept")
+    else:
+        accept = component.get("properties", {}).get("accept")
+    if not accept:
+        return
+    if accept.strip().startswith("="):
+        raise ValueError(f"upload field '{key}': FEEL expressions are not supported for 'accept' ({accept!r})")
+
+    normalized = []
+    for token in accept.split(","):
+        token = token.strip().lower()
+        if not token:
+            continue
+        if "/" not in token and not token.startswith("."):
+            token = "." + token
+        normalized.append(token)
+    if ".*" in normalized or "*/*" in normalized:
+        return  # any file type is allowed
+    if normalized:
+        jsonschema["properties"][key]["accept"] = normalized
 
 
 def _handle_disable(component, uischema, jsonschema, key):
@@ -463,16 +510,35 @@ def _handle_layout(component, uischema, key):
     uischema["ui:layout"][row].append(key)
 
 
+def _handle_columns(component, uischema, key):
+    columns = (component.get("layout") or {}).get("columns")
+    if isinstance(columns, str) and columns.isdigit():
+        columns = int(columns)
+    if isinstance(columns, int) and not isinstance(columns, bool) and columns > 0:
+        uischema[key]["ui:columns"] = columns
+
+
 def _handle_validate(component, jsonschema, key):
     validate = component.get("validate", {})
     if _is_required(component) and not _is_attachment_multi(component):
         jsonschema["required"] = jsonschema.get("required", []) + [
             key,
         ]
-    if validate.get("minLength", None) is not None:
-        jsonschema["properties"][key]["minLength"] = validate.get("minLength")
-    if validate.get("maxLength", None) is not None:
-        jsonschema["properties"][key]["maxLength"] = validate.get("maxLength")
+    for camunda_keyword, schema_keyword in (("minLength", "minLength"), ("maxLength", "maxLength"), ("min", "minimum"), ("max", "maximum")):
+        value = validate.get(camunda_keyword, None)
+        if value is None:
+            continue
+        if isinstance(value, str):
+            raise ValueError(f"field '{key}': FEEL expressions are not supported for '{camunda_keyword}' ({value!r})")
+        jsonschema["properties"][key][schema_keyword] = value
+    if validate.get("pattern"):
+        jsonschema["properties"][key]["pattern"] = validate.get("pattern")
+
+
+def _handle_pattern_message(component, uischema, key):
+    message = component.get("properties", {}).get("pattern_message")
+    if message:
+        uischema[key]["ui:patternMessage"] = message
 
 
 def _is_required(component):

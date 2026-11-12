@@ -56,3 +56,21 @@ export const isAttachmentMultiSchema = (schema: any): boolean =>
   typeof schema.items === 'object' &&
   !Array.isArray(schema.items) &&
   (schema.items.properties?.datauri as { format?: string } | undefined)?.format === 'data-url';
+
+export const getAccept = (schema: any): string[] | undefined =>
+  Array.isArray(schema?.accept) && schema.accept.length > 0
+    ? (schema.accept as string[])
+    : undefined;
+
+export const fileMatchesAccept = (
+  file: { name: string; type: string },
+  accept: string[]
+): boolean => {
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return accept.some(token => {
+    if (token.startsWith('.')) return name.endsWith(token);
+    if (token.endsWith('/*')) return type.startsWith(token.slice(0, -1));
+    return type === token;
+  });
+};

@@ -11,9 +11,11 @@ accepts the connection and never replies, and expects the send to fail within
 the configured timeout.
 """
 
+import io
 import socketserver
 import threading
 import time
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -63,7 +65,8 @@ def test_graph_transport_gives_up_on_a_gateway_that_never_answers(silent_server,
 
     def send() -> None:
         try:
-            mail._send_via_graph("subject", "content", ["someone@example.com"], {})
+            with mail._graph_transport("subject", mail.MailBody(text="content", html=None), {}) as send:
+                send(["someone@example.com"], [])
             outcome["error"] = None
         except BaseException as error:  # noqa: BLE001 - inspected in the main thread
             outcome["error"] = error
@@ -76,3 +79,304 @@ def test_graph_transport_gives_up_on_a_gateway_that_never_answers(silent_server,
     assert not worker.is_alive(), f"the send is still waiting on the gateway after {BUDGET_SECONDS} s; the transport has no timeout on its HTTP calls"
     assert outcome["error"] is not None, "a gateway that never answers must make the send fail"
     assert time.monotonic() - started < BUDGET_SECONDS
+
+
+@pytest.fixture
+def real_sending(monkeypatch):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: False)
+    monkeypatch.setattr(settings, "email_override_recipients_enable", False)
+    monkeypatch.setattr(settings, "email_override_recipients_list", [])
+    monkeypatch.setattr(settings, "email_subject_prefix", "")
+    monkeypatch.setattr(settings, "email_subject_suffix", "")
+
+
+@pytest.fixture
+def smtp_server(monkeypatch, real_sending):
+    monkeypatch.setattr(settings, "email_transport", "SMTP")
+    monkeypatch.setattr(settings, "email_smtp_host", "smtp.example.com")
+    monkeypatch.setattr(settings, "email_smtp_use_ssl", False)
+    monkeypatch.setattr(settings, "email_smtp_use_tls", False)
+    monkeypatch.setattr(settings, "email_smtp_username", "")
+    monkeypatch.setattr(settings, "email_smtp_password", "")
+    monkeypatch.setattr(settings, "email_from_address", "wf@example.com")
+    server = MagicMock()
+    with patch("actidoo_wfe.helpers.mail.smtplib.SMTP") as smtp_cls:
+        smtp_cls.return_value.__enter__.return_value = server
+        yield server
+
+
+@pytest.fixture
+def graph_client(monkeypatch, real_sending):
+    monkeypatch.setattr(settings, "email_transport", "GRAPH")
+    monkeypatch.setattr(settings, "email_token_endpoint", "https://login.example.com/token")
+    monkeypatch.setattr(settings, "email_send_endpoint", "https://graph.example.com/sendMail")
+    monkeypatch.setattr(settings, "email_subscription_key", "key")
+    client = MagicMock()
+    client.post.return_value.raise_for_status.return_value = None
+    with patch("actidoo_wfe.helpers.mail.OAuth2Session") as session_cls:
+        session_cls.return_value.__enter__.return_value = client
+        yield client
+
+
+def _sent_message(server):
+    server.send_message.assert_called_once()
+    return server.send_message.call_args.args[0]
+
+
+def test_smtp_sets_cc_header(smtp_server):
+    sent = mail.send_text_mail(
+        subject="Hi",
+        content="Body",
+        recipient_or_recipients_list=["to@example.com"],
+        attachments={},
+        cc_recipient_or_recipients_list=["cc1@example.com", "cc2@example.com"],
+        recipients_see_each_other=True,
+    )
+
+    assert sent is True
+    message = _sent_message(smtp_server)
+    assert message["To"] == "to@example.com"
+    assert message["Cc"] == "cc1@example.com, cc2@example.com"
+
+
+def test_smtp_accepts_single_cc_string_and_omits_header_without_cc(smtp_server):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list="cc@example.com", recipients_see_each_other=True)
+    assert _sent_message(smtp_server)["Cc"] == "cc@example.com"
+
+    smtp_server.reset_mock()
+    mail.send_text_mail("Hi", "Body", "to@example.com", {})
+    assert _sent_message(smtp_server)["Cc"] is None
+
+
+@pytest.mark.parametrize("cc", ["", [""], [None]])
+def test_smtp_ignores_empty_cc(smtp_server, cc):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list=cc)
+    assert _sent_message(smtp_server)["Cc"] is None
+
+
+def test_override_recipients_drop_cc(smtp_server, monkeypatch):
+    monkeypatch.setattr(settings, "email_override_recipients_list", ["dev@example.com"])
+
+    mail.send_text_mail(
+        "Hi",
+        "Body",
+        ["to@example.com"],
+        {},
+        cc_recipient_or_recipients_list=["cc@example.com"],
+        bcc_recipient_or_recipients_list=["bcc@example.com"],
+        recipients_see_each_other=True,
+    )
+
+    message = _sent_message(smtp_server)
+    assert message["To"] == "dev@example.com"
+    assert message["Cc"] is None
+    assert message["Bcc"] is None
+
+
+def test_graph_without_cc_sends_one_mail_per_recipient(graph_client):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {})
+
+    payloads = [call.kwargs["json"]["message"] for call in graph_client.post.call_args_list]
+    assert [p["toRecipients"] for p in payloads] == [
+        [{"emailAddress": {"address": "a@example.com"}}],
+        [{"emailAddress": {"address": "b@example.com"}}],
+    ]
+    assert all(p["ccRecipients"] == [] for p in payloads)
+
+
+def test_graph_with_recipients_see_each_other_sends_single_mail_with_all_recipients(graph_client):
+    mail.send_text_mail(
+        "Hi",
+        "Body",
+        ["a@example.com", "b@example.com"],
+        {"file.txt": io.BytesIO(b"data")},
+        cc_recipient_or_recipients_list="cc@example.com",
+        recipients_see_each_other=True,
+    )
+
+    graph_client.post.assert_called_once()
+    message = graph_client.post.call_args.kwargs["json"]["message"]
+    assert message["toRecipients"] == [
+        {"emailAddress": {"address": "a@example.com"}},
+        {"emailAddress": {"address": "b@example.com"}},
+    ]
+    assert message["ccRecipients"] == [{"emailAddress": {"address": "cc@example.com"}}]
+    assert message["attachments"][0]["name"] == "file.txt"
+
+
+@pytest.mark.parametrize("cc", ["", [""], [None]])
+def test_graph_ignores_empty_cc(graph_client, cc):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {}, cc_recipient_or_recipients_list=cc)
+
+    payloads = [call.kwargs["json"]["message"] for call in graph_client.post.call_args_list]
+    assert len(payloads) == 2
+    assert all(p["ccRecipients"] == [] for p in payloads)
+
+
+def test_smtp_without_recipients_see_each_other_sends_one_mail_per_recipient(smtp_server):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {})
+
+    assert [call.args[0]["To"] for call in smtp_server.send_message.call_args_list] == ["a@example.com", "b@example.com"]
+
+
+def test_smtp_with_recipients_see_each_other_sends_single_mail_with_all_recipients(smtp_server):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {}, recipients_see_each_other=True)
+
+    assert _sent_message(smtp_server)["To"] == "a@example.com, b@example.com"
+
+
+def test_smtp_hands_bcc_to_send_message(smtp_server):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {}, bcc_recipient_or_recipients_list="bcc@example.com")
+
+    assert _sent_message(smtp_server)["Bcc"] == "bcc@example.com"
+
+
+def test_graph_without_recipients_see_each_other_copies_bcc_into_every_mail(graph_client):
+    mail.send_text_mail("Hi", "Body", ["a@example.com", "b@example.com"], {}, bcc_recipient_or_recipients_list="bcc@example.com")
+
+    payloads = [call.kwargs["json"]["message"] for call in graph_client.post.call_args_list]
+    assert [p["bccRecipients"] for p in payloads] == [[{"emailAddress": {"address": "bcc@example.com"}}]] * 2
+
+
+def test_graph_with_recipients_see_each_other_sends_bcc_once(graph_client):
+    mail.send_text_mail(
+        "Hi", "Body", ["a@example.com", "b@example.com"], {}, bcc_recipient_or_recipients_list="bcc@example.com", recipients_see_each_other=True
+    )
+
+    graph_client.post.assert_called_once()
+    assert graph_client.post.call_args.kwargs["json"]["message"]["bccRecipients"] == [{"emailAddress": {"address": "bcc@example.com"}}]
+
+
+def test_cc_without_recipients_see_each_other_is_rejected_also_on_test_systems(monkeypatch):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
+    monkeypatch.setattr(settings, "email_override_recipients_list", ["dev@example.com"])
+
+    with pytest.raises(ValueError, match="recipients_see_each_other"):
+        mail.send_text_mail("Hi", "Body", "to@example.com", {}, cc_recipient_or_recipients_list="cc@example.com")
+
+
+@pytest.mark.parametrize("recipients", ["", " ", [], [""], [None]])
+def test_mail_without_recipient_is_not_sent(smtp_server, recipients, caplog):
+    with caplog.at_level("WARNING", logger="actidoo_wfe.helpers.mail"):
+        sent = mail.send_text_mail("Hi", "Body", recipients, {})
+
+    assert sent is False
+    smtp_server.send_message.assert_not_called()
+    assert "no recipient" in caplog.text
+
+
+def test_skipped_sending_logs_cc(monkeypatch, caplog):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
+    monkeypatch.setattr(settings, "email_override_recipients_enable", False)
+    monkeypatch.setattr(settings, "email_override_recipients_list", [])
+
+    with caplog.at_level("INFO", logger="actidoo_wfe.helpers.mail"):
+        sent = mail.send_text_mail(
+            "Hi",
+            "Body",
+            "to@example.com",
+            {},
+            cc_recipient_or_recipients_list=["cc@example.com"],
+            bcc_recipient_or_recipients_list=["bcc@example.com"],
+            recipients_see_each_other=True,
+        )
+
+    assert sent is False
+    assert "cc: 'cc@example.com'" in caplog.text
+    assert "bcc: 'bcc@example.com'" in caplog.text
+
+
+MARKDOWN = "Hello **Jens**,\n\nplease check the [document](https://tenant.sharepoint.com/very/long/link?x=1).\n\nRaw <b>html</b> stays literal."
+
+
+def _html_part(message):
+    return message.get_body(preferencelist=("html",)).get_content()
+
+
+def _plain_part(message):
+    return message.get_body(preferencelist=("plain",)).get_content()
+
+
+def test_smtp_markdown_sends_html_with_markdown_source_as_plain_alternative(smtp_server):
+    mail.send_mail("Hi", MARKDOWN, "to@example.com", {"file.txt": io.BytesIO(b"data")}, body_format="markdown")
+
+    message = _sent_message(smtp_server)
+    html = _html_part(message)
+    assert '<a href="https://tenant.sharepoint.com/very/long/link?x=1">document</a>' in html
+    assert "<strong>Jens</strong>" in html
+    assert "&lt;b&gt;html&lt;/b&gt;" in html
+    assert "<b>html</b>" not in html
+    assert _plain_part(message).strip() == MARKDOWN
+    assert [a.get_filename() for a in message.iter_attachments()] == ["file.txt"]
+
+
+def test_smtp_html_without_alternative_sends_single_html_part(smtp_server):
+    mail.send_mail("Hi", "<p>Hello</p>", "to@example.com", {}, body_format="html")
+
+    message = _sent_message(smtp_server)
+    assert message.get_content_type() == "text/html"
+    assert "<p>Hello</p>" in message.get_content()
+
+
+def test_smtp_html_with_text_alternative_sends_both_parts(smtp_server):
+    mail.send_mail("Hi", "<p>Hello</p>", "to@example.com", {}, body_format="html", text_alternative="Hello")
+
+    message = _sent_message(smtp_server)
+    assert message.get_content_type() == "multipart/alternative"
+    assert _plain_part(message).strip() == "Hello"
+    assert "<p>Hello</p>" in _html_part(message)
+
+
+def test_smtp_text_stays_plain(smtp_server):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {})
+
+    message = _sent_message(smtp_server)
+    assert message.get_content_type() == "text/plain"
+    assert message.get_content().strip() == "Body"
+
+
+def test_graph_markdown_sends_html_content_type(graph_client):
+    mail.send_mail("Hi", MARKDOWN, "to@example.com", {}, body_format="markdown")
+
+    body = graph_client.post.call_args.kwargs["json"]["message"]["body"]
+    assert body["contentType"] == "HTML"
+    assert 'href="https://tenant.sharepoint.com/very/long/link?x=1"' in body["content"]
+    assert "&lt;b&gt;html&lt;/b&gt;" in body["content"]
+
+
+def test_graph_text_sends_text_content_type(graph_client):
+    mail.send_text_mail("Hi", "Body", "to@example.com", {})
+
+    body = graph_client.post.call_args.kwargs["json"]["message"]["body"]
+    assert body == {"contentType": "Text", "content": "Body"}
+
+
+def test_markdown_drops_unsafe_link_schemes(smtp_server):
+    mail.send_mail("Hi", "[click](javascript:alert(1))", "to@example.com", {}, body_format="markdown")
+
+    assert "<a " not in _html_part(_sent_message(smtp_server))
+
+
+def test_unknown_body_format_is_rejected(smtp_server):
+    with pytest.raises(ValueError):
+        mail.send_mail("Hi", "Body", "to@example.com", {}, body_format="rtf")  # type: ignore[arg-type]
+    smtp_server.send_message.assert_not_called()
+
+
+def test_unknown_body_format_is_rejected_when_sending_is_skipped(monkeypatch):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
+
+    with pytest.raises(ValueError):
+        mail.send_mail("Hi", "Body", "to@example.com", {}, body_format="rtf")  # type: ignore[arg-type]
+
+
+def test_skipped_sending_logs_body_format(monkeypatch, caplog):
+    monkeypatch.setattr(mail, "shall_skip_sending_email", lambda: True)
+    monkeypatch.setattr(settings, "email_override_recipients_enable", False)
+    monkeypatch.setattr(settings, "email_override_recipients_list", [])
+
+    with caplog.at_level("INFO", logger="actidoo_wfe.helpers.mail"):
+        mail.send_mail("Hi", MARKDOWN, "to@example.com", {}, body_format="markdown")
+
+    assert "Printing markdown email" in caplog.text
+    assert "[document](https://tenant.sharepoint.com/very/long/link?x=1)" in caplog.text

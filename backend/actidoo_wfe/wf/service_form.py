@@ -765,7 +765,10 @@ def filter_template_data(*, jsonschema: dict, data: dict, mode: str, apply_value
     )
 
 
-def get_options_limit(jsonschema, path: list[str], default_limit: int = 15) -> int | None:
+DEFAULT_OPTIONS_LIMIT = 50
+
+
+def get_options_limit(jsonschema, path: list[str], default_limit: int = DEFAULT_OPTIONS_LIMIT) -> int | None:
     """
     Read optional options_limit from field custom_properties.
     Default is `default_limit`; explicit 0 disables limiting.
@@ -1021,6 +1024,32 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
     return custom_properties_validator
 
 
+def file_matches_accept(filename: str | None, mimetype: str | None, accept: list[str]) -> bool:
+    filename = (filename or "").lower()
+    mimetype = (mimetype or "").lower()
+    for token in accept:
+        if token.startswith("."):
+            if filename.endswith(token):
+                return True
+        elif token.endswith("/*"):
+            if mimetype.startswith(token[:-1]):
+                return True
+        elif mimetype == token:
+            return True
+    return False
+
+
+def accept_validator(validator, accept, instance, schema):
+    files = instance if isinstance(instance, list) else [instance]
+    for file in files:
+        if not isinstance(file, dict) or not file.get("filename"):
+            continue
+        if not file_matches_accept(file.get("filename"), file.get("mimetype"), accept):
+            yield jsonschema.exceptions.ValidationError(
+                f"File type of {file['filename']} not allowed, allowed: {', '.join(accept)}",
+            )
+
+
 @dataclass
 class ValidationResult:
     task_data: dict
@@ -1104,6 +1133,7 @@ def validate_task_data(
                 property_path=position,
                 form=form,
             ),
+            "accept": accept_validator,
         },
     )
 
@@ -1122,7 +1152,7 @@ def validate_task_data(
                 run_again = True
                 break  # re-validate after each removal to keep the remaining paths valid
 
-    error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data)
+    error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data, uischema=form.uischema)
     # log.debug("removed = %s", removed)
 
     untracked_task_data = copy.deepcopy(tracked_task_data)

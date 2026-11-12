@@ -3,9 +3,9 @@
 
 import datetime
 import uuid
-from typing import Any, List, Optional
+from typing import Annotated, Any, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataSchema
 from actidoo_wfe.wf.constants import TemplateMode
@@ -102,6 +102,7 @@ class GetUserTasksResponseUserTasks(BaseModel):
     completed_by_delegate_user: Optional["InlineUserResponse"]
     delegate_submit_comment: str | None = Field(default=None)
     is_readonly: bool = Field(default=False)
+    completed_at: datetime.datetime | None = Field(default=None)
 
 
 class StartWorkflowWithDataResponse(BaseModel):
@@ -139,6 +140,8 @@ class GetWorkflowInstancesResponseItem(BaseModel):
     is_completed: bool
     created_at: datetime.datetime
     completed_at: datetime.datetime | None
+    cancelled_by: Optional["InlineUserResponse"] = None
+    cancel_reason: str | None = None
     active_tasks: list[GetWorkflowInstancesResponseItemTask] = Field(
         default_factory=lambda: [],
     )
@@ -230,12 +233,15 @@ class SearchPropertyOptionsRequest(BaseModel):
     search: str = Field(default_factory=lambda: "")
     include_value: str | list[str] | None = Field(default_factory=lambda: None)
     form_data: dict | None = Field(default_factory=lambda: None)
+    offset: int = Field(default=0, ge=0)
 
 
 class SearchPropertyOptionsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     options: list["SearchPropertyOptionsResponseItem"]
+    has_more: bool = False
+    next_offset: int | None = None
 
 
 class SearchPropertyOptionsResponseItem(BaseModel):
@@ -304,6 +310,7 @@ class WorkflowSpecResponse(BaseModel):
 class CancelWorkflowRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     task_id: uuid.UUID
+    reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
 
 
 class CancelWorkflowResponse(BaseModel):

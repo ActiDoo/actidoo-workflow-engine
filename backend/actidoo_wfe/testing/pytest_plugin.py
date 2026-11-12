@@ -168,23 +168,39 @@ def isolated_data_model_registry():
 
 @pytest.fixture
 def mock_send_text_mail():
-    """Capture outbound text mails for assertions."""
+    """Capture outbound mails (any body format) for assertions."""
     from actidoo_wfe.helpers.mail import log_email
 
     emails = []
 
-    def mock_send(subject, content, recipient_or_recipients_list, attachments):
+    def mock_send(
+        subject,
+        content,
+        recipient_or_recipients_list,
+        attachments,
+        cc_recipient_or_recipients_list=None,
+        body_format="text",
+        text_alternative=None,
+        *,
+        bcc_recipient_or_recipients_list=None,
+        recipients_see_each_other=False,
+    ):
         email = {
             "subject": subject,
             "content": content,
             "recipients": recipient_or_recipients_list,
+            "cc": cc_recipient_or_recipients_list,
+            "bcc": bcc_recipient_or_recipients_list,
             "attachments": attachments,
+            "body_format": body_format,
+            "text_alternative": text_alternative,
+            "recipients_see_each_other": recipients_see_each_other,
         }
         emails.append(email)
-        log_email(subject, content, recipient_or_recipients_list, attachments)
+        log_email(subject, content, recipient_or_recipients_list, attachments, cc_recipient_or_recipients_list, body_format, bcc_recipient_or_recipients_list)
         return True
 
-    with patch("actidoo_wfe.helpers.mail.send_text_mail", new=mock_send):
+    with patch("actidoo_wfe.helpers.mail.send_mail", new=mock_send):
         yield emails
 
 

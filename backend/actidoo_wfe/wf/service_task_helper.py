@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 import actidoo_wfe.helpers.mail as mail_helpers
 from actidoo_wfe.database import SessionLocal, committed_read, session_lock_wait_timeout
 from actidoo_wfe.helpers.datauri import DataURI
+from actidoo_wfe.helpers.markdown import escape_markdown
 from actidoo_wfe.helpers.string import get_boxed_text
 from actidoo_wfe.storage import get_file_content
 from actidoo_wfe.wf.constants import (
@@ -135,19 +136,63 @@ class ServiceTaskHelper:
             log.exception(f"{type(error).__name__}: {error.args}")
             return "??:??"
 
+    def send_mail(
+        self,
+        subject: str,
+        content: str,
+        recipient_or_recipients_list: list[str] | str,
+        attachments: dict[str, io.BytesIO] | None = None,
+        cc_recipient_or_recipients_list: list[str] | str | None = None,
+        body_format: mail_helpers.BodyFormat = "text",
+        text_alternative: str | None = None,
+        *,
+        bcc_recipient_or_recipients_list: list[str] | str | None = None,
+        recipients_see_each_other: bool = False,
+    ):
+        """
+        Sends a mail. With body_format="markdown" the content is rendered to HTML, raw HTML in it is
+        escaped and links can be written as [text](url). Escape values taken from task data with
+        escape_markdown() so they render literally. body_format="html" sends the content unchanged.
+        Each recipient gets a mail of their own unless recipients_see_each_other is set; cc needs it.
+        Bcc recipients get a copy of every mail that goes out.
+        """
+        return mail_helpers.send_mail(
+            subject=subject,
+            content=content,
+            recipient_or_recipients_list=recipient_or_recipients_list,
+            attachments=attachments or {},
+            cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
+            body_format=body_format,
+            text_alternative=text_alternative,
+            bcc_recipient_or_recipients_list=bcc_recipient_or_recipients_list,
+            recipients_see_each_other=recipients_see_each_other,
+        )
+
     def send_text_mail(
         self,
         subject: str,
         content: str,
         recipient_or_recipients_list: list[str] | str,
         attachments: dict[str, io.BytesIO],
+        cc_recipient_or_recipients_list: list[str] | str | None = None,
+        *,
+        bcc_recipient_or_recipients_list: list[str] | str | None = None,
+        recipients_see_each_other: bool = False,
     ):
-        return mail_helpers.send_text_mail(
+        return self.send_mail(
             subject=subject,
             content=content,
             recipient_or_recipients_list=recipient_or_recipients_list,
             attachments=attachments,
+            cc_recipient_or_recipients_list=cc_recipient_or_recipients_list,
+            body_format="text",
+            bcc_recipient_or_recipients_list=bcc_recipient_or_recipients_list,
+            recipients_see_each_other=recipients_see_each_other,
         )
+
+    @staticmethod
+    def escape_markdown(value) -> str:
+        return escape_markdown(value)
 
     def get_user_by_id(self, user_id):
         from actidoo_wfe.wf import repository

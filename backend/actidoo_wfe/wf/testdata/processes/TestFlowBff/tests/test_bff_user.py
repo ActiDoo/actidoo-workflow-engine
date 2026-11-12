@@ -13,6 +13,7 @@ from sqlalchemy import update as sa_update
 
 from actidoo_wfe.database import SessionLocal, setup_db
 from actidoo_wfe.helpers.bff_table import CursorPosition, decode_cursor, encode_cursor
+from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff.bff_user_schema import (
@@ -276,6 +277,40 @@ def test_get_my_usertasks_ready(db_engine_ctx):
         assert parsed.workflow_instance.title
 
 
+def test_get_my_usertasks_completed_carries_completion_time(db_engine_ctx):
+    """Completed tasks ship the moment they were submitted; ready ones have nothing to ship yet."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        before = dt_now_naive()
+        workflow.user("initiator").submit(
+            task_data=FORM1_DATA_MIN,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+        after = dt_now_naive()
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            completed = client.root_client.get(
+                client.root_client.app.url_path_for("get_usertasks", state="completed"),
+                params={"workflow_instance_id": str(workflow.workflow_instance_id)},
+            )
+            ready = client.root_client.get(
+                client.root_client.app.url_path_for("get_usertasks", state="ready"),
+                params={"workflow_instance_id": str(workflow.workflow_instance_id)},
+            )
+
+        parsed = GetUserTasksResponse.model_validate(completed.json())
+        form1 = next(t for t in parsed.usertasks if t.name == "Form1")
+        assert form1.completed_at is not None
+        # the column stores whole seconds, so the value may round past the window
+        tolerance = datetime.timedelta(seconds=1)
+        assert before - tolerance <= form1.completed_at.replace(tzinfo=None) <= after + tolerance
+
+        still_open = GetUserTasksResponse.model_validate(ready.json())
+        assert all(t.completed_at is None for t in still_open.usertasks)
+
+
 def test_get_my_usertasks_instance_block_visibility(db_engine_ctx):
     """The instance block is shipped only to users who may see the instance —
     outsiders and unknown ids get the same empty shape (no title oracle)."""
@@ -483,6 +518,40 @@ def test_unassign_task_from_me(db_engine_ctx):
             )
 
         assert status == 200
+
+
+def test_unassign_completed_task_is_refused(db_engine_ctx):
+    """A completed task keeps its assignment - it records who did the work."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+        workflow.user("initiator").assign_task(task_id=task.id)
+        workflow.user("initiator").submit(
+            task_data=FORM1_DATA_MIN,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            response = client.root_client.post(
+                client.root_client.app.url_path_for("unassign_task"),
+                json={"task_id": str(task.id)},
+            )
+
+        assert response.status_code == 409
+        assert response.json()["code"] == "task_cannot_be_unassigned"
+
+        # the assignment is still on the completed task
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            completed = client.root_client.get(
+                client.root_client.app.url_path_for("get_usertasks", state="completed"),
+                params={"workflow_instance_id": str(workflow.workflow_instance_id)},
+            )
+        parsed = GetUserTasksResponse.model_validate(completed.json())
+        form1 = next(t for t in parsed.usertasks if t.id == task.id)
+        assert form1.assigned_user is not None
+        assert form1.can_be_unassigned is False
 
 
 # ---------------------------------------------------------------------------
@@ -800,6 +869,58 @@ def test_search_property_options(db_engine_ctx):
         assert {"cat_alpha", "cat_beta", "cat_gamma"} <= values
 
 
+def test_search_property_options_pagination(db_engine_ctx, monkeypatch):
+    many_options = [(f"opt_{i:03d}", f"Option {i:03d}") for i in range(120)]
+    monkeypatch.setattr(
+        service_application.service_workflow,
+        "get_options_for_property",
+        lambda **kwargs: list(many_options),
+    )
+
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        def fetch_page(offset, include_value=None):
+            client = Client()
+            with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+                status, json_resp = client.post(
+                    name="get_property_options",
+                    json={
+                        "task_id": str(task.id),
+                        "property_path": ["category"],
+                        "search": "",
+                        "offset": offset,
+                        "include_value": include_value,
+                    },
+                    cls=SearchPropertyOptionsResponse,
+                )
+            assert status == 200
+            return json_resp
+
+        first = fetch_page(0, include_value="opt_119")
+        assert [o.value for o in first.options][:50] == [f"opt_{i:03d}" for i in range(50)]
+        assert first.options[-1].value == "opt_119"
+        assert len(first.options) == 51
+        assert first.has_more is True
+        assert first.next_offset == 50
+
+        second = fetch_page(first.next_offset, include_value="opt_119")
+        assert [o.value for o in second.options] == [f"opt_{i:03d}" for i in range(50, 100)]
+        assert second.has_more is True
+        assert second.next_offset == 100
+
+        last = fetch_page(second.next_offset)
+        assert [o.value for o in last.options] == [f"opt_{i:03d}" for i in range(100, 120)]
+        assert last.has_more is False
+        assert last.next_offset is None
+
+        beyond = fetch_page(500)
+        assert beyond.options == []
+        assert beyond.has_more is False
+
+
 def test_download_attachment(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()
@@ -845,11 +966,37 @@ def test_cancel_workflow(db_engine_ctx):
         with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
             status, _json = client.post(
                 name="cancel_workflow",
-                json={"task_id": str(task.id)},
+                json={"task_id": str(task.id), "reason": "test"},
                 cls=CancelWorkflowResponse,
             )
 
         assert status == 200
+
+
+def test_cancel_workflow_shows_who_and_why_in_my_workflows(db_engine_ctx, monkeypatch):
+    monkeypatch.setattr(service_application.service_workflow, "can_user_cancel_workflow", lambda **_: True)
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _start_bff_workflow(db)
+        task = workflow.user("initiator").get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        client = Client()
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            status, _ = client.post(
+                name="cancel_workflow",
+                json={"task_id": str(task.id), "reason": "no longer needed"},
+            )
+            assert status == 200
+            _, json_resp = client.post(
+                name="get_my_initiated_workflow_instances",
+                json={},
+                cls=GetWorkflowInstancesResponse,
+            )
+
+        item = next(i for i in json_resp.ITEMS if i.id == workflow.workflow_instance_id)
+        assert item.is_completed
+        assert item.cancelled_by.id == workflow.user("initiator").user.id
+        assert item.cancel_reason == "no longer needed"
 
 
 def test_delete_workflow(db_engine_ctx):

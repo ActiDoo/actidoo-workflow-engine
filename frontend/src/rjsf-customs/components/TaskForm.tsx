@@ -24,14 +24,18 @@ import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/C
 import { isAttachmentMultiSchema } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
+import CustomTextWidget from '@/rjsf-customs/custom-widgets/CustomTextWidget';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
 import CustomFieldErrorTemplate from '@/rjsf-customs/templates/CustomFieldErrorTemplate';
 import CustomDescriptionFieldTemplate from '@/rjsf-customs/templates/CustomDescriptionFieldTemplate';
+import CustomFieldTemplate from '@/rjsf-customs/templates/CustomFieldTemplate';
 import MultiSelectDynamic from '@/rjsf-customs/custom-widgets/MultiSelectDynamic';
 import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
 import { collectHiddenPaths, dropErrorsOfHiddenFields } from '@/services/FeelService';
+import { replacePatternErrorMessages } from '@/rjsf-customs/patternErrors';
+import { useTranslation } from '@/i18n';
 
 const validator = customizeValidator();
 
@@ -58,6 +62,7 @@ const customWidgets: RegistryWidgetsType = {
   combobox: CustomComboBox,
   SelectWidget: CustomSelect,
   CheckboxWidget: CustomCheckbox,
+  TextWidget: CustomTextWidget,
   CurrencyNumberWidget,
   MultiSelectDynamic,
   MultiSelectStatic,
@@ -71,7 +76,25 @@ const customTemplates = {
   ArrayFieldItemTemplate: CustomArrayFieldItemTemplate,
   FieldErrorTemplate: CustomFieldErrorTemplate,
   DescriptionFieldTemplate: CustomDescriptionFieldTemplate,
+  FieldTemplate: CustomFieldTemplate,
 };
+
+// Enter in a single-line field would submit the form implicitly; a task is only submitted
+// via its submit button. Textareas, buttons and widgets that handle Enter themselves
+// (react-select picks an option) still get the key.
+const preventSubmitOnEnter = (event: React.KeyboardEvent<HTMLFormElement>) => {
+  if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+    event.preventDefault();
+  }
+};
+
+const FormWithoutEnterSubmit = React.forwardRef<
+  HTMLFormElement,
+  React.FormHTMLAttributes<HTMLFormElement> & { as?: React.ElementType }
+>(({ as: FormTag = 'form', ...props }, ref) => (
+  <FormTag {...props} ref={ref} onKeyDown={preventSubmitOnEnter} />
+));
+FormWithoutEnterSubmit.displayName = 'FormWithoutEnterSubmit';
 
 type BaseFormProps = React.ComponentProps<typeof Form>;
 
@@ -90,6 +113,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
   children,
   ...rest
 }) => {
+  const { t } = useTranslation();
+
   // Errors of fields the form does not show must not block the submit: the backend treats
   // a hidden field and everything below it as absent, and so does this filter. Visibility
   // is read from the same data the hide-if rendering uses (formContext.formData).
@@ -97,7 +122,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
     const formData =
       (rest.formContext as { formData?: unknown } | undefined)?.formData ?? rest.formData;
     const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
-    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths);
+    const visibleErrors = replacePatternErrorMessages(
+      dropErrorsOfHiddenFields(errors, hiddenPaths),
+      uiSchema ?? rest.uiSchema,
+      t('taskForm.patternMismatch')
+    );
     return providedTransformErrors
       ? providedTransformErrors(visibleErrors, uiSchema)
       : visibleErrors;
@@ -106,6 +135,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   return (
     <Form
       {...rest}
+      _internalFormWrapper={FormWithoutEnterSubmit}
       validator={providedValidator ?? validator}
       transformErrors={transformErrors}
       templates={templates ?? customTemplates}

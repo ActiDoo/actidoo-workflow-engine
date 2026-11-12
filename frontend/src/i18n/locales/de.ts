@@ -44,6 +44,8 @@ export const de = {
     logout: 'Abmelden',
   },
   common: {
+    cancelReason: 'Grund für den Abbruch',
+    cancelledBy: 'Abgebrochen von {{name}}: {{reason}}',
     actions: {
       search: 'Suchen',
       searchUser: 'Benutzer suchen',
@@ -132,9 +134,9 @@ export const de = {
     },
     unsavedChanges: {
       title: 'Ungespeicherte Änderungen',
-      message: 'Möchtest du die Seite wirklich verlassen? Deine Änderungen gehen verloren.',
+      message: 'Wenn du die Seite verlässt, gehen die Änderungen verloren.',
       stay: 'Bleiben',
-      leave: 'Verlassen',
+      leave: 'Änderungen verwerfen',
       hint: 'Du hast ungespeicherte Änderungen. Vergiss nicht zu speichern!',
     },
     delegations: {
@@ -164,6 +166,7 @@ export const de = {
     unassigned: 'Nicht zugewiesen',
     resetDialogTitle: 'Auf Anfangszustand zurücksetzen',
     resetDialogText: 'Dadurch werden alle Formulardaten auf den Anfangszustand zurückgesetzt.',
+    resetDialogKeep: 'Behalten',
     deleteDialogTitle: 'Workflow löschen',
     deleteDialogText:
       'Dadurch wird der Workflow dauerhaft gelöscht.\n\nWenn du den Workflow versehentlich gestartet hast, kannst du ihn problemlos löschen.',
@@ -173,6 +176,10 @@ export const de = {
     processDraft: 'Entwurf wird verarbeitet',
     submitSuccess: 'Formular erfolgreich übermittelt',
     submitError: 'Beim Absenden des Formulars ist ein Fehler aufgetreten',
+    optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
+  },
+  taskForm: {
+    patternMismatch: 'Die Eingabe hat nicht das erwartete Format',
   },
   taskActions: {
     reset: 'Zurücksetzen',
@@ -231,6 +238,11 @@ export const de = {
       error: 'Vorlage konnte nicht gelöscht werden. Bitte versuche es erneut.',
     },
   },
+  listOverview: {
+    copyColumn: 'Spalte kopieren',
+    columnCopied: 'Spalte kopiert',
+    copyFailed: 'Spalte konnte nicht kopiert werden.',
+  },
   singleTaskHeader: {
     readonlyDefinitionMissing:
       'Diese Workflow-Definition ist nicht mehr verfügbar. Die Instanz ist schreibgeschützt.',
@@ -253,6 +265,8 @@ export const de = {
     assignError: 'Aufgabe konnte dir nicht zugewiesen werden. Bitte versuche es erneut',
     unassignSuccess: 'Aufgabe erfolgreich freigegeben',
     unassignError: 'Aufgabe konnte dir nicht entzogen werden. Bitte versuche es erneut',
+    unassignCompletedError:
+      'Die Aufgabe ist bereits abgeschlossen; die Zuweisung kann nicht mehr aufgehoben werden.',
     cancelSuccess: 'Workflow erfolgreich abgebrochen',
     cancelError: 'Workflow konnte nicht abgebrochen werden. Bitte versuche es erneut',
     deleteSuccess: 'Workflow erfolgreich gelöscht',
@@ -304,7 +318,18 @@ export const de = {
     cancelWorkflowConfirm: 'Möchtest du diesen Workflow wirklich abbrechen?',
     cancelWorkflowSuccess: 'Workflow erfolgreich abgebrochen',
     cancelWorkflowError: 'Aufgabe konnte nicht ausgeführt werden. Bitte versuche es erneut.',
+    cancelWorkflowAlreadyFinished:
+      'Dieser Workflow ist bereits beendet und kann nicht mehr abgebrochen werden.',
+    cancelWorkflowBusy:
+      'Der Workflow wird gerade durch einen anderen Aufruf bearbeitet. Bitte warte kurz und versuche es erneut.',
     keepWorkflowTitle: 'Workflow behalten',
+    deleteWorkflowTitle: 'Workflow löschen',
+    deleteWorkflowWarning:
+      'Der Workflow wird mit allen Aufgaben, Daten und Anhängen endgültig gelöscht und taucht auch in der Statistik nicht mehr auf. Das kann nicht rückgängig gemacht werden.',
+    deleteWorkflowConfirmWord: 'LÖSCHEN',
+    deleteWorkflowConfirmLabel: 'Gib zur Bestätigung {{word}} ein:',
+    deleteWorkflowSuccess: 'Workflow endgültig gelöscht',
+    deleteWorkflowError: 'Workflow konnte nicht gelöscht werden. Bitte versuche es erneut.',
     tasksHeadline: 'Aufgaben',
     noSelectedTaskTitle: 'Keine Aufgabe ausgewählt',
     noSelectedTaskText: 'Bitte links eine Aufgabe auswählen',
@@ -416,6 +441,9 @@ export const de = {
     isCompleted: 'Ist abgeschlossen',
     hasError: 'Aufgaben mit Fehler',
     createdBy: 'Erstellt von',
+    createdAt: 'Erstellt am',
+    completedAt: 'Abgeschlossen am',
+    cancelledBy: 'Abgebrochen von',
   },
   statistics: {
     title: 'Workflow-Statistiken',

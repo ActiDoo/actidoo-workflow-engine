@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Bar,
   BusyIndicator,
@@ -11,9 +11,11 @@ import {
   MessageStripDesign,
   Modals,
   Text,
+  TextArea,
   Title,
   TitleLevel,
 } from '@ui5/webcomponents-react';
+import { PcDateString } from '@/ui5-components';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
@@ -32,6 +34,44 @@ interface TaskItemHeaderProps {
   reloadTask: () => void;
   backToList: () => void;
 }
+
+const CancelWorkflowDialogContent: React.FC<{
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}> = ({ onClose, onConfirm }) => {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState('');
+
+  return (
+    <div className="flex flex-column gap-2">
+      <span
+        dangerouslySetInnerHTML={{
+          __html: t('singleTaskHeader.cancelWorkflowDialogText'),
+        }}
+      />
+      <TextArea
+        placeholder={t('common.cancelReason')}
+        maxlength={1000}
+        value={reason}
+        onInput={e => {
+          setReason(e.target.value ?? '');
+        }}
+      />
+      <Bar
+        startContent={<Button onClick={onClose}>{t('singleTaskHeader.closeDialog')}</Button>}
+        endContent={
+          <Button
+            disabled={!reason.trim()}
+            onClick={() => {
+              onConfirm(reason.trim());
+            }}>
+            {t('singleTaskHeader.cancelWorkflowAction')}
+          </Button>
+        }
+      />
+    </div>
+  );
+};
 
 export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const { t } = useTranslation();
@@ -75,8 +115,19 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     !isReadonly &&
     (!task.assigned_user || task.can_be_assigned_as_delegate) &&
     !task.assigned_to_me;
+  // Only a ready task may cancel its workflow, so a completed task never offers it, even while
+  // its instance is still running; a finished instance has nothing left to cancel. Both facts
+  // are checked so a stale can_cancel_workflow flag - e.g. from a task page that was open while
+  // someone else completed the task or the workflow - cannot offer the action.
+  const isWorkflowFinished = !!task.state_completed || !!workflowInstance?.is_completed;
+  const canCancelWorkflow =
+    !isReadonly && !isWorkflowFinished && task.can_cancel_workflow && !task.can_delete_workflow;
+  // A completed task keeps its assignment - it is the record of who did it. The backend
+  // refuses to hand it back with 409, and the delegate cases below would otherwise offer
+  // the button although can_be_unassigned is already false for a completed task.
   const canUnassignTask =
     !isReadonly &&
+    !task.state_completed &&
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- logical OR between booleans
     (task.can_be_unassigned || task.assigned_to_me_as_delegate || isDelegatedToMyDelegate);
 
@@ -92,13 +143,22 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     );
   }, [assignToMeState?.postResponse]);
 
+  // A 409 carries a `code`; the store keeps the error body in `data`.
+  const unassignErrorText = (): string => {
+    const errorBody = unassignTaskFromMe?.data as { code?: string } | undefined;
+    if (errorBody?.code === 'task_cannot_be_unassigned') {
+      return t('singleTaskHeader.unassignCompletedError');
+    }
+    return t('singleTaskHeader.unassignError');
+  };
+
   useEffect(() => {
     handleResponse(
       dispatch,
       WeDataKey.UNASSIGN_TASK_FROM_ME,
       unassignTaskFromMe?.postResponse,
       t('singleTaskHeader.unassignSuccess'),
-      t('singleTaskHeader.unassignError'),
+      unassignErrorText(),
       props.reloadTask,
       props.reloadTask
     );
@@ -162,8 +222,8 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     dispatch(postRequest(WeDataKey.UNASSIGN_TASK_FROM_ME, { task_id: taskId }));
   };
 
-  const handleCancelWorkflow = (taskId: string): void => {
-    dispatch(postRequest(WeDataKey.CANCEL_WORKFLOW, { task_id: taskId }));
+  const handleCancelWorkflow = (taskId: string, reason: string): void => {
+    dispatch(postRequest(WeDataKey.CANCEL_WORKFLOW, { task_id: taskId, reason }));
   };
 
   const showDialog = Modals.useShowDialog();
@@ -183,6 +243,11 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
         <div className="flex-1">
           <Text>{workflowInstance?.title}</Text>
           <Title level={TitleLevel.H3}>{task.title}</Title>
+          {task.completed_at ? (
+            <Text className="text-xs text-neutral-700">
+              {t('common.labels.completedAt')}: <PcDateString val={task.completed_at} />
+            </Text>
+          ) : null}
         </div>
         {isReadonly && (
           <MessageStrip
@@ -251,7 +316,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                 </Button>
               </BusyIndicator>
             ) : null}
-            {task.can_cancel_workflow && !task.can_delete_workflow ? (
+            {canCancelWorkflow ? (
               <BusyIndicator active={cancelWorkflowLoadState} delay={0} className="">
                 <Button
                   icon="employee-rejections"
@@ -260,35 +325,14 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
                   onClick={() => {
                     const { close } = showDialog({
                       children: (
-                        <span
-                          dangerouslySetInnerHTML={{
-                            __html: t('singleTaskHeader.cancelWorkflowDialogText'),
+                        <CancelWorkflowDialogContent
+                          onClose={() => {
+                            close();
                           }}
-                        />
-                      ),
-                      footer: (
-                        <Bar
-                          startContent={
-                            <div>
-                              <Button
-                                onClick={() => {
-                                  close();
-                                }}>
-                                {t('singleTaskHeader.closeDialog')}
-                              </Button>
-                            </div>
-                          }
-                          endContent={
-                            <div>
-                              <Button
-                                onClick={() => {
-                                  handleCancelWorkflow(task.id);
-                                  close();
-                                }}>
-                                {t('singleTaskHeader.cancelWorkflowAction')}
-                              </Button>
-                            </div>
-                          }
+                          onConfirm={reason => {
+                            handleCancelWorkflow(task.id, reason);
+                            close();
+                          }}
                         />
                       ),
                     });

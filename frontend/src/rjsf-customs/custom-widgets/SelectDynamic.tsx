@@ -2,83 +2,38 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import { WidgetProps } from '@rjsf/utils';
-import React, { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
+import React, { ReactElement, useEffect, useRef, useState } from 'react';
 import { SingleValue } from 'react-select';
-import { useMutation } from 'react-query';
-import { fetchPost } from '@/ui5-components';
-import { getApiUrl } from '@/services/ApiService';
 import { useParams } from 'react-router-dom';
 import { FilterOptionOption } from 'react-select/dist/declarations/src/filters';
 import { WeComboBox } from '@/utils/components/WeComboBox';
 import { PcValueLabelItem } from '@/models/models';
-import { debounce, isEqual } from 'lodash';
-import { useDispatch } from 'react-redux';
-import { addToast } from '@/store/ui/actions';
-import { WeToastContent } from '@/utils/components/WeToast';
-import { stripAttachmentPayload } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
+import { isEqual } from 'lodash';
 import { getPropertyPath, useDependencyValues } from '@/rjsf-customs/custom-widgets/dependsOn';
+import { usePropertyOptions } from '@/rjsf-customs/hooks/usePropertyOptions';
 
 const SelectDynamic = (props: WidgetProps): ReactElement => {
-  const [options, setOptions] = useState<PcValueLabelItem[] | undefined>(undefined);
   const [optionsLoaded, setOptionsLoaded] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<PcValueLabelItem | null>(null);
   const [search, setSearch] = useState<string>('');
   const isDisabled = props.disabled ?? props.readonly;
-  const dispatch = useDispatch();
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
-  // console.log(`SelectDynamic: ${JSON.stringify(options)} -> ${props.value}`)
-
-  const optionsQuery = useMutation({
-    mutationFn: async () => {
-      if (!props.uiSchema) {
-        return {};
-      }
-
-      if (!effectiveTaskId) {
-        return { options: [] };
-      }
-
-      const res = await fetchPost(getApiUrl('user/search_property_options'), {
-        task_id: effectiveTaskId,
-        property_path: getPropertyPath(props.id, props.uiSchema['ui:path']),
-        search,
-        include_value: props?.value,
-        form_data: stripAttachmentPayload((props.registry as any)?.formContext?.formData),
-      });
-
-      // console.log(`opts = ${JSON.stringify(res.data)}`)
-      // e.g. {"options":[{"value":"three","label":"Option Drei"},{"value":"one","label":"Option Eins"},{"value":"two","label":"Option Zwei"}]}
-
-      return res.data;
-    },
-    onSuccess: (data: { options: PcValueLabelItem[] }) => {
-      setOptions(data.options);
-    },
-    onError: () => {
-      // Keep the field usable after a failed search: clear the loading/stale state so the
-      // menu shows the standard "no options" and a corrected input re-triggers the search.
-      setOptions([]);
-      dispatch(addToast(<WeToastContent text={`Could not load options. Please try again.`} />));
-    },
+  const { options, isLoading, loadMore, reload, cancelReload, clear } = usePropertyOptions({
+    taskId: effectiveTaskId,
+    propertyPath: props.uiSchema ? getPropertyPath(props.id, props.uiSchema['ui:path']) : undefined,
+    search,
+    includeValue: props?.value,
+    formData: (props.registry as any)?.formContext?.formData,
   });
 
-  const debouncedMutate = useCallback(
-    // debouncedMutate will stay the same during re-render, as long as the deps don't change
-    debounce(() => {
-      optionsQuery.mutate();
-    }, 300),
-    [effectiveTaskId, props.uiSchema ? props.uiSchema['ui:path'] : null]
-  );
-
   useEffect(() => {
-    debouncedMutate();
+    reload();
     return () => {
-      debouncedMutate.cancel(); // cleanup function that runs every re-render and on unmount
+      cancelReload();
     };
-  }, [search, props.value]); // TODO hier werden sich
-  // IN JEDEM FALL dynamisch die Werte geholt
+  }, [search, props.value]);
 
   const handleChange = function (option: unknown): void {
     const singleOption = option as SingleValue<PcValueLabelItem>;
@@ -108,12 +63,11 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
 
   useEffect(() => {
     if (!optionsLoaded) {
-      debouncedMutate();
+      reload();
       setOptionsLoaded(true);
     } else {
       setSelectedOption(getSelectionOption());
     }
-    // no return value with clean-up code like "debouncedMutate.cancel()"", because that's done in the other useEffect() definition
   }, [props.value, options, optionsLoaded]);
 
   const effectDeps = useDependencyValues(
@@ -130,7 +84,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
     setSelectedOption(null);
     setOptionsLoaded(false);
     setSearch('');
-    setOptions([]);
+    clear();
     if (props.value && props.value === prevValueRef.current) props.onChange('');
   }, effectDeps);
 
@@ -144,7 +98,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
         inputId={props.id}
         value={selectedOption ?? ''}
         required={props.required}
-        isLoading={optionsQuery.isLoading}
+        isLoading={isLoading}
         options={options}
         isDisabled={isDisabled}
         isClearable={
@@ -156,6 +110,7 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
         onChange={e => {
           handleChange(e);
         }}
+        onMenuScrollToBottom={loadMore}
         filterOption={(option, inputValue) => handleFilter(option, inputValue)}
       />
     </div>

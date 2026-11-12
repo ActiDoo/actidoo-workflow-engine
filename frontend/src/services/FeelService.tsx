@@ -202,7 +202,7 @@ export function evaluateHideIfAndFeel(
     // e.g. "The product is {{ numberA * numberB }}."
     const description: string = fieldSchemaProps['ui:description'];
     if (description) {
-      const regexp = /{{(.*?)}}/g;
+      const regexp = /{{([\s\S]*?)}}/g;
       const findings = [...description.matchAll(regexp)]; // description can be undefined, then create an empty array
 
       for (const finding of findings) {

@@ -41,7 +41,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Chromium for browser-mode tests
-        run: yarn playwright install --with-deps chromium
+        run: yarn playwright install chromium
 
       - name: Typecheck
         run: yarn typecheck

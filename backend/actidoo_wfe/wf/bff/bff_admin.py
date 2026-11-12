@@ -19,6 +19,8 @@ from actidoo_wfe.wf.bff.bff_admin_schema import (
     AssignUserRequest,
     CancelWorkflowInstanceRequest,
     CancelWorkflowInstanceResponse,
+    DeleteWorkflowInstanceRequest,
+    DeleteWorkflowInstanceResponse,
     DownloadAttachmentRequest,
     ExecuteErroneousTaskRequest,
     GetAllTasksResponse,
@@ -47,6 +49,7 @@ from actidoo_wfe.wf.exceptions import (
     TaskIsNotErroneousException,
     UserMayNotAdministrateThisWorkflowException,
     UserMayNotAdministrateUsersException,
+    WorkflowInstanceAlreadyFinishedException,
     WorkflowInstanceBusyException,
 )
 from actidoo_wfe.wf.models import WorkflowUser
@@ -157,13 +160,14 @@ def get_all_tasks(
 @router.post("/statistics_information", name="bff_admin_get_statistics_information")
 def get_statistic_information(
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
 ) -> ReducedWorkflowInstanceResponse:
     """
     Used by the Frontend Graph and similar to "all_workflow_instances",
     but without the function get_paginated_data() in `views.py`,
     because this caused high loading times, which were unacceptable for the Graph.
     """
-    result = service_application.admin_get_statistics_graph_timestamps(db=db)
+    result = service_application.admin_get_statistics_graph_timestamps(db=db, user_id=user.id)
     return result
 
 
@@ -404,12 +408,16 @@ def download_attachment(
     user: Annotated[WorkflowUser, Depends(get_user)],
     reqdata: DownloadAttachmentRequest,
 ) -> Response:
-
-    attachment: Attachment = service_application.download_attachment(
-        db=db,
-        task_id=reqdata.task_id,
-        hash=reqdata.hash,
-    )
+    try:
+        attachment: Attachment = service_application.admin_download_attachment(
+            db=db,
+            user_id=user.id,
+            task_id=reqdata.task_id,
+            hash=reqdata.hash,
+        )
+    except UserMayNotAdministrateThisWorkflowException:
+        log.warning(f"User {user.username} is not allowed to call download_attachment for task_id {reqdata.task_id}")
+        raise HTTPException(status_code=403)
 
     return streaming_response_with_filecontent(
         binary=attachment.data,
@@ -491,18 +499,66 @@ def cancel_workflow_instance(
     user: Annotated[WorkflowUser, Depends(get_user)],
     reqdata: CancelWorkflowInstanceRequest,
 ) -> CancelWorkflowInstanceResponse:
+    """Cancels a running instance.
+
+    An instance that is already completed or cancelled is answered with 409
+    ``workflow_instance_already_finished`` instead of being silently
+    "cancelled" a second time.
+    """
 
     try:
         service_application.admin_cancel_workflow(
             db=db,
             user_id=user.id,
             workflow_instance_id=reqdata.workflow_instance_id,
+            reason=reqdata.reason,
         )
         return CancelWorkflowInstanceResponse()
 
     except UserMayNotAdministrateThisWorkflowException as ex:
-        log.warning(f"User {user.username} is not allowed to call cancel_workflow_instance for task_id {reqdata.task_id}")
+        log.warning(f"User {user.username} is not allowed to call cancel_workflow_instance for workflow_instance_id {reqdata.workflow_instance_id}")
         raise HTTPException(status_code=403)
+    except WorkflowInstanceAlreadyFinishedException as error:
+        return _conflict(
+            "workflow_instance_already_finished",
+            "This workflow is already finished and cannot be cancelled.",
+            workflow_instance_id=str(error.workflow_instance_id),
+        )
+    except WorkflowInstanceBusyException as error:
+        return _conflict(
+            "workflow_instance_busy",
+            "Another request is still working on this workflow instance.",
+            workflow_instance_id=str(error.workflow_instance_id),
+        )
+
+
+# delete workflow
+
+
+@router.post("/delete_workflow_instance", name="bff_admin_delete_workflow_instance")
+def delete_workflow_instance(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    reqdata: DeleteWorkflowInstanceRequest,
+) -> DeleteWorkflowInstanceResponse:
+
+    try:
+        service_application.admin_delete_workflow(
+            db=db,
+            user_id=user.id,
+            workflow_instance_id=reqdata.workflow_instance_id,
+        )
+        return DeleteWorkflowInstanceResponse()
+
+    except UserMayNotAdministrateThisWorkflowException as ex:
+        log.warning(f"User {user.username} is not allowed to call delete_workflow_instance for workflow_instance_id {reqdata.workflow_instance_id}")
+        raise HTTPException(status_code=403)
+    except WorkflowInstanceBusyException as error:
+        return _conflict(
+            "workflow_instance_busy",
+            "Another request is still working on this workflow instance.",
+            workflow_instance_id=str(error.workflow_instance_id),
+        )
 
 
 @router.get("/system_information", name="bff_admin_system_information")

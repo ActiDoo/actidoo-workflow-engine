@@ -10,6 +10,7 @@ import {
 import { PcDateColumn, PcIconButton, PcInputColumn, PcTableData } from '@/ui5-components';
 import { Link } from 'react-router-dom';
 import { type useTranslation } from '@/i18n';
+import { WeStateCanceledIcon } from '@/utils/components/WeStateIcon';
 import '@ui5/webcomponents-icons/dist/status-negative';
 import '@ui5/webcomponents-icons/dist/status-positive';
 import '@ui5/webcomponents-icons/dist/document-text';
@@ -53,10 +54,22 @@ export const myWorkflowsAllColumns = (
     disableFilters: true,
     width: 90,
     hAlign: TextAlign.Center,
-    Cell: (instance: any) =>
-      instance.row.original.is_completed ? (
+    Cell: (instance: any) => {
+      const flow = instance.row.original;
+      if (flow.cancelled_by) {
+        return (
+          <WeStateCanceledIcon
+            title={t('common.cancelledBy', {
+              name: flow.cancelled_by.full_name,
+              reason: flow.cancel_reason,
+            })}
+          />
+        );
+      }
+      return flow.is_completed ? (
         <Icon name="status-positive" design={IconDesign.Positive} />
-      ) : null,
+      ) : null;
+    },
   },
   PcDateColumn('completed_at', t('myWorkflowsTable.completedAt'), tableData),
   PcInputColumn('id', t('myWorkflowsTable.instanceId'), tableData),

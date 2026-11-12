@@ -541,11 +541,11 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
               disabled={false}
               className="transparent-button-gray"
               design={ButtonDesign.Transparent}
-              tooltip={t('common.actions.cancel')}
+              tooltip={t('taskContent.resetDialogKeep')}
               onClick={() => {
                 setResetToInitialStateDialogOpen(false);
               }}>
-              {t('common.actions.cancel')}
+              {t('taskContent.resetDialogKeep')}
             </Button>
             <Button
               disabled={false}

@@ -1,0 +1,279 @@
+{
+  "jsonschema": {
+    "definitions": {},
+    "type": "object",
+    "properties": {
+      "file_single": {
+        "type": "object",
+        "title": "File picker - default",
+        "properties": {
+          "datauri": {
+            "type": "string",
+            "format": "data-url"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          }
+        }
+      },
+      "file_disabled": {
+        "type": "object",
+        "title": "File picker - disabled",
+        "properties": {
+          "datauri": {
+            "type": "string",
+            "format": "data-url"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          }
+        }
+      },
+      "file_multi": {
+        "type": "array",
+        "title": "File picker - multiple files",
+        "items": {
+          "type": "object",
+          "properties": {
+            "datauri": {
+              "type": "string",
+              "format": "data-url"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "mimetype": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "file_accept": {
+        "type": "object",
+        "title": "File picker - supported files only (csv, pdf)",
+        "properties": {
+          "datauri": {
+            "type": "string",
+            "format": "data-url"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          }
+        },
+        "accept": [
+          ".csv",
+          ".pdf"
+        ]
+      },
+      "show_required": {
+        "type": "boolean",
+        "title": "Show required upload"
+      },
+      "file_required": {
+        "type": "object",
+        "title": "File picker - required, visible when checked",
+        "hideif": "=show_required != true",
+        "properties": {
+          "datauri": {
+            "type": "string",
+            "format": "data-url"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          }
+        }
+      },
+      "file_multi_accept_required": {
+        "type": "array",
+        "title": "File picker - multiple, required (pdf, xml)",
+        "items": {
+          "type": "object",
+          "properties": {
+            "datauri": {
+              "type": "string",
+              "format": "data-url"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "mimetype": {
+              "type": "string"
+            }
+          }
+        },
+        "accept": [
+          ".pdf",
+          ".xml"
+        ],
+        "minItems": 1
+      },
+      "legacy_multi_images": {
+        "type": "array",
+        "title": "Textfield upload - custom_type attachment_multi (images only)",
+        "items": {
+          "type": "object",
+          "properties": {
+            "datauri": {
+              "type": "string",
+              "format": "data-url"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "mimetype": {
+              "type": "string"
+            }
+          }
+        },
+        "accept": [
+          "image/*"
+        ]
+      }
+    },
+    "required": [
+      "file_required"
+    ]
+  },
+  "uischema": {
+    "ui:field": "layout",
+    "ui:layout": {
+      "Row_1qbeacq": [
+        "file_single"
+      ],
+      "Row_1741yni": [
+        "file_disabled"
+      ],
+      "Row_16dafd7": [
+        "file_multi"
+      ],
+      "Row_12khw2c": [
+        "file_accept"
+      ],
+      "Row_0chk7q1": [
+        "show_required"
+      ],
+      "Row_08sg40l": [
+        "file_required"
+      ],
+      "Row_1840o0f": [
+        "file_multi_accept_required"
+      ],
+      "Row_0x3k9aa": [
+        "legacy_multi_images"
+      ]
+    },
+    "file_single": {
+      "ui:description": "",
+      "ui:path": [
+        "file_single"
+      ],
+      "ui:field": "AttachmentSingle"
+    },
+    "file_disabled": {
+      "ui:description": "",
+      "ui:path": [
+        "file_disabled"
+      ],
+      "ui:disabled": true,
+      "ui:field": "AttachmentSingle"
+    },
+    "file_multi": {
+      "ui:description": "",
+      "ui:path": [
+        "file_multi"
+      ],
+      "ui:field": "AttachmentMulti"
+    },
+    "file_accept": {
+      "ui:description": "",
+      "ui:path": [
+        "file_accept"
+      ],
+      "ui:field": "AttachmentSingle"
+    },
+    "show_required": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "show_required"
+      ]
+    },
+    "file_required": {
+      "ui:description": "",
+      "ui:path": [
+        "file_required"
+      ],
+      "ui:hideif": "=show_required != true",
+      "ui:field": "AttachmentSingle"
+    },
+    "file_multi_accept_required": {
+      "ui:description": "",
+      "ui:path": [
+        "file_multi_accept_required"
+      ],
+      "ui:field": "AttachmentMulti"
+    },
+    "legacy_multi_images": {
+      "ui:description": "",
+      "ui:path": [
+        "legacy_multi_images"
+      ],
+      "ui:field": "AttachmentMulti"
+    },
+    "ui:templateMode": "blacklist"
+  }
+}

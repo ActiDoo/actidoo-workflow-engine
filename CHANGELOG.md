@@ -7,12 +7,256 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Added
+
+- **When** a text field must have a certain format, e.g. a cost center
+  `CC-1234`:
+  - Before: the Modeler's "Custom regular expression" was ignored. The form
+    accepted any text, and a wrong value was only found later in the process.
+  - Now: the regex is checked in the browser while typing and again on submit.
+    The custom property `pattern_message` on the field sets the error the
+    user sees, e.g. "Cost center like CC-1234"; it is translatable like a
+    label. Without it a generic "expected format" message is shown, never the
+    regex itself.
+
+- **When** a link to the engine is shared, e.g. in a chat:
+  - Before: every environment showed the same title "Workflow Engine", so the
+    reader could not tell whether the link pointed to DEV, QAS or production
+    and often opened the wrong one from their bookmarks.
+  - Now: the environment variable `PAGE_TITLE` sets the browser tab title,
+    e.g. "Workflow Engine QAS". Unset keeps "Workflow Engine".
+
+- **When** an administrator wants to get rid of a workflow instance, for
+  example one that was started by mistake to test on production:
+  - Before: the instance could only be cancelled. It stayed in the lists and
+    in the statistics. Deleting was only possible for the assigned user of a
+    form with `can_user_delete_workflow`.
+  - Now: users with the role `wf-admin` can delete an instance on its admin
+    details page, running or finished. The instance is removed with all its
+    tasks and attachments. The dialog asks to type a confirmation word
+    first. Workflow owners can still only cancel.
+
+### Changed
+
+- **When** a user resets a form to its initial state or leaves the user
+  settings with unsaved changes:
+  - Before: the buttons read "Cancel / Reset" and "Stay / Leave". It was not
+    clear at first sight which button keeps the data.
+  - Now: they read "Keep / Reset" and "Stay / Discard changes", and the
+    unsaved-changes text says what happens: "If you leave, your changes will
+    be discarded." The admin user details page uses the same dialog.
+
+- **When** a user presses Enter in a single-line field of a task form:
+  - Before: the form was submitted, as if the submit button had been
+    clicked.
+  - Now: nothing happens. A task is only submitted with its submit button.
+    Enter in a multi-line field still adds a line break.
+
+- **When** a workflow is cancelled, by a user from a form or by an
+  administrator:
+  - Before: nobody could tell later who cancelled it and why. In the
+    workflow lists a cancelled workflow looked like one that had finished
+    normally.
+  - Now: cancelling asks for a reason, which is required. The workflow
+    stores who cancelled it and the reason; the time is its completion time.
+    "My workflows" and the admin workflow list show a cancel icon instead of
+    the check mark, with who and why as tooltip. The admin details page
+    shows both as well. Workflows cancelled before this release show no
+    cancel icon.
+
 ### Fixed
 
 - Forms: `depends_on` works inside dynamic lists. The select reacts to the
   field of its own row, and the `options_function` sees that row's values.
-  The reset no longer depends on timing: it skipped changes made within a
-  second of the last option load, and so missed quick edits.
+  The reset no longer skips edits made shortly after loading options.
+
+- **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
+  workflow that an extension provides:
+  - Before: `extract` and `update` failed with "No workflow named ... found",
+    and `extract-all` and `update-all` skipped the workflows of extensions.
+  - Now: every command of the i18n CLI loads the installed extensions first
+    and finds their workflows.
+
+- **When** a text in a form contains a FEEL expression `{{ … }}` that spans
+  several lines:
+  - Before: the expression was shown as plain text instead of its result.
+  - Now: the expression is evaluated, as in the Camunda Modeler.
+
+## [0.1.46] - 2026-11-04
+
+### Fixed
+
+- **When** an extension keeps its own settings in the same dotenv file as the
+  engine:
+  - Before: a key the engine did not know stopped the backend with a
+    validation error.
+  - Now: unknown keys in dotenv files are ignored, like unknown OS environment
+    variables.
+
+### Security
+
+- Backend: bumped `starlette` from 1.0.0 to 1.7.0, `python-multipart` from
+  0.0.27 to 0.0.32, `anyio` from 4.13.0 to 4.14.2, `cryptography` from 47.0.0
+  to 50.0.2, `urllib3` from 2.7.0 to 2.8.0, `joserfc` from 1.6.4 to 1.7.5 and
+  `certifi` from 2026.4.22 to 2026.10.19.
+- Frontend: bumped `axios` from 1.15.2 to 1.20.0 and refreshed the transitive
+  dependencies `react-router`, `react-router-dom`, `preact`,
+  `follow-redirects`, `form-data` and `fast-uri` to patched versions.
+
+## [0.1.45] - 2026-10-08
+
+### Added
+
+- **When** a user needs the values of one column of a dynamic list in
+  another program:
+  - Before: the overview of the list only showed the values. The user had to
+    copy them one by one.
+  - Now: a copy icon in the column header copies the whole column, one value
+    per line, as Excel does. It can be pasted into Excel or SAP. File columns
+    have no copy icon.
+- **When** a form needs a file upload:
+  - Before: only a text field with the custom property
+    `custom_type: attachment_single` or `attachment_multi` became an upload
+    field. The Modeler's file picker showed up as a plain text field. The
+    allowed file types could not be limited.
+  - Now: the Modeler's file picker is an upload field for one or several
+    files. Required, disabled and hide-if work as for other fields. Its
+    "Supported file formats" limits the file types: the browser offers only
+    those files, and on submit the server checks each file's name and
+    declared type. A text field upload takes the same list as the custom
+    property `accept`. A FEEL expression in "Upload multiple files" or
+    "Supported file formats" makes the workflow fail to load.
+- **When** a service task sends a mail that other people should get a copy
+  of:
+  - Before: a mail had only direct recipients.
+  - Now: `sth.send_mail` and `sth.send_text_mail` take cc recipients, one
+    address or a list, together with `recipients_see_each_other=True`. The
+    mail then goes out once to all recipients, so everyone sees who got it.
+    Cc without that flag fails. Empty cc values are ignored. When the
+    recipient override of a test system is on, the cc recipients are
+    dropped too.
+- **When** a service task sends a mail that someone should get a hidden copy
+  of, for example an archive mailbox:
+  - Before: there was no bcc.
+  - Now: `sth.send_mail` and `sth.send_text_mail` take bcc recipients, one
+    address or a list. Nobody sees them. They get a copy of every mail that
+    goes out: one mail with `recipients_see_each_other=True`, otherwise one
+    per recipient. The recipient override drops them like cc.
+- **When** a mail from a service task should show a long link, for example
+  to a OneDrive or SharePoint document:
+  - Before: mails were plain text. The long link stood in the text as it is.
+  - Now: the service task can write the body in Markdown or HTML (ADR 014).
+    A link can then have a short text. A Markdown body is sent as HTML,
+    together with the Markdown text for mail programs without HTML. HTML
+    typed into a Markdown body shows as text, and `javascript:` links are
+    dropped. `sth.escape_markdown` makes a form value show exactly as typed;
+    a web address in it stays a link. Plain-text mails and the engine's own
+    notification mails do not change.
+
+### Changed
+
+- **When** a select gets its options from a file or a function:
+  - Before: it showed at most 15 options (or `options_limit`). Other matches
+    appeared only after typing a search.
+  - Now: it loads 50 options at a time (or `options_limit`) and loads the
+    next ones when the user scrolls to the end of the list.
+    `options_limit: 0` still loads all options at once.
+- **When** the fields of a form row have a width set in the Modeler:
+  - Before: the width was ignored. The fields shared the row equally, and a
+    row of four fields showed one field per line.
+  - Now: each field gets its width from the Modeler. Fields without a width
+    share the rest of the row; a row of four such fields sits side by side.
+    On small screens every field still takes the full width.
+- **When** a text view contains Markdown headings:
+  - Before: headings of level 4 to 6 had the same small size and looked much
+    like field labels.
+  - Now: every level has its own size or style, so headings stand out from
+    field labels.
+- **When** someone looks at a completed task or at the details of a workflow
+  instance:
+  - Before: the task did not show when it was completed. The admin details
+    page did not show when the instance was started or completed.
+  - Now: the task header shows the date and time the task was completed. On
+    the admin details page, the task list shows date and time for each
+    completed task, and the header shows when the instance was started and
+    completed.
+- **When** a workflow test checks sent mails with the `mock_send_text_mail`
+  fixture:
+  - Before: it recorded subject, content, recipients and attachments of
+    plain-text mails.
+  - Now: it records mails of every body format, and also their body format,
+    cc and bcc recipients and `recipients_see_each_other`.
+- **When** a mail goes to several recipients over the SMTP transport:
+  - Before: it went out as one mail, so every recipient saw all addresses.
+    The Graph transport sent one mail per recipient.
+  - Now: SMTP also sends one mail per recipient. `recipients_see_each_other=True`
+    sends one mail to everyone, with both transports.
+- **When** a mail has no recipient left, for example only empty addresses:
+  - Before: Graph sent nothing and reported success; SMTP handed a mail with
+    an empty recipient to the server.
+  - Now: neither transport sends anything. The engine logs a warning, and
+    `sth.send_mail` returns `False`.
+
+### Fixed
+
+- **When** a request fails with an unexpected error:
+  - Before: the server answered with the full traceback, including file
+    paths and source lines.
+  - Now: it answers `500 Internal Server Error` only. The traceback is still
+    in the server log. Errors in service tasks are not affected; they are
+    shown on the erroneous task as before.
+- **When** a user downloads a task's file through the admin interface:
+  - Before: every logged-in user could download any file of any task, given
+    the task id and the file hash.
+  - Now: only an administrator of that workflow gets the file. Everyone else
+    gets 403.
+- **When** a user exports a data table as CSV or downloads a file from it:
+  - Before: since 0.1.42 the server refused the request, because the browser
+    opens it directly and cannot send the client version (ADR 011).
+  - Now: both work again. They only read, so they need no version.
+- **When** a user clicks or tabs into a number field that already has a
+  value:
+  - Before: typing added to the value, so the user had to delete it first.
+  - Now: the value is selected, so typing replaces it.
+- **When** a user empties a number field that has a default value:
+  - Before: the default came back at once, so the field could not be emptied.
+  - Now: the field stays empty while the user is in it. The default comes
+    back only when the user leaves the field empty.
+- **When** a workflow was renamed and an admin opens the statistics page:
+  - Before: the graph labelled the workflow with the title stored on one of
+    its instances, often the old name.
+  - Now: the graph shows the current, translated title, like the table below
+    it. A workflow whose definition is gone keeps the title stored on its
+    newest completed instance.
+- **When** a user who does not administer a workflow asks the server for the
+  data of the statistics graph:
+  - Before: the server returned the completed instances of all workflows to
+    every logged-in user.
+  - Now: it returns only the workflows the user administers, as global admin
+    or as workflow owner, like the other admin lists.
+- **When** the last step of a workflow fails and no end event follows it:
+  - Before: the instance was shown as completed. An administrator's retry of
+    the step ended in a server error.
+  - Now: the instance stays open until the step succeeds or the instance is
+    cancelled. The retry works, and the instance is completed once the step
+    succeeds.
+- **When** a user unassigns a task that is already completed:
+  - Before: in some delegate cases the task header still offered "Unassign
+    from me", and the request ended in a server error.
+  - Now: the task header does not offer it for a completed task. A request
+    that still arrives is refused, and the page says that the task is already
+    completed.
+- **When** an administrator cancels a workflow instance that is already
+  finished:
+  - Before: the server reported success and marked the instance as
+    unsuccessful.
+  - Now: the server refuses it, and the page says that the workflow is already
+    finished. The admin details page no longer offers the button for a
+    finished instance.
+- **When** an administrator cancels a workflow instance while another request
+  is still working on it:
+  - Before: the cancel ended in a server error.
+  - Now: the page says that the workflow is busy and asks to try again.
 
 ## [0.1.44] - 2026-09-23
 
@@ -198,7 +442,9 @@ releases correspond to the git tags of this repository.
 Last release before this changelog was introduced. See the git history for
 earlier changes.
 
-[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.44...HEAD
+[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.46...HEAD
+[0.1.46]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.45...v0.1.46
+[0.1.45]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.44...v0.1.45
 [0.1.44]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.43...v0.1.44
 [0.1.43]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.42...v0.1.43
 [0.1.42]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.41...v0.1.42

@@ -37,6 +37,7 @@ from actidoo_wfe.wf.exceptions import (
     UserMayNotStartWorkflowException,
     ValidationResultContainsErrors,
     WorkflowDefinitionMissingError,
+    WorkflowInstanceAlreadyFinishedException,
     WorkflowSpecNotFoundException,
 )
 from actidoo_wfe.wf.models import (
@@ -585,6 +586,20 @@ def _enrich_user_tasks_with_nested_users(
     return enriched
 
 
+def _enrich_user_tasks_with_completion_times(
+    db: Session,
+    usertasks: list[UserTaskRepresentation],
+) -> None:
+    """Fills in when each completed task was submitted, from the task rows."""
+    completed_ids = {ut.id for ut in usertasks if ut.state_completed}
+    if not completed_ids:
+        return
+
+    completed_at_by_id = repository.get_task_completion_times(db=db, task_ids=completed_ids)
+    for ut in usertasks:
+        ut.completed_at = completed_at_by_id.get(ut.id)
+
+
 def _translate_UserTaskRepresentationForms(db: Session, workflow_name: str, usertask: UserTaskRepresentation, locale) -> UserTaskRepresentation:
     if usertask.jsonschema and usertask.uischema:
         translated = service_i18n.translate_form_data(
@@ -653,6 +668,7 @@ def get_usertasks_for_user_id(
     )
 
     usertasks = _enrich_user_tasks_with_nested_users(db=db, usertasks=usertasks)
+    _enrich_user_tasks_with_completion_times(db=db, usertasks=usertasks)
     usertasks = [_translate_UserTaskRepresentationForms(db=db, workflow_name=workflow.spec.name, usertask=ut, locale=user.locale) for ut in usertasks]
 
     # If the workflow definition has been removed, the workflow can no longer be progressed.
@@ -922,6 +938,12 @@ def _resolve_accessible_usertask(
     return workflow, task
 
 
+class PropertyOptionsPage(NamedTuple):
+    options: list[tuple[str, str]]
+    has_more: bool
+    next_offset: int | None
+
+
 def search_property_options(
     db: Session,
     user_id: uuid.UUID,
@@ -930,8 +952,10 @@ def search_property_options(
     search: str,
     include_value: str | list[str] | None,
     form_data: dict | None,
-) -> list[tuple[str, str]]:
+    offset: int = 0,
+) -> PropertyOptionsPage:
     workflow, _usertask = _resolve_accessible_usertask(db=db, user_id=user_id, task_id=task_id)
+    offset = max(offset, 0)
 
     # Workflow definition missing — we can't load remote options (the options/ folder and
     # service functions are gone). Echo back only the already-selected values so the form
@@ -942,7 +966,7 @@ def search_property_options(
             echoed = [(v, v) for v in include_value]
         elif include_value:
             echoed = [(include_value, include_value)]
-        return echoed
+        return PropertyOptionsPage(options=echoed, has_more=False, next_offset=None)
 
     options = service_workflow.get_options_for_property(
         workflow=workflow,
@@ -975,26 +999,36 @@ def search_property_options(
     for word in search.split():
         options = [x for x in options if word.lower() in x[1].lower() or word.lower() in x[0].lower()]
 
-    options_limit = 15
+    options_limit = service_form.DEFAULT_OPTIONS_LIMIT
     try:
         task = workflow.get_task_from_id(task_id)
         formdata = service_workflow.get_react_json_schema_form_data(task=task)
         options_limit = service_form.get_options_limit(
             jsonschema=formdata.jsonschema,
             path=property_path,
-            default_limit=15,
         )
     except Exception:
-        options_limit = 15
+        options_limit = service_form.DEFAULT_OPTIONS_LIMIT
 
+    total = len(options)
     if options_limit is not None:
-        options = options[:options_limit]
+        page_end = offset + options_limit
+        options = options[offset:page_end]
+        has_more = page_end < total
+    else:
+        options = options[offset:]
+        has_more = False
 
-    for val in options_by_value:
-        if val[0] not in {o[0] for o in options}:
-            options.append(val)
+    if offset == 0:
+        for val in options_by_value:
+            if val[0] not in {o[0] for o in options}:
+                options.append(val)
 
-    return options
+    return PropertyOptionsPage(
+        options=options,
+        has_more=has_more,
+        next_offset=offset + options_limit if has_more and options_limit is not None else None,
+    )
 
 
 def strip_hidden_form_fields(
@@ -1307,8 +1341,7 @@ def is_completed(
     workflow_instance_id: uuid.UUID,
 ) -> bool:
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id)
-    unfinished_tasks = service_workflow.get_unfinished_tasks(workflow)
-    return len(unfinished_tasks) == 0
+    return service_workflow.is_workflow_completed(workflow)
 
 
 def is_faulty(
@@ -1320,7 +1353,7 @@ def is_faulty(
     return len(faulty_tasks) > 0
 
 
-def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
+def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, reason: str):
     workflow = repository.load_workflow_instance_by_task_id(db=db, task_id=task_id, for_update=True)
     can_cancel = service_workflow.can_user_cancel_workflow(
         workflow=workflow,
@@ -1330,6 +1363,7 @@ def user_cancel_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     if can_cancel:
         service_workflow.cancel_workflow(workflow=workflow)
         repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
+        repository.set_workflow_instance_cancelled(db=db, workflow_instance_id=workflow.task_tree.id, cancelled_by_id=user_id, reason=reason)
 
 
 def user_delete_workflow(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
@@ -1504,6 +1538,11 @@ def admin_get_single_task(db: Session, user_id: uuid.UUID, task_id: uuid.UUID):
     return task
 
 
+def admin_download_attachment(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, hash: str) -> Attachment:
+    require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
+    return download_attachment(db=db, task_id=task_id, hash=hash)
+
+
 def admin_replace_task_data(db: Session, user_id: uuid.UUID, task_id: uuid.UUID, task_data: dict):
 
     require_workflow_admin_by_task_id(db=db, user_id=user_id, task_id=task_id)
@@ -1536,13 +1575,30 @@ def admin_execute_erroneous_task(db: Session, user_id: uuid.UUID, task_id: uuid.
     return workflow.task_tree.id, outcome
 
 
-def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID):
+def admin_cancel_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID, reason: str):
 
     require_workflow_admin_by_instance_id(db=db, user_id=user_id, instance_id=workflow_instance_id)
 
     workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id, for_update=True)
+
+    # A completed instance has nothing left to cancel: it either reached its end or
+    # was cancelled before. Cancelling it again would only flip the instance to
+    # unsuccessful and report success to the caller.
+    if service_workflow.is_workflow_completed(workflow):
+        raise WorkflowInstanceAlreadyFinishedException(workflow_instance_id)
+
     service_workflow.cancel_workflow(workflow=workflow)
     repository.store_workflow_instance(db=db, workflow=workflow)
+    repository.set_workflow_instance_cancelled(db=db, workflow_instance_id=workflow_instance_id, cancelled_by_id=user_id, reason=reason)
+
+
+def admin_delete_workflow(db: Session, user_id: uuid.UUID, workflow_instance_id: uuid.UUID):
+    if not is_global_admin(db=db, user_id=user_id):
+        raise UserMayNotAdministrateThisWorkflowException("Only a global admin may delete a workflow instance")
+
+    workflow = repository.load_workflow_instance(db=db, workflow_id=workflow_instance_id, for_update=True)
+    repository.delete_workflow_instance(db=db, workflow=workflow)
+    log.info(f"User {user_id} deleted workflow instance {workflow_instance_id} ({workflow.spec.name})")
 
 
 def admin_assign_task_to_user_without_checks(
@@ -1592,8 +1648,21 @@ def admin_get_task_states_per_workflow(db: Session, wf_name: str, admin_user_id:
     return response
 
 
-def admin_get_statistics_graph_timestamps(db: Session) -> ReducedWorkflowInstanceResponse:
-    return views.bff_admin_get_graph_workflow_instances(db=db)
+def admin_get_statistics_graph_timestamps(db: Session, user_id: uuid.UUID) -> ReducedWorkflowInstanceResponse:
+    """Completed instances for the graph, labelled with the current workflow title; the newest stored title if the definition is gone."""
+    locale = repository.load_user(db=db, user_id=user_id).locale
+    allowed_workflow_names = get_workflow_names_the_user_is_admin_for(db=db, user_id=user_id)
+    instances = views.bff_admin_get_graph_workflow_instances(db=db, allowed_workflow_names=allowed_workflow_names)
+
+    titles = {instance.name: instance.title for instance in instances.ITEMS}
+    for name in titles:
+        if workflow_providers.workflow_definition_available(name):
+            titles[name] = service_workflow.get_workflow_title_cached(name, locale=locale)
+
+    for instance in instances.ITEMS:
+        instance.title = titles[instance.name]
+
+    return instances
 
 
 #### Number ranges (ADR 012) ####

@@ -129,6 +129,21 @@ def test_values_that_only_look_like_the_sentinel_are_still_refused(sent):
     assert response.status_code == 426
 
 
+@pytest.mark.parametrize(
+    "route_name,params",
+    [
+        ("export_data_model_csv", {"model_name": "AnyModel"}),
+        ("download_data_model_attachment", {"model_name": "AnyModel", "row_id": "00000000-0000-0000-0000-000000000001", "version": "1", "file_hash": "h"}),
+    ],
+)
+def test_downloads_the_browser_opens_directly_are_ungated(route_name, params):
+    """A link or a new tab cannot send the version header. Reaching the auth check
+    is the proof the request got past the gate."""
+    response = Client(client_version=None).root_client.get(root_app.url_path_for(route_name, **params))
+
+    assert response.status_code in (401, 403)
+
+
 def test_version_endpoint_is_ungated_and_reports_the_contract_version():
     """What the SPA polls to notice its bundle no longer matches - it must answer
     even a client the BFF refuses, otherwise a blocked tab can never find out why."""

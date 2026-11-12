@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_failed_step_terminate" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_failed_step_terminate">
+    <bpmn:participant id="Participant_failed_step_terminate" name="TestFlow_FailedStepTerminate" processRef="TestFlow_FailedStepTerminate" />
+  </bpmn:collaboration>
+  <bpmn:process id="TestFlow_FailedStepTerminate" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_initiator" name="Initiator">
+        <bpmn:extensionElements>
+          <zeebe:properties>
+            <zeebe:property name="initiator" value="true" />
+          </zeebe:properties>
+        </bpmn:extensionElements>
+        <bpmn:flowNodeRef>StartEvent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>FailingStep</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>TerminateEndEvent</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent">
+      <bpmn:outgoing>Flow_start_to_split</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="Split">
+      <bpmn:incoming>Flow_start_to_split</bpmn:incoming>
+      <bpmn:outgoing>Flow_split_to_failing</bpmn:outgoing>
+      <bpmn:outgoing>Flow_split_to_terminate</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="FailingStep" name="Failing step">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="failing_step" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_split_to_failing</bpmn:incoming>
+      <bpmn:outgoing>Flow_failing_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent">
+      <bpmn:incoming>Flow_failing_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="TerminateEndEvent">
+      <bpmn:incoming>Flow_split_to_terminate</bpmn:incoming>
+      <bpmn:terminateEventDefinition id="TerminateEventDefinition_1" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_split" sourceRef="StartEvent" targetRef="Split" />
+    <bpmn:sequenceFlow id="Flow_split_to_failing" sourceRef="Split" targetRef="FailingStep" />
+    <bpmn:sequenceFlow id="Flow_failing_to_end" sourceRef="FailingStep" targetRef="EndEvent" />
+    <bpmn:sequenceFlow id="Flow_split_to_terminate" sourceRef="Split" targetRef="TerminateEndEvent" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_failed_step_terminate">
+      <bpmndi:BPMNShape id="Participant_failed_step_terminate_di" bpmnElement="Participant_failed_step_terminate" isHorizontal="true">
+        <dc:Bounds x="100" y="60" width="560" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_initiator_di" bpmnElement="Lane_initiator" isHorizontal="true">
+        <dc:Bounds x="130" y="60" width="530" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
+        <dc:Bounds x="182" y="112" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Split_di" bpmnElement="Split">
+        <dc:Bounds x="275" y="105" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FailingStep_di" bpmnElement="FailingStep">
+        <dc:Bounds x="380" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_di" bpmnElement="EndEvent">
+        <dc:Bounds x="552" y="112" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TerminateEndEvent_di" bpmnElement="TerminateEndEvent">
+        <dc:Bounds x="412" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_start_to_split_di" bpmnElement="Flow_start_to_split">
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="275" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_split_to_failing_di" bpmnElement="Flow_split_to_failing">
+        <di:waypoint x="325" y="130" />
+        <di:waypoint x="380" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_failing_to_end_di" bpmnElement="Flow_failing_to_end">
+        <di:waypoint x="480" y="130" />
+        <di:waypoint x="552" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_split_to_terminate_di" bpmnElement="Flow_split_to_terminate">
+        <di:waypoint x="300" y="155" />
+        <di:waypoint x="300" y="240" />
+        <di:waypoint x="412" y="240" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

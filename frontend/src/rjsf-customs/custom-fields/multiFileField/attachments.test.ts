@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import { isRealFile, isAttachmentSingleSchema, isAttachmentMultiSchema } from './attachments';
+import {
+  fileMatchesAccept,
+  isAttachmentMultiSchema,
+  isAttachmentSingleSchema,
+  isRealFile,
+} from './attachments';
 
 describe('isRealFile', () => {
   it('rejects placeholder entries and empty values', () => {
@@ -61,5 +66,15 @@ describe('isAttachmentMultiSchema', () => {
     expect(isAttachmentMultiSchema({ type: 'array', items: [{ type: 'string' }] })).toBe(false);
     expect(isAttachmentMultiSchema({ type: 'object' })).toBe(false);
     expect(isAttachmentMultiSchema(undefined)).toBe(false);
+  });
+});
+
+describe('fileMatchesAccept', () => {
+  it('matches extensions and mime types', () => {
+    const file = (name: string, type: string) => ({ name, type });
+    expect(fileMatchesAccept(file('report.PDF', 'application/pdf'), ['.pdf'])).toBe(true);
+    expect(fileMatchesAccept(file('report.pdf.txt', 'text/plain'), ['.pdf'])).toBe(false);
+    expect(fileMatchesAccept(file('a.png', 'image/png'), ['.pdf', 'image/*'])).toBe(true);
+    expect(fileMatchesAccept(file('a.json', 'application/json'), ['application/json'])).toBe(true);
   });
 });

@@ -6,6 +6,7 @@ import logging
 from datetime import timedelta
 from pathlib import Path
 
+import pytest
 from sqlalchemy import select
 
 from actidoo_wfe.database import SessionLocal, setup_db
@@ -13,7 +14,7 @@ from actidoo_wfe.helpers.time import dt_now_naive
 from actidoo_wfe.settings import settings
 from actidoo_wfe.wf import service_application
 from actidoo_wfe.wf.bff import bff_admin
-from actidoo_wfe.wf.models import WorkflowInstanceTask
+from actidoo_wfe.wf.models import WorkflowInstance, WorkflowInstanceTask
 from actidoo_wfe.wf.bff.bff_admin_schema import (
     CancelWorkflowInstanceResponse,
     GetAllTasksResponse,
@@ -100,6 +101,12 @@ def test_admin_get_all_workflow_instances(db_engine_ctx):
             )
 
         assert len(json_resp.ITEMS) > 0
+        # the details header prints when the instance was finished
+        item = next(x for x in json_resp.ITEMS if x.id == workflow.workflow_instance_id)
+        assert item.is_completed
+        assert item.completed_at is not None
+        assert item.created_at <= item.completed_at
+        assert item.cancelled_by is None
 
 
 def test_cancel_workflow(db_engine_ctx):
@@ -118,7 +125,7 @@ def test_cancel_workflow(db_engine_ctx):
         with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
             status, json_resp = client.post(
                 name="bff_admin_cancel_workflow_instance",
-                json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+                json={"workflow_instance_id": str(workflow.workflow_instance_id), "reason": "test"},
                 cls=CancelWorkflowInstanceResponse,
             )
 
@@ -133,6 +140,217 @@ def test_cancel_workflow(db_engine_ctx):
 
         assert len(json_resp.ITEMS) > 0
         assert any(x.state_cancelled for x in json_resp.ITEMS)
+
+
+def _cancel(client, workflow, reason="test"):
+    with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+        return client.post(
+            name="bff_admin_cancel_workflow_instance",
+            json={"workflow_instance_id": str(workflow.workflow_instance_id), "reason": reason},
+        )
+
+
+def _tasks_of(client, workflow):
+    with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+        _, json_resp = client.post(
+            name="bff_admin_get_all_tasks",
+            json={},
+            cls=GetAllTasksResponse,
+        )
+    return [t for t in json_resp.ITEMS if t.workflow_instance.id == workflow.workflow_instance_id]
+
+
+def test_cancel_completed_workflow_is_refused(db_engine_ctx):
+    """A completed instance has nothing left to cancel and must not be reported as cancelled."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _create_completed_workflow(db=db)
+        client = Client()
+
+        status, json_resp = _cancel(client=client, workflow=workflow)
+
+        assert status == 409
+        assert json_resp["code"] == "workflow_instance_already_finished"
+
+        tasks = _tasks_of(client=client, workflow=workflow)
+        assert len(tasks) > 0
+        assert not any(t.state_cancelled for t in tasks)
+
+
+def test_cancel_workflow_twice_is_refused(db_engine_ctx):
+    """The second cancel finds no unfinished task left and is refused."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow)
+        assert status == 200
+
+        status, json_resp = _cancel(client=client, workflow=workflow)
+        assert status == 409
+        assert json_resp["code"] == "workflow_instance_already_finished"
+
+
+def test_cancel_workflow_with_erroneous_task(db_engine_ctx):
+    """A workflow stuck on a failed service task is still running and stays cancellable."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        workflow.user("initiator").submit(
+            task_data=FORM1_DATA_TRIGGER_ERROR,
+            workflow_instance_id=workflow.workflow_instance_id,
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow)
+
+        assert status == 200
+        assert any(t.state_cancelled for t in _tasks_of(client=client, workflow=workflow))
+
+
+def test_cancel_workflow_records_who_and_why(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow, reason="started by mistake")
+        assert status == 200
+
+        with override_get_user(client=client, user=workflow.user("admin").user), disable_role_check(client):
+            _, json_resp = client.post(
+                name="bff_admin_get_all_workflow_instances",
+                json={},
+                cls=GetAllWorkflowInstancesResponse,
+            )
+        item = next(x for x in json_resp.ITEMS if x.id == workflow.workflow_instance_id)
+        assert item.cancelled_by.id == workflow.user("admin").user.id
+        assert item.cancel_reason == "started by mistake"
+        assert item.completed_at is not None
+
+
+@pytest.mark.parametrize("reason", ["  ", "x" * 1001])
+def test_cancel_workflow_without_reason_or_with_too_long_reason_is_refused(db_engine_ctx, reason):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _cancel(client=client, workflow=workflow, reason=reason)
+
+        assert status == 422
+        assert not any(t.state_cancelled for t in _tasks_of(client=client, workflow=workflow))
+
+
+# ---------------------------------------------------------------------------
+# delete workflow
+# ---------------------------------------------------------------------------
+
+
+def _delete(client, workflow, user_name="admin"):
+    with override_get_user(client=client, user=workflow.user(user_name).user), disable_role_check(client):
+        return client.post(
+            name="bff_admin_delete_workflow_instance",
+            json={"workflow_instance_id": str(workflow.workflow_instance_id)},
+        )
+
+
+def _instance_exists(db, workflow) -> bool:
+    db.commit()
+    instance = db.execute(select(WorkflowInstance.id).where(WorkflowInstance.id == workflow.workflow_instance_id)).scalar_one_or_none()
+    task = db.execute(select(WorkflowInstanceTask.id).where(WorkflowInstanceTask.workflow_instance_id == workflow.workflow_instance_id)).first()
+    assert (instance is None) == (task is None)
+    return instance is not None
+
+
+def test_delete_running_workflow(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "admin": ["wf-admin"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow)
+
+        assert status == 200
+        assert not _instance_exists(db, workflow)
+        assert _tasks_of(client=client, workflow=workflow) == []
+
+
+def test_delete_completed_workflow(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _create_completed_workflow(db=db)
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow)
+
+        assert status == 200
+        assert not _instance_exists(db, workflow)
+
+
+def test_delete_workflow_is_refused_for_workflow_owner(db_engine_ctx, monkeypatch):
+    monkeypatch.setattr(
+        service_application.service_workflow,
+        "get_wf_owner_role_to_workflow_mapping",
+        lambda: {"wf-owner-bff": [WF_NAME]},
+    )
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"], "owner": ["wf-user", "wf-owner-bff"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow, user_name="owner")
+
+        assert status == 403
+        assert _instance_exists(db, workflow)
+
+
+def test_delete_workflow_is_refused_for_user(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = WorkflowDummy(
+            db_session=db,
+            users_with_roles={"initiator": ["wf-user"]},
+            workflow_name=WF_NAME,
+            start_user="initiator",
+        )
+        client = Client()
+
+        status, _ = _delete(client=client, workflow=workflow, user_name="initiator")
+
+        assert status == 403
+        assert _instance_exists(db, workflow)
 
 
 def test_admin_assign(db_engine_ctx):
@@ -247,6 +465,57 @@ def test_admin_get_statistic_information(db_engine_ctx):
             )
 
         assert status == 200
+
+
+def test_admin_statistics_graph_shows_current_title(db_engine_ctx):
+    """Instances are labelled with the current workflow title, not the stored one.
+    A workflow without definition keeps its newest stored title."""
+    with db_engine_ctx():
+        db = SessionLocal()
+        renamed = _create_completed_workflow(db=db)
+        removed_old = _create_completed_workflow(db=db)
+        removed_new = _create_completed_workflow(db=db)
+
+        db.get(WorkflowInstance, renamed.workflow_instance_id).title = "Old title"
+        for workflow, title, age in ((removed_old, "First title", timedelta(days=2)), (removed_new, "Second title", timedelta(days=1))):
+            instance = db.get(WorkflowInstance, workflow.workflow_instance_id)
+            instance.name = "RemovedFlow"
+            instance.title = title
+            instance.created_at = dt_now_naive() - age
+        db.commit()
+
+        client = Client()
+        with override_get_user(client=client, user=renamed.user("admin").user), disable_role_check(client):
+            status, json_resp = client.post(
+                name="bff_admin_get_statistics_information",
+                json={},
+                cls=ReducedWorkflowInstanceResponse,
+            )
+
+        titles = {item.id: item.title for item in json_resp.ITEMS}
+        assert titles[renamed.workflow_instance_id] == "Test Flow BFF"
+        assert titles[removed_old.workflow_instance_id] == "Second title"
+        assert titles[removed_new.workflow_instance_id] == "Second title"
+
+
+def test_admin_statistics_graph_only_shows_administered_workflows(db_engine_ctx):
+    with db_engine_ctx():
+        db = SessionLocal()
+        workflow = _create_completed_workflow(db=db)
+        client = Client()
+
+        items = {}
+        for name in ("initiator", "admin"):
+            with override_get_user(client=client, user=workflow.user(name).user), disable_role_check(client):
+                _, json_resp = client.post(
+                    name="bff_admin_get_statistics_information",
+                    json={},
+                    cls=ReducedWorkflowInstanceResponse,
+                )
+            items[name] = [item.id for item in json_resp.ITEMS]
+
+        assert items["initiator"] == []
+        assert items["admin"] == [workflow.workflow_instance_id]
 
 
 def test_admin_get_all_users_endpoint(db_engine_ctx):
@@ -387,6 +656,14 @@ def test_admin_download_attachment(db_engine_ctx):
 
         assert response.status_code == 200
         assert "content-disposition" in {k.lower() for k in response.headers}
+
+        # A user who does not administer the workflow must not get the file.
+        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
+            response = client.root_client.post(
+                url, json={"task_id": str(task_id), "hash": attachments[0].hash},
+            )
+
+        assert response.status_code == 403
 
 
 def test_admin_search_wf_users(db_engine_ctx):

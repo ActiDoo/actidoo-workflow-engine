@@ -10,7 +10,8 @@ down by default (``probe.external_down``), so the task ends in state_error and
 gives `bff_admin_execute_erroneous_task` something real to operate on. A second
 service task sits behind it, so a test can also let the retried task succeed and
 the step after it fail. A script task closes the chain: unlike a service task it
-does not catch its own errors, so a retry of it can raise.
+does not catch its own errors, so a retry of it can raise. It has no end event
+behind it, so when it fails, no task is left unfinished in the engine's sense.
 
 A test steers the run the way an administrator experiences it:
 
