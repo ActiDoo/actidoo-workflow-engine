@@ -505,6 +505,21 @@ def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None
     return data
 
 
+def remove_static_text_fields(data, jsonschema):
+    if not isinstance(data, dict):
+        return
+    for key, node in jsonschema.get("properties", {}).items():
+        if not isinstance(node, dict) or key not in data:
+            continue
+        if node.get("type") == "null":
+            del data[key]
+        elif node.get("type") == "array" and isinstance(data[key], list):
+            for row in data[key]:
+                remove_static_text_fields(row, node.get("items", {}))
+        else:
+            remove_static_text_fields(data[key], node)
+
+
 def get_static_options(jsonschema, path):
     node = _get_subschema(global_jsonschema=jsonschema, path=path)
     oneOf = node.get("oneOf", [])
