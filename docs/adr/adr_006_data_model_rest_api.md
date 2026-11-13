@@ -62,6 +62,8 @@ Besides the surrogate `id`, every data model carries a reserved, nullable `title
 
 Executing an action is conceptually a workflow start that happens to be seeded with an existing row's data, so it lives with the workflow-start endpoints rather than in the data API, and it reuses the existing start service — the target workflow's own initiator roles still apply on top of the action's `row_filter`.
 
+[ADR 015](adr_015_overview_pages.md) proposes moving data-model HTTP access, including its action endpoints, to a dedicated Data BFF while preserving the existing routes for compatibility. Workflow starts would still be executed and authorized by the workflow module.
+
 System columns — `version`, `is_current`, the provenance workflow instance, `action`, `created_at` — are excluded from the field schema by default. The stable `id` stays, since it is the record's identity.
 
 ### Label localization

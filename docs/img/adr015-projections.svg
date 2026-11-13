@@ -1,3 +1,93 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="484" viewBox="0 0 1200 484"><style>text{font-family:"72",Arial,Helvetica,sans-serif;fill:#1d2d3e;font-size:14px} .b{font-weight:700} .s{font-size:12.5px;fill:#556b82} .cap{font-size:13px;font-weight:700;fill:#556b82;letter-spacing:.04em}</style>
-<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d2d3e"/></marker></defs>
-<rect width="1200" height="484" fill="#ffffff"/><rect x="300" y="36" width="540" height="178" rx="14" fill="none" stroke="#556b82" stroke-width="1.5" stroke-dasharray="7 5"/><text class="cap" x="316" y="60">ONE TRANSACTION</text><rect x="36" y="84" width="216" height="76" rx="10" fill="#ffffff" stroke="#a6a6a6" stroke-width="1.5"/><text class="b" x="144.0" y="118.0" text-anchor="middle">A workflow instance changes</text><text class="s" x="144.0" y="137.0" text-anchor="middle">for example a submitted task</text><line x1="252" y1="122" x2="318" y2="122" stroke="#1d2d3e" stroke-width="1.6" marker-end="url(#ah)" /><rect x="320" y="84" width="230" height="76" rx="10" fill="#eaf1f8" stroke="#5b738b" stroke-width="1.5"/><text class="b" x="435.0" y="109.0" text-anchor="middle">The engine saves the change</text><text class="s" x="435.0" y="128.0" text-anchor="middle">in its tables:</text><text class="s" x="435.0" y="145.0" text-anchor="middle">workflow instances and tasks</text><line x1="550" y1="122" x2="588" y2="122" stroke="#1d2d3e" stroke-width="1.6" marker-end="url(#ah)" /><rect x="590" y="84" width="232" height="76" rx="10" fill="#eaf3e6" stroke="#2e8400" stroke-width="1.5"/><text class="b" x="706.0" y="109.0" text-anchor="middle">The projection derives rows</text><text class="s" x="706.0" y="128.0" text-anchor="middle">in derived tables:</text><text class="s" x="706.0" y="145.0" text-anchor="middle">business data in columns</text><text class="s" x="570" y="196" text-anchor="middle">If the projection fails, nothing is stored.</text><rect x="900" y="84" width="264" height="76" rx="10" fill="#ffffff" stroke="#a6a6a6" stroke-width="1.5"/><text class="b" x="1032.0" y="118.0" text-anchor="middle">Rebuild in the background</text><text class="s" x="1032.0" y="137.0" text-anchor="middle">after a projection was added or changed</text><line x1="900" y1="122" x2="824" y2="122" stroke="#1d2d3e" stroke-width="1.6" marker-end="url(#ah)" /><text class="s" x="1032" y="184" text-anchor="middle">Runs the projection again for all</text><text class="s" x="1032" y="201" text-anchor="middle">existing workflow instances.</text><text class="cap" x="36" y="268">READING</text><line x1="36" y1="280" x2="1164" y2="280" stroke="#d9d9d9"/><line x1="435" y1="160" x2="435" y2="318" stroke="#1d2d3e" stroke-width="1.6" marker-end="url(#ah)" /><line x1="706" y1="160" x2="706" y2="318" stroke="#1d2d3e" stroke-width="1.6" marker-end="url(#ah)" /><rect x="320" y="320" width="230" height="76" rx="10" fill="#eaf1f8" stroke="#5b738b" stroke-width="1.5"/><text class="b" x="435.0" y="345.0" text-anchor="middle">Workflow views</text><text class="s" x="435.0" y="364.0" text-anchor="middle">database views with stable columns:</text><text class="s" x="435.0" y="381.0" text-anchor="middle">status, user tasks, who, when</text><line x1="550" y1="358" x2="588" y2="358" stroke="#1d2d3e" stroke-width="1.6" marker-end="url(#ah)" /><rect x="590" y="320" width="232" height="76" rx="10" fill="#eaf3e6" stroke="#2e8400" stroke-width="1.5"/><text class="b" x="706.0" y="354.0" text-anchor="middle">Data source</text><text class="s" x="706.0" y="373.0" text-anchor="middle">the rows a user may see</text><line x1="822" y1="358" x2="898" y2="358" stroke="#1d2d3e" stroke-width="1.6" marker-end="url(#ah)" /><rect x="900" y="320" width="264" height="76" rx="10" fill="#ffffff" stroke="#a6a6a6" stroke-width="1.5"/><text class="b" x="1032.0" y="354.0" text-anchor="middle">Page</text><text class="s" x="1032.0" y="373.0" text-anchor="middle">tables, key figures, charts</text><text class="s" x="706" y="422" text-anchor="middle">Totals per month or year are computed here, not stored.</text><rect x="36" y="446" width="16" height="16" rx="4" fill="#eaf1f8" stroke="#5b738b"/><text class="s" x="60" y="459">owned by the engine</text><rect x="210" y="446" width="16" height="16" rx="4" fill="#eaf3e6" stroke="#2e8400"/><text class="s" x="234" y="459">owned by the extension</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="936" viewBox="0 0 1200 936" role="img" aria-labelledby="title description">
+<title id="title">Asynchronous workflow projections</title>
+<desc id="description">Workflow changes and their update request commit together. A background worker derives projection rows and publishes them in a separate transaction after checking the input state and definition revision. Rebuilds use the same processing path. Errors preserve previous rows. Data sources can combine current workflow views with older projection results.</desc>
+<defs>
+<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1d2d3e" flood-opacity="0.07"/></filter>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#63788b"/></marker>
+</defs>
+<style>text{font-family:"72","72full",Arial,Helvetica,sans-serif;fill:#1d2d3e;font-size:16px} .mono{font-family:Consolas,"Liberation Mono",monospace}</style>
+<rect x="0" y="0" width="1200" height="936" rx="0" fill="#ffffff"/>
+<text x="32" y="48" text-anchor="start" style="font-size:28px;fill:#1d2d3e;font-weight:700">One processing path for every projection</text>
+<text x="32" y="80" text-anchor="start" style="font-size:17px;fill:#556b82;font-weight:400">Ongoing changes and historical rebuilds converge on durable work.</text>
+<text x="32" y="126" text-anchor="start" style="font-size:13px;fill:#556b82;font-weight:700">01  RECORD THE WORK</text>
+<rect x="32" y="146" width="340" height="174" rx="14" fill="#f3f7fc" stroke="#bdcfe0"/>
+<rect x="52" y="164" width="180" height="28" rx="14.0" fill="#e3edf7"/>
+<text x="142.0" y="183.0" text-anchor="middle" style="font-size:14px;fill:#365b7a;font-weight:600">Workflow transaction</text>
+<text x="52" y="218" text-anchor="start" style="font-size:19px;fill:#1d2d3e;font-weight:700">Save workflow + data models</text>
+<text x="52" y="249" text-anchor="start" style="font-size:16px;fill:#556b82;font-weight:400">Record the latest projection target.</text>
+<text x="52" y="274" text-anchor="start" style="font-size:16px;fill:#556b82;font-weight:400">Commit both together.</text>
+<text x="52" y="300" text-anchor="start" style="font-size:14px;fill:#556b82;font-weight:400">No projection code runs here.</text>
+<rect x="430" y="146" width="310" height="174" rx="14" fill="#ffffff" stroke="#d9e0e7" filter="url(#shadow)"/>
+<text x="452" y="184" text-anchor="start" style="font-size:20px;fill:#1d2d3e;font-weight:700">Pending work</text>
+<text x="452" y="217" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">One target per projection + instance.</text>
+<text x="452" y="244" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">New changes advance that target.</text>
+<text x="452" y="271" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Work survives process restarts.</text>
+<rect x="452" y="282" width="172" height="24" rx="12.0" fill="#edf2f7"/>
+<text x="538.0" y="299.0" text-anchor="middle" style="font-size:14px;fill:#365b7a;font-weight:600">Durable, coalesced</text>
+<rect x="824" y="146" width="344" height="174" rx="14" fill="#f8f9fb" stroke="#d9e0e7"/>
+<rect x="846" y="164" width="160" height="28" rx="14.0" fill="#e3edf7"/>
+<text x="926.0" y="183.0" text-anchor="middle" style="font-size:14px;fill:#365b7a;font-weight:600">Historical rebuild</text>
+<text x="846" y="218" text-anchor="start" style="font-size:19px;fill:#1d2d3e;font-weight:700">New or increased revision</text>
+<text x="846" y="249" text-anchor="start" style="font-size:16px;fill:#556b82;font-weight:400">Submit existing instances in batches.</text>
+<text x="846" y="274" text-anchor="start" style="font-size:16px;fill:#556b82;font-weight:400">Resume from recorded progress.</text>
+<text x="846" y="300" text-anchor="start" style="font-size:14px;fill:#556b82;font-weight:400">Uses the same workers.</text>
+<path d="M372 230 H428" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="400" y="209" text-anchor="middle" style="font-size:12px;fill:#556b82;font-weight:400">commit</text>
+<path d="M824 230 H742" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="782" y="209" text-anchor="middle" style="font-size:12px;fill:#556b82;font-weight:400">batches</text>
+<text x="430" y="366" text-anchor="start" style="font-size:13px;fill:#556b82;font-weight:700">02  COMPUTE IN THE BACKGROUND</text>
+<rect x="430" y="384" width="310" height="174" rx="14" fill="#f0f7eb" stroke="#a8c796"/>
+<text x="452" y="422" text-anchor="start" style="font-size:20px;fill:#1d2d3e;font-weight:700">Background worker</text>
+<text x="452" y="456" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Read committed workflow state.</text>
+<text x="452" y="483" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Run the pure projection function.</text>
+<path d="M452 509 H718" fill="none" stroke="#cfdfc5" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="452" y="537" text-anchor="start" style="font-size:14px;fill:#426735;font-weight:400">Workflow execution can continue.</text>
+<path d="M700 320 V382" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="824" y="366" text-anchor="start" style="font-size:13px;fill:#556b82;font-weight:700">03  PUBLISH A COMPLETE RESULT</text>
+<rect x="824" y="384" width="344" height="174" rx="14" fill="#f3f7fc" stroke="#bdcfe0"/>
+<rect x="846" y="402" width="182" height="28" rx="14.0" fill="#e3edf7"/>
+<text x="937.0" y="421.0" text-anchor="middle" style="font-size:14px;fill:#365b7a;font-weight:600">Separate transaction</text>
+<text x="846" y="456" text-anchor="start" style="font-size:19px;fill:#1d2d3e;font-weight:700">Recheck state + revision</text>
+<text x="846" y="487" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">If still current, replace all result rows</text>
+<text x="846" y="512" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">and record the processed state.</text>
+<text x="846" y="538" text-anchor="start" style="font-size:13px;fill:#556b82;font-weight:400">Rows and processing state commit together.</text>
+<path d="M740 470 H822" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="781" y="450" text-anchor="middle" style="font-size:12px;fill:#556b82;font-weight:400">result</text>
+<rect x="32" y="384" width="340" height="174" rx="14" fill="#fff8f3" stroke="#eed3bc"/>
+<text x="52" y="422" text-anchor="start" style="font-size:18px;fill:#1d2d3e;font-weight:700">When processing cannot finish</text>
+<text x="52" y="455" text-anchor="start" style="font-size:14px;fill:#556b82;font-weight:400">Error: retain previous rows and record it.</text>
+<text x="52" y="480" text-anchor="start" style="font-size:14px;fill:#556b82;font-weight:400">Newer input: discard the computed result.</text>
+<text x="52" y="505" text-anchor="start" style="font-size:14px;fill:#556b82;font-weight:400">Retry the latest target when appropriate.</text>
+<text x="52" y="538" text-anchor="start" style="font-size:14px;fill:#8c4b1f;font-weight:600">Workflow changes stay committed.</text>
+<path d="M430 470 H374" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="5 5"/>
+<text x="400" y="452" text-anchor="middle" style="font-size:12px;fill:#556b82;font-weight:400">error</text>
+<path d="M850 558 V586 H202 V560" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="5 5"/>
+<text x="430" y="578" text-anchor="start" style="font-size:12px;fill:#556b82;font-weight:400">Newer state / revision: keep work pending</text>
+<path d="M202 384 V348 H402 V260 H428" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="5 5"/>
+<text x="225" y="338" text-anchor="start" style="font-size:12px;fill:#556b82;font-weight:400">retry / newer state</text>
+<text x="32" y="610" text-anchor="start" style="font-size:13px;fill:#556b82;font-weight:700">04  READ THROUGH DATA SOURCES</text>
+<path d="M32 624 H1168" fill="none" stroke="#d9e0e7" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="32" y="650" width="340" height="112" rx="14" fill="#f3f7fc" stroke="#bdcfe0"/>
+<text x="52" y="686" text-anchor="start" style="font-size:19px;fill:#1d2d3e;font-weight:700">Workflow database views</text>
+<text x="52" y="717" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Current committed workflow facts.</text>
+<text x="52" y="741" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Stable columns; no copied data.</text>
+<path d="M32 232 H14 V706 H30" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="824" y="650" width="344" height="112" rx="14" fill="#f0f7eb" stroke="#a8c796"/>
+<text x="846" y="686" text-anchor="start" style="font-size:19px;fill:#1d2d3e;font-weight:700">Projection database tables</text>
+<text x="846" y="717" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Last successfully published rows.</text>
+<text x="846" y="741" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Freshness and errors remain visible.</text>
+<path d="M996 558 V648" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="430" y="650" width="310" height="112" rx="14" fill="#ffffff" stroke="#d9e0e7" filter="url(#shadow)"/>
+<text x="452" y="686" text-anchor="start" style="font-size:20px;fill:#1d2d3e;font-weight:700">Data source</text>
+<text x="452" y="717" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Authorised database query.</text>
+<text x="452" y="741" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Returns records or aggregates.</text>
+<path d="M372 706 H428" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M824 706 H742" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="32" y="810" width="1136" height="74" rx="12" fill="#f7f9fb" stroke="#d9e0e7"/>
+<circle cx="62" cy="847" r="14" fill="#e3edf7"/>
+<text x="62" y="853" text-anchor="middle" style="font-size:18px;fill:#365b7a;font-weight:700">i</text>
+<text x="90" y="839" text-anchor="start" style="font-size:17px;fill:#1d2d3e;font-weight:700">Pages and other consumers</text>
+<text x="90" y="865" text-anchor="start" style="font-size:15px;fill:#556b82;font-weight:400">Current workflow facts may be combined with older projection results. Consumers can inspect freshness.</text>
+<path d="M585 762 V808" fill="none" stroke="#63788b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="32" y="919" text-anchor="start" style="font-size:13px;fill:#556b82;font-weight:400">Projection computation is asynchronous. Publishing remains atomic per projection and workflow instance.</text>
+</svg>
