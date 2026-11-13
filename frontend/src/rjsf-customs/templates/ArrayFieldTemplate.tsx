@@ -43,6 +43,61 @@ import {
 } from '@/rjsf-customs/custom-fields/multiFileField/attachments';
 import _ from 'lodash';
 
+type OverviewLabels = Record<string, Record<string, string>>;
+
+const isDynamicSelect = (uiSchema: any): boolean =>
+  ['SelectDynamic', 'MultiSelectDynamic'].includes(uiSchema?.['ui:widget']);
+
+// Resolve each selected value in its own row, including nested lists. A value may
+// have different labels in two rows, so index the labels by the complete path.
+const loadOverviewLabels = async (
+  rowUiSchema: any,
+  rows: any[],
+  arrayPath: Array<string | number>,
+  taskId: string | undefined,
+  formData: unknown
+): Promise<OverviewLabels> => {
+  if (!taskId) return {};
+  const labels: OverviewLabels = {};
+  await Promise.all(
+    rows.flatMap((row, rowIndex) =>
+      Object.entries(rowUiSchema ?? {}).map(async ([key, config]: [string, any]) => {
+        const propertyPath = [...arrayPath, rowIndex, key];
+        const value = row?.[key];
+        if (isDynamicSelect(config)) {
+          const values = (Array.isArray(value) ? value : [value]).filter(
+            item => item !== undefined && item !== null && item !== ''
+          );
+          if (!values.length) return;
+          try {
+            const response = await fetchPost(getApiUrl('user/search_property_options'), {
+              task_id: taskId,
+              property_path: propertyPath,
+              search: '',
+              include_value: values.length === 1 ? values[0] : values,
+              form_data: stripAttachmentPayload(formData),
+            });
+            labels[JSON.stringify(propertyPath)] = Object.fromEntries(
+              ((response?.data?.options ?? []) as PcValueLabelItem[]).map(option => [
+                String(option.value),
+                `${option.label} (ID: ${option.value})`,
+              ])
+            );
+          } catch (error) {
+            console.error('Failed to fetch dynamic select labels for overview', error);
+          }
+        } else if (config?.items && Array.isArray(value)) {
+          Object.assign(
+            labels,
+            await loadOverviewLabels(config.items, value, propertyPath, taskId, formData)
+          );
+        }
+      })
+    )
+  );
+  return labels;
+};
+
 const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
   try {
     return unaryTest(expression, { ...(context ?? {}) });
@@ -66,32 +121,8 @@ export default function CustomArrayFieldTemplate<
   const location = useLocation();
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
-  const [dynamicSelectLabels, setDynamicSelectLabels] = useState<
-    Record<string, Record<string, string>>
-  >({});
   const [overviewLoading, setOverviewLoading] = useState(false);
   const itemUiSchema = (props.uiSchema as any)?.items;
-  const itemUiSchemaSignature = JSON.stringify(itemUiSchema ?? null);
-  const dynamicSelectConfigs = useMemo<Record<string, any>>(() => {
-    if (!itemUiSchema || typeof itemUiSchema !== 'object') {
-      return {};
-    }
-
-    return Object.entries(itemUiSchema).reduce<Record<string, any>>((acc, [key, config]) => {
-      if (
-        config &&
-        typeof config === 'object' &&
-        (config as Record<string, unknown>)['ui:widget'] &&
-        ['SelectDynamic', 'MultiSelectDynamic'].includes(
-          (config as Record<string, unknown>)['ui:widget'] as string
-        )
-      ) {
-        acc[key] = config;
-      }
-      return acc;
-    }, {});
-  }, [itemUiSchemaSignature]);
-
   useEffect(() => {
     // DURING THE FIRST RENDER -> ADD THE MINIMUM ITEMS, WHICH SHALL BE VISIBLE
 
@@ -132,106 +163,15 @@ export default function CustomArrayFieldTemplate<
     }
   }, []);
 
-  const extractUniqueValues = (dataArray: any[], key: string): string[] => {
-    const values = new Set<string>();
-
-    dataArray?.forEach(item => {
-      const value = item?.[key];
-
-      if (Array.isArray(value)) {
-        value.forEach(v => {
-          if (v !== undefined && v !== null) {
-            values.add(String(v));
-          }
-        });
-      } else if (value !== undefined && value !== null) {
-        values.add(String(value));
-      }
-    });
-
-    return Array.from(values);
-  };
-
-  const formContextSignature = JSON.stringify(
-    (props.registry as any)?.formContext?.formData ?? null
-  );
-  const dynamicSelectFetchSignature = useMemo(() => {
-    const dataArray = Array.isArray(props.formData) ? props.formData : [];
-    const fields = Object.entries(dynamicSelectConfigs)
-      .map(([fieldKey, fieldUiSchema]) => {
-        const propertyPath = (fieldUiSchema as Record<string, any>)['ui:path'];
-        const values = extractUniqueValues(dataArray, fieldKey).sort();
-        return { fieldKey, propertyPath, values };
-      })
-      .sort((a, b) => a.fieldKey.localeCompare(b.fieldKey));
-
-    return JSON.stringify({
-      taskId: effectiveTaskId ?? null,
-      formContextSignature,
-      fields,
-    });
-  }, [dynamicSelectConfigs, effectiveTaskId, formContextSignature, props.formData]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const fetchDynamicLabels = async () => {
-      if (!Object.keys(dynamicSelectConfigs).length) {
-        setDynamicSelectLabels(prev => (_.isEqual(prev, {}) ? prev : {}));
-        return;
-      }
-
-      const dataArray = Array.isArray(props.formData) ? props.formData : [];
-      const nextLabels: Record<string, Record<string, string>> = {};
-
-      await Promise.all(
-        Object.entries(dynamicSelectConfigs).map(async ([fieldKey, fieldUiSchema]) => {
-          nextLabels[fieldKey] = {};
-          const propertyPath = (fieldUiSchema as Record<string, any>)['ui:path'];
-          const values = extractUniqueValues(dataArray, fieldKey);
-
-          if (!effectiveTaskId || !propertyPath || !values.length) {
-            return;
-          }
-
-          try {
-            const response = await fetchPost(getApiUrl('user/search_property_options'), {
-              task_id: effectiveTaskId,
-              property_path: propertyPath,
-              search: '',
-              include_value: values.length === 1 ? values[0] : values,
-              form_data: stripAttachmentPayload((props.registry as any)?.formContext?.formData),
-            });
-
-            const options = (response?.data?.options ?? []) as PcValueLabelItem[];
-
-            options.forEach(option => {
-              nextLabels[fieldKey][String(option.value)] = `${option.label} (ID: ${option.value})`;
-            });
-          } catch (error) {
-            console.error('Failed to fetch dynamic select labels for overview', error);
-          }
-        })
-      );
-
-      if (isActive) {
-        setDynamicSelectLabels(prev => (_.isEqual(prev, nextLabels) ? prev : nextLabels));
-      }
-    };
-
-    void fetchDynamicLabels();
-
-    return () => {
-      isActive = false;
-    };
-  }, [dynamicSelectFetchSignature, dynamicSelectConfigs, effectiveTaskId]);
-
   // console.log(props.items.length)
   const showDialog = Modals.useShowDialog();
   const items = props.schema.items as unknown as {
     properties: Record<string, { title: string }>;
   };
 
+  const formContextSignature = JSON.stringify(
+    (props.registry as any)?.formContext?.formData ?? null
+  );
   const rootData = (props.registry as any)?.formContext?.formData;
   const rootUiSchema = (props.registry as any)?.formContext?.uiSchema;
   const maskedRootContext = useMemo(
@@ -263,41 +203,24 @@ export default function CustomArrayFieldTemplate<
       return resolveHiddenFields(rowUiSchema, evalContext, evaluateHideIf).hiddenFields;
     });
 
-  const getDynamicValueLabel = (fieldKey: string, value: unknown): string | null => {
-    if (!dynamicSelectConfigs[fieldKey]) {
-      return null;
-    }
-
-    const mapping = dynamicSelectLabels[fieldKey];
-    if (!mapping) {
-      return null;
-    }
-
-    if (Array.isArray(value)) {
-      const labels = value
-        .map(v => (v !== undefined && v !== null ? mapping[String(v)] : null))
-        .filter((v): v is string => Boolean(v));
-
-      if (!labels.length) {
-        return null;
-      }
-
-      return labels.join(', ');
-    }
-
-    const mapped = mapping[String(value)];
-    return mapped || null;
-  };
-
-  const cellText = (property: any, key: string, raw: unknown): string | undefined => {
+  const cellText = (
+    property: any,
+    raw: unknown,
+    fieldUiSchema: any,
+    fieldPath: Array<string | number>,
+    labels: OverviewLabels
+  ): string | undefined => {
     let val: any = raw;
+    if (isDynamicSelect(fieldUiSchema)) {
+      const mapping = labels[JSON.stringify(fieldPath)] ?? {};
+      const label = (value: unknown): string =>
+        value == null ? '' : mapping[String(value)] ?? String(value);
+      return Array.isArray(val) ? val.map(label).join(', ') : label(val);
+    }
     if (property?.oneOf) {
       const match = property.oneOf.find((o: any) => o.const === val);
       if (match) val = match.title;
     }
-
-    const dynamicLabel = getDynamicValueLabel(key, val);
-    if (dynamicLabel) return dynamicLabel;
     if (typeof val === 'boolean') return val ? 'Yes' : 'No';
     if (property?.type === 'array' && Array.isArray(val)) return undefined;
     return val == null ? '' : String(val);
@@ -315,7 +238,9 @@ export default function CustomArrayFieldTemplate<
     items: any,
     dataArray: any[],
     rowUiSchema: any,
-    arrayId: string
+    arrayId: string,
+    arrayPath: Array<string | number>,
+    labels: OverviewLabels
   ): JSX.Element => {
     const properties = items?.properties ?? {};
     const rows = dataArray ?? [];
@@ -333,7 +258,7 @@ export default function CustomArrayFieldTemplate<
       <TableColumn key={`column-${index}`}>
         <div className="flex items-center gap-1">
           <Label>{properties[key].title}</Label>
-          {(properties[key]?.type !== 'array' || dynamicSelectConfigs[key]) &&
+          {(properties[key]?.type !== 'array' || isDynamicSelect(rowUiSchema?.[key])) &&
             !isAttachmentSingleSchema(properties[key]) && (
               <Icon
                 name="copy"
@@ -346,7 +271,13 @@ export default function CustomArrayFieldTemplate<
                     rows.map((data, rowIndex) =>
                       hiddenKeysPerRow[rowIndex]?.has(key)
                         ? ''
-                        : cellText(properties[key], key, data[key]) ?? ''
+                        : cellText(
+                            properties[key],
+                            data[key],
+                            rowUiSchema?.[key],
+                            [...arrayPath, rowIndex, key],
+                            labels
+                          ) ?? ''
                     )
                   );
                 }}
@@ -383,7 +314,13 @@ export default function CustomArrayFieldTemplate<
             );
           }
 
-          const text = cellText(property, key, val);
+          const text = cellText(
+            property,
+            val,
+            rowUiSchema?.[key],
+            [...arrayPath, rowIndex, key],
+            labels
+          );
 
           // Handle nested arrays recursively
           if (text === undefined) {
@@ -393,7 +330,9 @@ export default function CustomArrayFieldTemplate<
                   property.items,
                   val,
                   rowUiSchema?.[key]?.items,
-                  `${arrayId}_${rowIndex}_${key}`
+                  `${arrayId}_${rowIndex}_${key}`,
+                  [...arrayPath, rowIndex, key],
+                  labels
                 )}
               </TableCell>
             );
@@ -416,11 +355,11 @@ export default function CustomArrayFieldTemplate<
   // Read-only: fetch form data with hidden fields stripped (hide-if is server-side only);
   // fieldPathId.path locates this (possibly nested) list in the cleaned data. Falls back to raw.
   const openOverview = async (): Promise<void> => {
+    setOverviewLoading(true);
     let dataArray = (props.formData as any[]) ?? [];
     const fullFormData = (props.registry as any)?.formContext?.formData;
     if (effectiveTaskId && fullFormData) {
       try {
-        setOverviewLoading(true);
         const response = await fetchPost(getApiUrl('user/strip_hidden_fields'), {
           task_id: effectiveTaskId,
           form_data: fullFormData,
@@ -432,13 +371,28 @@ export default function CustomArrayFieldTemplate<
         }
       } catch (error) {
         console.error('Failed to strip hidden fields for overview', error);
-      } finally {
-        setOverviewLoading(false);
       }
     }
 
+    const arrayPath = props.fieldPathId.path;
+    const labels = await loadOverviewLabels(
+      itemUiSchema,
+      dataArray,
+      arrayPath,
+      effectiveTaskId,
+      fullFormData
+    );
+    setOverviewLoading(false);
+
     const { close } = showDialog({
-      children: renderTable(items, dataArray, itemUiSchema, props.fieldPathId?.$id ?? 'root'),
+      children: renderTable(
+        items,
+        dataArray,
+        itemUiSchema,
+        props.fieldPathId?.$id ?? 'root',
+        arrayPath,
+        labels
+      ),
       footer: (
         <Bar
           endContent={

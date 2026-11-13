@@ -37,12 +37,14 @@ export interface WorkflowFormFixture {
 
 const TaskFormHarness = ({
   fixture,
+  initialData,
   onSubmit,
 }: {
   fixture: WorkflowFormFixture;
+  initialData: Record<string, unknown>;
   onSubmit: (formData: unknown) => void;
 }) => {
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [formData, setFormData] = useState<Record<string, unknown>>(initialData);
 
   const schema = _.cloneDeep(fixture.jsonschema) as RJSFSchema;
   const uiSchema = _.cloneDeep(fixture.uischema) as UiSchema;
@@ -72,7 +74,10 @@ const TaskFormHarness = ({
   );
 };
 
-export const renderTaskForm = (fixture: WorkflowFormFixture) => {
+export const renderTaskForm = (
+  fixture: WorkflowFormFixture,
+  initialData: Record<string, unknown> = {}
+) => {
   const submitted = vi.fn();
   const store = legacy_createStore(() => ({}));
   const queryClient = new QueryClient({
@@ -85,7 +90,7 @@ export const renderTaskForm = (fixture: WorkflowFormFixture) => {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <MemoryRouter initialEntries={[`/tasks/open/${TEST_TASK_ID}`]}>
-              <TaskFormHarness fixture={fixture} onSubmit={submitted} />
+              <TaskFormHarness fixture={fixture} initialData={initialData} onSubmit={submitted} />
             </MemoryRouter>
           </ThemeProvider>
         </QueryClientProvider>

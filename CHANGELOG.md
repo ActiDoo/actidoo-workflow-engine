@@ -67,6 +67,10 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
+- Forms: `depends_on` works inside dynamic lists. The select reacts to the
+  field of its own row, and the `options_function` sees that row's values.
+  The reset no longer skips edits made shortly after loading options.
+
 - **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
   workflow that an extension provides:
   - Before: `extract` and `update` failed with "No workflow named ... found",

@@ -551,6 +551,7 @@ def get_function_options(jsonschema, property_path, options_function, form_data,
         raise OptionFunctionNotFound(f"Error when looking up options_function '{options_function}'")
 
     oth = OptionTaskHelper(
+        jsonschema=jsonschema,
         form_data=form_data,
         property_path=property_path,
         allowed_data_models=set(functions_env.get("DATA_MODELS", [])),

@@ -22,7 +22,7 @@ export interface PropertyOptionsPage {
 
 export interface UsePropertyOptionsParams {
   taskId: string | undefined;
-  propertyPath: string[] | undefined;
+  propertyPath: Array<string | number> | undefined;
   search: string;
   includeValue: unknown;
   formData: unknown;
