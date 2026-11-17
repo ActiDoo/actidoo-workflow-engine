@@ -939,7 +939,7 @@ def remove_data_uri_fields(schema):
             remove_data_uri_fields(s)
 
 
-def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, property_path, options_folder, functions_env):
+def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, property_path, options_folder, functions_env, current_path=None):
     def custom_properties_validator(validator, value, instance, schema):
         log.debug("custom_properties_validator: instance=%s, property_path=%s, value=%s)", instance, property_path, value)
 
@@ -1015,6 +1015,9 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
                 form_data=task_data,
                 property_path=p,
                 allowed_data_models=set(functions_env.get("DATA_MODELS", [])),
+                path=list(current_path) if current_path else None,
+                key=current_path[-1] if current_path else None,
+                value=copy.deepcopy(instance),
             )
             try:
                 data = func(vth=vth)
@@ -1120,7 +1123,8 @@ def validate_task_data(
         on_remove=_collect_unknown_field if preserve_unknown_fields else None,
     )
 
-    position, tracked_task_data = get_position_tracker(cleaned_task_data)
+    current_path: list = []
+    position, tracked_task_data = get_position_tracker(cleaned_task_data, current_path=current_path)
 
     # if there's "custom_properties"  within jsonschema["properties"] (the contents are the custom properties from the Camunda Modeler),
     # then this validator is called:
@@ -1133,6 +1137,7 @@ def validate_task_data(
                 task_data=cleaned_task_data,
                 property_path=position,
                 form=form,
+                current_path=current_path,
             ),
             "accept": accept_validator,
         },

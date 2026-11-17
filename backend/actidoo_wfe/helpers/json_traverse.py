@@ -6,7 +6,7 @@ import copy
 import wrapt
 
 
-def get_position_tracker(data, is_debugging=False):
+def get_position_tracker(data, is_debugging=False, current_path: list | None = None):
     """
     Returns a position tracker for a nested dictionary or list.
 
@@ -16,6 +16,7 @@ def get_position_tracker(data, is_debugging=False):
 
     Args:
         data (dict or list): The nested data structure to track.
+        current_path (list, optional): Filled in place with the full path of the item accessed last, including its key.
 
     Returns:
         tuple: A tuple containing:
@@ -68,6 +69,9 @@ def get_position_tracker(data, is_debugging=False):
                 # Then the caller of get_position_tracker will still work with the old reference and its old value.
                 position.clear()
                 position.extend(self._self_path)
+                if current_path is not None:
+                    current_path.clear()
+                    current_path.extend(self._self_path + [key])
 
             if isinstance(value, (list, dict)):  # then it is a nested strucure, we have to "go deeper"
                 set_position()
