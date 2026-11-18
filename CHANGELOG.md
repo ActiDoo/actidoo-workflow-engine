@@ -79,6 +79,12 @@ releases correspond to the git tags of this repository.
   - Before: the expression was shown as plain text instead of its result.
   - Now: the expression is evaluated, as in the Camunda Modeler.
 
+- **When** a user copies a workflow instance and a field of its first form
+  became required after the instance was completed:
+  - Before: the copy failed with "Could not copy workflow."
+  - Now: the preview opens and the copy can start. The first task shows the
+    copied values and the user must fill the required field to submit it.
+
 ## [0.1.46] - 2026-11-04
 
 ### Fixed

@@ -22,6 +22,7 @@ import { useSelectUiLoading } from '@/store/ui/selectors';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest, resetStateForKey } from '@/store/generic-data/actions';
 import { State } from '@/store';
+import type { StartWorkflowRequest } from '@/models/models';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
@@ -49,6 +50,14 @@ const StartWorkflowPreview: React.FC = () => {
     }
   }, [dataParam]);
 
+  // A copy names only its source instance; the server takes workflow and data from there.
+  const copyFrom = searchParams.get('copy_from');
+  const request = useMemo<StartWorkflowRequest | null>(() => {
+    if (copyFrom) return { copy_from: copyFrom };
+    if (!workflowName || parsedData === null) return null;
+    return { name: workflowName, data: parsedData };
+  }, [copyFrom, workflowName, parsedData]);
+
   useEffect(() => {
     dispatch(resetStateForKey(WeDataKey.START_WORKFLOW_PREVIEW));
     return () => {
@@ -57,14 +66,8 @@ const StartWorkflowPreview: React.FC = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!workflowName || parseError || parsedData === null) return;
-    dispatch(
-      postRequest(WeDataKey.START_WORKFLOW_PREVIEW, {
-        name: workflowName,
-        data: parsedData,
-      })
-    );
-  }, [dispatch, workflowName, parseError, parsedData]);
+    if (request) dispatch(postRequest(WeDataKey.START_WORKFLOW_PREVIEW, request));
+  }, [dispatch, request]);
 
   const previewState = useSelector((state: State) => state.data[WeDataKey.START_WORKFLOW_PREVIEW]);
   const previewLoading = useSelectUiLoading(WeDataKey.START_WORKFLOW_PREVIEW, 'POST');
@@ -93,16 +96,10 @@ const StartWorkflowPreview: React.FC = () => {
   const formData = useMemo(() => previewTask?.data ?? {}, [previewTask]);
 
   const handleStartWorkflow = (): void => {
-    if (!workflowName || parsedData === null) return;
-    dispatch(
-      postRequest(WeDataKey.START_WORKFLOW, {
-        name: workflowName,
-        data: parsedData,
-      })
-    );
+    if (request) dispatch(postRequest(WeDataKey.START_WORKFLOW, request));
   };
 
-  const cannotStartWorkflow = !workflowName || parseError || parsedData === null || !previewTask;
+  const cannotStartWorkflow = !request || !previewTask;
 
   return (
     <div className="pl-2">

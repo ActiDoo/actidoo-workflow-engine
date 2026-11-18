@@ -115,7 +115,10 @@ def start_workflow(
             name=reqdata.name,
             user_id=user.id,
             initial_task_data=reqdata.data,
+            copy_from=reqdata.copy_from,
         )
+    except UserMayNotCopyWorkflowException:
+        raise HTTPException(status_code=403, detail="User may not copy this workflow instance.")
     except UserMayNotStartWorkflowException:
         log.warning(f"Starting workflow {reqdata.name} failed (not allowed)")
         raise HTTPException(
@@ -143,7 +146,10 @@ def start_workflow_preview_with_data(
             name=reqdata.name,
             user_id=user.id,
             task_data=reqdata.data,
+            copy_from=reqdata.copy_from,
         )
+    except UserMayNotCopyWorkflowException:
+        raise HTTPException(status_code=403, detail="User may not copy this workflow instance.")
     except UserMayNotStartWorkflowException:
         log.warning(f"Previewing workflow {reqdata.name} failed (not allowed)")
         raise HTTPException(

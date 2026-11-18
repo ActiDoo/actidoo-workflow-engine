@@ -77,10 +77,11 @@ log = logging.getLogger(__name__)
 
 def start_workflow(
     db: Session,
-    name: str,
+    name: str | None,
     user_id: uuid.UUID,
     initial_task_data: dict | None = None,
     trusted_seed: bool = False,
+    copy_from: uuid.UUID | None = None,
 ) -> uuid.UUID:
     """Starts a workflow with the given name, and the given user as creator. Returns the workflow ID.
 
@@ -88,7 +89,14 @@ def start_workflow(
     applied to the first user task as-is (technical fields kept, no form validation).
     Only pass ``True`` for server-built data — never for client-supplied form data,
     which must go through form validation.
+
+    ``copy_from`` starts a copy of that instance: workflow and first-task data come
+    from it. Values that break today's form still land in the task; its submit checks them.
     """
+    if copy_from is not None:
+        copy = get_workflow_copy_data(db=db, user_id=user_id, workflow_instance_id=copy_from)
+        name, initial_task_data = copy.workflow_name, copy.data
+    assert name is not None
     user_rep = repository.load_user(db=db, user_id=user_id)
     repository.persist_workflow_spec(db=db, name=name)
 
@@ -136,6 +144,7 @@ def start_workflow(
                     task=first_task,
                     submitted_data=initial_task_data,
                     locale=user_rep.locale,
+                    raise_on_errors=copy_from is None,
                 )
                 service_workflow.update_task_data(
                     workflow=workflow,
@@ -158,10 +167,15 @@ def start_workflow(
 
 def get_workflow_preview(
     db: Session,
-    name: str,
+    name: str | None,
     user_id: uuid.UUID,
     task_data: dict | None = None,
+    copy_from: uuid.UUID | None = None,
 ) -> WorkflowPreviewRepresentation:
+    if copy_from is not None:
+        copy = get_workflow_copy_data(db=db, user_id=user_id, workflow_instance_id=copy_from)
+        name, task_data = copy.workflow_name, copy.data
+    assert name is not None
     user_rep = repository.load_user(db=db, user_id=user_id)
     repository.persist_workflow_spec(db=db, name=name)
 
@@ -199,6 +213,7 @@ def get_workflow_preview(
             task=first_task,
             submitted_data=task_data,
             locale=user_rep.locale,
+            raise_on_errors=copy_from is None,
         )
         service_workflow.update_task_data(
             workflow=workflow,
@@ -295,6 +310,7 @@ def get_workflow_copy_data(
             task=t_new,
             submitted_data=matching_original_task.data,
             locale=user_rep.locale,
+            raise_on_errors=False,  # edited and validated again in the form
         )
 
         if idx == 0:
@@ -687,12 +703,14 @@ def get_usertasks_for_user_id(
     return usertasks
 
 
-def _clean_submitted_task_data(workflow, task, submitted_data, locale: str):
+def _clean_submitted_task_data(workflow, task, submitted_data, locale: str, raise_on_errors: bool = True):
     """Validate and clean a payload from a user form submission.
 
     The payload typically only contains the fields the frontend knows about.
     Unknown / technical properties are removed deliberately and hidden fields
-    are stripped."""
+    are stripped. With ``raise_on_errors=False`` the cleaned data is returned even
+    when it does not validate - for data that lands in a form to be edited anyway,
+    such as the stored data of a task being copied."""
 
     assert task.uischema and task.jsonschema
     form = ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema)
@@ -717,7 +735,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data, locale: str):
         locale=locale,
     )
 
-    if validation_result.error_schema:
+    if validation_result.error_schema and raise_on_errors:
         log.error("Errors during validation of submitted task data" + str(validation_result.error_schema))
         raise ValidationResultContainsErrors(message="Errors during validation of submitted task data", error_schema=validation_result.error_schema)
 

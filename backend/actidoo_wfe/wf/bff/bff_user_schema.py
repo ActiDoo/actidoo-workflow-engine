@@ -5,7 +5,7 @@ import datetime
 import uuid
 from typing import Annotated, Any, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 from actidoo_wfe.helpers.schema import CursorPaginatedDataSchema, PaginatedDataSchema
 from actidoo_wfe.wf.constants import TemplateMode
@@ -20,8 +20,18 @@ class ErrorResponse(BaseModel):
 class StartWorkflowRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    name: str
-    data: dict | None = Field(default=None)
+    name: str | None = None
+    data: dict | None = None
+    copy_from: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def validate_source(self):
+        if self.copy_from is not None:
+            if self.name is not None or self.data is not None:
+                raise ValueError("A copy takes its workflow and form data from the source instance.")
+        elif self.name is None:
+            raise ValueError("Provide a workflow name or a source instance to copy.")
+        return self
 
 
 class StartWorkflowResponse(BaseModel):
@@ -30,11 +40,8 @@ class StartWorkflowResponse(BaseModel):
     workflow_instance_id: uuid.UUID
 
 
-class StartWorkflowWithDataRequest(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    name: str
-    data: dict | None = Field(default=None)
+class StartWorkflowWithDataRequest(StartWorkflowRequest):
+    pass
 
 
 class GetWorkflowCopyDataResponse(BaseModel):

@@ -21,7 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
 import { useNavigate, useParams, createSearchParams } from 'react-router-dom';
 import { UserTask } from '@/models/models';
-import { postRequest, resetStateForKey } from '@/store/generic-data/actions';
+import { postRequest } from '@/store/generic-data/actions';
 import '@ui5/webcomponents-icons/dist/navigation-left-arrow';
 import '@ui5/webcomponents-icons/dist/employee-rejections';
 import { useSelectUiLoading } from '@/store/ui/selectors';
@@ -97,9 +97,6 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const cancelWorkflowLoadState = useSelectUiLoading(WeDataKey.CANCEL_WORKFLOW, 'POST');
 
   const deleteWorkflow = useSelector((state: State) => state.data[WeDataKey.DELETE_WORKFLOW]);
-
-  const copyInstance = useSelector((state: State) => state.data[WeDataKey.COPY_INSTANCE]);
-  const copyInstanceLoadState = useSelectUiLoading(WeDataKey.COPY_INSTANCE, 'POST');
 
   const isActingAsDelegate = task.assigned_to_me_as_delegate;
   const isDelegatedToMyDelegate = !!(
@@ -188,32 +185,6 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
     );
   }, [deleteWorkflow?.postResponse]);
 
-  useEffect(() => {
-    if (!copyInstance?.postResponse) return;
-
-    if (copyInstance.postResponse === 200) {
-      const workflowName = copyInstance.data?.workflow_name;
-      const taskName = copyInstance.data?.task_name;
-      const workflowData = copyInstance.data?.data ?? {};
-
-      if (workflowName) {
-        const params = new URLSearchParams();
-        params.set('workflow_name', workflowName);
-        if (taskName) params.set('task_name', taskName);
-        params.set('data', JSON.stringify(workflowData));
-        navigate({
-          pathname: '/tasks/open/start_workflow_preview',
-          search: createSearchParams(params).toString(),
-        });
-      } else {
-        dispatch(addToast(<>{t('singleTaskHeader.copyFailed')}</>));
-      }
-    } else {
-      dispatch(addToast(<>{t('singleTaskHeader.copyRequestFailed')}</>));
-    }
-    dispatch(resetStateForKey(WeDataKey.COPY_INSTANCE));
-  }, [copyInstance?.postResponse]);
-
   const handleAssignTaskToMe = (taskId: string): void => {
     dispatch(postRequest(WeDataKey.ASSIGN_TASK_TO_ME, { task_id: taskId }));
   };
@@ -234,7 +205,10 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
       dispatch(addToast(<>{t('singleTaskHeader.missingWorkflowId')}</>));
       return;
     }
-    dispatch(postRequest(WeDataKey.COPY_INSTANCE, {}, { workflow_instance_id: workflowId }));
+    navigate({
+      pathname: '/tasks/open/start_workflow_preview',
+      search: createSearchParams({ copy_from: workflowId }).toString(),
+    });
   };
 
   return (
@@ -266,16 +240,9 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
           </MessageStrip>
         )}
         {!isReadonly && task?.state_completed && task.assigned_to_me ? (
-          <BusyIndicator active={copyInstanceLoadState} delay={0} className="text-white">
-            <Button
-              disabled={copyInstanceLoadState}
-              design={ButtonDesign.Emphasized}
-              onClick={() => {
-                handleCopyInstance();
-              }}>
-              {t('singleTaskHeader.startNewWorkflowWithData')}
-            </Button>
-          </BusyIndicator>
+          <Button design={ButtonDesign.Emphasized} onClick={handleCopyInstance}>
+            {t('singleTaskHeader.startNewWorkflowWithData')}
+          </Button>
         ) : null}
         {!isReadonly && !task.assigned_user ? (
           <BusyIndicator active={assignTaskToMeLoadState} delay={0} className="text-white">

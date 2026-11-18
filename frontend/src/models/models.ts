@@ -60,10 +60,9 @@ export interface SubmitTaskDataErrorResponse {
   error_schema: object;
 }
 
-export interface StartWorkflowRequest {
-  name: string;
-  data?: Record<string, unknown>;
-}
+export type StartWorkflowRequest =
+  | { name: string; data?: Record<string, unknown> }
+  | { copy_from: string };
 
 export interface StartWorkflowResponse {
   workflow_instance_id: string;
