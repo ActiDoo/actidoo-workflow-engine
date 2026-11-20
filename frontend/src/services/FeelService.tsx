@@ -119,12 +119,10 @@ export function computeHiddenMap(
 // ============================================================================
 
 /**
- * Moves 'required' from JSON schema to UI schema for fields with hideif.
+ * Moves 'minItems' from JSON schema to UI schema for lists with hideif.
  *
- * Im Frontend Validation-Schema dürfen wir die versteckten Felder nicht als required setzen.
- * Wir werden deshalb die "required" Eigenschaft vorerst aus dem jsonschema in das uischema schieben.
- * Später, in einer Kopie des Schemas für das Rendern, wird die Eigenschaft wieder zurückgeschoben.
- * Die Required-Eigenschaft wird also nur durch die HTML5-Validierung sichergestellt.
+ * 'required' stays in the schema: errors of hidden fields are dropped by
+ * dropErrorsOfHiddenFields when the form is validated.
  */
 export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
   schema: any,
@@ -137,7 +135,6 @@ export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
 
   while ((propPath = queue.shift())) {
     // traverse schema
-    let parentProp;
     let curProp = schema;
     const propPathQueue = [...propPath];
     let pathElement;
@@ -148,7 +145,6 @@ export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
         curProp = curProp.items;
         uiPropSchema = uiPropSchema?.items;
       }
-      parentProp = curProp;
       curProp = curProp.properties?.[pathElement];
       uiPropSchema =
         uiPropSchema && Object.hasOwn(uiPropSchema, pathElement) ? uiPropSchema[pathElement] : null;
@@ -161,14 +157,6 @@ export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
     }
 
     const hideif = uiPropSchema?.['ui:hideif'];
-    if (
-      hideif !== undefined &&
-      Array.isArray(parentProp.required) &&
-      parentProp.required.includes(propPath[propPath.length - 1])
-    ) {
-      uiPropSchema['ui:required'] = true;
-      _.remove(parentProp.required, x => propPath && x === propPath[propPath.length - 1]);
-    }
 
     // An array expresses 'required' as minItems, so the same applies to a hidden dynamic list
     // or attachment field: it must not block the submit while it is not shown. Moved back by
@@ -253,7 +241,6 @@ export function evaluateHideIfAndFeel(
 
     // Search for 'hideif' and apply the pre-computed hidden state
     const hideif = fieldSchemaProps['ui:hideif'];
-    const required = fieldSchemaProps['ui:required'];
     const minItems = fieldSchemaProps['ui:minItems'];
 
     if (hideif !== undefined) {
@@ -264,15 +251,6 @@ export function evaluateHideIfAndFeel(
       } else if (newUiSchema[fieldName]?.['ui:widget'] === 'hidden') {
         // Unhide if it was hidden by a previous hide-if evaluation
         delete newUiSchema[fieldName]['ui:widget'];
-      }
-
-      if (!hide && required) {
-        if (!newSchema.required) {
-          newSchema.required = [];
-        }
-        if (!newSchema.required.includes(fieldName)) {
-          newSchema.required.push(fieldName);
-        }
       }
 
       // Counterpart of the minItems move in changeRequiredDefinitionForFieldsWithHideIfDefinition:

@@ -18,7 +18,6 @@ import {
 import { ROW_ID_KEY, FormTemplateMode, WorkflowState } from '@/models/models';
 import { adoptServerRowIds, generateRowId, isDynamicListUiItems } from '@/utils/rowIdentity';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
-import { useScrollTop } from '@/utils/hooks/useScrollTop';
 import { WeUploadDialog } from '@/utils/components/WeUploadDialog';
 import { WeEmptySection } from '@/utils/components/WeEmptySection';
 import { SingleTaskHeader } from '@/pages/tasks/content/single-task/SingleTaskHeader';
@@ -176,7 +175,6 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
   const dispatch = useDispatch();
 
   const task = useSelectCurrentTask(taskId);
-  const [scrollToTop] = useScrollTop();
 
   const [progress, setProgress] = useState(0);
   const [formData, setFormData] = useState<object | undefined>(undefined);
@@ -688,9 +686,11 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
                 submitData(data.formData);
               }}
               onError={() => {
-                scrollToTop();
+                document
+                  .querySelector('#single-task-form [id$="__error"]')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}
-              noHtml5Validate={false}
+              noHtml5Validate
               formContext={{
                 formData: preparedFormData,
                 schema: task.jsonschema,

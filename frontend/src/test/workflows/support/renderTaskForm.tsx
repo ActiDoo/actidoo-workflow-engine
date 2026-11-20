@@ -56,7 +56,7 @@ const TaskFormHarness = ({
       schema={schema}
       uiSchema={uiSchema}
       showErrorList={false}
-      noHtml5Validate={false}
+      noHtml5Validate
       onChange={(event: IChangeEvent) => {
         setFormData(_.cloneDeep(event.formData ?? {}));
       }}
