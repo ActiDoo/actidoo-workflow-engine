@@ -212,7 +212,7 @@ jobs:
             sbom-devcontainer.cdx.json
 
       - name: Upload release notes artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-notes
           path: release_notes.md
