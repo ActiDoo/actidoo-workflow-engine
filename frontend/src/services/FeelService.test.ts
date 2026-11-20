@@ -10,19 +10,18 @@ import type { RJSFSchema } from '@rjsf/utils';
 
 import {
   normalizeEmptyStringComparisons,
-  changeRequiredDefinitionForFieldsWithHideIfDefinition,
   collectHiddenPaths,
   dropErrorsOfHiddenFields,
   evaluateHideIfAndFeel,
   evaluateHideIfExpression,
-} from './FeelService';
+} from '@/services/FeelService';
 import {
   buildEvaluationContext,
   buildMaskedParentContext,
   resolveHiddenFields,
   HideIfEvaluator,
-} from './feelContext';
-import { collectBlankRequiredPaths, isBlank, readsAsNull } from './emptyValues';
+} from '@/services/feelContext';
+import { collectBlankRequiredPaths, isBlank, readsAsNull } from '@/services/emptyValues';
 import form010Fixture from '@/test/workflows/test-flow-dynamic-list-hidden/form010-fill.fixture.json';
 
 describe('evaluateHideIfAndFeel', () => {
@@ -210,42 +209,6 @@ describe('evaluateHideIfAndFeel', () => {
     const result = evaluateHideIfAndFeel({ x: true }, undefined, schema);
 
     expect(result).toEqual({ newUiSchema: undefined, newSchema: schema, hide: false });
-  });
-});
-
-describe('changeRequiredDefinitionForFieldsWithHideIfDefinition', () => {
-  it('keeps required for fields with hideif', () => {
-    const schema: any = {
-      type: 'object',
-      properties: { a: { type: 'string' }, b: { type: 'string' } },
-      required: ['a', 'b'],
-    };
-    const uiSchema: any = { a: { 'ui:hideif': 'x = true' } };
-
-    changeRequiredDefinitionForFieldsWithHideIfDefinition(schema, uiSchema);
-
-    expect(schema.required).toEqual(['a', 'b']);
-  });
-
-  it('keeps required for nested array item properties with hideif', () => {
-    const schema: any = {
-      type: 'object',
-      properties: {
-        list: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: { inner: { type: 'string' } },
-            required: ['inner'],
-          },
-        },
-      },
-    };
-    const uiSchema: any = { list: { items: { inner: { 'ui:hideif': 'x = true' } } } };
-
-    changeRequiredDefinitionForFieldsWithHideIfDefinition(schema, uiSchema);
-
-    expect(schema.properties.list.items.required).toEqual(['inner']);
   });
 });
 
@@ -979,18 +942,18 @@ describe('collectBlankRequiredPaths', () => {
   };
 
   it('reports required fields that are present but blank', () => {
-    expect(collectBlankRequiredPaths(schema, {}, { name: '   ', choice: null }, [])).toEqual([
+    expect(collectBlankRequiredPaths(schema, { name: '   ', choice: null }, [])).toEqual([
       ['name'],
       ['choice'],
     ]);
   });
 
   it('leaves absent required fields to the schema validation', () => {
-    expect(collectBlankRequiredPaths(schema, {}, {}, [])).toEqual([]);
+    expect(collectBlankRequiredPaths(schema, {}, [])).toEqual([]);
   });
 
   it('ignores keys that are present as undefined - rjsf hands the data over that way', () => {
-    expect(collectBlankRequiredPaths(schema, {}, { name: undefined, choice: 'a' }, [])).toEqual([]);
+    expect(collectBlankRequiredPaths(schema, { name: undefined, choice: 'a' }, [])).toEqual([]);
   });
 
   it('leaves object-typed (attachment) fields to the schema validation', () => {
@@ -1000,36 +963,34 @@ describe('collectBlankRequiredPaths', () => {
       properties: { file: { type: 'object', properties: { datauri: { type: 'string' } } } },
     };
 
-    expect(collectBlankRequiredPaths(withFile, {}, { file: null }, [])).toEqual([]);
+    expect(collectBlankRequiredPaths(withFile, { file: null }, [])).toEqual([]);
   });
 
   it('ignores blank optional fields and filled required ones', () => {
-    expect(
-      collectBlankRequiredPaths(schema, {}, { name: 'x', choice: 'a', note: ' ' }, [])
-    ).toEqual([]);
+    expect(collectBlankRequiredPaths(schema, { name: 'x', choice: 'a', note: ' ' }, [])).toEqual(
+      []
+    );
   });
 
   it('walks list rows', () => {
     const data = { name: 'x', choice: 'a', rows: [{ label: 'ok' }, { label: ' ' }, {}] };
 
-    expect(collectBlankRequiredPaths(schema, {}, data, [])).toEqual([['rows', 1, 'label']]);
+    expect(collectBlankRequiredPaths(schema, data, [])).toEqual([['rows', 1, 'label']]);
   });
 
   it('skips fields on or below a hidden path', () => {
     const data = { name: ' ', choice: 'a', rows: [{ label: ' ' }] };
 
-    expect(collectBlankRequiredPaths(schema, {}, data, [['rows']])).toEqual([['name']]);
-    expect(collectBlankRequiredPaths(schema, {}, data, [['name'], ['rows', 0, 'label']])).toEqual(
-      []
-    );
+    expect(collectBlankRequiredPaths(schema, data, [['rows']])).toEqual([['name']]);
+    expect(collectBlankRequiredPaths(schema, data, [['name'], ['rows', 0, 'label']])).toEqual([]);
   });
 
   it('tolerates data that is not an object', () => {
-    expect(collectBlankRequiredPaths(schema, {}, undefined, [])).toEqual([]);
-    expect(collectBlankRequiredPaths(schema, {}, 'junk', [])).toEqual([]);
+    expect(collectBlankRequiredPaths(schema, undefined, [])).toEqual([]);
+    expect(collectBlankRequiredPaths(schema, 'junk', [])).toEqual([]);
   });
 
-  it('reports a shown required field with a hide-if, whose required lives in ui:required', () => {
+  it('reports a shown required field with a hide-if at the root and inside a row', () => {
     const withHideIf: any = {
       type: 'object',
       required: ['reason'],
@@ -1051,15 +1012,8 @@ describe('collectBlankRequiredPaths', () => {
       reason: { 'ui:hideif': '=flag = true' },
       rows: { items: { skip: {}, note: { 'ui:hideif': '=this.skip = true' } } },
     };
-    // What the task view does before rendering: required moves to ui:required.
-    changeRequiredDefinitionForFieldsWithHideIfDefinition(withHideIf, uiSchema);
     const blankIn = (data: any): unknown[] =>
-      collectBlankRequiredPaths(
-        withHideIf,
-        uiSchema,
-        data,
-        collectHiddenPaths(uiSchema, withHideIf, data)
-      );
+      collectBlankRequiredPaths(withHideIf, data, collectHiddenPaths(uiSchema, withHideIf, data));
 
     const shown = {
       flag: false,

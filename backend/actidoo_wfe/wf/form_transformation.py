@@ -131,6 +131,8 @@ def _insert_array_component(
     }
     if label:
         jsonschema["properties"][itemgroup]["title"] = label
+    if _is_required(component):
+        jsonschema.setdefault("required", []).append(itemgroup)
     if min_items > 0:
         jsonschema["properties"][itemgroup]["minItems"] = min_items
 

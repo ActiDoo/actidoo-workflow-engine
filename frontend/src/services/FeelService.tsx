@@ -119,56 +119,6 @@ export function computeHiddenMap(
 // ============================================================================
 
 /**
- * Moves 'minItems' from JSON schema to UI schema for lists with hideif.
- *
- * 'required' stays in the schema: errors of hidden fields are dropped by
- * dropErrorsOfHiddenFields when the form is validated.
- */
-export function changeRequiredDefinitionForFieldsWithHideIfDefinition(
-  schema: any,
-  uiSchema: UiSchema<any, RJSFSchema, any> | undefined
-): void {
-  if (!schema.properties || !uiSchema) return;
-
-  const queue: string[][] = Object.keys(schema.properties).map(x => [x]);
-  let propPath: string[] | undefined;
-
-  while ((propPath = queue.shift())) {
-    // traverse schema
-    let curProp = schema;
-    const propPathQueue = [...propPath];
-    let pathElement;
-    let uiPropSchema: any = uiSchema;
-
-    while ((pathElement = propPathQueue.shift())) {
-      if ((curProp?.type ?? '') === 'array' && curProp.items) {
-        curProp = curProp.items;
-        uiPropSchema = uiPropSchema?.items;
-      }
-      curProp = curProp.properties?.[pathElement];
-      uiPropSchema =
-        uiPropSchema && Object.hasOwn(uiPropSchema, pathElement) ? uiPropSchema[pathElement] : null;
-    }
-
-    if ((curProp?.type ?? '') === 'array' && curProp?.items?.properties) {
-      for (const subProp of Object.keys(curProp.items.properties)) {
-        queue.push([...propPath, subProp]);
-      }
-    }
-
-    const hideif = uiPropSchema?.['ui:hideif'];
-
-    // An array expresses 'required' as minItems, so the same applies to a hidden dynamic list
-    // or attachment field: it must not block the submit while it is not shown. Moved back by
-    // evaluateHideIfAndFeel as soon as the field becomes visible again.
-    if (hideif !== undefined && typeof curProp?.minItems === 'number') {
-      uiPropSchema['ui:minItems'] = curProp.minItems;
-      delete curProp.minItems;
-    }
-  }
-}
-
-/**
  * Evaluates ui:hideif conditions and FEEL expressions in ui:description.
  *
  * For hideif: Uses fixpoint iteration to correctly handle interdependent boolean fields.
@@ -188,7 +138,6 @@ export function evaluateHideIfAndFeel(
   }
 
   const newUiSchema = _.cloneDeep(uiSchema);
-  const newSchema = _.cloneDeep(schema);
   const schemaProperties = (schema as any)?.properties as Record<string, any> | undefined;
   const hiddenMap = computeHiddenMap(
     uiSchema,
@@ -241,7 +190,6 @@ export function evaluateHideIfAndFeel(
 
     // Search for 'hideif' and apply the pre-computed hidden state
     const hideif = fieldSchemaProps['ui:hideif'];
-    const minItems = fieldSchemaProps['ui:minItems'];
 
     if (hideif !== undefined) {
       hide = Boolean(hiddenMap[fieldName]);
@@ -252,17 +200,10 @@ export function evaluateHideIfAndFeel(
         // Unhide if it was hidden by a previous hide-if evaluation
         delete newUiSchema[fieldName]['ui:widget'];
       }
-
-      // Counterpart of the minItems move in changeRequiredDefinitionForFieldsWithHideIfDefinition:
-      // a visible list validates (and renders its initial rows) with its minItems again.
-      const fieldSchema = (newSchema as any)?.properties?.[fieldName];
-      if (!hide && typeof minItems === 'number' && fieldSchema) {
-        fieldSchema.minItems = minItems;
-      }
     }
   }
 
-  return { newUiSchema, newSchema, hide };
+  return { newUiSchema, newSchema: schema, hide };
 }
 
 // ============================================================================

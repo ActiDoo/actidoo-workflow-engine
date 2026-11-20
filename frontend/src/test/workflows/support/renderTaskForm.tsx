@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-// Renders TaskForm the way SingleTask does: the schema goes through
-// changeRequiredDefinitionForFieldsWithHideIfDefinition, formData is controlled and mirrored
-// into formContext.formData (hide-if reads it from there), HTML5 validation is on, there
+// Renders TaskForm the way SingleTask does: formData is controlled and mirrored
+// into formContext.formData (hide-if reads it from there), AJV handles validation, there
 // is a router because the dynamic-list template only adds its default rows under /tasks/open/,
 // and the i18n provider because the templates translate their button tooltips.
 // The captured formData equals the request body of POST user/submit_task_data:
@@ -26,7 +25,6 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { I18nProvider } from '@/i18n';
-import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
 
 export const TEST_TASK_ID = 'workflow-test-task';
 
@@ -46,12 +44,12 @@ const TaskFormHarness = ({
 }) => {
   const [formData, setFormData] = useState<Record<string, unknown>>(initialData);
 
-  const schema = _.cloneDeep(fixture.jsonschema) as RJSFSchema;
-  const uiSchema = _.cloneDeep(fixture.uischema) as UiSchema;
-  changeRequiredDefinitionForFieldsWithHideIfDefinition(schema, uiSchema);
+  const schema = fixture.jsonschema as RJSFSchema;
+  const uiSchema = fixture.uischema as UiSchema;
 
   return (
     <TaskForm
+      id="single-task-form"
       formData={formData}
       schema={schema}
       uiSchema={uiSchema}

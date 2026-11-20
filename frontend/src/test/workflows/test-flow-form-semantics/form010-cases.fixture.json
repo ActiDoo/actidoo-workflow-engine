@@ -1,0 +1,989 @@
+{
+  "jsonschema": {
+    "definitions": {},
+    "type": "object",
+    "properties": {
+      "Field_intro": {
+        "type": "null",
+        "title": ""
+      },
+      "service_saw": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Last submit"
+      },
+      "Field_required": {
+        "type": "null",
+        "title": ""
+      },
+      "text_required": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Required text",
+        "default": "Valid text"
+      },
+      "Field_required_positions_case": {
+        "type": "null",
+        "title": ""
+      },
+      "hide_required_lists": {
+        "type": "boolean",
+        "title": "Hide required lists"
+      },
+      "required_positions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "Field_position_label": {
+              "type": "null",
+              "title": ""
+            }
+          }
+        },
+        "title": "Required positions",
+        "minItems": 1,
+        "hideif": "=hide_required_lists = true"
+      },
+      "required_tags": {
+        "type": "array",
+        "title": "Required tags",
+        "hideif": "=hide_required_lists = true",
+        "custom_properties": {
+          "custom_type": "select_multi"
+        },
+        "items": {
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "a",
+              "title": "Example tag"
+            }
+          ]
+        },
+        "minItems": 1
+      },
+      "Field_required_choice_case": {
+        "type": "null",
+        "title": ""
+      },
+      "required_choice": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Required choice",
+        "oneOf": [
+          {
+            "const": "a",
+            "title": "Value a"
+          },
+          {
+            "const": null,
+            "title": "(null)"
+          }
+        ]
+      },
+      "Field_clear": {
+        "type": "null",
+        "title": ""
+      },
+      "date_optional": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Stored date",
+        "format": "date"
+      },
+      "Field_empty_condition": {
+        "type": "null",
+        "title": ""
+      },
+      "text_optional": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Sample text"
+      },
+      "Field_needs_text_null": {
+        "type": "null",
+        "title": "",
+        "hideif": "=text_optional = null"
+      },
+      "Field_needs_text_blank": {
+        "type": "null",
+        "title": "",
+        "hideif": "=text_optional = \"\""
+      },
+      "Field_empty_tags_case": {
+        "type": "null",
+        "title": ""
+      },
+      "tags_for_empty_check": {
+        "type": "array",
+        "title": "Tags for the empty-value check",
+        "default": [
+          "a"
+        ],
+        "custom_properties": {
+          "custom_type": "select_multi"
+        },
+        "items": {
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "a",
+              "title": "Value a"
+            }
+          ]
+        }
+      },
+      "Field_needs_tags": {
+        "type": "null",
+        "title": "",
+        "hideif": "=tags_for_empty_check = null"
+      },
+      "Field_defaults": {
+        "type": "null",
+        "title": ""
+      },
+      "number_optional": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "title": "Number with default 5",
+        "default": 5
+      },
+      "Field_hide_cleared": {
+        "type": "null",
+        "title": ""
+      },
+      "hide_defaults": {
+        "type": "boolean",
+        "title": "Hide tags"
+      },
+      "tags_optional": {
+        "type": "array",
+        "title": "Tags to hide",
+        "default": [
+          "a"
+        ],
+        "hideif": "=hide_defaults = true",
+        "custom_properties": {
+          "custom_type": "select_multi"
+        },
+        "items": {
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "a",
+              "title": "Value a"
+            }
+          ]
+        }
+      },
+      "Field_replace_file": {
+        "type": "null",
+        "title": ""
+      },
+      "file_optional": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "title": "Replacement file",
+        "properties": {
+          "datauri": {
+            "type": "string",
+            "format": "data-url"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          }
+        }
+      },
+      "Field_hide_if": {
+        "type": "null",
+        "title": ""
+      },
+      "category": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Category",
+        "oneOf": [
+          {
+            "const": "a",
+            "title": "Value a"
+          },
+          {
+            "const": null,
+            "title": "(null)"
+          }
+        ]
+      },
+      "note_unless_a": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Note",
+        "hideif": "=category = \"a\""
+      },
+      "Field_numeric_condition": {
+        "type": "null",
+        "title": ""
+      },
+      "amount": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "title": "Amount"
+      },
+      "reason_up_to_10": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Reason",
+        "hideif": "=amount > 10"
+      },
+      "Field_quoted_text": {
+        "type": "null",
+        "title": ""
+      },
+      "finding": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Finding",
+        "oneOf": [
+          {
+            "const": "true_positive",
+            "title": "True positive"
+          },
+          {
+            "const": "false_positive",
+            "title": "False positive"
+          },
+          {
+            "const": null,
+            "title": "(null)"
+          }
+        ]
+      },
+      "finding_details": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Finding details",
+        "hideif": "=finding != \"true_positive\""
+      },
+      "Field_list": {
+        "type": "null",
+        "title": ""
+      },
+      "skip_notes": {
+        "type": "boolean",
+        "title": "Hide all notes"
+      },
+      "positions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "item": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "Item"
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "Note",
+              "hideif": "=skip_notes = true or this.item = \"\""
+            }
+          }
+        },
+        "title": "Notes by row"
+      },
+      "Field_overview_case": {
+        "type": "null",
+        "title": ""
+      },
+      "overview_rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "overview_item": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "Item"
+            },
+            "overview_note": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "Note",
+              "hideif": "=this.overview_item = \"\""
+            }
+          }
+        },
+        "title": "Overview rows"
+      },
+      "Field_locked": {
+        "type": "null",
+        "title": ""
+      },
+      "locked_text": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Read-only text"
+      },
+      "locked_rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "locked_item": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "Item"
+            }
+          }
+        },
+        "title": "Read-only list"
+      },
+      "Field_finish": {
+        "type": "null",
+        "title": ""
+      },
+      "again": {
+        "type": "boolean",
+        "title": "Open this form again",
+        "default": true
+      }
+    },
+    "required": [
+      "text_required",
+      "hide_required_lists",
+      "required_positions",
+      "required_tags",
+      "required_choice"
+    ]
+  },
+  "uischema": {
+    "ui:field": "layout",
+    "ui:layout": {
+      "Row_intro": [
+        "Field_intro"
+      ],
+      "Row_service_saw": [
+        "service_saw"
+      ],
+      "Row_required": [
+        "Field_required"
+      ],
+      "Row_text_required": [
+        "text_required"
+      ],
+      "Row_required_positions_case": [
+        "Field_required_positions_case"
+      ],
+      "Row_hide_required_lists": [
+        "hide_required_lists"
+      ],
+      "required_positions": [
+        "required_positions"
+      ],
+      "Row_required_tags": [
+        "required_tags"
+      ],
+      "Row_required_choice_case": [
+        "Field_required_choice_case"
+      ],
+      "Row_required_choice": [
+        "required_choice"
+      ],
+      "Row_clear": [
+        "Field_clear"
+      ],
+      "Row_date_optional": [
+        "date_optional"
+      ],
+      "Row_empty_condition": [
+        "Field_empty_condition"
+      ],
+      "Row_text_optional": [
+        "text_optional"
+      ],
+      "Row_needs_text_null": [
+        "Field_needs_text_null"
+      ],
+      "Row_needs_text_blank": [
+        "Field_needs_text_blank"
+      ],
+      "Row_empty_tags_case": [
+        "Field_empty_tags_case"
+      ],
+      "Row_tags_for_empty_check": [
+        "tags_for_empty_check"
+      ],
+      "Row_needs_tags": [
+        "Field_needs_tags"
+      ],
+      "Row_defaults": [
+        "Field_defaults"
+      ],
+      "Row_number_optional": [
+        "number_optional"
+      ],
+      "Row_hide_cleared": [
+        "Field_hide_cleared"
+      ],
+      "Row_hide_defaults": [
+        "hide_defaults"
+      ],
+      "Row_tags_optional": [
+        "tags_optional"
+      ],
+      "Row_replace_file": [
+        "Field_replace_file"
+      ],
+      "Row_file_optional": [
+        "file_optional"
+      ],
+      "Row_hide_if": [
+        "Field_hide_if"
+      ],
+      "Row_category": [
+        "category"
+      ],
+      "Row_note_unless_a": [
+        "note_unless_a"
+      ],
+      "Row_numeric_condition": [
+        "Field_numeric_condition"
+      ],
+      "Row_amount": [
+        "amount"
+      ],
+      "Row_reason_up_to_10": [
+        "reason_up_to_10"
+      ],
+      "Row_quoted_text": [
+        "Field_quoted_text"
+      ],
+      "Row_finding": [
+        "finding"
+      ],
+      "Row_finding_details": [
+        "finding_details"
+      ],
+      "Row_list": [
+        "Field_list"
+      ],
+      "Row_skip_notes": [
+        "skip_notes"
+      ],
+      "positions": [
+        "positions"
+      ],
+      "Row_overview_case": [
+        "Field_overview_case"
+      ],
+      "overview_rows": [
+        "overview_rows"
+      ],
+      "Row_locked": [
+        "Field_locked"
+      ],
+      "Row_locked_text": [
+        "locked_text"
+      ],
+      "locked_rows": [
+        "locked_rows"
+      ],
+      "Row_finish": [
+        "Field_finish"
+      ],
+      "Row_again": [
+        "again"
+      ]
+    },
+    "Field_intro": {
+      "ui:description": "## Form semantics\n\nStart a fresh instance for each case on each branch. Change only the fields in that case. After a successful submit, open the next task. **Last submit** shows the results by case number.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_intro"
+      ]
+    },
+    "service_saw": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "service_saw"
+      ],
+      "ui:disabled": true,
+      "ui:widget": "textarea",
+      "ui:emptyValue": null
+    },
+    "Field_required": {
+      "ui:description": "### 1a. Required text containing only spaces\n\n**Error case — spaces pass the required check.**\n\nReplace the text with three spaces and submit. A field error should keep this task open.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_required"
+      ]
+    },
+    "text_required": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "text_required"
+      ],
+      "ui:emptyValue": null
+    },
+    "Field_required_positions_case": {
+      "ui:description": "### 1b. Empty required lists with a hide-if\n\n**Error case — a visible list has no error or a hidden list blocks submission.**\n\nDelete the only row in **Required positions** and remove the tag in **Required tags**. Submit once. Both fields should show an error in the interface language, and the form should scroll to **Required positions**. Tick **Hide required lists** and submit again. The next task should open.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_required_positions_case"
+      ]
+    },
+    "hide_required_lists": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "hide_required_lists"
+      ]
+    },
+    "required_positions": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_position_label": [
+            "Field_position_label"
+          ]
+        },
+        "Field_position_label": {
+          "ui:description": "Example position",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "required_positions",
+            "Field_position_label"
+          ]
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "True",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": 0,
+      "ui:label": "Required positions",
+      "ui:copyable": true,
+      "ui:hideif": "=hide_required_lists = true"
+    },
+    "required_tags": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "required_tags"
+      ],
+      "ui:hideif": "=hide_required_lists = true",
+      "ui:widget": "MultiSelectStatic"
+    },
+    "Field_required_choice_case": {
+      "ui:description": "### 1c. Cleared required choice and unchecked required checkbox\n\n**Error case — the form accepts a cleared choice or rejects an unchecked box.**\n\nClear **Required choice** with the × and submit. Its field error should keep this task open. Select **Value a** again, leave **Hide required lists** unchecked and submit. **Last submit** should show `1c. Hide required lists = false`.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_required_choice_case"
+      ]
+    },
+    "required_choice": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "required_choice"
+      ],
+      "ui:widget": "SelectStatic"
+    },
+    "Field_clear": {
+      "ui:description": "### 2. Clearing an optional field that had a value\n\n**Error case — the old date survives clearing.**\n\nClear the stored date and submit. **Last submit** should show `2. Stored date = null`.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_clear"
+      ]
+    },
+    "date_optional": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "date_optional"
+      ],
+      "ui:emptyValue": null
+    },
+    "Field_empty_condition": {
+      "ui:description": "### 3a. Checking empty text with `= \"\"` or `= null`\n\n**Error case — spaces leave a dependent message visible.**\n\nReplace the sample text with three spaces. Both messages below should disappear.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_empty_condition"
+      ]
+    },
+    "text_optional": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "text_optional"
+      ],
+      "ui:emptyValue": null
+    },
+    "Field_needs_text_null": {
+      "ui:description": "Message for the null condition",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_needs_text_null"
+      ],
+      "ui:hideif": "=text_optional = null"
+    },
+    "Field_needs_text_blank": {
+      "ui:description": "Message for the empty-string condition",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_needs_text_blank"
+      ],
+      "ui:hideif": "=text_optional = \"\""
+    },
+    "Field_empty_tags_case": {
+      "ui:description": "### 3b. Checking an empty multi select with `= null`\n\n**Error case — the message stays visible after the last tag is removed.**\n\nRemove the selected tag. The message below should disappear.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_empty_tags_case"
+      ]
+    },
+    "tags_for_empty_check": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "tags_for_empty_check"
+      ],
+      "ui:widget": "MultiSelectStatic"
+    },
+    "Field_needs_tags": {
+      "ui:description": "Message for selected tags",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_needs_tags"
+      ],
+      "ui:hideif": "=tags_for_empty_check = null"
+    },
+    "Field_defaults": {
+      "ui:description": "### 4. Clearing a field with a default\n\n**Error case — the default reappears.**\n\nClear the number 5 and submit. The number field should reopen empty.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_defaults"
+      ]
+    },
+    "number_optional": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "number_optional"
+      ],
+      "ui:emptyValue": null
+    },
+    "Field_hide_cleared": {
+      "ui:description": "### 5. Hiding a previously cleared field\n\n**Error case — hiding cleared tags brings back the default tag.**\n\n**Tags to hide** starts cleared. Tick **Hide tags** and submit. Reopen and untick it. **Tags to hide** should still be empty.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_hide_cleared"
+      ]
+    },
+    "hide_defaults": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "hide_defaults"
+      ]
+    },
+    "tags_optional": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "tags_optional"
+      ],
+      "ui:hideif": "=hide_defaults = true",
+      "ui:widget": "MultiSelectStatic"
+    },
+    "Field_replace_file": {
+      "ui:description": "### 6. Uploading a file after removal\n\n**Error case — uploading onto a removed file fails.**\n\nThe previous file is already cleared. Upload one file and submit. Its filename should appear under **6. Replacement file** in **Last submit**.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_replace_file"
+      ]
+    },
+    "file_optional": {
+      "ui:description": "",
+      "ui:path": [
+        "file_optional"
+      ],
+      "ui:field": "AttachmentSingle"
+    },
+    "Field_hide_if": {
+      "ui:description": "### 7. A hide-if compares a field that was never filled\n\n**Error case — the server drops a visible note.**\n\nLeave **Category** untouched. Enter a note and submit. Your text should appear under **7. Note** in **Last submit**.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_hide_if"
+      ]
+    },
+    "category": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "category"
+      ],
+      "ui:widget": "SelectStatic"
+    },
+    "note_unless_a": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "note_unless_a"
+      ],
+      "ui:hideif": "=category = \"a\"",
+      "ui:emptyValue": null
+    },
+    "Field_numeric_condition": {
+      "ui:description": "### 8. A hide-if compares a number with `> 10`\n\n**Error case — a reason entered at 10 disappears.**\n\nLeave **Amount** at 10. Enter a reason and submit. Your text should appear under **8. Reason** in **Last submit**.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_numeric_condition"
+      ]
+    },
+    "amount": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "amount"
+      ],
+      "ui:emptyValue": null
+    },
+    "reason_up_to_10": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "reason_up_to_10"
+      ],
+      "ui:hideif": "=amount > 10",
+      "ui:emptyValue": null
+    },
+    "Field_quoted_text": {
+      "ui:description": "### 9. A hide-if compares the quoted value `\"true_positive\"`\n\n**Error case — details for True positive disappear.**\n\nLeave **True positive** selected. Enter details and submit. Your text should appear under **9. Finding details** in **Last submit**.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_quoted_text"
+      ]
+    },
+    "finding": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "finding"
+      ],
+      "ui:widget": "SelectStatic"
+    },
+    "finding_details": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "finding_details"
+      ],
+      "ui:hideif": "=finding != \"true_positive\"",
+      "ui:emptyValue": null
+    },
+    "Field_list": {
+      "ui:description": "### 10a. A hide-if combines a form field and a row field\n\n**Error case — the server drops a visible row note.**\n\nWith **Hide all notes** off and **Item** filled, enter a note and submit. Your note should appear under **10a. Row note** in **Last submit**.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_list"
+      ]
+    },
+    "skip_notes": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "skip_notes"
+      ]
+    },
+    "positions": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_item": [
+            "item"
+          ],
+          "Row_note": [
+            "note"
+          ]
+        },
+        "item": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "positions",
+            "item"
+          ],
+          "ui:emptyValue": null
+        },
+        "note": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "positions",
+            "note"
+          ],
+          "ui:hideif": "=skip_notes = true or this.item = \"\"",
+          "ui:emptyValue": null
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "False",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": 1,
+      "ui:label": "Notes by row",
+      "ui:copyable": true
+    },
+    "Field_overview_case": {
+      "ui:description": "### 10b. A list overview checks a row against `\"\"`\n\n**Error case — Overview keeps the Note column for a blank item.**\n\nReplace the item with three spaces. Open **Overview**. Only the **Item** column should appear.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_overview_case"
+      ]
+    },
+    "overview_rows": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_overview_item": [
+            "overview_item"
+          ],
+          "Row_overview_note": [
+            "overview_note"
+          ]
+        },
+        "overview_item": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "overview_rows",
+            "overview_item"
+          ],
+          "ui:emptyValue": null
+        },
+        "overview_note": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "overview_rows",
+            "overview_note"
+          ],
+          "ui:hideif": "=this.overview_item = \"\"",
+          "ui:emptyValue": null
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "False",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": 1,
+      "ui:label": "Overview rows",
+      "ui:copyable": true
+    },
+    "Field_locked": {
+      "ui:description": "### 11. Read-only fields and lists\n\n**Error case — a read-only value or list can be edited.**\n\nTry editing **Read-only text** and adding a row to **Read-only list**. The text should stay unchanged and **Add** should be disabled.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_locked"
+      ]
+    },
+    "locked_text": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "locked_text"
+      ],
+      "ui:disabled": true,
+      "ui:emptyValue": null
+    },
+    "locked_rows": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_locked_item": [
+            "locked_item"
+          ]
+        },
+        "locked_item": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "locked_rows",
+            "locked_item"
+          ],
+          "ui:emptyValue": null
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "True",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": 0,
+      "ui:label": "Read-only list",
+      "ui:copyable": true,
+      "ui:disabled": true
+    },
+    "Field_finish": {
+      "ui:description": "To finish the instance, untick **Open this form again** and submit.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_finish"
+      ]
+    },
+    "again": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "again"
+      ]
+    },
+    "ui:templateMode": "blacklist"
+  }
+}

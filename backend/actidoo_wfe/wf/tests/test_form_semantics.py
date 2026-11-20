@@ -1279,3 +1279,26 @@ def test__hidden_required_multi_select_may_be_empty():
 
     assert not result.error_schema
     assert "tags" not in result.task_data
+
+
+def test__required_dynamic_list_needs_a_row_only_while_visible():
+    form = {
+        "components": [
+            {"type": "checkbox", "key": "hide", "validate": {"required": True}},
+            {
+                "type": "dynamiclist",
+                "path": "rows",
+                "components": [{"type": "textfield", "key": "note"}],
+                "validate": {"required": True},
+                "conditional": {"hide": "=hide = true"},
+            },
+        ],
+    }
+
+    assert "rows" in _required_errors(_validate(form, {"hide": False}))
+    assert "rows" in _validate(form, {"hide": False, "rows": []}).error_schema
+    assert not _validate(form, {"hide": False, "rows": [{ROW_ID_KEY: "r1", "note": "ok"}]}).error_schema
+    for data in ({"hide": True}, {"hide": True, "rows": []}):
+        result = _validate(form, data)
+        assert not result.error_schema
+        assert result.task_data == {"hide": True}

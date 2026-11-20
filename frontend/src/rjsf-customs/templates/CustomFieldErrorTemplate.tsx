@@ -2,28 +2,23 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import type { ReactElement } from 'react';
+import { useTranslation } from '@/i18n';
 import { errorId, FieldErrorProps } from '@rjsf/utils';
 
 const CustomFieldErrorTemplate = (props: FieldErrorProps): ReactElement | null => {
+  const { t } = useTranslation();
   const { errors = [], fieldPathId, uiSchema } = props;
   if (errors.length === 0) {
     return null;
   }
 
   const id = errorId(fieldPathId);
-  let isSingleUpload = false;
-  let isMultiUpload = false;
-  if (uiSchema?.['ui:field'] === 'AttachmentSingle') {
-    isSingleUpload = true;
-  } else if (uiSchema?.['ui:field'] === 'AttachmentMulti') {
-    isMultiUpload = true;
-  }
-
+  const upload = uiSchema?.['ui:field'];
   const normalizedErrors = errors.map(error => {
-    if (typeof error !== 'string') return error;
-    if (isSingleUpload && error === 'must be object') return 'Bitte einen Anhang anfügen';
-    if (isMultiUpload && error === 'must NOT have fewer than 1 items')
-      return 'Bitte mind. einen Anhang anfügen';
+    if (upload === 'AttachmentSingle' && error === 'must be object')
+      return t('formErrors.attachmentRequired');
+    if (upload === 'AttachmentMulti' && error === t('formErrors.minItemsOne'))
+      return t('formErrors.attachmentRequired');
     return error;
   });
 

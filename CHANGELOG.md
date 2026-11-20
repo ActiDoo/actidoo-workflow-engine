@@ -49,7 +49,12 @@ server now apply the same rules.
   - Now: empty is empty, also only spaces. Browser and server check the same
     way. A multi select or dynamic list needs at least one entry. Spaces
     around a real value are kept. This also applies while a required field
-    with a `hide-if` is visible.
+    with a `hide-if` is visible. An unchecked required checkbox supplies
+    `false` and is valid. Use a validation function if a checkbox must be ticked.
+- **When** several visible fields fail browser validation on submit, the task
+  shows their errors together and scrolls to the first one. Required fields,
+  list minimums, text length and numeric limits have German and English messages.
+  Hidden fields and their list rows do not block submission.
 - **When** a `hide-if` checks if a field is empty, with `= null` or `= ""`:
   - Before: `= null` did not match empty text, and `= ""` did not match
     `null`. For a field that was never filled, `= ""` hid the field on the

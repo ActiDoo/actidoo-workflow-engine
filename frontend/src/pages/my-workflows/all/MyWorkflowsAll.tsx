@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
@@ -22,7 +22,6 @@ import { WeTaskSubRow } from '@/utils/components/WeTaskSubRow';
 import { useTranslation } from '@/i18n';
 import { WeCompletedTaskSubRow } from '@/utils/components/WeCompletedTaskSubRow';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
-import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
 import {
   BusyIndicator,
   BusyIndicatorSize,
@@ -37,7 +36,6 @@ import {
 import '@ui5/webcomponents-icons/dist/decline';
 import { createPortal } from 'react-dom';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import _ from 'lodash';
 import TaskForm from '@/rjsf-customs/components/TaskForm';
 import { myWorkflowsAllColumns } from '@/pages/my-workflows/all/MyWorkflowsAllSettings';
 
@@ -100,18 +98,6 @@ const MyWorkflowsAll: React.FC = () => {
     setSelectedTaskId(null);
   };
 
-  const submittedFormSchema = useMemo(() => {
-    if (!submittedTask?.jsonschema) return null;
-    const schema = _.cloneDeep(submittedTask.jsonschema) as RJSFSchema;
-    const uiSchema = submittedTask.uischema
-      ? (_.cloneDeep(submittedTask.uischema) as UiSchema)
-      : undefined;
-    if (uiSchema) {
-      changeRequiredDefinitionForFieldsWithHideIfDefinition(schema, uiSchema);
-    }
-    return { schema, uiSchema };
-  }, [submittedTask]);
-
   const renderRowSubComponent = (row: any): React.ReactElement | null => {
     const activeTasks: ActiveTaskInstance[] | undefined = row.values.active_tasks;
     const completedTasks: ActiveTaskInstance[] = (row.original.completed_tasks ?? []).filter(
@@ -150,14 +136,14 @@ const MyWorkflowsAll: React.FC = () => {
     : t('myWorkflows.submittedFormTitle');
 
   const submittedFormContent =
-    submittedFormSchema && submittedTask?.data ? (
+    submittedTask?.jsonschema && submittedTask.data ? (
       <div className="bg-white pt-2 px-6 pc-form pb-6">
         <TaskForm
           formData={submittedTask.data}
           className="max-w-7xl"
           disabled={true}
-          schema={submittedFormSchema.schema}
-          uiSchema={submittedFormSchema.uiSchema}
+          schema={submittedTask.jsonschema as RJSFSchema}
+          uiSchema={submittedTask.uischema as UiSchema}
           showErrorList={false}
           formContext={{
             formData: submittedTask.data,

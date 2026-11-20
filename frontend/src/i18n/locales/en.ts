@@ -178,6 +178,9 @@ export const en = {
     optionsLoadError: 'Could not load options. Please try again.',
   },
   formErrors: {
+    minItems: 'Please add at least {{limit}} entries.',
+    minItemsOne: 'Please add at least one entry.',
+    attachmentRequired: 'Please attach at least one file.',
     required: 'Please fill in this field.',
     minLength: 'Please enter at least {{limit}} characters.',
     maxLength: 'Please enter at most {{limit}} characters.',
@@ -188,9 +191,6 @@ export const en = {
     reset: 'Reset',
     submit: 'Submit',
     delete: 'Delete',
-  },
-  validation: {
-    required: 'This field is required',
   },
   formTemplates: {
     saveAction: 'Save as template',
