@@ -112,7 +112,7 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `accept` | comma-separated file types, e.g. `pdf, xml` or `image/*` | restricts a text field upload (`custom_type: attachment_*`) to these file types, like the file picker's "Supported file formats" | only certain documents |
 | `options_file` | `<name>.csv` | takes the select's options from `options/<name>.csv` in the workflow directory | a fixed lookup list kept out of the form |
 | `options_function` | function name | takes the select's options from a function `<name>(oth)` in the workflow module | options computed at fill time, e.g. from a data model or connector |
-| `depends_on` | comma-separated top-level keys | the select clears and reloads its options when one of those fields changes | options that depend on another field |
+| `depends_on` | comma-separated keys; the nearest containing row defining the key takes precedence, even when empty, then the top level | the select clears and reloads its options when one of those fields changes | options that depend on another field |
 | `options_limit` | integer, default 50, `0` = all at once | how many dynamic options the select loads at a time | load fewer options at a time, or all at once |
 | `pattern_message` | text, e.g. `Cost center like CC-1234` | the error shown when the field's regex (`pattern`) does not match; translatable like a label | a user cannot act on `must match pattern "^CC-[0-9]{4}$"` |
 | `validation_function` | function name | calls `<name>(vth)` on submit, which can reject the field with a message | checks the schema cannot express, e.g. a lookup |
