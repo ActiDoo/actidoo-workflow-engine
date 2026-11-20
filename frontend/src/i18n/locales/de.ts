@@ -179,6 +179,7 @@ export const de = {
     optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
   },
   formErrors: {
+    checkboxRequired: 'Bitte kreuze dieses Kästchen an.',
     minItems: 'Bitte füge mindestens {{limit}} Einträge hinzu.',
     minItemsOne: 'Bitte füge mindestens einen Eintrag hinzu.',
     attachmentRequired: 'Bitte füge mindestens eine Datei an.',

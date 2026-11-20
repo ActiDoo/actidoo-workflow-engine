@@ -110,3 +110,5 @@ msgstr ""
 "Es gibt außerdem Aufgaben für Gruppen, in denen Sie Mitglied sind. Sie "
 "können sich diese Aufgaben selbst zuweisen:"
 
+msgid "Please tick this checkbox."
+msgstr "Bitte kreuze dieses Kästchen an."

@@ -23,6 +23,7 @@ def test_prefilled_validation_cases_and_last_submit(db_engine_ctx):
         assert task.data["required_tags"] == ["a"]
         assert task.data["required_choice"] == "a"
         assert task.data["hide_required_lists"] is False
+        assert task.data["confirm_review"] is True
 
         # Submit the values shown in a fresh task, including form defaults.
         payload = {
@@ -31,8 +32,11 @@ def test_prefilled_validation_cases_and_last_submit(db_engine_ctx):
             if key in task.data or "default" in schema
         }
         with pytest.raises(ValidationResultContainsErrors) as cleared:
-            user.submit({**payload, "required_choice": None}, instance, task_id=task.id)
-        assert set(cleared.value.error_schema) == {"required_choice"}
+            user.submit({**payload, "required_choice": None, "confirm_review": False}, instance, task_id=task.id)
+        assert set(cleared.value.error_schema) == {"required_choice", "confirm_review"}
+        with pytest.raises(ValidationResultContainsErrors) as unchecked:
+            user.submit({**payload, "confirm_review": False}, instance, task_id=task.id)
+        assert set(unchecked.value.error_schema) == {"confirm_review"}
 
         empty_lists = {**payload, "required_positions": [], "required_tags": []}
         with pytest.raises(ValidationResultContainsErrors) as visible:
@@ -41,7 +45,6 @@ def test_prefilled_validation_cases_and_last_submit(db_engine_ctx):
 
         user.submit(payload, instance, task_id=task.id)
         next_task = user.get_usertasks(instance, 1)[0]
-        assert "1c. Hide required lists = false" in next_task.data["service_saw"]
+        assert "1c. Confirm review = true" in next_task.data["service_saw"]
         user.submit({**empty_lists, "hide_required_lists": True}, instance, task_id=next_task.id)
-        report = user.get_usertasks(instance, 1)[0].data["service_saw"]
-        assert "1c. Hide required lists = true" in report
+        assert user.get_usertasks(instance, 1)[0].data["hide_required_lists"] is True

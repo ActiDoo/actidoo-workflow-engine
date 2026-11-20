@@ -49,8 +49,10 @@ server now apply the same rules.
   - Now: empty is empty, also only spaces. Browser and server check the same
     way. A multi select or dynamic list needs at least one entry. Spaces
     around a real value are kept. This also applies while a required field
-    with a `hide-if` is visible. An unchecked required checkbox supplies
-    `false` and is valid. Use a validation function if a checkbox must be ticked.
+    with a `hide-if` is visible. A visible required checkbox must be ticked. An
+    optional checkbox can stay unchecked. Use a required Yes/No selection
+    when either answer is valid. The checkbox rule applies to new workflow
+    instances. Running instances use the form saved when they started.
 - **When** several visible fields fail browser validation on submit, the task
   shows their errors together and scrolls to the first one. Required fields,
   list minimums, text length and numeric limits have German and English messages.

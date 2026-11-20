@@ -1284,7 +1284,7 @@ def test__hidden_required_multi_select_may_be_empty():
 def test__required_dynamic_list_needs_a_row_only_while_visible():
     form = {
         "components": [
-            {"type": "checkbox", "key": "hide", "validate": {"required": True}},
+            {"type": "checkbox", "key": "hide"},
             {
                 "type": "dynamiclist",
                 "path": "rows",
@@ -1302,3 +1302,32 @@ def test__required_dynamic_list_needs_a_row_only_while_visible():
         result = _validate(form, data)
         assert not result.error_schema
         assert result.task_data == {"hide": True}
+
+
+@pytest.mark.parametrize("data", [{}, {"confirmed": False}, {"confirmed": None}, {"confirmed": 0}, {"confirmed": 1}, {"confirmed": "true"}])
+def test__required_checkbox_rejects_missing_and_non_true_values(data):
+    form = {"components": [{"type": "checkbox", "key": "confirmed", "validate": {"required": True}}]}
+    assert "confirmed" in _validate(form, data).error_schema
+
+
+def test__checkbox_confirmation_only_applies_to_visible_editable_fields_per_row():
+    form = {
+        "components": [
+            {
+                "type": "dynamiclist",
+                "path": "rows",
+                "components": [
+                    {"type": "checkbox", "key": "skip"},
+                    {"type": "checkbox", "key": "confirmed", "validate": {"required": True}, "conditional": {"hide": "=this.skip = true"}},
+                    {"type": "checkbox", "key": "locked", "validate": {"required": True}, "readonly": True},
+                ],
+            }
+        ]
+    }
+    rows = [{"skip": True, "confirmed": False}, {"skip": False, "confirmed": False}]
+    assert _validate(form, {"rows": rows}).error_schema["rows"][1]["confirmed"]["__errors"]
+    rows[1]["confirmed"] = True
+    result = _validate(form, {"rows": rows})
+    assert not result.error_schema
+    assert "confirmed" not in result.task_data["rows"][0]
+    assert result.task_data["rows"][1]["skip"] is False
