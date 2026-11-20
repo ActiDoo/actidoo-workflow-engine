@@ -25,7 +25,8 @@ import {
   RJSFSchema,
   StrictRJSFSchema,
 } from '@rjsf/utils';
-import { InterpreterContext, unaryTest } from 'feelin';
+import { InterpreterContext } from 'feelin';
+import { memoizedUnaryTest } from '@/services/feelMemo';
 import { fetchPost } from '@/ui5-components';
 import { useTranslation } from '@/i18n';
 import { addToast } from '@/store/ui/actions';
@@ -100,7 +101,7 @@ const loadOverviewLabels = async (
 
 const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
   try {
-    return unaryTest(expression, { ...(context ?? {}) });
+    return memoizedUnaryTest(expression, { ...(context ?? {}) });
   } catch {
     return false;
   }

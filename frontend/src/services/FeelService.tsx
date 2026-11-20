@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import { evaluate, InterpreterContext, unaryTest } from 'feelin';
+import { InterpreterContext } from 'feelin';
 import _ from 'lodash';
 
 import {
@@ -11,6 +11,7 @@ import {
   HideIfEvaluator,
   resolveHiddenFields,
 } from '@/services/feelContext';
+import { memoizedEvaluate, memoizedUnaryTest } from '@/services/feelMemo';
 
 // ============================================================================
 // Internal Helpers
@@ -30,7 +31,7 @@ function safeUnaryTest(expr: string, ctx: Record<string, any>): boolean {
   try {
     const trimmed = expr.trim();
     const normalized = trimmed.startsWith('=') ? trimmed.slice(1) : trimmed;
-    return unaryTest(normalized, { ...ctx });
+    return memoizedUnaryTest(normalized, { ...ctx });
   } catch {
     return false;
   }
@@ -209,7 +210,7 @@ export function evaluateHideIfAndFeel(
         const wholeInclBrackets = finding[0]; // e.g. "{{ numberA * numberB }}"
         const expression = finding[1]; // e.g. " numberA * numberB "
         try {
-          let newValue = evaluate(expression, { ...orgFormData });
+          let newValue = memoizedEvaluate(expression, { ...orgFormData });
           if (newValue == null) {
             // if expression can not (yet) be evaluated, we do not want to render the expression,
             // but rather render an empty string
@@ -281,7 +282,7 @@ export type FormPath = Array<string | number>;
 
 const evaluateHideIfForMasking: HideIfEvaluator = (expression, context) => {
   try {
-    return unaryTest(expression, { ...(context ?? {}) });
+    return memoizedUnaryTest(expression, { ...(context ?? {}) });
   } catch {
     return false;
   }

@@ -8,7 +8,8 @@ import {
   buildMaskedParentContext,
   resolveHiddenFields,
 } from '@/services/feelContext';
-import { InterpreterContext, unaryTest } from 'feelin';
+import { InterpreterContext } from 'feelin';
+import { memoizedUnaryTest } from '@/services/feelMemo';
 import { FieldProps } from '@rjsf/utils';
 import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 
@@ -18,7 +19,7 @@ import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 
 const evaluateHideIf = (expression: string, context: InterpreterContext | undefined): boolean => {
   try {
-    return unaryTest(expression, { ...(context ?? {}) });
+    return memoizedUnaryTest(expression, { ...(context ?? {}) });
   } catch {
     return false;
   }
