@@ -16,7 +16,7 @@ import uuid
 import pytest
 
 from actidoo_wfe.database import SessionLocal, SessionMaker
-from actidoo_wfe.wf import repository, service_application
+from actidoo_wfe.wf import events, repository, service_application
 from actidoo_wfe.wf.bff.bff_admin_schema import GetAllTasksResponse
 from actidoo_wfe.wf.constants import DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE
 from actidoo_wfe.wf.exceptions import DataModelAccessDeniedError
@@ -82,6 +82,22 @@ class TestIssuing:
             with SessionMaker() as db:
                 instance = repository.load_workflow_instance(db=db, workflow_id=dummy.workflow_instance_id)
             assert instance.get_data(DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE) == "CASE-01000"
+
+    def test_issuing_a_number_does_not_send_pending_events_before_the_commit(self, db_engine_ctx, monkeypatch):
+        with db_engine_ctx():
+            delivered = []
+            monkeypatch.setattr(events, "_handle_event", delivered.append)
+            db = SessionLocal()
+            owner = _start(db).user("initiator").user.id
+            db.commit()
+
+            event = events.TaskBecameErroneousEvent(task_id=uuid.uuid4())
+            with db.begin():
+                events.publish_event(event, db)
+                # Issuing a number releases a savepoint inside the open transaction.
+                service_application.start_workflow(db, WF_NAME, owner)
+                assert delivered == []
+            assert delivered == [event]
 
     def test_copy_preview_only_issues_numbers_on_confirmed_start(self, db_engine_ctx):
         with db_engine_ctx():

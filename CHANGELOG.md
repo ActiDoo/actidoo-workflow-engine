@@ -103,6 +103,15 @@ releases correspond to the git tags of this repository.
   - Now: only starting the copy records its number. A number shown in the
     preview is provisional until the user starts the workflow.
 
+- **When** a workflow issues a business number in a step in which task
+  notifications are already pending, e.g. when one message continues several
+  workflows:
+  - Before: the pending notification mails could be sent as soon as the
+    number was issued, before the step was saved. If saving failed afterwards,
+    the mails had already gone out.
+  - Now: notifications are sent only after the step is saved. If saving
+    fails, none are sent.
+
 ## [0.1.46] - 2026-11-04
 
 ### Fixed
