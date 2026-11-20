@@ -194,6 +194,9 @@ Tests:
 
 ### Added
 
+- Admin task data can be shown as a collapsible tree. "Edit JSON" returns
+  to the text editor.
+
 - **When** a text field must have a certain format, e.g. a cost center
   `CC-1234`:
   - Before: the Modeler's "Custom regular expression" was ignored. The form
@@ -224,6 +227,10 @@ Tests:
 
 ### Changed
 
+- Static form texts no longer add empty technical entries to submitted task
+  data. Existing instances are not cleaned up. Service results, including
+  `null`, continue to be stored.
+
 - **When** a user resets a form to its initial state or leaves the user
   settings with unsaved changes:
   - Before: the buttons read "Cancel / Reset" and "Stay / Leave". It was not
@@ -251,6 +258,10 @@ Tests:
     cancel icon.
 
 ### Fixed
+
+- Forms: `depends_on` works inside dynamic lists. The select reacts to the
+  field of its own row, and the `options_function` sees that row's values.
+  The reset no longer skips edits made shortly after loading options.
 
 - **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
   workflow that an extension provides:

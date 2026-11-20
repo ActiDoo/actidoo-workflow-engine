@@ -597,6 +597,21 @@ def remove_unknown_fields_from_task_data(data, validation_schema, on_remove=None
     return data
 
 
+def remove_static_text_fields(data, jsonschema):
+    if not isinstance(data, dict):
+        return
+    for key, node in jsonschema.get("properties", {}).items():
+        if not isinstance(node, dict) or key not in data:
+            continue
+        if node.get("type") == "null":
+            del data[key]
+        elif node.get("type") == "array" and isinstance(data[key], list):
+            for row in data[key]:
+                remove_static_text_fields(row, node.get("items", {}))
+        else:
+            remove_static_text_fields(data[key], node)
+
+
 def get_static_options(jsonschema, path):
     node = _get_subschema(global_jsonschema=jsonschema, path=path)
     oneOf = node.get("oneOf", [])
@@ -643,6 +658,7 @@ def get_function_options(jsonschema, property_path, options_function, form_data,
         raise OptionFunctionNotFound(f"Error when looking up options_function '{options_function}'")
 
     oth = OptionTaskHelper(
+        jsonschema=jsonschema,
         form_data=form_data,
         property_path=property_path,
         allowed_data_models=set(functions_env.get("DATA_MODELS", [])),
@@ -1061,7 +1077,7 @@ def remove_data_uri_fields(schema):
             remove_data_uri_fields(s)
 
 
-def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, property_path, options_folder, functions_env):
+def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, property_path, options_folder, functions_env, current_path=None):
     def custom_properties_validator(validator, value, instance, schema):
         log.debug("custom_properties_validator: instance=%s, property_path=%s, value=%s)", instance, property_path, value)
 
@@ -1137,6 +1153,9 @@ def make_custom_properties_validator(form: ReactJsonSchemaFormData, task_data, p
                 form_data=task_data,
                 property_path=p,
                 allowed_data_models=set(functions_env.get("DATA_MODELS", [])),
+                path=list(current_path) if current_path else None,
+                key=current_path[-1] if current_path else None,
+                value=copy.deepcopy(instance),
             )
             try:
                 data = func(vth=vth)
@@ -1256,7 +1275,8 @@ def validate_task_data(
         on_remove=_collect_unknown_field if preserve_unknown_fields else None,
     )
 
-    position, tracked_task_data = get_position_tracker(cleaned_task_data)
+    current_path: list = []
+    position, tracked_task_data = get_position_tracker(cleaned_task_data, current_path=current_path)
 
     # if there's "custom_properties"  within jsonschema["properties"] (the contents are the custom properties from the Camunda Modeler),
     # then this validator is called:
@@ -1269,6 +1289,7 @@ def validate_task_data(
                 task_data=cleaned_task_data,
                 property_path=position,
                 form=form,
+                current_path=current_path,
             ),
             "accept": accept_validator,
         },

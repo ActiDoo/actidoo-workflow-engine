@@ -19,11 +19,17 @@ class ValidationTaskHelper:
         form_data,
         property_path,
         allowed_data_models: set[str] | None = None,
+        path: list | None = None,
+        key: str | None = None,
+        value=None,
     ):
         self.db: Session = SessionLocal()
         self.form_data = form_data
         self.property_path = property_path
         self._allowed_data_models: set[str] = allowed_data_models or set()
+        self.path = path
+        self.key = key
+        self.value = value
 
     def get_connector(self, type_name: str, instance_name: str):
         """Obtain a configured connector as a context manager."""

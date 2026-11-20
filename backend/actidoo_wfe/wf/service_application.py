@@ -724,6 +724,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data, locale: str, rais
         log.error("Errors during validation of submitted task data" + str(validation_result.error_schema))
         raise ValidationResultContainsErrors(message="Errors during validation of submitted task data", error_schema=validation_result.error_schema)
 
+    service_form.remove_static_text_fields(validation_result.task_data, task.jsonschema)
     return validation_result.task_data
 
 
@@ -957,7 +958,7 @@ def search_property_options(
     db: Session,
     user_id: uuid.UUID,
     task_id: uuid.UUID,
-    property_path: list[str],
+    property_path: list[str | int],
     search: str,
     include_value: str | list[str] | None,
     form_data: dict | None,
