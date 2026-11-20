@@ -9,6 +9,9 @@ releases correspond to the git tags of this repository.
 
 ### Added
 
+- Admin task data can be shown as a collapsible tree. "Edit JSON" returns
+  to the text editor.
+
 - **When** a text field must have a certain format, e.g. a cost center
   `CC-1234`:
   - Before: the Modeler's "Custom regular expression" was ignored. The form
@@ -38,6 +41,10 @@ releases correspond to the git tags of this repository.
     first. Workflow owners can still only cancel.
 
 ### Changed
+
+- Static form texts no longer add empty technical entries to submitted task
+  data. Existing instances are not cleaned up. Service results, including
+  `null`, continue to be stored.
 
 - **When** a user resets a form to its initial state or leaves the user
   settings with unsaved changes:
