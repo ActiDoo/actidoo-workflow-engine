@@ -18,6 +18,10 @@ class UserMayNotStartWorkflowException(Exception):
     pass
 
 
+class WorkflowCopySourceNotFoundException(Exception):
+    pass
+
+
 class UserMayNotCopyWorkflowException(Exception):
     pass
 

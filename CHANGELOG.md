@@ -85,6 +85,13 @@ releases correspond to the git tags of this repository.
   - Now: the preview opens and the copy can start. The first task shows the
     copied values and the user must fill the required field to submit it.
 
+- **When** a workflow assigns a business number before its first form and a user
+  opens the copy preview:
+  - Before: preparing or reopening the preview could consume numbers for
+    instances that were never saved.
+  - Now: only starting the copy records its number. A number shown in the
+    preview is provisional until the user starts the workflow.
+
 ## [0.1.46] - 2026-11-04
 
 ### Fixed

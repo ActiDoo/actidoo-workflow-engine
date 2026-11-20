@@ -19,6 +19,11 @@ import { PcDateString } from '@/ui5-components';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { useDispatch, useSelector } from 'react-redux';
 import { State } from '@/store';
+import { useMutation, useQueryClient } from 'react-query';
+import {
+  loadWorkflowPreview,
+  workflowPreviewKey,
+} from '@/pages/start-workflow-preview/workflowPreview';
 import { useNavigate, useParams, createSearchParams } from 'react-router-dom';
 import { UserTask } from '@/models/models';
 import { postRequest } from '@/store/generic-data/actions';
@@ -73,12 +78,54 @@ const CancelWorkflowDialogContent: React.FC<{
   );
 };
 
+const CopyWorkflowButton: React.FC<{ workflowId?: string }> = ({ workflowId }) => {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const preview = useMutation(loadWorkflowPreview);
+  const showError = (): void => {
+    dispatch(addToast(<>{t('singleTaskHeader.copyRequestFailed')}</>));
+  };
+  const prepareCopy = (): void => {
+    if (!workflowId) {
+      dispatch(addToast(<>{t('singleTaskHeader.missingWorkflowId')}</>));
+      return;
+    }
+    const request = { copy_from: workflowId };
+    preview.mutate(request, {
+      onError: showError,
+      onSuccess: data => {
+        if (!data.task?.id || !data.task.jsonschema || !data.task.uischema) {
+          showError();
+          return;
+        }
+        const preparedPreviewId = data.task.id;
+        queryClient.setQueryData(workflowPreviewKey(request, preparedPreviewId), data);
+        navigate(
+          {
+            pathname: '/tasks/open/start_workflow_preview',
+            search: createSearchParams(request).toString(),
+          },
+          { state: { preparedPreviewId } }
+        );
+      },
+    });
+  };
+  return (
+    <BusyIndicator active={preview.isLoading} delay={0}>
+      <Button design={ButtonDesign.Emphasized} disabled={preview.isLoading} onClick={prepareCopy}>
+        {t('singleTaskHeader.startNewWorkflowWithData')}
+      </Button>
+    </BusyIndicator>
+  );
+};
+
 export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
   const { t } = useTranslation();
   const { workflowId } = useParams();
   const { task } = props;
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   // The task-view response (BFF) ships the instance block alongside the tasks —
   // works for deep links too, unlike searching the sidebar's loaded pages.
@@ -199,18 +246,6 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
 
   const showDialog = Modals.useShowDialog();
 
-  const handleCopyInstance = (): void => {
-    // The route param IS the instance id — no need for the instance block here.
-    if (!workflowId) {
-      dispatch(addToast(<>{t('singleTaskHeader.missingWorkflowId')}</>));
-      return;
-    }
-    navigate({
-      pathname: '/tasks/open/start_workflow_preview',
-      search: createSearchParams({ copy_from: workflowId }).toString(),
-    });
-  };
-
   return (
     <div className="bg-white mb-2 py-3 px-3 md:px-12">
       <div className="flex justify-between items-center gap-4">
@@ -240,9 +275,7 @@ export const SingleTaskHeader: React.FC<TaskItemHeaderProps> = props => {
           </MessageStrip>
         )}
         {!isReadonly && task?.state_completed && task.assigned_to_me ? (
-          <Button design={ButtonDesign.Emphasized} onClick={handleCopyInstance}>
-            {t('singleTaskHeader.startNewWorkflowWithData')}
-          </Button>
+          <CopyWorkflowButton key={workflowId} workflowId={workflowId} />
         ) : null}
         {!isReadonly && !task.assigned_user ? (
           <BusyIndicator active={assignTaskToMeLoadState} delay={0} className="text-white">

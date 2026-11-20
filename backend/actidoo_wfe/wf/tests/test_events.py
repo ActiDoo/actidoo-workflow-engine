@@ -15,22 +15,10 @@ from actidoo_wfe.wf import events
 def clean_handlers():
     old_handlers = events.handlers
     events.handlers = {}
-    events.session_events = {}
     try:
         yield
     finally:
         events.handlers = old_handlers
-
-
-def test_publish_event_collects_event(db_engine_ctx, clean_handlers):
-    with db_engine_ctx():
-        session = SessionLocal()
-        session.begin()
-        event_instance = events.TaskReadyForUserNotificationEvent(user_id=uuid.uuid4(), task_id=uuid.uuid4())
-        events.publish_event(event_instance, session)
-
-        assert session in events.session_events
-        assert events.session_events[session][0] == event_instance
 
 
 def test_handler_registration_and_execution(db_engine_ctx, clean_handlers):
@@ -46,8 +34,6 @@ def test_handler_registration_and_execution(db_engine_ctx, clean_handlers):
 
         event_instance = events.TaskReadyForUserNotificationEvent(user_id=uuid.uuid4(), task_id=uuid.uuid4())
         events.publish_event(event_instance, session)
-
-        events.handle_pending_events(session)
 
         wait_for_results(results, 1, 2)
 
@@ -103,26 +89,41 @@ def test_event_handling_in_transaction(db_engine_ctx, clean_handlers):
         assert results[0] == event_instance
 
 
-def test_cleanup_session_events(db_engine_ctx, clean_handlers):
+def test_closing_an_uncommitted_session_discards_events(db_engine_ctx, monkeypatch):
     with db_engine_ctx():
-        session = SessionLocal()
-        event_instance = events.TaskReadyForUserNotificationEvent(user_id=uuid.uuid4(), task_id=uuid.uuid4())
-        events.publish_event(event_instance, session)
+        delivered = []
+        monkeypatch.setattr(events, "_handle_event", delivered.append)
+        db = SessionLocal()
+        db.begin()
+        events.publish_event(events.TaskBecameErroneousEvent(task_id=uuid.uuid4()), db)
+        db.close()
+        with db.begin():
+            pass
+        assert delivered == []
 
-        events.cleanup_session_events(session, None)
 
-        assert session not in events.session_events
-
-
-def test_cleanup_after_transaction_end(db_engine_ctx, clean_handlers):
+def test_savepoint_events_follow_their_transaction(db_engine_ctx, monkeypatch):
     with db_engine_ctx():
-        session = SessionLocal()
-        event_instance = events.TaskReadyForUserNotificationEvent(user_id=uuid.uuid4(), task_id=uuid.uuid4())
-        events.publish_event(event_instance, session)
+        delivered = []
+        monkeypatch.setattr(events, "_handle_event", delivered.append)
+        db = SessionLocal()
+        outer, kept, discarded = [events.TaskBecameErroneousEvent(task_id=uuid.uuid4()) for _ in range(3)]
+        with db.begin():
+            events.publish_event(outer, db)
+            with db.begin_nested():
+                events.publish_event(kept, db)
+            preview = db.begin_nested()
+            with db.begin_nested():
+                events.publish_event(discarded, db)
+            preview.rollback()
+            assert delivered == []
+        assert delivered == [outer, kept]
 
-        session.rollback()
-
-        assert session not in events.session_events
+        db.begin()
+        with db.begin_nested():
+            events.publish_event(discarded, db)
+        db.rollback()
+        assert delivered == [outer, kept]
 
 
 def test_task_ready_for_role_notification_event_dispatches_handler(db_engine_ctx, clean_handlers):

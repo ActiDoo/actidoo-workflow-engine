@@ -16,7 +16,7 @@ import uuid
 import pytest
 
 from actidoo_wfe.database import SessionLocal, SessionMaker
-from actidoo_wfe.wf import repository
+from actidoo_wfe.wf import repository, service_application
 from actidoo_wfe.wf.bff.bff_admin_schema import GetAllTasksResponse
 from actidoo_wfe.wf.constants import DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE
 from actidoo_wfe.wf.exceptions import DataModelAccessDeniedError
@@ -82,6 +82,31 @@ class TestIssuing:
             with SessionMaker() as db:
                 instance = repository.load_workflow_instance(db=db, workflow_id=dummy.workflow_instance_id)
             assert instance.get_data(DATA_KEY_WORKFLOW_INSTANCE_SUBTITLE) == "CASE-01000"
+
+    def test_copy_preview_only_issues_numbers_on_confirmed_start(self, db_engine_ctx):
+        with db_engine_ctx():
+            db = SessionLocal()
+            dummy = _start(db)
+            owner = dummy.user("initiator").user.id
+            source = dummy.workflow_instance_id
+
+            # The legacy copy-data endpoint and both kinds of preview can be retried.
+            service_application.get_workflow_copy_data(db, owner, source)
+            service_application.get_workflow_preview(db, WF_NAME, owner)
+            for _ in range(2):
+                preview = service_application.get_workflow_preview(db, None, owner, copy_from=source)
+                assert preview.subtitle == "CASE-01002"
+            db.commit()
+            assert [row.value for row in _rows()] == [1000, 1001]
+            assert workflow_module.ISSUED == [("CASE-01000", "CASE-01001")] + [("CASE-01002", "CASE-01003")] * 4
+
+            workflow_module.ISSUED.clear()
+            copied = service_application.start_workflow(db, None, owner, copy_from=source)
+            db.commit()
+            assert workflow_module.ISSUED == [("CASE-01002", "CASE-01003")]
+            assert [(row.value, row.workflow_instance_id) for row in _rows()] == [
+                (1000, source), (1001, source), (1002, copied), (1003, copied),
+            ]
 
     def test_a_second_run_continues_the_sequence(self, db_engine_ctx):
         with db_engine_ctx():

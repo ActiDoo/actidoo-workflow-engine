@@ -78,7 +78,7 @@ export interface StartWorkflowPreviewResponse {
   name: string;
   title: string;
   subtitle?: string;
-  task: UserTask;
+  task: UserTask | null;
 }
 
 export type FormTemplateMode = 'off' | 'blacklist' | 'whitelist';

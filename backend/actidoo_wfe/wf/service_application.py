@@ -9,9 +9,11 @@ import datetime
 import hashlib
 import logging
 import uuid
+from contextlib import contextmanager
 from copy import deepcopy
 from typing import Any, Literal, NamedTuple
 
+from SpiffWorkflow.bpmn import BpmnWorkflow
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
@@ -36,6 +38,7 @@ from actidoo_wfe.wf.exceptions import (
     UserMayNotCopyWorkflowException,
     UserMayNotStartWorkflowException,
     ValidationResultContainsErrors,
+    WorkflowCopySourceNotFoundException,
     WorkflowDefinitionMissingError,
     WorkflowInstanceAlreadyFinishedException,
     WorkflowSpecNotFoundException,
@@ -75,6 +78,40 @@ from actidoo_wfe.wf.types import (
 log = logging.getLogger(__name__)
 
 
+def _resolve_workflow_start(db: Session, name: str | None, user_id: uuid.UUID, copy_from: uuid.UUID | None) -> tuple[str, UserRepresentation, BpmnWorkflow | None]:
+    source = None
+    if copy_from is not None:
+        try:
+            source = repository.load_workflow_instance(db=db, workflow_id=copy_from)
+        except NoResultFound as error:
+            raise WorkflowCopySourceNotFoundException() from error
+        if service_workflow.get_created_by_id(source) != user_id:
+            raise UserMayNotCopyWorkflowException()
+        name = source.spec.name
+
+    assert name is not None
+    user = repository.load_user(db=db, user_id=user_id)
+    repository.persist_workflow_spec(db=db, name=name)
+    if not service_workflow.can_load_workflow(name=name):
+        raise InvalidWorkflowSpecException()
+    if not service_workflow.user_may_start_workflow(name=name, user=user):
+        raise UserMayNotStartWorkflowException()
+    return name, user, source
+
+
+@contextmanager
+def _preview_workflow(db: Session, name: str, user: UserRepresentation):
+    # Service tasks run to determine the first form. Discard their transactional
+    # writes even when the preview succeeds (e.g. number-range allocations).
+    savepoint = db.begin_nested()
+    try:
+        workflow = service_workflow.start_process(name=name, created_by=user)
+        service_workflow.run_workflow(workflow=workflow)
+        yield workflow
+    finally:
+        savepoint.rollback()
+
+
 def start_workflow(
     db: Session,
     name: str | None,
@@ -93,19 +130,11 @@ def start_workflow(
     ``copy_from`` starts a copy of that instance: workflow and first-task data come
     from it. Values that break today's form still land in the task; its submit checks them.
     """
-    if copy_from is not None:
-        copy = get_workflow_copy_data(db=db, user_id=user_id, workflow_instance_id=copy_from)
-        name, initial_task_data = copy.workflow_name, copy.data
-    assert name is not None
-    user_rep = repository.load_user(db=db, user_id=user_id)
-    repository.persist_workflow_spec(db=db, name=name)
-
-    if not service_workflow.can_load_workflow(name=name):
-        raise InvalidWorkflowSpecException()
-
-    if not service_workflow.user_may_start_workflow(name=name, user=user_rep):
-        raise UserMayNotStartWorkflowException()
-
+    name, user_rep, source = _resolve_workflow_start(db, name, user_id, copy_from)
+    if source is not None:
+        # A copy only prefills the first user task after the engine has reached it.
+        initial_task_data = None
+        trusted_seed = False
     workflow = service_workflow.start_process(name=name, created_by=user_rep)
 
     # A trusted seed is the workflow's engine start data: seed it into the root task
@@ -120,13 +149,15 @@ def start_workflow(
 
     copied_task_attachments: list[tuple[uuid.UUID, list[UploadedAttachmentRepresentation]]] = []
 
-    if initial_task_data is not None:
+    if initial_task_data is not None or source is not None:
         ready_tasks_in_new_workflow = service_workflow.get_usertasks_for_user(
             workflow=workflow,
             user=user_rep,
             state="ready",
         )
 
+        if source is not None:
+            initial_task_data = _first_task_copy_data(source, user_rep, ready_tasks_in_new_workflow)
         if not ready_tasks_in_new_workflow:
             log.warning("No ready user tasks available to apply initial data for workflow %s", name)
         else:
@@ -172,22 +203,14 @@ def get_workflow_preview(
     task_data: dict | None = None,
     copy_from: uuid.UUID | None = None,
 ) -> WorkflowPreviewRepresentation:
-    if copy_from is not None:
-        copy = get_workflow_copy_data(db=db, user_id=user_id, workflow_instance_id=copy_from)
-        name, task_data = copy.workflow_name, copy.data
-    assert name is not None
-    user_rep = repository.load_user(db=db, user_id=user_id)
-    repository.persist_workflow_spec(db=db, name=name)
+    name, user_rep, source = _resolve_workflow_start(db, name, user_id, copy_from)
+    with _preview_workflow(db, name, user_rep) as workflow:
+        return _build_workflow_preview(db, workflow, user_rep, source, task_data)
 
-    if not service_workflow.can_load_workflow(name=name):
-        raise InvalidWorkflowSpecException()
 
-    if not service_workflow.user_may_start_workflow(name=name, user=user_rep):
-        raise UserMayNotStartWorkflowException()
-
-    workflow = service_workflow.start_process(name=name, created_by=user_rep)
-    service_workflow.run_workflow(workflow=workflow)
-
+def _build_workflow_preview(
+    db: Session, workflow: BpmnWorkflow, user_rep: UserRepresentation, source: BpmnWorkflow | None, task_data: dict | None
+) -> WorkflowPreviewRepresentation:
     subtitle = service_workflow.get_subtitle(workflow=workflow)
 
     workflow_rep = WorkflowPreviewRepresentation(
@@ -202,6 +225,8 @@ def get_workflow_preview(
         user=user_rep,
         state="ready",
     )
+    if source is not None:
+        task_data = _first_task_copy_data(source, user_rep, usertasks)
     if not usertasks:
         return workflow_rep
 
@@ -213,7 +238,7 @@ def get_workflow_preview(
             task=first_task,
             submitted_data=task_data,
             locale=user_rep.locale,
-            raise_on_errors=copy_from is None,
+            raise_on_errors=source is None,
         )
         service_workflow.update_task_data(
             workflow=workflow,
@@ -255,78 +280,26 @@ def get_workflow_copy_data(
     user_id: uuid.UUID,
     workflow_instance_id: uuid.UUID,
 ) -> WorkflowCopyInstruction:
-    original_instance = repository.load_workflow_instance(
-        db=db,
-        workflow_id=workflow_instance_id,
-    )
-    original_created_by = service_workflow.get_created_by_id(original_instance)
+    name, user, source = _resolve_workflow_start(db, None, user_id, workflow_instance_id)
+    assert source is not None
+    with _preview_workflow(db, name, user) as workflow:
+        ready_tasks = service_workflow.get_usertasks_for_user(workflow=workflow, user=user, state="ready")
+        data = _first_task_copy_data(source, user, ready_tasks)
+        if ready_tasks:
+            data = _clean_submitted_task_data(workflow, ready_tasks[0], data, user.locale, raise_on_errors=False)
+        return WorkflowCopyInstruction(workflow_name=name, task_name=ready_tasks[0].name if ready_tasks else "", data=data)
 
-    if original_created_by != user_id:
-        raise UserMayNotCopyWorkflowException()
 
-    user_rep = repository.load_user(db=db, user_id=user_id)
-
-    workflow_name = original_instance.spec.name
-
-    if not service_workflow.can_load_workflow(name=workflow_name):
-        raise InvalidWorkflowSpecException()
-
-    if not service_workflow.user_may_start_workflow(name=workflow_name, user=user_rep):
-        raise UserMayNotStartWorkflowException()
-
-    repository.persist_workflow_spec(db=db, name=workflow_name)
-
-    workflow_preview = service_workflow.start_process(
-        name=workflow_name,
-        created_by=user_rep,
-    )
-    service_workflow.run_workflow(workflow=workflow_preview)
-
-    ready_tasks_in_new_workflow = service_workflow.get_usertasks_for_user(
-        workflow=workflow_preview,
-        user=user_rep,
-        state="ready",
-    )
-    tasks_in_original_workflow = service_workflow.get_usertasks_for_user(
-        workflow=original_instance,
-        user=user_rep,
-        state="completed",
-    )
-
-    cleaned_data_for_first_task: dict | None = None
-    first_task_name = ""
-
-    for idx, t_new in enumerate(ready_tasks_in_new_workflow):
-        matching_original_task = next(
-            (t_original for t_original in tasks_in_original_workflow if t_original.name == t_new.name),
-            None,
-        )
-
-        if matching_original_task is None or matching_original_task.assigned_user_id != user_id:
+def _first_task_copy_data(source: BpmnWorkflow, user: UserRepresentation, ready_tasks: list[UserTaskWithoutNestedAssignedUserRepresentation]) -> dict:
+    completed = service_workflow.get_usertasks_for_user(workflow=source, user=user, state="completed")
+    first_data = {}
+    for index, target in enumerate(ready_tasks):
+        original = next((task for task in completed if task.name == target.name), None)
+        if original is None or original.assigned_user_id != user.id:
             raise UserMayNotCopyWorkflowException()
-
-        cleaned_task_data = _clean_submitted_task_data(
-            workflow=workflow_preview,
-            task=t_new,
-            submitted_data=matching_original_task.data,
-            locale=user_rep.locale,
-            raise_on_errors=False,  # edited and validated again in the form
-        )
-
-        if idx == 0:
-            cleaned_data_for_first_task = cleaned_task_data
-            first_task_name = t_new.name
-
-    if cleaned_data_for_first_task is None:
-        cleaned_data_for_first_task = {}
-        if ready_tasks_in_new_workflow:
-            first_task_name = ready_tasks_in_new_workflow[0].name
-
-    return WorkflowCopyInstruction(
-        workflow_name=workflow_name,
-        task_name=first_task_name,
-        data=cleaned_data_for_first_task,
-    )
+        if index == 0:
+            first_data = original.data
+    return first_data
 
 
 def start_workflow_with_message(db: Session, name: str, message: WorkflowMessage) -> uuid.UUID:
