@@ -8,20 +8,21 @@ import { useParams } from 'react-router-dom';
 import { FilterOptionOption } from 'react-select/dist/declarations/src/filters';
 import { WeComboBox } from '@/utils/components/WeComboBox';
 import { PcValueLabelItem } from '@/models/models';
+import { isEqual } from 'lodash';
+import { getPropertyPath, useDependencyValues } from '@/rjsf-customs/custom-widgets/dependsOn';
 import { usePropertyOptions } from '@/rjsf-customs/hooks/usePropertyOptions';
 
 const SelectDynamic = (props: WidgetProps): ReactElement => {
   const [optionsLoaded, setOptionsLoaded] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<PcValueLabelItem | null>(null);
   const [search, setSearch] = useState<string>('');
-  const isDisabled = props.disabled ?? props.readonly;
-  const lastValueChangeRef = useRef(Date.now());
+  const isDisabled = Boolean(props.disabled || props.readonly);
   const { taskId } = useParams();
   const effectiveTaskId = taskId ?? (props.registry as any)?.formContext?.taskId;
 
   const { options, isLoading, loadMore, reload, cancelReload, clear } = usePropertyOptions({
     taskId: effectiveTaskId,
-    propertyPath: props.uiSchema ? props.uiSchema['ui:path'] : undefined,
+    propertyPath: props.uiSchema ? getPropertyPath(props.id, props.uiSchema['ui:path']) : undefined,
     search,
     includeValue: props?.value,
     formData: (props.registry as any)?.formContext?.formData,
@@ -61,9 +62,6 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
   };
 
   useEffect(() => {
-    const now = Date.now();
-    lastValueChangeRef.current = now;
-
     if (!optionsLoaded) {
       reload();
       setOptionsLoaded(true);
@@ -72,33 +70,27 @@ const SelectDynamic = (props: WidgetProps): ReactElement => {
     }
   }, [props.value, options, optionsLoaded]);
 
-  if (props.uiSchema && 'ui:dependsOn' in props.uiSchema) {
-    const dependsOn = props.uiSchema['ui:dependsOn'];
-    const formContextFormData = (props.registry as any)?.formContext?.formData;
-    const effectDeps = dependsOn.map((dep: string) =>
-      formContextFormData && Object.prototype.hasOwnProperty.call(formContextFormData, dep)
-        ? formContextFormData[dep]
-        : null
-    );
+  const effectDeps = useDependencyValues(
+    props.uiSchema?.['ui:dependsOn'],
+    (props.registry as any)?.formContext
+  );
+  const prevDepsRef = useRef(effectDeps);
+  const prevValueRef = useRef(props.value);
 
-    useEffect(() => {
-      const now = Date.now();
-      const timeSinceLastValueChange = now - (lastValueChangeRef.current || 0);
-      // When the data is first filled into the form and there are already values for these fields, then all fields are filled "simultaneously".
-      // Then all Change Events are processed "simultaneously".
-      // Then it is determined that the Dependency field (e.g. Car Type) has changed and the dependent field (e.g. "Car Sub Type") is reset,
-      // so the initial value is gone.
-      // I have solved this with a time check that checks whether the two fields have changed in quick succession and then does not perform a reset.
+  useEffect(() => {
+    const changed = !isEqual(effectDeps, prevDepsRef.current);
+    prevDepsRef.current = effectDeps;
+    if (!changed || isDisabled) return;
+    setSelectedOption(null);
+    setOptionsLoaded(false);
+    setSearch('');
+    clear();
+    if (props.value && props.value === prevValueRef.current) props.onChange(null);
+  }, effectDeps);
 
-      if (timeSinceLastValueChange > 1000) {
-        setSelectedOption(null);
-        setOptionsLoaded(false);
-        setSearch('');
-        clear();
-        props.onChange('');
-      }
-    }, effectDeps);
-  }
+  useEffect(() => {
+    prevValueRef.current = props.value;
+  });
 
   return (
     <div>

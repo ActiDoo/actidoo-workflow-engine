@@ -14,5 +14,8 @@
   },
   "test-flow-demo-form-upload/upload-files.fixture.json": {
     "form": "TestFlowDemoFormUpload/UploadFiles.form"
+  },
+  "test-flow-depends-on/form010-fill.fixture.json": {
+    "form": "TestFlow_DependsOn/Form010_Fill.form"
   }
 }

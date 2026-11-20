@@ -1,0 +1,565 @@
+{
+  "components": [
+    {
+      "text": "## Form semantics\n\nStart a fresh instance for each case on each branch. Change only the fields in that case. After a successful submit, open the next task. **Last submit** shows the results by case number.",
+      "type": "text",
+      "layout": {
+        "row": "Row_intro",
+        "columns": null
+      },
+      "id": "Field_intro"
+    },
+    {
+      "label": "Last submit",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_service_saw",
+        "columns": null
+      },
+      "id": "Field_service_saw",
+      "key": "service_saw",
+      "disabled": true
+    },
+    {
+      "text": "### 1a. Required text containing only spaces\n\n**Error case — spaces pass the required check.**\n\nReplace the text with three spaces and submit. A field error should keep this task open.",
+      "type": "text",
+      "layout": {
+        "row": "Row_required",
+        "columns": null
+      },
+      "id": "Field_required"
+    },
+    {
+      "label": "Required text",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_text_required",
+        "columns": null
+      },
+      "id": "Field_text_required",
+      "key": "text_required",
+      "validate": {
+        "required": true
+      },
+      "defaultValue": "Valid text"
+    },
+    {
+      "text": "### 1b. Empty required list\n\n**Error case — a required list accepts zero rows.**\n\nDelete the only row and submit. A list error should keep this task open.",
+      "type": "text",
+      "layout": {
+        "row": "Row_required_positions_case",
+        "columns": null
+      },
+      "id": "Field_required_positions_case"
+    },
+    {
+      "label": "Required positions",
+      "components": [
+        {
+          "type": "text",
+          "layout": {
+            "row": "Row_position_label",
+            "columns": null
+          },
+          "id": "Field_position_label",
+          "text": "Example position"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_required_positions",
+        "columns": null
+      },
+      "id": "Field_required_positions",
+      "path": "required_positions",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "text": "### 2. Clearing an optional field that had a value\n\n**Error case — the old date survives clearing.**\n\nClear the stored date and submit. **Last submit** should show `2. Stored date = null`.",
+      "type": "text",
+      "layout": {
+        "row": "Row_clear",
+        "columns": null
+      },
+      "id": "Field_clear"
+    },
+    {
+      "subtype": "date",
+      "dateLabel": "Stored date",
+      "type": "datetime",
+      "layout": {
+        "row": "Row_date_optional",
+        "columns": null
+      },
+      "id": "Field_date_optional",
+      "key": "date_optional"
+    },
+    {
+      "text": "### 3a. Checking empty text with `= \"\"` or `= null`\n\n**Error case — spaces leave a dependent message visible.**\n\nReplace the sample text with three spaces. Both messages below should disappear.",
+      "type": "text",
+      "layout": {
+        "row": "Row_empty_condition",
+        "columns": null
+      },
+      "id": "Field_empty_condition"
+    },
+    {
+      "label": "Sample text",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_text_optional",
+        "columns": null
+      },
+      "id": "Field_text_optional",
+      "key": "text_optional"
+    },
+    {
+      "type": "text",
+      "layout": {
+        "row": "Row_needs_text_null",
+        "columns": null
+      },
+      "id": "Field_needs_text_null",
+      "conditional": {
+        "hide": "=text_optional = null"
+      },
+      "text": "Message for the null condition"
+    },
+    {
+      "type": "text",
+      "layout": {
+        "row": "Row_needs_text_blank",
+        "columns": null
+      },
+      "id": "Field_needs_text_blank",
+      "conditional": {
+        "hide": "=text_optional = \"\""
+      },
+      "text": "Message for the empty-string condition"
+    },
+    {
+      "text": "### 3b. Checking an empty multi select with `= null`\n\n**Error case — the message stays visible after the last tag is removed.**\n\nRemove the selected tag. The message below should disappear.",
+      "type": "text",
+      "layout": {
+        "row": "Row_empty_tags_case",
+        "columns": null
+      },
+      "id": "Field_empty_tags_case"
+    },
+    {
+      "label": "Tags for the empty-value check",
+      "values": [
+        {
+          "label": "Value a",
+          "value": "a"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_tags_for_empty_check",
+        "columns": null
+      },
+      "id": "Field_tags_for_empty_check",
+      "key": "tags_for_empty_check",
+      "defaultValue": [
+        "a"
+      ],
+      "properties": {
+        "custom_type": "select_multi"
+      }
+    },
+    {
+      "type": "text",
+      "layout": {
+        "row": "Row_needs_tags",
+        "columns": null
+      },
+      "id": "Field_needs_tags",
+      "conditional": {
+        "hide": "=tags_for_empty_check = null"
+      },
+      "text": "Message for selected tags"
+    },
+    {
+      "text": "### 4. Clearing a field with a default\n\n**Error case — the default reappears.**\n\nClear the number 5 and submit. The number field should reopen empty.",
+      "type": "text",
+      "layout": {
+        "row": "Row_defaults",
+        "columns": null
+      },
+      "id": "Field_defaults"
+    },
+    {
+      "label": "Number with default 5",
+      "type": "number",
+      "layout": {
+        "row": "Row_number_optional",
+        "columns": null
+      },
+      "id": "Field_number_optional",
+      "key": "number_optional",
+      "defaultValue": 5
+    },
+    {
+      "text": "### 5. Hiding a previously cleared field\n\n**Error case — hiding cleared tags brings back the default tag.**\n\n**Tags to hide** starts cleared. Tick **Hide tags** and submit. Reopen and untick it. **Tags to hide** should still be empty.",
+      "type": "text",
+      "layout": {
+        "row": "Row_hide_cleared",
+        "columns": null
+      },
+      "id": "Field_hide_cleared"
+    },
+    {
+      "label": "Hide tags",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_hide_defaults",
+        "columns": null
+      },
+      "id": "Field_hide_defaults",
+      "key": "hide_defaults"
+    },
+    {
+      "label": "Tags to hide",
+      "values": [
+        {
+          "label": "Value a",
+          "value": "a"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_tags_optional",
+        "columns": null
+      },
+      "id": "Field_tags_optional",
+      "key": "tags_optional",
+      "defaultValue": [
+        "a"
+      ],
+      "properties": {
+        "custom_type": "select_multi"
+      },
+      "conditional": {
+        "hide": "=hide_defaults = true"
+      }
+    },
+    {
+      "text": "### 6. Uploading a file after removal\n\n**Error case — uploading onto a removed file fails.**\n\nThe previous file is already cleared. Upload one file and submit. Its filename should appear under **6. Replacement file** in **Last submit**.",
+      "type": "text",
+      "layout": {
+        "row": "Row_replace_file",
+        "columns": null
+      },
+      "id": "Field_replace_file"
+    },
+    {
+      "label": "Replacement file",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_file_optional",
+        "columns": null
+      },
+      "id": "Field_file_optional",
+      "key": "file_optional",
+      "properties": {
+        "custom_type": "attachment_single"
+      }
+    },
+    {
+      "text": "### 7. A hide-if compares a field that was never filled\n\n**Error case — the server drops a visible note.**\n\nLeave **Category** untouched. Enter a note and submit. Your text should appear under **7. Note** in **Last submit**.",
+      "type": "text",
+      "layout": {
+        "row": "Row_hide_if",
+        "columns": null
+      },
+      "id": "Field_hide_if"
+    },
+    {
+      "label": "Category",
+      "values": [
+        {
+          "label": "Value a",
+          "value": "a"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_category",
+        "columns": null
+      },
+      "id": "Field_category",
+      "key": "category"
+    },
+    {
+      "label": "Note",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_note_unless_a",
+        "columns": null
+      },
+      "id": "Field_note_unless_a",
+      "key": "note_unless_a",
+      "conditional": {
+        "hide": "=category = \"a\""
+      }
+    },
+    {
+      "text": "### 8. A hide-if compares a number with `> 10`\n\n**Error case — a reason entered at 10 disappears.**\n\nLeave **Amount** at 10. Enter a reason and submit. Your text should appear under **8. Reason** in **Last submit**.",
+      "type": "text",
+      "layout": {
+        "row": "Row_numeric_condition",
+        "columns": null
+      },
+      "id": "Field_numeric_condition"
+    },
+    {
+      "label": "Amount",
+      "type": "number",
+      "layout": {
+        "row": "Row_amount",
+        "columns": null
+      },
+      "id": "Field_amount",
+      "key": "amount"
+    },
+    {
+      "label": "Reason",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_reason_up_to_10",
+        "columns": null
+      },
+      "id": "Field_reason_up_to_10",
+      "key": "reason_up_to_10",
+      "conditional": {
+        "hide": "=amount > 10"
+      }
+    },
+    {
+      "text": "### 9. A hide-if compares the quoted value `\"true_positive\"`\n\n**Error case — details for True positive disappear.**\n\nLeave **True positive** selected. Enter details and submit. Your text should appear under **9. Finding details** in **Last submit**.",
+      "type": "text",
+      "layout": {
+        "row": "Row_quoted_text",
+        "columns": null
+      },
+      "id": "Field_quoted_text"
+    },
+    {
+      "label": "Finding",
+      "values": [
+        {
+          "label": "True positive",
+          "value": "true_positive"
+        },
+        {
+          "label": "False positive",
+          "value": "false_positive"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_finding",
+        "columns": null
+      },
+      "id": "Field_finding",
+      "key": "finding"
+    },
+    {
+      "label": "Finding details",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_finding_details",
+        "columns": null
+      },
+      "id": "Field_finding_details",
+      "key": "finding_details",
+      "conditional": {
+        "hide": "=finding != \"true_positive\""
+      }
+    },
+    {
+      "text": "### 10a. A hide-if combines a form field and a row field\n\n**Error case — the server drops a visible row note.**\n\nWith **Hide all notes** off and **Item** filled, enter a note and submit. Your note should appear under **10a. Row note** in **Last submit**.",
+      "type": "text",
+      "layout": {
+        "row": "Row_list",
+        "columns": null
+      },
+      "id": "Field_list"
+    },
+    {
+      "label": "Hide all notes",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_skip_notes",
+        "columns": null
+      },
+      "id": "Field_skip_notes",
+      "key": "skip_notes"
+    },
+    {
+      "label": "Notes by row",
+      "components": [
+        {
+          "label": "Item",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_item",
+            "columns": null
+          },
+          "id": "Field_item",
+          "key": "item"
+        },
+        {
+          "label": "Note",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_note",
+            "columns": null
+          },
+          "id": "Field_note",
+          "key": "note",
+          "conditional": {
+            "hide": "=skip_notes = true or this.item = \"\""
+          }
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": false,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_positions",
+        "columns": null
+      },
+      "id": "Field_positions",
+      "path": "positions"
+    },
+    {
+      "text": "### 10b. A list overview checks a row against `\"\"`\n\n**Error case — Overview keeps the Note column for a blank item.**\n\nReplace the item with three spaces. Open **Overview**. Only the **Item** column should appear.",
+      "type": "text",
+      "layout": {
+        "row": "Row_overview_case",
+        "columns": null
+      },
+      "id": "Field_overview_case"
+    },
+    {
+      "label": "Overview rows",
+      "components": [
+        {
+          "label": "Item",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_overview_item",
+            "columns": null
+          },
+          "id": "Field_overview_item",
+          "key": "overview_item"
+        },
+        {
+          "label": "Note",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_overview_note",
+            "columns": null
+          },
+          "id": "Field_overview_note",
+          "key": "overview_note",
+          "conditional": {
+            "hide": "=this.overview_item = \"\""
+          }
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": false,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_overview_rows",
+        "columns": null
+      },
+      "id": "Field_overview_rows",
+      "path": "overview_rows"
+    },
+    {
+      "text": "### 11. Read-only fields and lists\n\n**Error case — a read-only value or list can be edited.**\n\nTry editing **Read-only text** and adding a row to **Read-only list**. The text should stay unchanged and **Add** should be disabled.",
+      "type": "text",
+      "layout": {
+        "row": "Row_locked",
+        "columns": null
+      },
+      "id": "Field_locked"
+    },
+    {
+      "label": "Read-only text",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_locked_text",
+        "columns": null
+      },
+      "id": "Field_locked_text",
+      "key": "locked_text",
+      "readonly": true
+    },
+    {
+      "label": "Read-only list",
+      "components": [
+        {
+          "label": "Item",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_locked_item",
+            "columns": null
+          },
+          "id": "Field_locked_item",
+          "key": "locked_item"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_locked_rows",
+        "columns": null
+      },
+      "id": "Field_locked_rows",
+      "path": "locked_rows",
+      "readonly": true
+    },
+    {
+      "text": "To finish the instance, untick **Open this form again** and submit.",
+      "type": "text",
+      "layout": {
+        "row": "Row_finish",
+        "columns": null
+      },
+      "id": "Field_finish"
+    },
+    {
+      "label": "Open this form again",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_again",
+        "columns": null
+      },
+      "id": "Field_again",
+      "key": "again",
+      "defaultValue": true
+    }
+  ],
+  "type": "default",
+  "id": "Form010_Cases",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.4.0",
+  "schemaVersion": 16
+}
