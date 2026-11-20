@@ -27,13 +27,13 @@ const CustomCheckbox = (props: WidgetProps): ReactElement => {
             onChange={evt => {
               onCheckbox(evt);
             }}
+            aria-invalid={props.rawErrors?.length ? true : undefined}
+            aria-describedby={props.rawErrors?.length ? props.id + '__error' : undefined}
             required={props.required}
             disabled={props.disabled}
           />
         </div>
-        <label
-          htmlFor={props.id}
-          className={'ml-2 text-sm' + (props.disabled ? 'opacity-75' : '')}>
+        <label htmlFor={props.id} className={'ml-2 text-sm' + (props.disabled ? 'opacity-75' : '')}>
           {props.required ? props.label + '*' : props.label}
         </label>
       </div>

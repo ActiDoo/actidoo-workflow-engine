@@ -179,6 +179,8 @@ export const de = {
     optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
   },
   formErrors: {
+    badNumber: 'Bitte gib eine vollständige Zahl ein.',
+    badInput: 'Bitte vervollständige die Eingabe.',
     checkboxRequired: 'Bitte kreuze dieses Kästchen an.',
     minItems: 'Bitte füge mindestens {{limit}} Einträge hinzu.',
     minItemsOne: 'Bitte füge mindestens einen Eintrag hinzu.',

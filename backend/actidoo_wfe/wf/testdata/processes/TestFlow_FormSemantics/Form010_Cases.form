@@ -44,23 +44,13 @@
       "defaultValue": "Valid text"
     },
     {
-      "text": "### 1b. Empty required lists with a hide-if\n\n**Error case — a visible list has no error or a hidden list blocks submission.**\n\nDelete the only row in **Required positions** and remove the tag in **Required tags**. Submit once. Both fields should show an error in the interface language, and the form should scroll to **Required positions**. Tick **Hide required lists** and submit again. The next task should open.",
+      "text": "### 1b. Empty required list\n\n**Error case — a required list accepts zero rows.**\n\nDelete the only row and submit. A list error should keep this task open.",
       "type": "text",
       "layout": {
         "row": "Row_required_positions_case",
         "columns": null
       },
       "id": "Field_required_positions_case"
-    },
-    {
-      "type": "checkbox",
-      "layout": {
-        "row": "Row_hide_required_lists",
-        "columns": null
-      },
-      "id": "Field_hide_required_lists",
-      "key": "hide_required_lists",
-      "label": "Hide required lists"
     },
     {
       "label": "Required positions",
@@ -78,7 +68,7 @@
       "showOutline": true,
       "isRepeating": true,
       "allowAddRemove": true,
-      "defaultRepetitions": 0,
+      "defaultRepetitions": 1,
       "type": "dynamiclist",
       "layout": {
         "row": "Row_required_positions",
@@ -86,75 +76,6 @@
       },
       "id": "Field_required_positions",
       "path": "required_positions",
-      "validate": {
-        "required": true
-      },
-      "conditional": {
-        "hide": "=hide_required_lists = true"
-      }
-    },
-    {
-      "type": "select",
-      "layout": {
-        "row": "Row_required_tags",
-        "columns": null
-      },
-      "id": "Field_required_tags",
-      "key": "required_tags",
-      "label": "Required tags",
-      "values": [
-        {
-          "label": "Example tag",
-          "value": "a"
-        }
-      ],
-      "properties": {
-        "custom_type": "select_multi"
-      },
-      "validate": {
-        "required": true
-      },
-      "conditional": {
-        "hide": "=hide_required_lists = true"
-      }
-    },
-    {
-      "type": "text",
-      "layout": {
-        "row": "Row_required_choice_case",
-        "columns": null
-      },
-      "id": "Field_required_choice_case",
-      "text": "### 1c. Required selection and confirmation\n\n**Error case — a cleared choice or an unchecked confirmation passes validation.**\n\nClear **Required choice** with the ×, untick **Confirm review** and submit. Both fields should show an error. Select **Value a** and submit again. The confirmation error should remain. Tick **Confirm review** and submit. **Last submit** should show `1c. Confirm review = true`."
-    },
-    {
-      "type": "select",
-      "layout": {
-        "row": "Row_required_choice",
-        "columns": null
-      },
-      "id": "Field_required_choice",
-      "key": "required_choice",
-      "label": "Required choice",
-      "values": [
-        {
-          "label": "Value a",
-          "value": "a"
-        }
-      ],
-      "validate": {
-        "required": true
-      }
-    },
-    {
-      "label": "Confirm review",
-      "type": "checkbox",
-      "layout": {
-        "row": "Row_confirm_review",
-        "columns": null
-      },
-      "id": "Field_confirm_review",
-      "key": "confirm_review",
       "validate": {
         "required": true
       }
@@ -614,6 +535,89 @@
       "id": "Field_locked_rows",
       "path": "locked_rows",
       "readonly": true
+    },
+    {
+      "type": "text",
+      "layout": {
+        "row": "Row_combined_errors_case",
+        "columns": null
+      },
+      "id": "Field_combined_errors_case",
+      "text": "### 12a. Two errors on one submit\n\n**Error case — the browser stops at one error.**\n\nClear **Required name**, replace **Two-letter code** with `A` and submit once. Both fields should show their own error immediately."
+    },
+    {
+      "type": "textfield",
+      "layout": {
+        "row": "Row_combined_name",
+        "columns": null
+      },
+      "id": "Field_combined_name",
+      "key": "combined_name",
+      "label": "Required name",
+      "defaultValue": "Alex",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textfield",
+      "layout": {
+        "row": "Row_combined_code",
+        "columns": null
+      },
+      "id": "Field_combined_code",
+      "key": "combined_code",
+      "label": "Two-letter code",
+      "defaultValue": "AB",
+      "validate": {
+        "minLength": 2
+      }
+    },
+    {
+      "type": "text",
+      "layout": {
+        "row": "Row_error_focus_case",
+        "columns": null
+      },
+      "id": "Field_error_focus_case",
+      "text": "### 12b. Scroll to the first invalid field\n\n**Error case — the form scrolls to the top after a validation error.**\n\nReplace **Focus target** with `A` and submit. The field and its error should scroll into view. Type `B` without clicking again. The letter should appear in **Focus target**."
+    },
+    {
+      "type": "textfield",
+      "layout": {
+        "row": "Row_focus_target",
+        "columns": null
+      },
+      "id": "Field_focus_target",
+      "key": "focus_target",
+      "label": "Focus target",
+      "defaultValue": "AB",
+      "validate": {
+        "minLength": 2
+      }
+    },
+    {
+      "text": "### 12c. Translated validation message\n\n**Error case — a field error is shown in the wrong language.**\n\nReplace 10 with 9 in **Minimum quantity** and submit. With the interface in German, the field should show “Der Wert muss mindestens 10 sein.” In English, it should show “The value must be at least 10.”",
+      "type": "text",
+      "layout": {
+        "row": "Row_translated_error_case",
+        "columns": null
+      },
+      "id": "Field_translated_error_case"
+    },
+    {
+      "label": "Minimum quantity",
+      "type": "number",
+      "layout": {
+        "row": "Row_minimum_quantity",
+        "columns": null
+      },
+      "id": "Field_minimum_quantity",
+      "key": "minimum_quantity",
+      "defaultValue": 10,
+      "validate": {
+        "min": 10
+      }
     },
     {
       "text": "To finish the instance, untick **Open this form again** and submit.",

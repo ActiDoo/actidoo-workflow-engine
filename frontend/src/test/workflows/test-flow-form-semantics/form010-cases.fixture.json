@@ -30,10 +30,6 @@
         "type": "null",
         "title": ""
       },
-      "hide_required_lists": {
-        "type": "boolean",
-        "title": "Hide required lists"
-      },
       "required_positions": {
         "type": "array",
         "items": {
@@ -46,52 +42,7 @@
           }
         },
         "title": "Required positions",
-        "minItems": 1,
-        "hideif": "=hide_required_lists = true"
-      },
-      "required_tags": {
-        "type": "array",
-        "title": "Required tags",
-        "hideif": "=hide_required_lists = true",
-        "custom_properties": {
-          "custom_type": "select_multi"
-        },
-        "items": {
-          "type": "string",
-          "oneOf": [
-            {
-              "const": "a",
-              "title": "Example tag"
-            }
-          ]
-        },
         "minItems": 1
-      },
-      "Field_required_choice_case": {
-        "type": "null",
-        "title": ""
-      },
-      "required_choice": {
-        "type": [
-          "string",
-          "null"
-        ],
-        "title": "Required choice",
-        "oneOf": [
-          {
-            "const": "a",
-            "title": "Value a"
-          },
-          {
-            "const": null,
-            "title": "(null)"
-          }
-        ]
-      },
-      "confirm_review": {
-        "type": "boolean",
-        "title": "Confirm review",
-        "const": true
       },
       "Field_clear": {
         "type": "null",
@@ -391,6 +342,53 @@
         },
         "title": "Read-only list"
       },
+      "Field_combined_errors_case": {
+        "type": "null",
+        "title": ""
+      },
+      "combined_name": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Required name",
+        "default": "Alex"
+      },
+      "combined_code": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Two-letter code",
+        "default": "AB",
+        "minLength": 2
+      },
+      "Field_error_focus_case": {
+        "type": "null",
+        "title": ""
+      },
+      "focus_target": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Focus target",
+        "default": "AB",
+        "minLength": 2
+      },
+      "Field_translated_error_case": {
+        "type": "null",
+        "title": ""
+      },
+      "minimum_quantity": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "title": "Minimum quantity",
+        "default": 10,
+        "minimum": 10
+      },
       "Field_finish": {
         "type": "null",
         "title": ""
@@ -404,9 +402,7 @@
     "required": [
       "text_required",
       "required_positions",
-      "required_tags",
-      "required_choice",
-      "confirm_review"
+      "combined_name"
     ]
   },
   "uischema": {
@@ -427,23 +423,8 @@
       "Row_required_positions_case": [
         "Field_required_positions_case"
       ],
-      "Row_hide_required_lists": [
-        "hide_required_lists"
-      ],
       "required_positions": [
         "required_positions"
-      ],
-      "Row_required_tags": [
-        "required_tags"
-      ],
-      "Row_required_choice_case": [
-        "Field_required_choice_case"
-      ],
-      "Row_required_choice": [
-        "required_choice"
-      ],
-      "Row_confirm_review": [
-        "confirm_review"
       ],
       "Row_clear": [
         "Field_clear"
@@ -544,6 +525,27 @@
       "locked_rows": [
         "locked_rows"
       ],
+      "Row_combined_errors_case": [
+        "Field_combined_errors_case"
+      ],
+      "Row_combined_name": [
+        "combined_name"
+      ],
+      "Row_combined_code": [
+        "combined_code"
+      ],
+      "Row_error_focus_case": [
+        "Field_error_focus_case"
+      ],
+      "Row_focus_target": [
+        "focus_target"
+      ],
+      "Row_translated_error_case": [
+        "Field_translated_error_case"
+      ],
+      "Row_minimum_quantity": [
+        "minimum_quantity"
+      ],
       "Row_finish": [
         "Field_finish"
       ],
@@ -584,17 +586,10 @@
       "ui:emptyValue": null
     },
     "Field_required_positions_case": {
-      "ui:description": "### 1b. Empty required lists with a hide-if\n\n**Error case — a visible list has no error or a hidden list blocks submission.**\n\nDelete the only row in **Required positions** and remove the tag in **Required tags**. Submit once. Both fields should show an error in the interface language, and the form should scroll to **Required positions**. Tick **Hide required lists** and submit again. The next task should open.",
+      "ui:description": "### 1b. Empty required list\n\n**Error case — a required list accepts zero rows.**\n\nDelete the only row and submit. A list error should keep this task open.",
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "Field_required_positions_case"
-      ]
-    },
-    "hide_required_lists": {
-      "ui:description": "",
-      "ui:enableMarkdownInDescription": true,
-      "ui:path": [
-        "hide_required_lists"
       ]
     },
     "required_positions": {
@@ -617,41 +612,9 @@
       "ui:arrayAddButtonText": "Add",
       "ui:arrayAllowAddRemove": "True",
       "ui:arrayOverviewButtonText": "Overview",
-      "ui:defaultRepetitions": 0,
+      "ui:defaultRepetitions": 1,
       "ui:label": "Required positions",
-      "ui:copyable": true,
-      "ui:hideif": "=hide_required_lists = true"
-    },
-    "required_tags": {
-      "ui:description": "",
-      "ui:enableMarkdownInDescription": true,
-      "ui:path": [
-        "required_tags"
-      ],
-      "ui:hideif": "=hide_required_lists = true",
-      "ui:widget": "MultiSelectStatic"
-    },
-    "Field_required_choice_case": {
-      "ui:description": "### 1c. Required selection and confirmation\n\n**Error case — a cleared choice or an unchecked confirmation passes validation.**\n\nClear **Required choice** with the ×, untick **Confirm review** and submit. Both fields should show an error. Select **Value a** and submit again. The confirmation error should remain. Tick **Confirm review** and submit. **Last submit** should show `1c. Confirm review = true`.",
-      "ui:enableMarkdownInDescription": true,
-      "ui:path": [
-        "Field_required_choice_case"
-      ]
-    },
-    "required_choice": {
-      "ui:description": "",
-      "ui:enableMarkdownInDescription": true,
-      "ui:path": [
-        "required_choice"
-      ],
-      "ui:widget": "SelectStatic"
-    },
-    "confirm_review": {
-      "ui:description": "",
-      "ui:enableMarkdownInDescription": true,
-      "ui:path": [
-        "confirm_review"
-      ]
+      "ui:copyable": true
     },
     "Field_clear": {
       "ui:description": "### 2. Clearing an optional field that had a value\n\n**Error case — the old date survives clearing.**\n\nClear the stored date and submit. **Last submit** should show `2. Stored date = null`.",
@@ -984,6 +947,59 @@
       "ui:label": "Read-only list",
       "ui:copyable": true,
       "ui:disabled": true
+    },
+    "Field_combined_errors_case": {
+      "ui:description": "### 12a. Two errors on one submit\n\n**Error case — the browser stops at one error.**\n\nClear **Required name**, replace **Two-letter code** with `A` and submit once. Both fields should show their own error immediately.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_combined_errors_case"
+      ]
+    },
+    "combined_name": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "combined_name"
+      ],
+      "ui:emptyValue": null
+    },
+    "combined_code": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "combined_code"
+      ],
+      "ui:emptyValue": null
+    },
+    "Field_error_focus_case": {
+      "ui:description": "### 12b. Scroll to the first invalid field\n\n**Error case — the form scrolls to the top after a validation error.**\n\nReplace **Focus target** with `A` and submit. The field and its error should scroll into view. Type `B` without clicking again. The letter should appear in **Focus target**.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_error_focus_case"
+      ]
+    },
+    "focus_target": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "focus_target"
+      ],
+      "ui:emptyValue": null
+    },
+    "Field_translated_error_case": {
+      "ui:description": "### 12c. Translated validation message\n\n**Error case — a field error is shown in the wrong language.**\n\nReplace 10 with 9 in **Minimum quantity** and submit. With the interface in German, the field should show “Der Wert muss mindestens 10 sein.” In English, it should show “The value must be at least 10.”",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_translated_error_case"
+      ]
+    },
+    "minimum_quantity": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "minimum_quantity"
+      ],
+      "ui:emptyValue": null
     },
     "Field_finish": {
       "ui:description": "To finish the instance, untick **Open this form again** and submit.",

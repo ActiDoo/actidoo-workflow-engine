@@ -178,6 +178,8 @@ export const en = {
     optionsLoadError: 'Could not load options. Please try again.',
   },
   formErrors: {
+    badNumber: 'Please enter a complete number.',
+    badInput: 'Please complete this value.',
     checkboxRequired: 'Please tick this checkbox.',
     minItems: 'Please add at least {{limit}} entries.',
     minItemsOne: 'Please add at least one entry.',

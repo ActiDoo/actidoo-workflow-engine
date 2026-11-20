@@ -24,7 +24,7 @@ const CustomFieldErrorTemplate = (props: FieldErrorProps): ReactElement | null =
 
   return (
     // copied html from packages/bootstrap-4/src/FieldErrorTemplate/FieldErrorTemplate.tsx:
-    <ul id={id} className="list-group">
+    <ul id={id} tabIndex={-1} className="list-group">
       {normalizedErrors.map((error, i) => (
         <li key={i} className="list-group-item border-0 m-0 p-0">
           <small className="m-0 text-danger">{error}</small>

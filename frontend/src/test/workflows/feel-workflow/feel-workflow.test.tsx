@@ -10,8 +10,9 @@
 //   my_list[].my_list_B[].number_c (default 32)             hidden if parent.number_a = 7
 //   my_list[].my_list_B[].number_d (required)               hidden if this.number_c = 33
 
+import { userEvent } from 'vitest/browser';
 import { renderTaskForm } from '@/test/workflows/support/renderTaskForm';
-import feelForm from './feel-form.fixture.json';
+import feelForm from '@/test/workflows/feel-workflow/feel-form.fixture.json';
 
 // FeelForm makes no requests; the mock only turns an unexpected one into a test failure.
 vi.mock('@/ui5-components/services/FetchService', async () =>
@@ -49,6 +50,24 @@ describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
     await form.submit();
 
     expect(form.submitted).not.toHaveBeenCalled();
+  });
+
+  it('shows a native number error in the inner row and submits as soon as the field is hidden', async () => {
+    const form = renderTaskForm(feelForm);
+    await addOuterRow(form);
+    await form.field(NUMBER_D).click();
+    await userEvent.keyboard('1e');
+    await form.submit();
+
+    await expect
+      .element(form.field(NUMBER_D + '__error'))
+      .toHaveTextContent('Please enter a complete number.');
+    await expect.element(form.field(NUMBER_D)).toHaveFocus();
+    expect(form.submitted).not.toHaveBeenCalled();
+
+    await form.field(NUMBER_C).fill('33');
+    await form.submit();
+    expect(form.submitted).toHaveBeenCalledOnce();
   });
 
   it('submits after the inner required field was filled and then hidden', async () => {

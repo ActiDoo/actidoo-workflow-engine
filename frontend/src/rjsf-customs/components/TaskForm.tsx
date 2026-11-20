@@ -2,6 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 import React from 'react';
+import type CoreForm from '@rjsf/core';
 import { Form } from '@rjsf/react-bootstrap';
 import { customizeValidator } from '@rjsf/validator-ajv8';
 import type {
@@ -21,6 +22,11 @@ import CustomSchemaField from '@/rjsf-customs/custom-fields/CustomSchemaField';
 import CustomArraySchemaField from '@/rjsf-customs/custom-fields/CustomArraySchemaField';
 import CustomMultiFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomMultiFileField';
 import CustomSingleFileField from '@/rjsf-customs/custom-fields/multiFileField/CustomSingleFileField';
+import {
+  addNativeErrors,
+  focusFirstError,
+  validateOnInvalid,
+} from '@/rjsf-customs/nativeValidation';
 import { skipMinItemsPopulation } from '@/rjsf-customs/arrayDefaults';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
@@ -129,18 +135,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const scrollToFirstError = React.useCallback(() => {
-    if (rest.id) {
-      document
-        .getElementById(rest.id)
-        ?.querySelector('[id$="__error"]')
-        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-    }
-  }, [rest.id]);
+  const formRef = React.useRef<CoreForm>(null);
 
   React.useEffect(() => {
-    if (rest.extraErrors) scrollToFirstError();
-  }, [rest.extraErrors, scrollToFirstError]);
+    const instance = formRef.current;
+    if (instance)
+      return validateOnInvalid(instance.formElement.current, () => instance.validateForm());
+  }, []);
+
+  const focusError = React.useCallback(() => {
+    focusFirstError(formRef.current?.formElement.current);
+  }, []);
+
+  React.useEffect(() => {
+    if (rest.extraErrors) focusError();
+  }, [rest.extraErrors, focusError]);
 
   // Errors of fields the form does not show must not block the submit: the backend treats
   // a hidden field and everything below it as absent, and so does this filter. Visibility
@@ -173,22 +182,27 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const customValidate: NonNullable<BaseFormProps['customValidate']> = (
     formData,
     errors,
-    uiSchema
+    uiSchema,
+    schemaErrors
   ) => {
     const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
     for (const path of collectBlankRequiredPaths(rest.schema, formData, hiddenPaths)) {
       const handler = path.reduce((current: any, segment) => current?.[segment], errors);
       handler?.addError?.(t('formErrors.required'));
     }
-    return providedCustomValidate ? providedCustomValidate(formData, errors, uiSchema) : errors;
+    const customErrors =
+      providedCustomValidate?.(formData, errors, uiSchema, schemaErrors) ?? errors;
+    addNativeErrors(formRef.current?.formElement.current, customErrors, schemaErrors, t);
+    return customErrors;
   };
 
   return (
     <Form
       {...rest}
+      ref={formRef}
       _internalFormWrapper={FormWithoutEnterSubmit}
       validator={providedValidator ?? validator}
-      onError={rest.onError ?? (rest.id ? scrollToFirstError : undefined)}
+      onError={rest.onError ?? focusError}
       transformErrors={transformErrors}
       customValidate={customValidate}
       templates={templates ?? customTemplates}

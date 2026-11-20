@@ -676,7 +676,6 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
                 }
                 submitData(data.formData);
               }}
-              noHtml5Validate
               formContext={{
                 formData: preparedFormData,
                 schema: task.jsonschema,
