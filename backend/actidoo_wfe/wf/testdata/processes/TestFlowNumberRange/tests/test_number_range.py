@@ -90,15 +90,14 @@ class TestIssuing:
             owner = dummy.user("initiator").user.id
             source = dummy.workflow_instance_id
 
-            # The legacy copy-data endpoint and both kinds of preview can be retried.
-            service_application.get_workflow_copy_data(db, owner, source)
+            # Both kinds of preview can be retried.
             service_application.get_workflow_preview(db, WF_NAME, owner)
             for _ in range(2):
                 preview = service_application.get_workflow_preview(db, None, owner, copy_from=source)
                 assert preview.subtitle == "CASE-01002"
             db.commit()
             assert [row.value for row in _rows()] == [1000, 1001]
-            assert workflow_module.ISSUED == [("CASE-01000", "CASE-01001")] + [("CASE-01002", "CASE-01003")] * 4
+            assert workflow_module.ISSUED == [("CASE-01000", "CASE-01001")] + [("CASE-01002", "CASE-01003")] * 3
 
             workflow_module.ISSUED.clear()
             copied = service_application.start_workflow(db, None, owner, copy_from=source)

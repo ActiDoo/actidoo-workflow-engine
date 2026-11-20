@@ -183,14 +183,6 @@ class WorkflowPreviewRepresentation(BaseModel):
     task: UserTaskRepresentation | None
 
 
-class WorkflowCopyInstruction(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    workflow_name: str
-    task_name: str
-    data: dict
-
-
 class WorkflowStatisticsRepresentation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -9,11 +9,9 @@ import datetime
 import hashlib
 import logging
 import uuid
-from contextlib import contextmanager
 from copy import deepcopy
 from typing import Any, Literal, NamedTuple
 
-from SpiffWorkflow.bpmn import BpmnWorkflow
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
@@ -65,7 +63,6 @@ from actidoo_wfe.wf.types import (
     UserRepresentation,
     UserTaskRepresentation,
     UserTaskWithoutNestedAssignedUserRepresentation,
-    WorkflowCopyInstruction,
     WorkflowInstanceRepresentation,
     WorkflowInstanceWithoutTasksRepresentation,
     WorkflowPreviewRepresentation,
@@ -78,7 +75,7 @@ from actidoo_wfe.wf.types import (
 log = logging.getLogger(__name__)
 
 
-def _resolve_workflow_start(db: Session, name: str | None, user_id: uuid.UUID, copy_from: uuid.UUID | None) -> tuple[str, UserRepresentation, BpmnWorkflow | None]:
+def _resolve_workflow_start(db: Session, name: str | None, user_id: uuid.UUID, copy_from: uuid.UUID | None):
     source = None
     if copy_from is not None:
         try:
@@ -97,19 +94,6 @@ def _resolve_workflow_start(db: Session, name: str | None, user_id: uuid.UUID, c
     if not service_workflow.user_may_start_workflow(name=name, user=user):
         raise UserMayNotStartWorkflowException()
     return name, user, source
-
-
-@contextmanager
-def _preview_workflow(db: Session, name: str, user: UserRepresentation):
-    # Service tasks run to determine the first form. Discard their transactional
-    # writes even when the preview succeeds (e.g. number-range allocations).
-    savepoint = db.begin_nested()
-    try:
-        workflow = service_workflow.start_process(name=name, created_by=user)
-        service_workflow.run_workflow(workflow=workflow)
-        yield workflow
-    finally:
-        savepoint.rollback()
 
 
 def start_workflow(
@@ -131,10 +115,6 @@ def start_workflow(
     from it. Values that break today's form still land in the task; its submit checks them.
     """
     name, user_rep, source = _resolve_workflow_start(db, name, user_id, copy_from)
-    if source is not None:
-        # A copy only prefills the first user task after the engine has reached it.
-        initial_task_data = None
-        trusted_seed = False
     workflow = service_workflow.start_process(name=name, created_by=user_rep)
 
     # A trusted seed is the workflow's engine start data: seed it into the root task
@@ -204,13 +184,19 @@ def get_workflow_preview(
     copy_from: uuid.UUID | None = None,
 ) -> WorkflowPreviewRepresentation:
     name, user_rep, source = _resolve_workflow_start(db, name, user_id, copy_from)
-    with _preview_workflow(db, name, user_rep) as workflow:
-        return _build_workflow_preview(db, workflow, user_rep, source, task_data)
+    # Service tasks run to determine the first form. Discard their transactional
+    # writes even when the preview succeeds (e.g. number-range allocations).
+    savepoint = db.begin_nested()
+    try:
+        return _build_workflow_preview(db, name, user_rep, source, task_data)
+    finally:
+        savepoint.rollback()
 
 
-def _build_workflow_preview(
-    db: Session, workflow: BpmnWorkflow, user_rep: UserRepresentation, source: BpmnWorkflow | None, task_data: dict | None
-) -> WorkflowPreviewRepresentation:
+def _build_workflow_preview(db: Session, name: str, user_rep: UserRepresentation, source, task_data: dict | None) -> WorkflowPreviewRepresentation:
+    workflow = service_workflow.start_process(name=name, created_by=user_rep)
+    service_workflow.run_workflow(workflow=workflow)
+
     subtitle = service_workflow.get_subtitle(workflow=workflow)
 
     workflow_rep = WorkflowPreviewRepresentation(
@@ -275,22 +261,7 @@ def _build_workflow_preview(
     return workflow_rep
 
 
-def get_workflow_copy_data(
-    db: Session,
-    user_id: uuid.UUID,
-    workflow_instance_id: uuid.UUID,
-) -> WorkflowCopyInstruction:
-    name, user, source = _resolve_workflow_start(db, None, user_id, workflow_instance_id)
-    assert source is not None
-    with _preview_workflow(db, name, user) as workflow:
-        ready_tasks = service_workflow.get_usertasks_for_user(workflow=workflow, user=user, state="ready")
-        data = _first_task_copy_data(source, user, ready_tasks)
-        if ready_tasks:
-            data = _clean_submitted_task_data(workflow, ready_tasks[0], data, user.locale, raise_on_errors=False)
-        return WorkflowCopyInstruction(workflow_name=name, task_name=ready_tasks[0].name if ready_tasks else "", data=data)
-
-
-def _first_task_copy_data(source: BpmnWorkflow, user: UserRepresentation, ready_tasks: list[UserTaskWithoutNestedAssignedUserRepresentation]) -> dict:
+def _first_task_copy_data(source, user: UserRepresentation, ready_tasks: list[UserTaskWithoutNestedAssignedUserRepresentation]) -> dict:
     completed = service_workflow.get_usertasks_for_user(workflow=source, user=user, state="completed")
     first_data = {}
     for index, target in enumerate(ready_tasks):

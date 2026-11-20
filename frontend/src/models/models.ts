@@ -68,12 +68,6 @@ export interface StartWorkflowResponse {
   workflow_instance_id: string;
 }
 
-export interface CopyWorkflowDataResponse {
-  workflow_name: string;
-  task_name: string;
-  data: Record<string, unknown>;
-}
-
 export interface StartWorkflowPreviewResponse {
   name: string;
   title: string;

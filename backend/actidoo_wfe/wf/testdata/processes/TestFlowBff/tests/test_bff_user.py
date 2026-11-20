@@ -27,7 +27,6 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     GetMyWfeUserResponse,
     GetPinnedWorkflowsResponse,
     GetUserTasksResponse,
-    GetWorkflowCopyDataResponse,
     GetWorkflowInstancesResponse,
     GetWorkflowInstancesWithTasksResponse,
     GetWorkflowsResponse,
@@ -237,34 +236,6 @@ def test_missing_copy_source(db_engine_ctx):
             for endpoint in ("start_workflow", "start_workflow_preview_with_data"):
                 status, _ = client.post(name=endpoint, json={"copy_from": source})
                 assert status == 404
-            url = client.root_client.app.url_path_for("get_workflow_copy_data", workflow_instance_id=source)
-            assert client.root_client.post(url).status_code == 404
-
-
-def test_get_workflow_copy_data(db_engine_ctx):
-    with db_engine_ctx():
-        db = SessionLocal()
-        workflow = _start_bff_workflow(db)
-        workflow.user("initiator").submit(
-            task_data=FORM1_DATA_MIN,
-            workflow_instance_id=workflow.workflow_instance_id,
-        )
-        workflow.user("initiator").submit(
-            task_data=FORM2_DATA,
-            workflow_instance_id=workflow.workflow_instance_id,
-        )
-
-        client = Client()
-        with override_get_user(client=client, user=workflow.user("initiator").user), disable_role_check(client):
-            url = client.root_client.app.url_path_for(
-                "get_workflow_copy_data",
-                workflow_instance_id=str(workflow.workflow_instance_id),
-            )
-            response = client.root_client.post(url, json={})
-
-        assert response.status_code == 200
-        parsed = GetWorkflowCopyDataResponse.model_validate(response.json())
-        assert parsed.workflow_name == WF_NAME
 
 
 # ---------------------------------------------------------------------------

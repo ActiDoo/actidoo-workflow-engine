@@ -30,7 +30,6 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     GetPinnedWorkflowsResponse,
     GetUserTasksResponse,
     GetUserTasksResponseUserTasks,
-    GetWorkflowCopyDataResponse,
     GetWorkflowInstancesResponse,
     GetWorkflowInstancesWithTasksResponse,
     GetWorkflowsResponse,
@@ -176,47 +175,6 @@ def start_workflow_preview_with_data(
         )
 
     return StartWorkflowWithDataResponse.model_validate(preview.model_dump())
-
-
-@router.post("/workflow_instances/{workflow_instance_id}/copy_data", name="get_workflow_copy_data")
-def get_workflow_copy_data(
-    workflow_instance_id: uuid.UUID,
-    db: Annotated[Session, Depends(get_db)],
-    user: Annotated[WorkflowUser, Depends(get_user)],
-) -> GetWorkflowCopyDataResponse:
-    try:
-        instruction = service_application.get_workflow_copy_data(
-            db=db,
-            user_id=user.id,
-            workflow_instance_id=workflow_instance_id,
-        )
-    except WorkflowCopySourceNotFoundException:
-        raise HTTPException(status_code=404, detail="Source workflow instance not found.")
-    except UserMayNotCopyWorkflowException:
-        log.warning(f"Creating workflow copy data for instance {workflow_instance_id} failed (copy not allowed)")
-        raise HTTPException(
-            status_code=403,
-            detail="Starting workflow not allowed because the user may not copy the given workflow instance",
-        )
-    except UserMayNotStartWorkflowException:
-        log.warning(f"Creating workflow copy data for instance {workflow_instance_id} failed (start not allowed)")
-        raise HTTPException(
-            status_code=403,
-            detail="Starting workflow not allowed",
-        )
-    except InvalidWorkflowSpecException:
-        raise HTTPException(
-            status_code=404,
-            detail="Workflow specification not found",
-        )
-    except Exception:
-        log.exception(f"Creating workflow copy data for instance {workflow_instance_id} failed")
-        raise HTTPException(
-            status_code=500,
-            detail="Creating workflow copy data failed",
-        )
-
-    return GetWorkflowCopyDataResponse.model_validate(instruction)
 
 
 @router.get("/my_usertasks/{state}", name="get_usertasks")

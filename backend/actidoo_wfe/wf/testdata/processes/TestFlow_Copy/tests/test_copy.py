@@ -13,7 +13,6 @@ from actidoo_wfe.wf import providers, repository, service_workflow
 from actidoo_wfe.wf.exceptions import UserMayNotCopyWorkflowException, ValidationResultContainsErrors
 from actidoo_wfe.wf.service_application import (
     get_usertasks_for_user_id,
-    get_workflow_copy_data,
     get_workflow_preview,
     start_workflow,
 )
@@ -63,21 +62,13 @@ def test_copyWorkflowInstance(db_engine_ctx, mock_send_text_mail):
             },
         )
 
-        copy_instruction = get_workflow_copy_data(
-            db=db_session,
-            user_id=workflow.user("initiator").user.id,
-            workflow_instance_id=workflow.workflow_instance_id,
-        )
-
-        assert copy_instruction.workflow_name == "TestFlow_Copy"
-
         preview = get_workflow_preview(
             db=db_session,
             name=None,
             user_id=workflow.user("initiator").user.id,
             copy_from=workflow.workflow_instance_id,
         )
-        assert preview.name == copy_instruction.workflow_name
+        assert preview.name == "TestFlow_Copy"
         assert preview.title
 
         preview_task = preview.task
@@ -138,17 +129,19 @@ def test_copyWorkflowInstance(db_engine_ctx, mock_send_text_mail):
         )
         assert any(att.attachment.hash == ATTACHMENT_HASH for att in db_workflow_attachments)
         with pytest.raises(UserMayNotCopyWorkflowException):
-            get_workflow_copy_data(
+            get_workflow_preview(
                 db=db_session,
+                name=None,
                 user_id=workflow.user("other@example.com").user.id,
-                workflow_instance_id=workflow.workflow_instance_id,
+                copy_from=workflow.workflow_instance_id,
             )
 
         with pytest.raises(UserMayNotCopyWorkflowException):
-            get_workflow_copy_data(
+            get_workflow_preview(
                 db=db_session,
+                name=None,
                 user_id=workflow.user("admin").user.id,
-                workflow_instance_id=workflow.workflow_instance_id,
+                copy_from=workflow.workflow_instance_id,
             )
 
 
@@ -206,16 +199,11 @@ def test_copyWorkflowInstance_strips_unknown_fields(db_engine_ctx, mock_send_tex
         )
         db_session.commit()
 
-        copy_instruction = get_workflow_copy_data(
-            db=db_session,
-            user_id=workflow.user("initiator").user.id,
-            workflow_instance_id=workflow.workflow_instance_id,
-        )
         newwfid = start_workflow(
             db=db_session,
-            name=copy_instruction.workflow_name,
+            name=None,
             user_id=workflow.user("initiator").user.id,
-            initial_task_data=copy_instruction.data,
+            copy_from=workflow.workflow_instance_id,
         )
         newtask = get_usertasks_for_user_id(
             db=db_session,
@@ -256,17 +244,11 @@ def test_hidden_fields_removed_for_ready_tasks_after_copy(db_engine_ctx, mock_se
             )
             db_session.commit()
 
-            copy_instruction = get_workflow_copy_data(
-                db=db_session,
-                user_id=workflow.user("initiator").user.id,
-                workflow_instance_id=workflow.workflow_instance_id,
-            )
-
             newwfid = start_workflow(
                 db=db_session,
-                name=copy_instruction.workflow_name,
+                name=None,
                 user_id=workflow.user("initiator").user.id,
-                initial_task_data=copy_instruction.data,
+                copy_from=workflow.workflow_instance_id,
             )
 
             copied_task = get_usertasks_for_user_id(
