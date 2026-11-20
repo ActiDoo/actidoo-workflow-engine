@@ -386,11 +386,9 @@ def _insert_single_component(
         )
         _handle_empty_value(uischema, jsonschema, key)
     elif component["type"] == "checkbox":
-        jsonschema["properties"][key].update(
-            {
-                "type": "boolean",
-            },
-        )
+        jsonschema["properties"][key]["type"] = "boolean"
+        if _is_required(component):
+            jsonschema["properties"][key]["const"] = True
     elif component["type"] == "radio":
         jsonschema["properties"][key].update(
             {

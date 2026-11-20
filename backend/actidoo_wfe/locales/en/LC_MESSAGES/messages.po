@@ -108,3 +108,6 @@ msgstr ""
 
 msgid "The input does not have the expected format"
 msgstr "The input does not have the expected format"
+
+msgid "Please tick this checkbox."
+msgstr "Please tick this checkbox."

@@ -60,10 +60,7 @@
       },
       "id": "Field_hide_required_lists",
       "key": "hide_required_lists",
-      "label": "Hide required lists",
-      "validate": {
-        "required": true
-      }
+      "label": "Hide required lists"
     },
     {
       "label": "Required positions",
@@ -128,7 +125,7 @@
         "columns": null
       },
       "id": "Field_required_choice_case",
-      "text": "### 1c. Cleared required choice and unchecked required checkbox\n\n**Error case — the form accepts a cleared choice or rejects an unchecked box.**\n\nClear **Required choice** with the × and submit. Its field error should keep this task open. Select **Value a** again, leave **Hide required lists** unchecked and submit. **Last submit** should show `1c. Hide required lists = false`."
+      "text": "### 1c. Required selection and confirmation\n\n**Error case — a cleared choice or an unchecked confirmation passes validation.**\n\nClear **Required choice** with the ×, untick **Confirm review** and submit. Both fields should show an error. Select **Value a** and submit again. The confirmation error should remain. Tick **Confirm review** and submit. **Last submit** should show `1c. Confirm review = true`."
     },
     {
       "type": "select",
@@ -145,6 +142,19 @@
           "value": "a"
         }
       ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Confirm review",
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_confirm_review",
+        "columns": null
+      },
+      "id": "Field_confirm_review",
+      "key": "confirm_review",
       "validate": {
         "required": true
       }

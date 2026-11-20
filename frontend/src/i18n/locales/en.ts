@@ -178,6 +178,7 @@ export const en = {
     optionsLoadError: 'Could not load options. Please try again.',
   },
   formErrors: {
+    checkboxRequired: 'Please tick this checkbox.',
     minItems: 'Please add at least {{limit}} entries.',
     minItemsOne: 'Please add at least one entry.',
     attachmentRequired: 'Please attach at least one file.',

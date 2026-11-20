@@ -88,6 +88,11 @@
           }
         ]
       },
+      "confirm_review": {
+        "type": "boolean",
+        "title": "Confirm review",
+        "const": true
+      },
       "Field_clear": {
         "type": "null",
         "title": ""
@@ -398,10 +403,10 @@
     },
     "required": [
       "text_required",
-      "hide_required_lists",
       "required_positions",
       "required_tags",
-      "required_choice"
+      "required_choice",
+      "confirm_review"
     ]
   },
   "uischema": {
@@ -436,6 +441,9 @@
       ],
       "Row_required_choice": [
         "required_choice"
+      ],
+      "Row_confirm_review": [
+        "confirm_review"
       ],
       "Row_clear": [
         "Field_clear"
@@ -624,7 +632,7 @@
       "ui:widget": "MultiSelectStatic"
     },
     "Field_required_choice_case": {
-      "ui:description": "### 1c. Cleared required choice and unchecked required checkbox\n\n**Error case — the form accepts a cleared choice or rejects an unchecked box.**\n\nClear **Required choice** with the × and submit. Its field error should keep this task open. Select **Value a** again, leave **Hide required lists** unchecked and submit. **Last submit** should show `1c. Hide required lists = false`.",
+      "ui:description": "### 1c. Required selection and confirmation\n\n**Error case — a cleared choice or an unchecked confirmation passes validation.**\n\nClear **Required choice** with the ×, untick **Confirm review** and submit. Both fields should show an error. Select **Value a** and submit again. The confirmation error should remain. Tick **Confirm review** and submit. **Last submit** should show `1c. Confirm review = true`.",
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "Field_required_choice_case"
@@ -637,6 +645,13 @@
         "required_choice"
       ],
       "ui:widget": "SelectStatic"
+    },
+    "confirm_review": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "confirm_review"
+      ]
     },
     "Field_clear": {
       "ui:description": "### 2. Clearing an optional field that had a value\n\n**Error case — the old date survives clearing.**\n\nClear the stored date and submit. **Last submit** should show `2. Stored date = null`.",

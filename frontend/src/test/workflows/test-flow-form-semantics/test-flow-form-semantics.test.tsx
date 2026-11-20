@@ -15,6 +15,7 @@ const initialData = {
   required_tags: ['a'],
   required_choice: 'a',
   hide_required_lists: false,
+  confirm_review: true,
 };
 
 describe('Test Flow Form Semantics — validation on submit', () => {
@@ -47,6 +48,7 @@ describe('Test Flow Form Semantics — validation on submit', () => {
       required_positions: [],
       required_tags: [],
       required_choice: null,
+      confirm_review: false,
     });
     language.mockRestore();
     await submit();
@@ -60,22 +62,59 @@ describe('Test Flow Form Semantics — validation on submit', () => {
     await expect
       .element(field('required_choice__error'))
       .toHaveTextContent('Bitte fülle dieses Feld aus.');
+    await expect
+      .element(field('confirm_review__error'))
+      .toHaveTextContent('Bitte kreuze dieses Kästchen an.');
   });
 
-  it('rejects a cleared required choice and accepts an unchecked required checkbox', async () => {
+  it('keeps a cleared confirmation invalid until it is ticked again', async () => {
     const { field, selectOption, submitted, submit } = renderTaskForm(form010, initialData);
     const input = await field('required_choice').findElement();
     input.focus();
     await userEvent.keyboard('{Backspace}');
+    await field('confirm_review').click();
     await submit();
 
     await expect
       .element(field('required_choice__error'))
       .toHaveTextContent('Please fill in this field.');
+    await expect
+      .element(field('confirm_review__error'))
+      .toHaveTextContent('Please tick this checkbox.');
     expect(submitted).not.toHaveBeenCalled();
+
     await selectOption('required_choice', 'Value a');
+    await submit();
+    expect(submitted).not.toHaveBeenCalled();
+    await expect.element(field('confirm_review__error')).toBeVisible();
+    await expect.element(field('required_choice__error')).not.toBeInTheDocument();
+
+    await field('confirm_review').click();
     await submit();
     expect(submitted).toHaveBeenCalledOnce();
     expect(submitted.mock.calls[0][0]).toMatchObject(initialData);
+  });
+
+  it('leaves a new required checkbox unchecked until the user confirms', async () => {
+    // Isolate the confirmation from the manual workflow's pre-filled task data.
+    const { field, submitted, submit } = renderTaskForm({
+      jsonschema: {
+        type: 'object',
+        properties: { confirm_review: form010.jsonschema.properties.confirm_review },
+        required: ['confirm_review'],
+      },
+      uischema: {
+        'ui:layout': { Row_confirm_review: ['confirm_review'] },
+        confirm_review: form010.uischema.confirm_review,
+      },
+    });
+    await expect.element(field('confirm_review')).not.toBeChecked();
+    await submit();
+    expect(submitted).not.toHaveBeenCalled();
+
+    await field('confirm_review').click();
+    await submit();
+    expect(submitted).toHaveBeenCalledOnce();
+    expect(submitted.mock.calls[0][0].confirm_review).toBe(true);
   });
 });

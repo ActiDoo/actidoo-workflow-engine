@@ -150,6 +150,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
       (rest.formContext as { formData?: unknown } | undefined)?.formData ?? rest.formData;
     const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
     const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths).map(error => {
+      if (
+        error.name === 'const' &&
+        error.params?.allowedValue === true &&
+        /\/properties\/[^/]+\/const$/.test(error.schemaPath ?? '')
+      ) {
+        return { ...error, message: t('formErrors.checkboxRequired') };
+      }
       if (!error.name || !TRANSLATED_ERRORS.has(error.name)) return error;
       const limit = error.params?.limit;
       const key = error.name === 'minItems' && limit === 1 ? 'minItemsOne' : error.name;

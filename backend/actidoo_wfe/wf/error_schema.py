@@ -61,6 +61,8 @@ def validate_and_create_error_dict(validator, instance, uischema=None, locale=No
         if error.validator == "required":
             # The error sits on the object; put it under the one missing property it names.
             path += [name for name in error.validator_value if error.message == f"{name!r} is a required property"][:1]
+        elif error.validator == "const" and error.validator_value is True and error.schema.get("type") == "boolean":
+            message = _("Please tick this checkbox.")
         elif error.validator == "pattern":
             message = pattern_message_for_path(uischema, path) or _("The input does not have the expected format")
         set_nested_error(errors_dict, path, message)
