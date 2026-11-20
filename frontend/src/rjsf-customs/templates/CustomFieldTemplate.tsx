@@ -20,6 +20,7 @@ export default function CustomFieldTemplate<
   F extends FormContextType = any
 >({
   id,
+  fieldPathId,
   children,
   displayLabel,
   rawErrors = [],
@@ -48,7 +49,11 @@ export default function CustomFieldTemplate<
     uiOptions
   );
   if (hidden) {
-    return <div className="hidden">{children}</div>;
+    return (
+      <fieldset disabled hidden>
+        {children}
+      </fieldset>
+    );
   }
   const isCheckbox = uiOptions.widget === 'checkbox';
 
@@ -69,7 +74,7 @@ export default function CustomFieldTemplate<
       schema={schema}
       uiSchema={uiSchema}
       registry={registry}>
-      <Form.Group>
+      <Form.Group data-form-field-path={JSON.stringify(fieldPathId.path)}>
         {displayLabel && !isCheckbox && (
           <Form.Label htmlFor={id} className={rawErrors.length > 0 ? 'text-danger' : ''}>
             {label}

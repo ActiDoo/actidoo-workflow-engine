@@ -51,12 +51,18 @@ server now apply the same rules.
     around a real value are kept. This also applies while a required field
     with a `hide-if` is visible. A visible required checkbox must be ticked. An
     optional checkbox can stay unchecked. Use a required Yes/No selection
-    when either answer is valid. The checkbox rule applies to new workflow
-    instances. Running instances use the form saved when they started.
-- **When** several visible fields fail browser validation on submit, the task
-  shows their errors together and scrolls to the first one. Required fields,
-  list minimums, text length and numeric limits have German and English messages.
-  Hidden fields and their list rows do not block submission.
+    when either answer is valid. The browser also enforces required checkboxes
+    on already-running tasks. New instances store the same rule in their
+    form schema for server-side validation.
+- **When** a user submits a form with several invalid fields:
+  - Before: if a field failed HTML validation, the browser focused the first
+    such field. The user had to fix the HTML errors and submit again to see
+    schema errors.
+  - Now: one submit shows HTML and schema errors together at the visible
+    fields and focuses the first invalid field. An incomplete number such as
+    `1e` blocks submission even in an optional field. Required fields, list
+    minimums, text length and numeric limits have German and English messages.
+    Hidden fields and their list rows do not block submission.
 - **When** a `hide-if` checks if a field is empty, with `= null` or `= ""`:
   - Before: `= null` did not match empty text, and `= ""` did not match
     `null`. For a field that was never filled, `= ""` hid the field on the

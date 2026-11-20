@@ -2,7 +2,7 @@
 // Copyright (c) 2025 ActiDoo GmbH
 
 // Renders TaskForm the way SingleTask does: formData is controlled and mirrored
-// into formContext.formData (hide-if reads it from there), AJV handles validation, there
+// into formContext.formData (hide-if reads it from there), HTML and AJV handle validation, there
 // is a router because the dynamic-list template only adds its default rows under /tasks/open/,
 // and the i18n provider because the templates translate their button tooltips.
 // The captured formData equals the request body of POST user/submit_task_data:
@@ -48,27 +48,30 @@ const TaskFormHarness = ({
   const uiSchema = fixture.uischema as UiSchema;
 
   return (
-    <TaskForm
-      id="single-task-form"
-      formData={formData}
-      schema={schema}
-      uiSchema={uiSchema}
-      showErrorList={false}
-      noHtml5Validate
-      onChange={(event: IChangeEvent) => {
-        setFormData(_.cloneDeep(event.formData ?? {}));
-      }}
-      onSubmit={(event: IChangeEvent) => {
-        onSubmit(event.formData);
-      }}
-      formContext={{
-        formData,
-        schema: fixture.jsonschema,
-        uiSchema: fixture.uischema,
-        taskId: TEST_TASK_ID,
-      }}>
-      <button type="submit">Absenden</button>
-    </TaskForm>
+    <>
+      <TaskForm
+        id="single-task-form"
+        formData={formData}
+        schema={schema}
+        uiSchema={uiSchema}
+        showErrorList={false}
+        onChange={(event: IChangeEvent) => {
+          setFormData(_.cloneDeep(event.formData ?? {}));
+        }}
+        onSubmit={(event: IChangeEvent) => {
+          onSubmit(event.formData);
+        }}
+        formContext={{
+          formData,
+          schema: fixture.jsonschema,
+          uiSchema: fixture.uischema,
+          taskId: TEST_TASK_ID,
+        }}
+      />
+      <button type="submit" form="single-task-form">
+        Absenden
+      </button>
+    </>
   );
 };
 
