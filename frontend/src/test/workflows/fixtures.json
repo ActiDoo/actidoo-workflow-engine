@@ -17,5 +17,8 @@
   },
   "test-flow-depends-on/form010-fill.fixture.json": {
     "form": "TestFlow_DependsOn/Form010_Fill.form"
+  },
+  "test-flow-form-semantics/form010-cases.fixture.json": {
+    "form": "TestFlow_FormSemantics/Form010_Cases.form"
   }
 }

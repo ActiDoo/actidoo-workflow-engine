@@ -179,6 +179,9 @@ export const de = {
     optionsLoadError: 'Optionen konnten nicht geladen werden. Bitte versuche es erneut.',
   },
   formErrors: {
+    minItems: 'Bitte füge mindestens {{limit}} Einträge hinzu.',
+    minItemsOne: 'Bitte füge mindestens einen Eintrag hinzu.',
+    attachmentRequired: 'Bitte füge mindestens eine Datei an.',
     required: 'Bitte fülle dieses Feld aus.',
     minLength: 'Bitte gib mindestens {{limit}} Zeichen ein.',
     maxLength: 'Bitte gib höchstens {{limit}} Zeichen ein.',
@@ -189,9 +192,6 @@ export const de = {
     reset: 'Zurücksetzen',
     submit: 'Absenden',
     delete: 'Löschen',
-  },
-  validation: {
-    required: 'Dieses Feld ist ein Pflichtfeld',
   },
   formTemplates: {
     saveAction: 'Als Vorlage speichern',

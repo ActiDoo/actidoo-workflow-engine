@@ -104,7 +104,7 @@ describe('Test Flow BFF — Form1', () => {
     await submit();
 
     expect(submitted).not.toHaveBeenCalled();
-    await expect.element(page.getByText('This field is required')).toBeVisible();
+    await expect.element(page.getByText('Please fill in this field.')).toBeVisible();
   });
 
   it('blocks submission when a shown required field with a hide-if holds only whitespace', async () => {
@@ -118,7 +118,7 @@ describe('Test Flow BFF — Form1', () => {
     await submit();
 
     expect(submitted).not.toHaveBeenCalled();
-    await expect.element(page.getByText('This field is required')).toBeVisible();
+    await expect.element(page.getByText('Please fill in this field.')).toBeVisible();
   });
 
   it('sends an emptied optional field as null, so the stored value is cleared', async () => {

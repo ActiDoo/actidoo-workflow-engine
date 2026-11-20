@@ -18,6 +18,10 @@ RECORD_KEY = "service_saw"
 def service_prepare_cases(sth: ServiceTaskHelper):
     sth.set_task_data(
         {
+            "required_positions": [{}],
+            "required_tags": ["a"],
+            "required_choice": "a",
+            "hide_required_lists": False,
             "date_optional": "2026-01-31",
             "text_optional": "Sample",
             "tags_optional": [],
@@ -38,6 +42,7 @@ def service_record_received(sth: ServiceTaskHelper):
     upload = data.get("file_optional", missing)
     rows = data.get("positions") or []
     results = {
+        "1c. Hide required lists": data.get("hide_required_lists", missing),
         "2. Stored date": data.get("date_optional", missing),
         "6. Replacement file": upload.get("filename", missing) if isinstance(upload, dict) else upload,
         "7. Note": data.get("note_unless_a", missing),

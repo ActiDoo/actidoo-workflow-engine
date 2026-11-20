@@ -15,9 +15,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import _ from 'lodash';
 
-import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { postRequest, resetStateForKey } from '@/store/generic-data/actions';
@@ -80,15 +78,8 @@ const StartWorkflowPreview: React.FC = () => {
 
   const previewWorkflowTitle = previewState?.data?.title ?? '';
 
-  const { jsonschema, uiSchema } = useMemo(() => {
-    if (!previewTask?.jsonschema || !previewTask?.uischema) {
-      return { jsonschema: undefined, uiSchema: undefined };
-    }
-    const schemaClone = _.cloneDeep(previewTask.jsonschema) as RJSFSchema;
-    const uiSchemaClone = _.cloneDeep(previewTask.uischema) as UiSchema<any, RJSFSchema, any>;
-    changeRequiredDefinitionForFieldsWithHideIfDefinition(schemaClone, uiSchemaClone);
-    return { jsonschema: schemaClone, uiSchema: uiSchemaClone };
-  }, [previewTask]);
+  const jsonschema = previewTask?.jsonschema as RJSFSchema | undefined;
+  const uiSchema = previewTask?.uischema as UiSchema | undefined;
 
   const formData = useMemo(() => previewTask?.data ?? {}, [previewTask]);
 

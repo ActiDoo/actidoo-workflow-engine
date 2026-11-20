@@ -44,15 +44,20 @@ const validator = customizeValidator({
   extenderFn: ajv => ajv.removeKeyword('pattern'),
 });
 
-const TRANSLATED_ERRORS = new Set(['required', 'minLength', 'maxLength', 'minimum', 'maximum']);
+const TRANSLATED_ERRORS = new Set([
+  'required',
+  'minLength',
+  'maxLength',
+  'minimum',
+  'maximum',
+  'minItems',
+]);
 
 // Restore rjsf v5 semantics: selects/radios are rendered as oneOf of {const, title},
 // and v6's const-as-defaults would otherwise prefill them with their first option.
 const defaultFormStateBehavior: Experimental_DefaultFormStateBehavior = {
   constAsDefaults: 'never',
   arrayMinItems: {
-    // Only dynamic lists get placeholder rows; a multi-select or attachment list must
-    // stay empty until the user picks something (see skipMinItemsPopulation).
     computeSkipPopulate: (_validator, schema) => skipMinItemsPopulation(schema),
   },
 };
@@ -124,6 +129,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const scrollToFirstError = React.useCallback(() => {
+    if (rest.id) {
+      document
+        .getElementById(rest.id)
+        ?.querySelector('[id$="__error"]')
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }
+  }, [rest.id]);
+
+  React.useEffect(() => {
+    if (rest.extraErrors) scrollToFirstError();
+  }, [rest.extraErrors, scrollToFirstError]);
+
   // Errors of fields the form does not show must not block the submit: the backend treats
   // a hidden field and everything below it as absent, and so does this filter. Visibility
   // is read from the same data the hide-if rendering uses (formContext.formData).
@@ -131,11 +149,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
     const formData =
       (rest.formContext as { formData?: unknown } | undefined)?.formData ?? rest.formData;
     const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
-    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths).map(error =>
-      error.name && TRANSLATED_ERRORS.has(error.name)
-        ? { ...error, message: t(`formErrors.${error.name}`, { limit: error.params?.limit ?? '' }) }
-        : error
-    );
+    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths).map(error => {
+      if (!error.name || !TRANSLATED_ERRORS.has(error.name)) return error;
+      const limit = error.params?.limit;
+      const key = error.name === 'minItems' && limit === 1 ? 'minItemsOne' : error.name;
+      return { ...error, message: t(`formErrors.${key}`, { limit: limit ?? '' }) };
+    });
     return providedTransformErrors
       ? providedTransformErrors(visibleErrors, uiSchema)
       : visibleErrors;
@@ -150,9 +169,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
     uiSchema
   ) => {
     const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
-    for (const path of collectBlankRequiredPaths(rest.schema, uiSchema, formData, hiddenPaths)) {
+    for (const path of collectBlankRequiredPaths(rest.schema, formData, hiddenPaths)) {
       const handler = path.reduce((current: any, segment) => current?.[segment], errors);
-      handler?.addError?.(t('validation.required'));
+      handler?.addError?.(t('formErrors.required'));
     }
     return providedCustomValidate ? providedCustomValidate(formData, errors, uiSchema) : errors;
   };
@@ -162,6 +181,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       {...rest}
       _internalFormWrapper={FormWithoutEnterSubmit}
       validator={providedValidator ?? validator}
+      onError={rest.onError ?? (rest.id ? scrollToFirstError : undefined)}
       transformErrors={transformErrors}
       customValidate={customValidate}
       templates={templates ?? customTemplates}

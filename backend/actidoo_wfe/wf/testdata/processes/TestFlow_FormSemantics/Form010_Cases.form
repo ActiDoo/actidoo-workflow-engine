@@ -44,13 +44,26 @@
       "defaultValue": "Valid text"
     },
     {
-      "text": "### 1b. Empty required list\n\n**Error case — a required list accepts zero rows.**\n\nDelete the only row and submit. A list error should keep this task open.",
+      "text": "### 1b. Empty required lists with a hide-if\n\n**Error case — a visible list has no error or a hidden list blocks submission.**\n\nDelete the only row in **Required positions** and remove the tag in **Required tags**. Submit once. Both fields should show an error in the interface language, and the form should scroll to **Required positions**. Tick **Hide required lists** and submit again. The next task should open.",
       "type": "text",
       "layout": {
         "row": "Row_required_positions_case",
         "columns": null
       },
       "id": "Field_required_positions_case"
+    },
+    {
+      "type": "checkbox",
+      "layout": {
+        "row": "Row_hide_required_lists",
+        "columns": null
+      },
+      "id": "Field_hide_required_lists",
+      "key": "hide_required_lists",
+      "label": "Hide required lists",
+      "validate": {
+        "required": true
+      }
     },
     {
       "label": "Required positions",
@@ -68,7 +81,7 @@
       "showOutline": true,
       "isRepeating": true,
       "allowAddRemove": true,
-      "defaultRepetitions": 1,
+      "defaultRepetitions": 0,
       "type": "dynamiclist",
       "layout": {
         "row": "Row_required_positions",
@@ -76,6 +89,62 @@
       },
       "id": "Field_required_positions",
       "path": "required_positions",
+      "validate": {
+        "required": true
+      },
+      "conditional": {
+        "hide": "=hide_required_lists = true"
+      }
+    },
+    {
+      "type": "select",
+      "layout": {
+        "row": "Row_required_tags",
+        "columns": null
+      },
+      "id": "Field_required_tags",
+      "key": "required_tags",
+      "label": "Required tags",
+      "values": [
+        {
+          "label": "Example tag",
+          "value": "a"
+        }
+      ],
+      "properties": {
+        "custom_type": "select_multi"
+      },
+      "validate": {
+        "required": true
+      },
+      "conditional": {
+        "hide": "=hide_required_lists = true"
+      }
+    },
+    {
+      "type": "text",
+      "layout": {
+        "row": "Row_required_choice_case",
+        "columns": null
+      },
+      "id": "Field_required_choice_case",
+      "text": "### 1c. Cleared required choice and unchecked required checkbox\n\n**Error case — the form accepts a cleared choice or rejects an unchecked box.**\n\nClear **Required choice** with the × and submit. Its field error should keep this task open. Select **Value a** again, leave **Hide required lists** unchecked and submit. **Last submit** should show `1c. Hide required lists = false`."
+    },
+    {
+      "type": "select",
+      "layout": {
+        "row": "Row_required_choice",
+        "columns": null
+      },
+      "id": "Field_required_choice",
+      "key": "required_choice",
+      "label": "Required choice",
+      "values": [
+        {
+          "label": "Value a",
+          "value": "a"
+        }
+      ],
       "validate": {
         "required": true
       }

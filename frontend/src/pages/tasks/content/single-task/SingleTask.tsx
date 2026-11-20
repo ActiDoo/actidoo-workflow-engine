@@ -11,10 +11,7 @@ import { ErrorSchema, RJSFSchema, UiSchema } from '@rjsf/utils';
 import { WeDataKey } from '@/store/generic-data/setup';
 import { getRequest, postRequest } from '@/store/generic-data/actions';
 import { State } from '@/store';
-import {
-  changeRequiredDefinitionForFieldsWithHideIfDefinition,
-  computeHiddenMap,
-} from '@/services/FeelService';
+import { computeHiddenMap } from '@/services/FeelService';
 import { ROW_ID_KEY, FormTemplateMode, WorkflowState } from '@/models/models';
 import { adoptServerRowIds, generateRowId, isDynamicListUiItems } from '@/utils/rowIdentity';
 import { useSelectCurrentTask } from '@/store/generic-data/selectors';
@@ -89,7 +86,7 @@ const prepareFormData = (
           changed = true;
         }
       } else if (value !== undefined && !(value === null && admitsNull(prop))) {
-        delete prepared[key];
+        Reflect.deleteProperty(prepared, key);
         changed = true;
       }
       continue;
@@ -207,10 +204,8 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     dispatch(postRequest(WeDataKey.DELETE_WORKFLOW, { task_id: taskId }));
   };
 
-  const jsonschema: RJSFSchema | undefined = _.cloneDeep(task?.jsonschema);
-  const uiSchema = task?.uischema
-    ? (_.cloneDeep(task.uischema) as UiSchema<any, RJSFSchema, any>)
-    : undefined;
+  const jsonschema: RJSFSchema | undefined = task?.jsonschema;
+  const uiSchema = task?.uischema as UiSchema | undefined;
 
   // Form-level template mode lives in the uischema root (see form_transformation).
   const templateMode = (task?.uischema as { 'ui:templateMode'?: FormTemplateMode } | undefined)?.[
@@ -228,10 +223,6 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
     !isBlockedByDelegateAssignment &&
     !task?.is_readonly;
   const isDelegateSubmission = !!task?.assigned_to_me_as_delegate;
-
-  if (jsonschema && uiSchema) {
-    changeRequiredDefinitionForFieldsWithHideIfDefinition(jsonschema, uiSchema);
-  }
 
   const uploadProgress = (p: number): void => {
     setProgress(() => p);
@@ -684,11 +675,6 @@ const SingleTask: React.FC<SingleTaskProps> = props => {
                   return;
                 }
                 submitData(data.formData);
-              }}
-              onError={() => {
-                document
-                  .querySelector('#single-task-form [id$="__error"]')
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}
               noHtml5Validate
               formContext={{
