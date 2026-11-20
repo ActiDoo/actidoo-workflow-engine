@@ -5,51 +5,83 @@ import { evaluate, InterpreterContext, parseExpression, parseUnaryTests, unaryTe
 
 const MAX_RESULTS_PER_EXPRESSION = 1000;
 const MAX_VALUES_KEY_LENGTH = 10000;
-const MISSING_FIELD = '\u0000missing';
-const UNDEFINED_VALUE = '\u0000undefined';
 
-function referencedNames(parse: typeof parseExpression, expression: string): string[] | null {
-  let memoizable = true;
-  const names = new Set<string>(['?']);
+// Calls may depend on time. Comments and quoted names need FEEL's full name resolution.
+const UNCACHED_NODES = new Set([
+  'FunctionInvocation',
+  'FunctionDefinition',
+  'DateTimeConstructor',
+  'BacktickIdentifier',
+  'LineComment',
+  'BlockComment',
+]);
+
+interface Dependencies {
+  words: Set<string>;
+  compactExpression: string;
+}
+
+function getDependencies(parse: typeof parseExpression, expression: string): Dependencies | null {
+  let cacheable = true;
   try {
     parse(expression).iterate({
-      enter: node => {
-        if (node.type.isError || node.type.name === 'FunctionInvocation') {
-          memoizable = false;
-        } else if (node.type.name === 'VariableName') {
-          names.add(expression.slice(node.from, node.to));
+      enter: ({ type }) => {
+        if (type.isError || UNCACHED_NODES.has(type.name)) {
+          cacheable = false;
         }
       },
     });
   } catch {
-    memoizable = false;
+    return null;
   }
-  return memoizable ? [...names] : null;
+  if (!cacheable) return null;
+
+  // FEEL parses names against the current context. A context-free syntax tree
+  // sees subtraction in "order-total" and a literal in "true", but either may
+  // be a field. Keep all words that could name an input, including keywords.
+  return {
+    words: new Set(expression.match(/[a-zA-Z0-9_]+/g)),
+    compactExpression: expression.replace(/\s/g, ''),
+  };
 }
 
-function valuesKey(names: string[], context: InterpreterContext): string {
-  const values = names.map(name => (name in context ? context[name] : MISSING_FIELD));
-  return JSON.stringify(values, (_key, value) => (value === undefined ? UNDEFINED_VALUE : value));
+function valuesKey(
+  { words, compactExpression }: Dependencies,
+  context: InterpreterContext
+): string {
+  const fields = Object.keys(context).filter(name => {
+    if (name === '?') return true;
+    if (/^[a-zA-Z0-9_]+$/.test(name)) return words.has(name);
+    // FEEL also matches compound names with different spacing, e.g. "order - total".
+    return compactExpression.includes(name.replace(/\s/g, ''));
+  });
+  // Include the actual names in lookup order: adding "order-total" can change
+  // the meaning even when "order" and "total" retain their values.
+  const entries = fields.map(name => [name, context[name]]);
+  // Tag strings so a literal value cannot collide with the encoding of undefined.
+  return JSON.stringify(entries, (_key, value) => {
+    if (typeof value === 'string') return `s${value}`;
+    if (value === undefined) return 'undefined';
+    return value;
+  });
 }
 
 function memoize<T>(
   parse: typeof parseExpression,
   run: (expression: string, context: InterpreterContext) => T
 ): (expression: string, context?: InterpreterContext) => T {
-  const namesByExpression = new Map<string, string[] | null>();
+  const dependenciesByExpression = new Map<string, Dependencies | null>();
   const resultsByExpression = new Map<string, Map<string, T>>();
 
   return (expression, context = {}) => {
-    let names = namesByExpression.get(expression);
-    if (names === undefined) {
-      names = referencedNames(parse, expression);
-      namesByExpression.set(expression, names);
+    let dependencies = dependenciesByExpression.get(expression);
+    if (dependencies === undefined) {
+      dependencies = getDependencies(parse, expression);
+      dependenciesByExpression.set(expression, dependencies);
     }
-    if (!names) {
-      return run(expression, context);
-    }
+    if (!dependencies) return run(expression, context);
 
-    const key = valuesKey(names, context);
+    const key = valuesKey(dependencies, context);
     if (key.length > MAX_VALUES_KEY_LENGTH) {
       return run(expression, context);
     }
