@@ -228,6 +228,19 @@ def test_start_workflow_preview_with_data(db_engine_ctx):
         assert json_resp.task is not None
 
 
+def test_missing_copy_source(db_engine_ctx):
+    with db_engine_ctx():
+        dummy = WorkflowDummy(db_session=SessionLocal(), users_with_roles={"initiator": ["wf-user"]})
+        client = Client()
+        source = str(uuid.uuid4())
+        with override_get_user(client, dummy.user("initiator").user), disable_role_check(client):
+            for endpoint in ("start_workflow", "start_workflow_preview_with_data"):
+                status, _ = client.post(name=endpoint, json={"copy_from": source})
+                assert status == 404
+            url = client.root_client.app.url_path_for("get_workflow_copy_data", workflow_instance_id=source)
+            assert client.root_client.post(url).status_code == 404
+
+
 def test_get_workflow_copy_data(db_engine_ctx):
     with db_engine_ctx():
         db = SessionLocal()

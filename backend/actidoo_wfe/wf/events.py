@@ -35,18 +35,15 @@ Example:
     publish_event(event)
 """
 
-import logging
 import uuid
 from functools import wraps
 
 import pydantic
 from sqlalchemy import event
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, SessionTransaction
 
 from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.helpers.concurrency import run_background_task
-
-log = logging.getLogger(__name__)
 
 
 class Event(pydantic.BaseModel):
@@ -67,7 +64,7 @@ class TaskBecameErroneousEvent(Event):
 
 
 handlers = {}
-session_events = {}
+_EVENT_QUEUES = "workflow_event_queues"
 
 
 def publish_event(event: Event, session: Session | None = None):
@@ -75,12 +72,12 @@ def publish_event(event: Event, session: Session | None = None):
     if session is None:
         session = SessionLocal()
 
-    if session is None or not session.in_transaction():
+    transaction = session.get_nested_transaction() or session.get_transaction()
+    if transaction is None:
         _handle_event(event)
     else:
-        if session not in session_events:
-            session_events[session] = []
-        session_events[session].append(event)
+        queues = session.info.setdefault(_EVENT_QUEUES, {})
+        queues.setdefault(transaction, []).append(event)
 
 
 def event_handler(event_type):
@@ -98,14 +95,6 @@ def event_handler(event_type):
     return decorator
 
 
-def handle_pending_events(session):
-    """Handles all collected events for a given session."""
-    if session in session_events:
-        while session_events[session]:
-            event = session_events[session].pop(0)
-            _handle_event(event)
-
-
 def _handle_event(event):
     event_type = type(event)
     if event_type in handlers:
@@ -113,20 +102,31 @@ def _handle_event(event):
             run_background_task(handler, event=event)
 
 
-def after_commit(session):
-    handle_pending_events(session)
-    cleanup_session_events(session, None)
+def handle_pending_events(session: Session):
+    """Dispatch events collected for the current transaction."""
+    transaction = session.get_nested_transaction() or session.get_transaction()
+    for entry in session.info.get(_EVENT_QUEUES, {}).pop(transaction, []):
+        _handle_event(entry)
 
 
-def cleanup_session_events(session, transaction=None):
-    """Cleans up session events to prevent memory leaks."""
-    if transaction is None or (not transaction.nested and transaction.parent is None):
-        if session in session_events:
-            if len(session_events[session]) > 0:
-                log.warning("Cleaning non-empty session_events queue in cleanup_session_events")
-            del session_events[session]
+@event.listens_for(Session, "after_commit")
+def after_commit(session: Session):
+    nested = session.get_nested_transaction()
+    if nested is None:
+        handle_pending_events(session)
+    else:
+        # Releasing a savepoint moves its events to the parent. Only the outer
+        # commit can publish them, since a surrounding savepoint may roll back.
+        queues = session.info.get(_EVENT_QUEUES, {})
+        pending = queues.pop(nested, [])
+        if pending:
+            queues.setdefault(nested.parent, []).extend(pending)
 
 
-event.listen(Session, "after_commit", after_commit)
-event.listen(Session, "after_transaction_end", cleanup_session_events)
-event.listen(Session, "after_rollback", cleanup_session_events)
+@event.listens_for(Session, "after_transaction_end")
+def cleanup_session_events(session: Session, transaction: SessionTransaction | None = None):
+    if transaction is None or transaction.parent is None:
+        session.info.pop(_EVENT_QUEUES, None)
+    else:
+        # A commit already moved the queue. Rollback or close discards it.
+        session.info.get(_EVENT_QUEUES, {}).pop(transaction, None)

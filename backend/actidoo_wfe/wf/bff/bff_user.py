@@ -75,6 +75,7 @@ from actidoo_wfe.wf.exceptions import (
     UserMayNotCopyWorkflowException,
     UserMayNotStartWorkflowException,
     ValidationResultContainsErrors,
+    WorkflowCopySourceNotFoundException,
 )
 from actidoo_wfe.wf.models import WorkflowUser
 from actidoo_wfe.wf.types import (
@@ -115,7 +116,12 @@ def start_workflow(
             name=reqdata.name,
             user_id=user.id,
             initial_task_data=reqdata.data,
+            copy_from=reqdata.copy_from,
         )
+    except WorkflowCopySourceNotFoundException:
+        raise HTTPException(status_code=404, detail="Source workflow instance not found.")
+    except UserMayNotCopyWorkflowException:
+        raise HTTPException(status_code=403, detail="User may not copy this workflow instance.")
     except UserMayNotStartWorkflowException:
         log.warning(f"Starting workflow {reqdata.name} failed (not allowed)")
         raise HTTPException(
@@ -143,7 +149,12 @@ def start_workflow_preview_with_data(
             name=reqdata.name,
             user_id=user.id,
             task_data=reqdata.data,
+            copy_from=reqdata.copy_from,
         )
+    except WorkflowCopySourceNotFoundException:
+        raise HTTPException(status_code=404, detail="Source workflow instance not found.")
+    except UserMayNotCopyWorkflowException:
+        raise HTTPException(status_code=403, detail="User may not copy this workflow instance.")
     except UserMayNotStartWorkflowException:
         log.warning(f"Previewing workflow {reqdata.name} failed (not allowed)")
         raise HTTPException(
@@ -179,6 +190,8 @@ def get_workflow_copy_data(
             user_id=user.id,
             workflow_instance_id=workflow_instance_id,
         )
+    except WorkflowCopySourceNotFoundException:
+        raise HTTPException(status_code=404, detail="Source workflow instance not found.")
     except UserMayNotCopyWorkflowException:
         log.warning(f"Creating workflow copy data for instance {workflow_instance_id} failed (copy not allowed)")
         raise HTTPException(

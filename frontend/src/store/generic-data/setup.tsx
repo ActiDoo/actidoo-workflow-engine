@@ -175,6 +175,8 @@ export interface WeDataState {
   [WeDataKey.START_WORKFLOW_FOR_DATA]: GenericDataEntry<StartWorkflowResponse> | null;
 }
 
+export const startWorkflowPreviewPath = 'user/start_workflow_preview_with_data';
+
 // API DEFINITION
 export const WeApiUrl = (
   key: string,
@@ -213,7 +215,7 @@ export const WeApiUrl = (
     case WeDataKey.COPY_INSTANCE:
       return `user/workflow_instances/${params?.workflow_instance_id}/copy_data`;
     case WeDataKey.START_WORKFLOW_PREVIEW:
-      return 'user/start_workflow_preview_with_data';
+      return startWorkflowPreviewPath;
     case WeDataKey.WFE_USER:
       return 'user/my_wfe_user';
     case WeDataKey.USER_SETTINGS:

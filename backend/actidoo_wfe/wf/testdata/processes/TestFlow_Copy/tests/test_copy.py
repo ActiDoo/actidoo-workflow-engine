@@ -3,12 +3,14 @@
 
 import base64
 import hashlib
+import json
+import shutil
 
 import pytest
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.wf import repository, service_workflow
-from actidoo_wfe.wf.exceptions import UserMayNotCopyWorkflowException
+from actidoo_wfe.wf import providers, repository, service_workflow
+from actidoo_wfe.wf.exceptions import UserMayNotCopyWorkflowException, ValidationResultContainsErrors
 from actidoo_wfe.wf.service_application import (
     get_usertasks_for_user_id,
     get_workflow_copy_data,
@@ -71,9 +73,9 @@ def test_copyWorkflowInstance(db_engine_ctx, mock_send_text_mail):
 
         preview = get_workflow_preview(
             db=db_session,
-            name=copy_instruction.workflow_name,
+            name=None,
             user_id=workflow.user("initiator").user.id,
-            task_data=copy_instruction.data,
+            copy_from=workflow.workflow_instance_id,
         )
         assert preview.name == copy_instruction.workflow_name
         assert preview.title
@@ -99,9 +101,9 @@ def test_copyWorkflowInstance(db_engine_ctx, mock_send_text_mail):
 
         newwfid = start_workflow(
             db=db_session,
-            name=copy_instruction.workflow_name,
+            name=None,
             user_id=workflow.user("initiator").user.id,
-            initial_task_data=copy_instruction.data,
+            copy_from=workflow.workflow_instance_id,
         )
         newtask = get_usertasks_for_user_id(
             db=db_session,
@@ -278,3 +280,34 @@ def test_hidden_fields_removed_for_ready_tasks_after_copy(db_engine_ctx, mock_se
             assert copied_task.data.get("toggle") is False
         finally:
             db_session.close()
+
+
+def test_copy_starts_when_a_field_became_required(db_engine_ctx, mock_send_text_mail, tmp_path, monkeypatch):
+    with db_engine_ctx():
+        workflow, db = start_my_workflow()
+        owner = workflow.user("initiator")
+        owner.assign_submit(workflow.workflow_instance_id, {"toggle": True, "should_not_survive": "copied note"})
+
+        # New instances load the changed form from a copy of the workflow directory;
+        # the original instance keeps the form it was started with.
+        get_directory = providers.get_workflow_directory
+        changed = tmp_path / WF_NAME
+        shutil.copytree(get_directory(WF_NAME), changed)
+        form_path = changed / "SimpleFormID.form"
+        form = json.loads(form_path.read_text())
+        next(field for field in form["components"] if field.get("key") == "text1")["validate"] = {"required": True}
+        form_path.write_text(json.dumps(form))
+        monkeypatch.setattr(providers, "get_workflow_directory", lambda name: changed if name == WF_NAME else get_directory(name))
+
+        source = workflow.workflow_instance_id
+        preview = get_workflow_preview(db=db, name=None, user_id=owner.user.id, copy_from=source)
+        assert preview.task and "text1" in preview.task.jsonschema["required"]
+        assert preview.task.data["should_not_survive"] == "copied note"
+
+        new_id = start_workflow(db=db, name=None, user_id=owner.user.id, copy_from=source)
+        task = owner.get_usertasks(new_id, 1)[0]
+        owner.assign_task(task.id)
+        with pytest.raises(ValidationResultContainsErrors):
+            owner.submit(task.data, new_id)
+        owner.submit({**task.data, "text1": "filled in"}, new_id)
+        assert owner.get_usertasks(new_id, 0) == []
