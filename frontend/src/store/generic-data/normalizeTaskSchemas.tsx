@@ -37,7 +37,7 @@ const normalizeUserTasksResponse = (data: GetUserTasksResponse): GetUserTasksRes
   usertasks: data.usertasks.map(normalizeTask),
 });
 
-export const normalizeStartWorkflowPreviewResponse = (
+const normalizeStartWorkflowPreviewResponse = (
   data: StartWorkflowPreviewResponse
 ): StartWorkflowPreviewResponse => ({
   ...data,

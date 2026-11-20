@@ -12,7 +12,7 @@ import {
   Title,
   TitleLevel,
 } from '@ui5/webcomponents-react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import _ from 'lodash';
@@ -20,12 +20,8 @@ import _ from 'lodash';
 import { changeRequiredDefinitionForFieldsWithHideIfDefinition } from '@/services/FeelService';
 import { useSelectUiLoading } from '@/store/ui/selectors';
 import { WeDataKey } from '@/store/generic-data/setup';
-import { postRequest } from '@/store/generic-data/actions';
-import { useQuery } from 'react-query';
-import {
-  loadWorkflowPreview,
-  workflowPreviewKey,
-} from '@/pages/start-workflow-preview/workflowPreview';
+import { postRequest, resetStateForKey } from '@/store/generic-data/actions';
+import { State } from '@/store';
 import type { StartWorkflowRequest } from '@/models/models';
 import { addToast } from '@/store/ui/actions';
 import { WeToastContent } from '@/utils/components/WeToast';
@@ -34,7 +30,7 @@ import { useTranslation } from '@/i18n';
 
 const StartWorkflowPreview: React.FC = () => {
   const { t } = useTranslation();
-  const { search, state, key } = useLocation();
+  const { search } = useLocation();
   const dispatch = useDispatch();
 
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
@@ -62,28 +58,30 @@ const StartWorkflowPreview: React.FC = () => {
     return { name: workflowName, data: parsedData };
   }, [copyFrom, workflowName, parsedData]);
 
-  // Navigation from the copy button supplies the already loaded preview. Direct
-  // links and page reloads fetch it from the source named in the URL.
-  const preview = useQuery(
-    workflowPreviewKey(request, state?.preparedPreviewId ?? key),
-    async () => (request ? await loadWorkflowPreview(request) : null),
-    {
-      enabled: !!request,
-      retry: false,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-    }
-  );
-  const startLoading = useSelectUiLoading(WeDataKey.START_WORKFLOW, 'POST');
   useEffect(() => {
-    if (preview.isError) {
+    dispatch(resetStateForKey(WeDataKey.START_WORKFLOW_PREVIEW));
+    return () => {
+      dispatch(resetStateForKey(WeDataKey.START_WORKFLOW_PREVIEW));
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (request) dispatch(postRequest(WeDataKey.START_WORKFLOW_PREVIEW, request));
+  }, [dispatch, request]);
+
+  const previewState = useSelector((state: State) => state.data[WeDataKey.START_WORKFLOW_PREVIEW]);
+  const previewLoading = useSelectUiLoading(WeDataKey.START_WORKFLOW_PREVIEW, 'POST');
+  const startLoading = useSelectUiLoading(WeDataKey.START_WORKFLOW, 'POST');
+
+  useEffect(() => {
+    if (previewState?.postResponse && previewState.postResponse !== 200) {
       dispatch(addToast(<WeToastContent type="error" text={t('workflowPreview.loadError')} />));
     }
-  }, [preview.isError, dispatch, t]);
+  }, [previewState?.postResponse, dispatch]);
 
-  const previewTask = preview.data?.task;
-  const previewWorkflowTitle = preview.data?.title ?? '';
+  const previewTask = previewState?.data?.task;
+
+  const previewWorkflowTitle = previewState?.data?.title ?? '';
 
   const { jsonschema, uiSchema } = useMemo(() => {
     if (!previewTask?.jsonschema || !previewTask?.uischema) {
@@ -126,7 +124,7 @@ const StartWorkflowPreview: React.FC = () => {
         </div>
       ) : null}
 
-      {preview.isLoading ? (
+      {previewLoading ? (
         <div className="flex justify-center items-center py-16">
           <BusyIndicator active delay={0} />
         </div>

@@ -32,7 +32,6 @@ import {
   ReplaceTaskDataRequestData,
   SearchWfUsersResponse,
   StartWorkflowResponse,
-  CopyWorkflowDataResponse,
   StartWorkflowPreviewResponse,
   SubmitTaskDataErrorResponse,
   TaskItem,
@@ -68,7 +67,6 @@ export enum WeDataKey {
   UNASSIGN_TASK_FROM_ME = 'unassign-task-from-me',
   CANCEL_WORKFLOW = 'cancel-workflow',
   DELETE_WORKFLOW = 'delete-workflow',
-  COPY_INSTANCE = 'copy-instance',
   START_WORKFLOW_PREVIEW = 'start-workflow-preview',
   WFE_USER = 'wfe-user',
   USER_SETTINGS = 'user-settings',
@@ -138,7 +136,6 @@ export interface WeDataState {
   [WeDataKey.UNASSIGN_TASK_FROM_ME]: GenericDataEntry<string> | null;
   [WeDataKey.CANCEL_WORKFLOW]: GenericDataEntry<string> | null;
   [WeDataKey.DELETE_WORKFLOW]: GenericDataEntry<string> | null;
-  [WeDataKey.COPY_INSTANCE]: GenericDataEntry<CopyWorkflowDataResponse> | null;
   [WeDataKey.START_WORKFLOW_PREVIEW]: GenericDataEntry<StartWorkflowPreviewResponse> | null;
   [WeDataKey.WFE_USER]: GenericDataEntry<User> | null;
   [WeDataKey.USER_SETTINGS]: GenericDataEntry<UserSettings> | null;
@@ -175,8 +172,6 @@ export interface WeDataState {
   [WeDataKey.START_WORKFLOW_FOR_DATA]: GenericDataEntry<StartWorkflowResponse> | null;
 }
 
-export const startWorkflowPreviewPath = 'user/start_workflow_preview_with_data';
-
 // API DEFINITION
 export const WeApiUrl = (
   key: string,
@@ -212,10 +207,8 @@ export const WeApiUrl = (
       return 'user/cancel_workflow';
     case WeDataKey.DELETE_WORKFLOW:
       return 'user/delete_workflow';
-    case WeDataKey.COPY_INSTANCE:
-      return `user/workflow_instances/${params?.workflow_instance_id}/copy_data`;
     case WeDataKey.START_WORKFLOW_PREVIEW:
-      return startWorkflowPreviewPath;
+      return 'user/start_workflow_preview_with_data';
     case WeDataKey.WFE_USER:
       return 'user/my_wfe_user';
     case WeDataKey.USER_SETTINGS:
@@ -300,7 +293,6 @@ export const initState: WeDataState = {
   [WeDataKey.UNASSIGN_TASK_FROM_ME]: null,
   [WeDataKey.CANCEL_WORKFLOW]: null,
   [WeDataKey.DELETE_WORKFLOW]: null,
-  [WeDataKey.COPY_INSTANCE]: null,
   [WeDataKey.START_WORKFLOW_PREVIEW]: null,
   [WeDataKey.WFE_USER]: null,
   [WeDataKey.USER_SETTINGS]: null,
@@ -342,7 +334,6 @@ export type WeDataGetResponseTypes =
   | GetUserTasksResponse
   | SubmitTaskDataErrorResponse
   | StartWorkflowResponse
-  | CopyWorkflowDataResponse
   | StartWorkflowPreviewResponse
   | GetWorkflowResponse
   | PinnedWorkflowsResponse

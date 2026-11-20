@@ -256,8 +256,6 @@ export const de = {
     cancelWorkflowAction: 'Workflow abbrechen',
     deleteWorkflowAction: 'Workflow löschen',
     missingWorkflowId: 'Workflow-Kennung fehlt.',
-    copyFailed: 'Workflow-Kopie konnte nicht vorbereitet werden.',
-    copyRequestFailed: 'Workflow konnte nicht kopiert werden.',
     assignSuccess: 'Aufgabe erfolgreich zugewiesen',
     assignError: 'Aufgabe konnte dir nicht zugewiesen werden. Bitte versuche es erneut',
     unassignSuccess: 'Aufgabe erfolgreich freigegeben',

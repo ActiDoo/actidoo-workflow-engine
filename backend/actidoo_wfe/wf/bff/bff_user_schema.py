@@ -44,14 +44,6 @@ class StartWorkflowWithDataRequest(StartWorkflowRequest):
     pass
 
 
-class GetWorkflowCopyDataResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    workflow_name: str
-    task_name: str
-    data: dict
-
-
 class SubmitTaskDataErrorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

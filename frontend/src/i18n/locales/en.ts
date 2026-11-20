@@ -254,8 +254,6 @@ export const en = {
     cancelWorkflowAction: 'Cancel Workflow',
     deleteWorkflowAction: 'Delete Workflow',
     missingWorkflowId: 'Missing workflow identifier.',
-    copyFailed: 'Could not prepare workflow copy.',
-    copyRequestFailed: 'Could not copy workflow.',
     assignSuccess: 'Successfully assigned task',
     assignError: 'Task could not be assigned to you. Please try again',
     unassignSuccess: 'Successfully unassigned task',
