@@ -23,6 +23,21 @@ releases correspond to the git tags of this repository.
     regex itself. Patterns use Python regex syntax; invalid patterns are rejected
     when the form is loaded.
 
+- **When** a number field has a minimum or maximum set in the Modeler, e.g.
+  a quantity from 1 to 10:
+  - Before: the limits were ignored. The form accepted any number.
+  - Now: the limits are checked on submit. A FEEL expression as a limit is
+    not supported, also not for the minimum or maximum length of a text
+    field; such a form is rejected when it is loaded.
+
+- **When** a validation function checks a field inside a dynamic list:
+  - Before: the function did not know which row it was called for. It had to
+    check all rows, and one invalid row marked the field in every row.
+  - Now: `vth.value` holds the checked value, `vth.key` the field name and
+    `vth.path` the full path including the row index. The function is called
+    once per row and an error marks only that row. Existing validation
+    functions keep working unchanged.
+
 - **When** a link to the engine is shared, e.g. in a chat:
   - Before: every environment showed the same title "Workflow Engine", so the
     reader could not tell whether the link pointed to DEV, QAS or production
@@ -111,6 +126,12 @@ releases correspond to the git tags of this repository.
     the mails had already gone out.
   - Now: notifications are sent only after the step is saved. If saving
     fails, none are sent.
+
+### Security
+
+- Backend: bumped `authlib` from 1.7.1 to 1.9.8, `joserfc` from 1.7.5 to
+  1.8.0, `dnspython` from 2.8.0 to 2.9.2, `idna` from 3.13 to 3.20, `mako`
+  from 1.3.12 to 1.4.3 and `pydantic-settings` from 2.14.0 to 2.16.3.
 
 ## [0.1.46] - 2026-11-04
 
