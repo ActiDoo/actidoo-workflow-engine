@@ -11,8 +11,11 @@ releases correspond to the git tags of this repository.
 
 ### Added
 
-- Admin task data can be shown as a collapsible tree. "Edit JSON" returns
-  to the text editor.
+- **When** an administrator looks at the task data on the admin details page
+  of an instance:
+  - Before: the data was only shown as JSON text.
+  - Now: the data can be shown as a collapsible tree. "Edit JSON" returns to
+    the text editor.
 
 - **When** a text field must have a certain format, e.g. a cost center
   `CC-1234`:
@@ -59,9 +62,13 @@ releases correspond to the git tags of this repository.
 
 ### Changed
 
-- Static form texts no longer add empty technical entries to submitted task
-  data. Existing instances are not cleaned up. Service results, including
-  `null`, continue to be stored.
+- **When** a form contains static texts, e.g. a hint or a heading, and a user
+  submits it:
+  - Before: every static text left an empty technical entry such as
+    `Field_1aff9sg: null` in the task data, also inside dynamic lists.
+  - Now: static texts add nothing to the task data. Instances submitted
+    before this release keep their entries. Results of service tasks are
+    still stored, also when they are `null`.
 
 - **When** a user resets a form to its initial state or leaves the user
   settings with unsaved changes:
@@ -91,9 +98,17 @@ releases correspond to the git tags of this repository.
 
 ### Fixed
 
-- Forms: `depends_on` works inside dynamic lists. The select reacts to the
-  field of its own row, and the `options_function` sees that row's values.
-  The reset no longer skips edits made shortly after loading options.
+- **When** a select inside a dynamic list uses `depends_on` on a field of
+  the same row, e.g. a cost center that depends on the department of that
+  row:
+  - Before: the select did not react to the field of its own row, and the
+    `options_function` did not see that row's values. An edit made shortly
+    after the options were loaded could keep a selection that no longer
+    fit.
+  - Now: the select reacts to the field of its own row, and the
+    `options_function` sees that row's values. Changing the field resets
+    the selection, also right after the options were loaded. The list
+    overview shows the labels of each row's own options.
 
 - **When** a workflow author runs `python -m actidoo_wfe.wf.cli_i18n` for a
   workflow that an extension provides:
