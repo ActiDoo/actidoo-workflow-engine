@@ -7,6 +7,8 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+## [0.1.47] - 2026-11-24
+
 ### Added
 
 - Admin task data can be shown as a collapsible tree. "Edit JSON" returns
@@ -493,7 +495,8 @@ releases correspond to the git tags of this repository.
 Last release before this changelog was introduced. See the git history for
 earlier changes.
 
-[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.46...HEAD
+[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.47...HEAD
+[0.1.47]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.46...v0.1.47
 [0.1.46]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.45...v0.1.46
 [0.1.45]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.44...v0.1.45
 [0.1.44]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.43...v0.1.44
