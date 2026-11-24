@@ -172,7 +172,18 @@ jobs:
         run: |
           set -euo pipefail
           COMMIT_TITLE="$(git log -1 --pretty=%s)"
-          cat <<EOF > release_notes.md
+          VERSION="${GITHUB_REF_NAME#v}"
+          # The tag's section of CHANGELOG.md, without its heading
+          awk -v v="$VERSION" '
+            /^## \[/ { if (found) exit; found = index($0, "## [" v "]") == 1; next }
+            found
+          ' CHANGELOG.md > changelog_section.md
+          if [ ! -s changelog_section.md ]; then
+            echo "::warning::CHANGELOG.md has no section for ${VERSION}"
+          fi
+          cp changelog_section.md release_notes.md
+          cat <<EOF >> release_notes.md
+
           ## Images
           - Runtime: ${RUNTIME_IMAGE}:${GITHUB_REF_NAME}
           - Devcontainer: ${DEVCONTAINER_IMAGE}:${GITHUB_REF_NAME}
