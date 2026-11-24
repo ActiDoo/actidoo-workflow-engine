@@ -69,6 +69,9 @@ jobs:
           context: .
           file: docker/runtime/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
+          # Release images are built from scratch. A cached apt layer would ship the
+          # Debian packages as of the last base image change, without later security updates.
+          no-cache: ${{ startsWith(github.ref, 'refs/tags/') }}
           platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || env.PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
