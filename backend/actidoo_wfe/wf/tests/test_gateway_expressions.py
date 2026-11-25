@@ -3,9 +3,9 @@
 
 """How FEEL expressions (a leading ``=``) read the task data.
 
-A sequence-flow condition reads a field the data does not hold - never filled, or
-hidden - as null, the way FEEL and a form's hide-if read it, so the gateway routes
-instead of failing the task. As in a hide-if, a comparison with null or ``""`` matches
+A sequence-flow condition reads a field the data does not hold - never filled - as
+null, the way FEEL and a form's hide-if read it, so the gateway routes instead of
+failing the task. As in a hide-if, a comparison with null, ``""`` or ``[]`` matches
 every empty value: no key, null, blank text and an empty list. Every other expression
 stays strict: a missing name in a collection, a timer or a correlation key is a
 modelling error and must surface. ``null`` is the FEEL literal everywhere; ``None``
@@ -48,7 +48,7 @@ def _expression(expression: str, data: dict):
     ],
 )
 def test__a_condition_reads_a_missing_field_as_null(expression, expected):
-    """The field was never filled or is hidden: no key in the data. The condition
+    """The field was never filled: no key in the data. The condition
     sees null - a comparison against a value is false, one against null is true."""
     assert _condition(expression, {"fallback": "yes"}) is expected
 

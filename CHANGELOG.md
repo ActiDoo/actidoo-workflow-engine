@@ -9,9 +9,9 @@ releases correspond to the git tags of this repository.
 
 This release makes empty values and form conditions consistent. A field has
 one of three states: it has a value; it is `null` because the user cleared
-it; or it is missing because it was never asked or is hidden. In conditions
-and in the required check, `null` and missing both mean empty. Browser and
-server now apply the same rules.
+it; or it is missing because it was never filled. In conditions and in the
+required check, `null` and missing both mean empty, and so does a field that
+a `hide-if` hides. Browser and server now apply the same rules.
 
 ### Added
 
@@ -105,10 +105,25 @@ server now apply the same rules.
   - Before: the copy failed.
   - Now: the data goes into the form. The engine checks it when the user
     submits.
+- **When** a task's form hides a field that holds a value from an earlier
+  step, for example a rejection reason that only shows for a rejection:
+  - Before: the value was removed from the task data for good, as soon as the
+    task was handed out. Later steps, gateways and mails no longer saw it. An
+    empty list was removed too, so a later form filled the field with its
+    default again.
+  - Now: the stored value stays. It shows when the field becomes visible, and
+    later steps still read it. A submit writes nothing into a field that is
+    hidden, `disabled` or `readonly`: whatever the browser sends for it,
+    `null` and an empty list included, is ignored.
+- **When** a text in a form computes with `{{ }}` from a hidden field, for
+  example a sum over the rows of a hidden list:
+  - Before: the text used what the form still held for the hidden field.
+  - Now: a hidden field reads as empty in a text, as in a `hide-if`.
 - **When** an instance was started before the update:
   - It keeps the form definitions from its start. No migration is needed.
   - At once: the required check, all `hide-if` fixes, gateway conditions, the
-    mail output and copying an instance.
+    mail output, copying an instance, and hidden fields keeping their value.
+    A value that was already removed from an open task does not come back.
   - Only for new instances: cleared fields become `null`, required lists need
     one entry, `readonly` works like `disabled`, locked lists.
 
@@ -117,12 +132,6 @@ server now apply the same rules.
 - **When** a user uploads a file after an earlier task removed it:
   - Before: uploading onto the stored `null` failed the submit.
   - Now: the new file replaces `null`, also inside a dynamic-list row.
-- **When** a later task hides a field the user cleared:
-  - Before: hiding removed a stored empty list. A later form could fill
-    the field with its default again. An empty value sent for a hidden
-    field could also overwrite stored data.
-  - Now: stored `null` and empty lists stay empty while hidden. A submit
-    writes nothing into a hidden field, including `null` or an empty list.
 - **When** a `hide-if` compares a field that was never filled, like
   `=category = "a"`:
   - Before: the server said true and hid the dependent field. It dropped what
@@ -199,8 +208,14 @@ Forms:
 - Make a multi select or dynamic list optional if it may stay empty.
   Required now means at least one entry.
 - Check `hide-if` conditions that compare with text in quotes, like
-  `= "false"`. They now match, so the field may hide and its value is
-  removed.
+  `= "false"`. They now match, so the field may hide, and what users enter
+  there is then ignored.
+- Check gateways, service tasks and mails that read a field a form may hide.
+  They now read the value an earlier step stored there, also after a later
+  form hid the field. Check the field that controls the `hide-if` as well,
+  for example the decision next to the rejection reason.
+- Do not use `hide-if` to keep a stored value from a user. The browser
+  receives the values of hidden fields.
 - Rewrite `hide-if` conditions outside the supported subset, including
   ordering comparisons with text, chains like `1 < x < 5`, `contains(...)`,
   `in` and `not(...)`. Their workflow definitions now fail to load.

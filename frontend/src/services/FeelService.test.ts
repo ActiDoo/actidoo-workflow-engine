@@ -191,6 +191,28 @@ describe('evaluateHideIfAndFeel', () => {
     expect(newUiSchema?.a['ui:description']).toBe('Summe: 6,00 Euro');
   });
 
+  it('reads a hidden field as empty in ui:description', () => {
+    const uiSchema = {
+      total: { 'ui:description': 'Summe: {{ sum(for p in positions return p.amount) }} Euro' },
+      positions: { 'ui:hideif': '=simple = true' },
+    };
+    const schema: RJSFSchema = {
+      type: 'object',
+      properties: {
+        simple: { type: 'boolean' },
+        total: { type: 'null' },
+        positions: { type: 'array', items: { type: 'object' } },
+      },
+    };
+    const positions = [{ amount: 2 }, { amount: 3 }];
+
+    const shown = evaluateHideIfAndFeel({ simple: false, positions }, uiSchema, schema);
+    expect(shown.newUiSchema?.total['ui:description']).toBe('Summe: 5,00 Euro');
+
+    const hidden = evaluateHideIfAndFeel({ simple: true, positions }, uiSchema, schema);
+    expect(hidden.newUiSchema?.total['ui:description']).toBe('Summe:  Euro');
+  });
+
   it('evaluates multiline FEEL expressions in ui:description', () => {
     const uiSchema = {
       a: { 'ui:description': 'Summe: {{\nif numberA > 1\nthen numberA * numberB\nelse 0\n}} Euro' },

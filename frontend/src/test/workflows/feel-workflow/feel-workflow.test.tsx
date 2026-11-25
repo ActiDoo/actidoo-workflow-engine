@@ -87,6 +87,15 @@ describe('FeelWorkflow — hide-if in nested dynamic lists', () => {
     expect(innerRow).toMatchObject({ number_c: 33, number_d: 4 });
   });
 
+  it('shows the stored value of a field that was hidden when the task was opened', async () => {
+    // The server keeps the value of a hidden field and hands it out with the task.
+    const form = renderTaskForm(feelForm, { globalA: 1, globalB: 7 });
+    await expect.element(form.field('globalB')).not.toBeVisible();
+
+    await form.field('globalA').fill('2');
+    await expect.element(form.field('globalB')).toHaveValue(7);
+  });
+
   it('submits after the inner required field was hidden without being filled', async () => {
     const form = renderTaskForm(feelForm);
     await addOuterRow(form);

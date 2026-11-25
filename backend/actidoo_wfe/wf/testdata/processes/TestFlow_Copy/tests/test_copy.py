@@ -145,32 +145,6 @@ def test_copyWorkflowInstance(db_engine_ctx, mock_send_text_mail):
             )
 
 
-def test_hidden_fields_removed_for_ready_tasks(db_engine_ctx, mock_send_text_mail):
-    with db_engine_ctx():
-        workflow, db_session = start_my_workflow()
-
-        try:
-            workflow_instance = repository.load_workflow_instance(
-                db=db_session,
-                workflow_id=workflow.workflow_instance_id,
-            )
-
-            ready_tasks = service_workflow.get_ready_and_waiting_usertasks(workflow_instance)
-            assert ready_tasks, "Expected at least one ready task"
-
-            task = ready_tasks[0]
-            task.data["toggle"] = False
-            task.data["should_not_survive"] = "secret"
-            task.data["technical_field"] = "keep-me"
-
-            service_workflow.run_workflow(workflow_instance)
-
-            assert "should_not_survive" not in task.data
-            assert task.data["technical_field"] == "keep-me"
-        finally:
-            db_session.close()
-
-
 def test_copyWorkflowInstance_strips_unknown_fields(db_engine_ctx, mock_send_text_mail):
     with db_engine_ctx():
         workflow, db_session = start_my_workflow()

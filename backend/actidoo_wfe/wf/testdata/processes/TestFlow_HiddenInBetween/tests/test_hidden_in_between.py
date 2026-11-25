@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 ActiDoo GmbH
 
-"""A field the user emptied stays empty while a later step hides it.
+"""What a field holds stays while a later step hides it.
 
 The three steps share the optional text field ``text_a`` and the optional multi select
 ``tags_a``, both with a default. Step 1 shows them, step 2 hides them while ``flag_a``
-is true, step 3 shows them again. The null and the empty list that step 1 stores
-survive step 2, its hand-out and its submit, so step 3 receives them - and the browser
-fills in a default only for a missing key, not for null or an empty list. A value of a
-hidden field is still removed when the step is handed out.
+is true, step 3 shows them again. Whatever step 1 stores - a value, or the null and the
+empty list of fields the user emptied - survives step 2, its hand-out and its submit,
+so step 3 receives it. The browser fills in a default only for a missing key, not for
+null or an empty list.
 """
 
 from actidoo_wfe.database import SessionLocal
@@ -61,11 +61,33 @@ def test_a_cleared_field_stays_cleared_while_a_later_step_hides_it(db_engine_ctx
         assert shown.data["tags_a"] == []
 
 
-def test_a_value_of_a_hidden_field_is_removed_when_the_step_is_handed_out(db_engine_ctx, mock_send_text_mail):
+def test_a_value_of_a_hidden_field_stays_while_a_later_step_hides_it(db_engine_ctx, mock_send_text_mail):
     with db_engine_ctx():
         workflow = _start_workflow()
         _submit(workflow, STEP_1, {"text_a": "typed", "tags_a": ["b"], "flag_a": True})
 
-        data = _ready_task(workflow).data
-        assert "text_a" not in data
-        assert "tags_a" not in data
+        hidden = _ready_task(workflow)
+        assert hidden.name == STEP_2
+        assert hidden.data["text_a"] == "typed"
+        assert hidden.data["tags_a"] == ["b"]
+
+        # Whatever the browser sends for the hidden fields is ignored.
+        _submit(workflow, STEP_2, {"flag_a": True, "text_a": "changed", "tags_a": ["a"]})
+
+        shown = _ready_task(workflow)
+        assert shown.name == STEP_3
+        assert shown.data["text_a"] == "typed"
+        assert shown.data["tags_a"] == ["b"]
+
+
+def test_a_field_the_user_shows_again_takes_the_submitted_value(db_engine_ctx, mock_send_text_mail):
+    with db_engine_ctx():
+        workflow = _start_workflow()
+        _submit(workflow, STEP_1, {"text_a": "typed", "tags_a": ["b"], "flag_a": True})
+
+        # The user unticks the flag in step 2: the fields are visible when the form is sent.
+        _submit(workflow, STEP_2, {"flag_a": False, "text_a": "changed", "tags_a": ["a"]})
+
+        shown = _ready_task(workflow)
+        assert shown.data["text_a"] == "changed"
+        assert shown.data["tags_a"] == ["a"]

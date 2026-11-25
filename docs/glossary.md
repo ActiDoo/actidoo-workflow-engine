@@ -60,7 +60,7 @@ A form component that repeats a group of fields as a list of rows; the user can 
 
 ## empty value
 
-A form field without a value: its key is missing from the task data, because the field was never filled or is hidden, or it holds `null`, because the user cleared it. Text that is empty or only whitespace (blank text) is an empty value too, and in conditions so is a multi select with nothing chosen. An empty value does not satisfy `required`, and a comparison with `null`, `""` or `[]` matches it.
+A form field without a value: its key is missing from the task data, because the field was never filled, or it holds `null`, because the user cleared it. Text that is empty or only whitespace (blank text) is an empty value too, and in conditions so is a multi select with nothing chosen. Inside a form, a field that a hide-if hides reads as empty whatever it holds. An empty value does not satisfy `required`, and a comparison with `null`, `""` or `[]` matches it.
 
 ## engine
 
@@ -88,7 +88,7 @@ A named preset of form input that a user saves for a form and can apply again la
 
 ## hide-if
 
-A FEEL condition on a form field (Camunda `conditional.hide`). While it is true, the browser hides the field and the server removes the field's value from the task data, so a hidden field never blocks a submit. A field the user emptied, a multi select or list included, stays empty. Also called conditional hide, hidden field condition (avoid).
+A FEEL condition on a form field (Camunda `conditional.hide`). While it is true, the browser hides the field and the server ignores what a submit sends for it, so a hidden field never blocks a submit. What the field already holds stays in the task data. Also called conditional hide, hidden field condition (avoid).
 
 ## IdP
 

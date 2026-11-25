@@ -148,6 +148,20 @@ export function evaluateHideIfAndFeel(
     (orgFormData ?? {}) as Record<string, any>
   );
 
+  // A hidden field reads as empty in a text expression too, as in a hide-if condition:
+  // a sum must not count the rows of a hidden list.
+  const isVisible = ([key]: [string, unknown]): boolean => !hiddenMap[key];
+  const feelContext: Record<string, any> = Object.fromEntries(
+    Object.entries(orgFormData ?? {}).filter(isVisible)
+  );
+  if (
+    feelContext.this &&
+    typeof feelContext.this === 'object' &&
+    !Array.isArray(feelContext.this)
+  ) {
+    feelContext.this = Object.fromEntries(Object.entries(feelContext.this).filter(isVisible));
+  }
+
   let hide = false;
 
   for (const fieldName of Object.keys(uiSchema)) {
@@ -164,7 +178,7 @@ export function evaluateHideIfAndFeel(
         const wholeInclBrackets = finding[0]; // e.g. "{{ numberA * numberB }}"
         const expression = finding[1]; // e.g. " numberA * numberB "
         try {
-          let newValue = memoizedEvaluate(expression, { ...orgFormData });
+          let newValue = memoizedEvaluate(expression, { ...feelContext });
           if (newValue == null) {
             // if expression can not (yet) be evaluated, we do not want to render the expression,
             // but rather render an empty string

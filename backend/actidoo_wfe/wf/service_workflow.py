@@ -205,7 +205,7 @@ def run_workflow(workflow: BpmnWorkflow):
             engine_tasks = [t for t in workflow.get_tasks(task_filter=TaskFilter(state=TaskState.READY, manual=False))]
 
     auto_assign_all_tasks_in_initiator_lane(workflow=workflow)
-    cleanup_hidden_fields_for_ready_tasks(workflow=workflow)
+    stamp_missing_row_ids_for_ready_tasks(workflow)
     return result
 
 
@@ -1061,26 +1061,6 @@ def stamp_missing_row_ids_for_ready_tasks(workflow: BpmnWorkflow) -> bool:
 
         stamped = stamp_missing_row_ids(form_spec.uischema, task_data) or stamped
     return stamped
-
-
-def cleanup_hidden_fields_for_ready_tasks(workflow: BpmnWorkflow):
-    """Ensure ready tasks do not expose values of currently hidden form fields,
-    and lazily migrate their dynamic-list rows to carry row IDs."""
-
-    tasks = get_ready_and_waiting_usertasks(workflow=workflow)
-    for task in tasks:
-        form_spec = get_react_json_schema_form_data(task=task)
-        if form_spec is None:
-            continue
-
-        task_data = task.data
-        if not isinstance(task_data, dict) or not task_data:
-            continue
-
-        cleaned = strip_hidden_field_values(workflow.spec.name, form_spec, task_data)
-        task.data.clear()
-        task.data.update(cleaned)
-        stamp_missing_row_ids(form_spec.uischema, task.data)
 
 
 class LaneMappingSchema(BaseModel):

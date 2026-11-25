@@ -112,7 +112,7 @@ Supported field types: text field, text area, text view (static text), single an
 
 Patterns use Python regular-expression syntax and are checked by the server when the form is submitted. Typing remains unrestricted. Invalid patterns fail to load with the field name and a description of the problem. Pattern errors use the user's language and show the translated `pattern_message` or a generic format message.
 
-An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared, for a cleared select and for a removed optional file, and the task data stores it - so clearing a field in a later task really removes the earlier value, and a field with a default stays empty once the user cleared it. A key missing from a submission changes nothing. `required` therefore means that a value was entered: an [empty value](glossary.md#empty-value) does not satisfy it, in the browser and on the server alike - and for a multi select or a dynamic list it means at least one entry. A checkbox is always `true` or `false` while it is shown. Code that reads an optional field must therefore expect a missing key as well as `null`; `sth.get_value` handles both (see [What the task helper offers](#what-the-task-helper-offers)), and mail templates print `null` as nothing.
+An emptied field is `null`: the browser sends `null` for a text, number or date field the user cleared, for a cleared select and for a removed optional file, and the task data stores it - so clearing a field in a later task really removes the earlier value, and a field with a default stays empty once the user cleared it. A key missing from a submission changes nothing. `required` therefore means that a value was entered: an [empty value](glossary.md#empty-value) does not satisfy it, in the browser and on the server alike - and for a multi select or a dynamic list it means at least one entry. A checkbox is always `true` or `false` while it is shown. Code that reads an optional field must therefore expect a missing key as well as `null`; `sth.get_value` handles both (see [What the task helper offers](#what-the-task-helper-offers)), and mail templates print `null` as nothing. Only form input is turned into `null`; what a service task writes is stored as written, so write `None` to empty a field, not `""`.
 
 ### Custom properties
 
@@ -144,7 +144,7 @@ Use the Modeler's file picker component. Without "Upload multiple files" it stor
 
 ### Conditional fields (hide-if)
 
-Set a component's "Hide if" condition to an expression starting with `=`. The browser hides the field while the condition is true and re-evaluates on every change; the server drops the values of hidden fields on submit, so a hidden field never reaches the task data and never blocks the submit. In `EnterExpense`, `travel_details` is shown only for travel expenses, with the hide-if `=category != "Travel"`; in `ApproveExpense`, `reason` is shown only for a rejection, with `=decision != "reject"`.
+Set a component's "Hide if" condition to an expression starting with `=`. The browser hides the field while the condition is true and re-evaluates on every change; the server ignores what a submit sends for a hidden field, so a hidden field never blocks the submit. What the field already holds from an earlier step stays in the task data and shows again when the field becomes visible. In `EnterExpense`, `travel_details` is shown only for travel expenses, with the hide-if `=category != "Travel"`; in `ApproveExpense`, `reason` is shown only for a rejection, with `=decision != "reject"`.
 
 :::{warning}
 The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, `<`, `>`, `<=` and `>=` against a number, references with `this.` and `parent.`, string, number, boolean and `null` literals, and the empty list `[]`. The browser evaluates full FEEL. Keep hide-if expressions inside the subset. A comparison with `null` (or `""` or `[]`) matches every empty field: missing, `null`, empty or whitespace-only text, and a multi select with nothing chosen. Text in quotes is compared exactly as written. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row. A condition may mix fields of a row with fields outside it, also nested in `and` and `or`; such a condition may contain at most 10 comparisons.
@@ -159,7 +159,7 @@ How the field-level flags interact with hide-if:
 | `required` / `minItems` | suspended; an empty hidden field does not block the submit | enforced only if the field is visible |
 | `disabled` / `readonly` | shown read-only; the value is owned by the server | the browser's value is ignored; the stored value wins, else the field's default |
 
-A `disabled` field therefore shows a backend-owned value the user may not change (`readonly` means the same to the engine). This is exactly how `ApproveExpense` shows `title`, `amount`, `category` and `description`: they are marked `disabled`, so the approver sees what the employee entered but cannot edit it, and on submit the engine keeps the stored values. A hidden disabled value is dropped like any hidden value.
+A `disabled` field therefore shows a backend-owned value the user may not change (`readonly` means the same to the engine). This is exactly how `ApproveExpense` shows `title`, `amount`, `category` and `description`: they are marked `disabled`, so the approver sees what the employee entered but cannot edit it, and on submit the engine keeps the stored values. While a disabled field is hidden, its stored value stays as well.
 
 ### Options
 
@@ -262,7 +262,7 @@ def service_notify_approver(sth: ServiceTaskHelper):
 
 `body_format="html"` sends the body unchanged and leaves escaping to you; use it only for a body you control completely.
 
-Keep service functions short; long-running work belongs in a background task. Task data must stay JSON-serialisable, and values of hidden form fields are removed after every run, so do not rely on them later. A field the user emptied stays empty: its `null`, or the empty list of a multi select or list, is kept.
+Keep service functions short; long-running work belongs in a background task. Task data must stay JSON-serialisable. The value of a hidden form field stays in the task data: a gateway, a service function or a mail still reads what an earlier step stored there, so check the field that controls the hide-if as well. A field the user emptied stays empty: its `null`, or the empty list of a multi select or list, is kept.
 
 ## Messages and timers
 
