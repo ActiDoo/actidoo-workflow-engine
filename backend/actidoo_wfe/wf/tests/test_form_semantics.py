@@ -172,19 +172,6 @@ def test__an_empty_value_submitted_for_a_hidden_field_is_dropped_too():
     assert stored == {"category": "a", "detail": "abc", "tags": ["b"]}
 
 
-def _handed_out(stored: dict) -> dict:
-    """The task data after the hand-out cleanup, which cleans stored data as trusted."""
-    form = transform_camunda_form(_optional_hidden_field_form())
-    return validate_task_data(form=form, task_data=stored, options_folder=OPTIONS_FOLDER, functions_env={}, preserve_unknown_fields=True).task_data
-
-
-def test__an_empty_value_of_a_hidden_field_stays_when_the_task_is_handed_out():
-    """The value of a hidden field is removed when its task is handed out, but null and
-    an empty list stay: a field the user cleared stays cleared while it is hidden."""
-    assert _handed_out({"category": "a", "detail": None, "tags": []}) == {"category": "a", "detail": None, "tags": []}
-    assert _handed_out({"category": "a", "detail": "abc", "tags": ["a"]}) == {"category": "a"}
-
-
 def test__a_form_template_takes_nothing_from_a_hidden_field():
     """Template data comes from the browser, not from stored task data. Like a
     submission, it takes nothing from a hidden field, an empty value included."""
@@ -603,39 +590,6 @@ def test__hidden_attachment_field_is_stripped_without_error():
     assert "docs" not in result.task_data
 
 
-def test__hidden_list_leaves_no_row_skeleton_in_stored_task_data():
-    """The hand-out cleanup preserves technical fields such as the row id - but
-    those must not resurrect the rows the hide-if just removed as empty shells."""
-    form = transform_camunda_form(HIDDEN_LIST_FORM)
-    stored = {"variant": "a", "positions": [{ROW_ID_KEY: "r1", "name": "x"}]}
-
-    result = validate_task_data(
-        form=form,
-        task_data=stored,
-        options_folder=OPTIONS_FOLDER,
-        functions_env={},
-        preserve_unknown_fields=True,
-    )
-
-    assert "positions" not in result.task_data
-
-
-def test__visible_list_keeps_its_row_ids_during_cleanup():
-    """The hand-out cleanup of a shown list keeps rows and their row ids intact."""
-    form = transform_camunda_form(HIDDEN_LIST_FORM)
-    stored = {"variant": "b", "positions": [{ROW_ID_KEY: "r1", "name": "x"}]}
-
-    result = validate_task_data(
-        form=form,
-        task_data=stored,
-        options_folder=OPTIONS_FOLDER,
-        functions_env={},
-        preserve_unknown_fields=True,
-    )
-
-    assert result.task_data["positions"] == [{"name": "x", ROW_ID_KEY: "r1"}]
-
-
 def test__or_across_levels_hides_when_the_root_operand_holds():
     """Condition ``this.n = 9 or rootflag = "a"``. With rootflag "a" the root
     operand is true, so the condition holds for every row regardless of n.
@@ -1034,29 +988,6 @@ def test__a_blank_reference_does_not_match_not_null():
     assert not _validate(form, {}, stored={"status": "set"}).error_schema
 
 
-def test__stored_blank_reference_hides_like_null_when_a_task_is_handed_out():
-    """When a task is handed out, its stored data is cleaned as trusted data,
-    without the submission rules. A stored blank still counts as null there, so
-    the value of a field the browser hides is not kept."""
-    form = transform_camunda_form(
-        {
-            "components": [
-                {"type": "textfield", "key": "status"},
-                {"type": "textfield", "key": "detail", "conditional": {"hide": "=status = null"}},
-            ],
-        }
-    )
-    result = validate_task_data(
-        form=form,
-        task_data={"status": "", "detail": "stale"},
-        options_folder=OPTIONS_FOLDER,
-        functions_env={},
-        preserve_unknown_fields=True,
-    )
-
-    assert result.task_data == {"status": ""}
-
-
 def _amount_form(condition: str) -> dict:
     return {
         "components": [
@@ -1203,7 +1134,6 @@ def test__trusted_engine_data_keeps_blanks():
         task_data={"name": "", "choice": None},
         options_folder=OPTIONS_FOLDER,
         functions_env={},
-        preserve_unknown_fields=True,
     )
 
     assert result.task_data == {"name": "", "choice": None}

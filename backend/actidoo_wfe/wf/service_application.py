@@ -1007,14 +1007,9 @@ def strip_hidden_form_fields(
     form_data: dict,
 ) -> dict:
     """Return ``form_data`` without values of currently hidden fields (for read-only views)."""
-    workflow, task = _resolve_accessible_usertask(db=db, user_id=user_id, task_id=task_id)
-
-    # No definition -> hide-if cannot be evaluated; return unchanged (mirrors search_property_options).
-    if not workflow_providers.workflow_definition_available(workflow.spec.name):
-        return form_data
-
+    _workflow, task = _resolve_accessible_usertask(db=db, user_id=user_id, task_id=task_id)
     form_spec = ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema)
-    return service_workflow.strip_hidden_field_values(workflow.spec.name, form_spec, form_data)
+    return service_form.drop_hidden_fields(form_spec, form_data)
 
 
 # Namespace for the placeholder ids that mark a file as "submitted in this request,

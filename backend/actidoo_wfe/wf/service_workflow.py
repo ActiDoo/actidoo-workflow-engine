@@ -63,7 +63,6 @@ from actidoo_wfe.wf.service_form import (
     index_rows_by_id,
     iter_dynamic_lists,
     use_row_id_matching,
-    validate_task_data,
 )
 from actidoo_wfe.wf.spiff_customized import (
     get_parser,
@@ -1010,24 +1009,6 @@ def auto_assign_all_tasks_in_initiator_lane(workflow: BpmnWorkflow):
             created_by_id: uuid.UUID | None = get_created_by_id(workflow=workflow)
             if created_by_id:
                 assign_task_without_checks(workflow=workflow, task_id=task.id, user_id=created_by_id)
-
-
-def strip_hidden_field_values(
-    workflow_name: str,
-    form_spec: ReactJsonSchemaFormData,
-    data: dict,
-) -> dict:
-    """Remove values of currently hidden (conditional-hide) fields, preserving everything else."""
-    options_folder = workflow_providers.get_workflow_directory(workflow_name) / "options"
-    functions_env = _get_workflow_functions_env(workflow_name)
-    return validate_task_data(
-        form=form_spec,
-        task_data=data,
-        options_folder=options_folder,
-        functions_env=functions_env,
-        preserve_unknown_fields=True,
-        log_validation_errors=False,
-    ).task_data
 
 
 def stamp_missing_row_ids(uischema: dict, data) -> bool:

@@ -66,7 +66,7 @@ def test_empty_row_dependency_shadows_global_value_for_search_and_validation(row
     assert options == []
 
     data["vehicles"][0]["car_sub_type"] = "sedan"
-    result = validate_task_data(form, data, Path("."), functions, log_validation_errors=False)
+    result = validate_task_data(form, data, Path("."), functions)
     assert result.error_schema["vehicles"][0]["car_sub_type"]["__errors"]
 
 

@@ -92,11 +92,7 @@
             "else": {
                 "properties": {
                     "textfield_with_condition": {
-                        "type": [
-                            "null",
-                            "array"
-                        ],
-                        "maxItems": 0
+                        "not": {}
                     }
                 },
                 "type": "object"
@@ -164,11 +160,7 @@
                             "else": {
                                 "properties": {
                                     "region": {
-                                        "type": [
-                                            "null",
-                                            "array"
-                                        ],
-                                        "maxItems": 0
+                                        "not": {}
                                     }
                                 },
                                 "type": "object"
@@ -185,11 +177,7 @@
                         "items": {
                             "properties": {
                                 "region": {
-                                    "type": [
-                                        "null",
-                                        "array"
-                                    ],
-                                    "maxItems": 0
+                                    "not": {}
                                 }
                             },
                             "type": "object"
@@ -220,11 +208,7 @@
             "else": {
                 "properties": {
                     "assets": {
-                        "type": [
-                            "null",
-                            "array"
-                        ],
-                        "maxItems": 0
+                        "not": {}
                     }
                 },
                 "type": "object"
