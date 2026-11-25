@@ -56,6 +56,7 @@ from actidoo_wfe.wf.exceptions import (
     TaskIsNotErroneousException,
 )
 from actidoo_wfe.wf.service_form import (
+    drop_hidden_fields,
     get_options,
     get_options_detailed,
     get_row_id,
@@ -1138,6 +1139,9 @@ def get_options_for_property(
     if formdata is None:
         raise FormNotFoundException()
     jsonschema = formdata.jsonschema
+    if isinstance(form_data, dict):
+        # What a submit would keep: it drops hidden values before it asks the options function.
+        form_data = drop_hidden_fields(formdata, form_data)
 
     data = get_options(
         jsonschema=jsonschema,

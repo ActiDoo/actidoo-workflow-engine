@@ -144,6 +144,11 @@ server now apply the same rules.
     without an error.
   - Now: the server reads a hidden field as empty in other conditions, like
     the browser, in any field order.
+- **When** a select with `depends_on` depends on a field that a `hide-if`
+  hides:
+  - Before: the option search still used the value of the hidden field, the
+    submit did not. The form offered options that the submit then rejected.
+  - Now: the search reads a hidden field as empty, like the submit.
 - **When** a `hide-if` uses `<`, `>`, `<=` or `>=`:
   - Before: the server read them as `=`. For `amount > 10`, the server hid the
     field at 10 and showed it at 20. The browser did the opposite.

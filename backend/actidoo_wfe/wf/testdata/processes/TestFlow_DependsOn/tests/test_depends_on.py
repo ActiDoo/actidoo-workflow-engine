@@ -34,6 +34,29 @@ def test_list_options_follow_the_rows_car_type(db_engine_ctx):
         assert {value for value, _label in options} == {"pickup", "semi", "dump"}
 
 
+def test_the_search_reads_a_hidden_dependency_as_empty_like_the_submit(db_engine_ctx, monkeypatch):
+    """The submit drops the value of a hidden field before it asks the options function.
+    The search does the same, so it offers nothing the submit would reject."""
+    form = transform_camunda_form_from_file(Path(__file__).parents[1] / "Form010_Fill.form")
+    monkeypatch.setitem(form.jsonschema["properties"]["car_type"], "hideif", "=vehicles = null")
+
+    with db_engine_ctx():
+        workflow = WorkflowDummy(
+            db_session=SessionLocal(),
+            users_with_roles={"initiator": ["wf-user"]},
+            workflow_name="TestFlow_DependsOn",
+            start_user="initiator",
+        )
+        user = workflow.user("initiator")
+        task = user.get_usertasks(workflow.workflow_instance_id, 1)[0]
+
+        def search(form_data):
+            return user.search_options(property_path=["car_sub_type"], search="", task_id=task.id, form_data=form_data)
+
+        assert search({"car_type": "truck"}) == []  # no vehicles: car_type is hidden
+        assert {value for value, _label in search({"car_type": "truck", "vehicles": [{}]})} == {"pickup", "semi", "dump"}
+
+
 @pytest.mark.parametrize("row", [{}, {"car_type": None}])
 def test_empty_row_dependency_shadows_global_value_for_search_and_validation(row):
     form = copy.deepcopy(transform_camunda_form_from_file(Path(__file__).parents[1] / "Form010_Fill.form"))
