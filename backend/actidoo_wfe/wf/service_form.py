@@ -329,7 +329,8 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
     if isinstance(node, ast.Compare):  # =, !=, <, >, <=, >=
         if len(node.ops) > 1:
             raise NotImplementedError("hide-if supports one comparison per operand, not a chain like 'a < x < b'")
-        operand_types = (ast.Name, ast.Constant, ast.Attribute, ast.UnaryOp)
+        literal_types = (ast.Constant, ast.UnaryOp, ast.List)
+        operand_types = (ast.Name, ast.Attribute, *literal_types)
         assert isinstance(node.left, operand_types)
         assert isinstance(node.comparators[0], operand_types)
 
@@ -346,7 +347,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
                 global_jsonschema,
                 path,
             )
-        elif isinstance(node.left, (ast.Constant, ast.UnaryOp)):
+        elif isinstance(node.left, literal_types):
             property, _ = _camunda_hide_if_expression_ast_to_jsonschema(
                 node.comparators[0],
                 global_jsonschema,
@@ -364,7 +365,7 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             value, _ = _camunda_hide_if_expression_ast_to_jsonschema(node.comparators[0], global_jsonschema, path)  # type: ignore
 
         op = node.ops[0]
-        if isinstance(node.left, (ast.Constant, ast.UnaryOp)):
+        if isinstance(node.left, literal_types):
             # 'value op field' reads as 'field op value' with the order turned around.
             op = {ast.Lt: ast.Gt(), ast.Gt: ast.Lt(), ast.LtE: ast.GtE(), ast.GtE: ast.LtE()}.get(type(op), op)
 
@@ -479,6 +480,11 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
             return node.value, []
         else:
             raise NotImplementedError("Unsupported constant type")
+    elif isinstance(node, ast.List):
+        if node.elts:
+            raise NotImplementedError("hide-if supports no list literal except the empty list []")
+        # A multi select with nothing chosen is null in a condition, so [] reads as null.
+        return None, []
     else:
         raise NotImplementedError("Unsupported node type")
 

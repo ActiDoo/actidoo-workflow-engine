@@ -60,7 +60,7 @@ A form component that repeats a group of fields as a list of rows; the user can 
 
 ## empty value
 
-A form field without a value: its key is missing from the task data, because the field was never filled or is hidden, or it holds `null`, because the user cleared it. Text that is empty or only whitespace (blank text) is an empty value too, and in conditions so is a multi select with nothing chosen. An empty value does not satisfy `required`, and a comparison with `null` or `""` matches it.
+A form field without a value: its key is missing from the task data, because the field was never filled or is hidden, or it holds `null`, because the user cleared it. Text that is empty or only whitespace (blank text) is an empty value too, and in conditions so is a multi select with nothing chosen. An empty value does not satisfy `required`, and a comparison with `null`, `""` or `[]` matches it.
 
 ## engine
 

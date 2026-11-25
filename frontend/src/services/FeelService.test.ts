@@ -9,7 +9,7 @@ import { unaryTest, InterpreterContext } from 'feelin';
 import type { RJSFSchema } from '@rjsf/utils';
 
 import {
-  normalizeEmptyStringComparisons,
+  normalizeEmptyLiteralComparisons,
   collectHiddenPaths,
   dropErrorsOfHiddenFields,
   evaluateHideIfAndFeel,
@@ -132,6 +132,8 @@ describe('evaluateHideIfAndFeel', () => {
     const uiSchema = {
       none: { 'ui:hideif': '=tags = null' },
       some: { 'ui:hideif': '=tags != null' },
+      noneAsList: { 'ui:hideif': '=tags = []' },
+      someAsList: { 'ui:hideif': '=tags != []' },
     };
     const schema: RJSFSchema = {
       type: 'object',
@@ -139,16 +141,22 @@ describe('evaluateHideIfAndFeel', () => {
         tags: { type: 'array', items: { type: 'string' } },
         none: { type: 'string' },
         some: { type: 'string' },
+        noneAsList: { type: 'string' },
+        someAsList: { type: 'string' },
       },
     };
 
     const empty = evaluateHideIfAndFeel({ tags: [] }, uiSchema, schema).newUiSchema;
     expect(empty?.none['ui:widget']).toBe('hidden');
     expect(empty?.some['ui:widget']).toBeUndefined();
+    expect(empty?.noneAsList['ui:widget']).toBe('hidden');
+    expect(empty?.someAsList['ui:widget']).toBeUndefined();
 
     const chosen = evaluateHideIfAndFeel({ tags: ['a'] }, uiSchema, schema).newUiSchema;
     expect(chosen?.none['ui:widget']).toBeUndefined();
     expect(chosen?.some['ui:widget']).toBe('hidden');
+    expect(chosen?.noneAsList['ui:widget']).toBeUndefined();
+    expect(chosen?.someAsList['ui:widget']).toBe('hidden');
   });
 
   it('compares numbers with <, >, <= and >=, as the server does', () => {
@@ -212,7 +220,7 @@ describe('evaluateHideIfAndFeel', () => {
   });
 });
 
-describe('normalizeEmptyStringComparisons', () => {
+describe('normalizeEmptyLiteralComparisons', () => {
   // An empty field is null, never "" - see the matching backend conversion.
   it('reads comparisons against "" as comparisons against null', () => {
     const uiSchema = {
@@ -241,7 +249,18 @@ describe('normalizeEmptyStringComparisons', () => {
   });
 
   it('leaves other string literals alone', () => {
-    expect(normalizeEmptyStringComparisons('x = "a" or y != ""')).toBe('x = "a" or y != null');
+    expect(normalizeEmptyLiteralComparisons('x = "a" or y != ""')).toBe('x = "a" or y != null');
+  });
+
+  it('reads comparisons against [] as comparisons against null', () => {
+    expect(normalizeEmptyLiteralComparisons('tags = []')).toBe('tags = null');
+    expect(normalizeEmptyLiteralComparisons('tags != [ ]')).toBe('tags != null');
+    expect(normalizeEmptyLiteralComparisons('[] = this.tags')).toBe('null = this.tags');
+  });
+
+  it('leaves list access and non-empty lists alone', () => {
+    const untouched = 'tags[1] = "a" or count(tags) = 0 or kind = ["a"]';
+    expect(normalizeEmptyLiteralComparisons(untouched)).toBe(untouched);
   });
 });
 

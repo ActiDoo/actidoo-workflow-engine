@@ -32,7 +32,7 @@ function safeUnaryTest(expr: string, ctx: Record<string, any>): boolean {
   try {
     const trimmed = expr.trim();
     const normalized = trimmed.startsWith('=') ? trimmed.slice(1) : trimmed;
-    return memoizedUnaryTest(normalizeEmptyStringComparisons(normalized), { ...ctx });
+    return memoizedUnaryTest(normalizeEmptyLiteralComparisons(normalized), { ...ctx });
   } catch {
     return false;
   }
@@ -40,11 +40,14 @@ function safeUnaryTest(expr: string, ctx: Record<string, any>): boolean {
 
 /**
  * An empty field is null, never "" - forms comparing against "" mean "empty", so the
- * comparison is read as one against null. Keeps old forms working; the server converts
+ * comparison is read as one against null. Keeps old forms working. The empty list []
+ * reads as null too: a multi select with nothing chosen is empty. The server converts
  * such comparisons the same way.
  */
-export function normalizeEmptyStringComparisons(expression: string): string {
-  return expression.replace(/(!?=)\s*""/g, '$1 null').replace(/""\s*(!?=)/g, 'null $1');
+export function normalizeEmptyLiteralComparisons(expression: string): string {
+  return expression
+    .replace(/(!?=)\s*(?:""|\[\s*\])/g, '$1 null')
+    .replace(/(?:""|\[\s*\])\s*(!?=)/g, 'null $1');
 }
 
 /**
@@ -220,7 +223,7 @@ export type FormPath = Array<string | number>;
  */
 export const evaluateHideIfExpression: HideIfEvaluator = (expression, context) => {
   try {
-    return memoizedUnaryTest(normalizeEmptyStringComparisons(expression), { ...(context ?? {}) });
+    return memoizedUnaryTest(normalizeEmptyLiteralComparisons(expression), { ...(context ?? {}) });
   } catch {
     return false;
   }

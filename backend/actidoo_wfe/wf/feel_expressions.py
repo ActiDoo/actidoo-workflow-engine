@@ -73,8 +73,10 @@ def compare_ordered_values(left, right, operation):
 
 
 def _is_null_literal(node) -> bool:
-    """``null`` (None after the rewrite) or ``""`` - an emptied field is null, so a
-    comparison with "" means one with null."""
+    """``null`` (None after the rewrite), ``""`` or ``[]`` - an emptied field is null,
+    so a comparison with "" or with the empty list means one with null."""
+    if isinstance(node, ast.List):
+        return not node.elts
     return isinstance(node, ast.Constant) and (node.value is None or node.value == "")
 
 
@@ -102,7 +104,7 @@ def _reject_unary_tests_outside_comparisons(tree, expression: str) -> None:
 def compile_feel_condition(expression: str, scope: dict):
     """Compile a sequence-flow condition and put its helpers in the evaluation scope.
 
-    A comparison with null or "" is true for every value that reads as null, and an
+    A comparison with null, "" or [] is true for every value that reads as null, and an
     ordering comparison with such a value is false. Python builtins remain available
     as functions and function arguments. A missing field called ``type`` or ``max``
     still reads as null when used as a field in a condition.
@@ -188,7 +190,7 @@ def compile_feel_condition(expression: str, scope: dict):
                 null_comparison = is_null_comparison(left, op, right)
                 null_on_the_right = _is_null_literal(right)
                 next_left = right
-                if index < len(node.ops) - 1 and not isinstance(right, ast.Constant):
+                if index < len(node.ops) - 1 and not isinstance(right, ast.Constant) and not null_on_the_right:
                     # In a < f() < b, save f() once for the next comparison.
                     name = unique_name("__wfe_comparison_value")
                     right = ast.NamedExpr(target=ast.Name(id=name, ctx=ast.Store()), value=right)
@@ -200,7 +202,7 @@ def compile_feel_condition(expression: str, scope: dict):
                         keywords=[],
                     )
                 elif null_comparison:
-                    # x = null, x = "", x is None: every value that reads as null matches.
+                    # x = null, x = "", x = [], x is None: every value that reads as null matches.
                     part = ast.Call(
                         func=ast.Name(id=null_function_name, ctx=ast.Load()),
                         args=[left if null_on_the_right else right],

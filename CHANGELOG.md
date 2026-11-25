@@ -63,13 +63,15 @@ server now apply the same rules.
     `1e` blocks submission even in an optional field. Required fields, list
     minimums, text length and numeric limits have German and English messages.
     Hidden fields and their list rows do not block submission.
-- **When** a `hide-if` checks if a field is empty, with `= null` or `= ""`:
+- **When** a `hide-if` checks if a field is empty, with `= null`, `= ""` or
+  `= []`:
   - Before: `= null` did not match empty text, and `= ""` did not match
     `null`. For a field that was never filled, `= ""` hid the field on the
     server but not in the browser. A multi select with nothing chosen never
-    counted as empty.
-  - Now: both forms find every empty field: missing, `null`, empty text, only
-    spaces, or a multi select with nothing chosen. Browser and server agree.
+    counted as empty, and `= []` failed on the server.
+  - Now: all three forms find every empty field: missing, `null`, empty text,
+    only spaces, or a multi select with nothing chosen. Browser and server
+    agree.
 - **When** a gateway condition on a sequence flow, with a leading `=`, uses a
   variable that is not in the task data:
   - Before: the task failed. Workflows needed a guard like
@@ -85,11 +87,12 @@ server now apply the same rules.
     available as functions and function arguments.
 - **When** a gateway condition with a leading `=` checks a stored empty
   value:
-  - Before: blank text and an empty list did not match `null`. Ordering blank
-    text against a number could fail the task.
-  - Now: `= null` and `= ""` match missing values, `null`, empty or
-    whitespace-only text and empty lists. `!= null` and `!= ""` are false
-    for them, and ordering comparisons are false.
+  - Before: blank text and an empty list did not match `null`, and `= []`
+    matched only a stored empty list. Ordering blank text against a number
+    could fail the task.
+  - Now: `= null`, `= ""` and `= []` match missing values, `null`, empty or
+    whitespace-only text and empty lists. `!= null`, `!= ""` and `!= []` are
+    false for them, and ordering comparisons are false.
 - **When** a field or a whole dynamic list is marked `readonly` or `disabled`:
   - Before: `readonly` had no effect; users could edit it and the server took
     what the browser sent. Individual `disabled` fields were already protected

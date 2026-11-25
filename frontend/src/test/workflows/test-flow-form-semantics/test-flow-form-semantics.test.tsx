@@ -53,6 +53,18 @@ describe('Test Flow Form Semantics — validation on submit', () => {
     await expect.element(emptyStringMessage).not.toBeInTheDocument();
   });
 
+  it('3b: an empty multi select hides both conditional messages', async () => {
+    renderTaskForm(form010, { ...initialData, tags_for_empty_check: ['a'] });
+    await expect.element(fieldGroup('Field_needs_tags')).toBeVisible();
+    await expect.element(fieldGroup('Field_needs_tags_list')).toBeVisible();
+    cleanup();
+
+    const { field } = renderTaskForm(form010, { ...initialData, tags_for_empty_check: [] });
+    await expect.element(field('text_optional')).toBeVisible();
+    await expect.element(fieldGroup('Field_needs_tags')).not.toBeInTheDocument();
+    await expect.element(fieldGroup('Field_needs_tags_list')).not.toBeInTheDocument();
+  });
+
   it('4: reopens a cleared number without restoring the default', async () => {
     const { field, submitted, submit } = renderTaskForm(form010, initialData);
     await expect.element(field('number_optional')).toHaveValue(5);

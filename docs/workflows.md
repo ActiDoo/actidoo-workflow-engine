@@ -91,7 +91,7 @@ A sequence-flow condition reads [empty values](glossary.md#empty-value) the way 
 | In a sequence-flow condition | Result |
 |---|---|
 | a variable the task data does not hold | reads as `null` |
-| `x = null` or `x = ""` | true for every empty value: missing, `null`, empty or whitespace-only text, an empty list; `x != null` and `x != ""` are false for it |
+| `x = null`, `x = ""` or `x = []` | true for every empty value: missing, `null`, empty or whitespace-only text, an empty list; `x != null`, `x != ""` and `x != []` are false for it |
 | `<`, `>`, `<=` or `>=` with an empty value | false |
 | a missing variable named like a Python builtin, such as `type`, `id` or `max` | reads as `null`; builtins remain available as functions and function arguments, like `len(items)` and `isinstance(amount, int)` |
 | `not(...)`, `contains(...)` with one argument, or a range like `[1..5]`, other than on one side of `=` or `!=` | the gateway goes to state error with a message that says what to write instead |
@@ -147,7 +147,7 @@ Use the Modeler's file picker component. Without "Upload multiple files" it stor
 Set a component's "Hide if" condition to an expression starting with `=`. The browser hides the field while the condition is true and re-evaluates on every change; the server drops the values of hidden fields on submit, so a hidden field never reaches the task data and never blocks the submit. In `EnterExpense`, `travel_details` is shown only for travel expenses, with the hide-if `=category != "Travel"`; in `ApproveExpense`, `reason` is shown only for a rejection, with `=decision != "reject"`.
 
 :::{warning}
-The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, `<`, `>`, `<=` and `>=` against a number, references with `this.` and `parent.`, and string, number, boolean and `null` literals. The browser evaluates full FEEL. Keep hide-if expressions inside the subset. A comparison with `null` (or `""`) matches every empty field: missing, `null`, empty or whitespace-only text, and a multi select with nothing chosen. Text in quotes is compared exactly as written. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row. A condition may mix fields of a row with fields outside it, also nested in `and` and `or`; such a condition may contain at most 10 comparisons.
+The server evaluates hide-if with a subset of FEEL: `=`, `!=`, `and`, `or`, `<`, `>`, `<=` and `>=` against a number, references with `this.` and `parent.`, string, number, boolean and `null` literals, and the empty list `[]`. The browser evaluates full FEEL. Keep hide-if expressions inside the subset. A comparison with `null` (or `""` or `[]`) matches every empty field: missing, `null`, empty or whitespace-only text, and a multi select with nothing chosen. Text in quotes is compared exactly as written. Inside a dynamic list write `this.<key>` for a field of the same row and `parent.<key>` for the enclosing row. A condition may mix fields of a row with fields outside it, also nested in `and` and `or`; such a condition may contain at most 10 comparisons.
 
 A form with a hide-if outside the subset - for example an ordering comparison against text such as a date in quotes, a chain like `1 < amount < 5`, `contains(...)`, `in` or `not(...)` - makes the workflow definition fail to load. The workflow is then not offered for start, and the log names the workflow, the form and the field.
 :::

@@ -124,20 +124,20 @@ def test__null_and_none_are_the_same_literal():
     assert _condition("=approver = null", {"approver": "x"}) is False
 
 
-EMPTY_VALUES = [{}, {"comment": None}, {"comment": ""}, {"comment": "   "}]
+EMPTY_VALUES = [{}, {"comment": None}, {"comment": ""}, {"comment": "   "}, {"comment": []}]
 
 
 @pytest.mark.parametrize("data", EMPTY_VALUES)
-@pytest.mark.parametrize("expression", ["=comment = null", '=comment = ""', '="" = comment', "=comment is None"])
+@pytest.mark.parametrize("expression", ["=comment = null", '=comment = ""', '="" = comment', "=comment is None", "=comment = []", "=[] = comment"])
 def test__a_comparison_with_null_or_empty_text_matches_every_empty_value(expression, data):
     """The comment was never filled (no key), emptied (null), or older data holds
-    blank text. A comparison with null or "" treats them all as empty, as a form's
-    hide-if does."""
+    blank text. A comparison with null, "" or [] treats them all as empty, as a
+    form's hide-if does."""
     assert _condition(expression, data) is True
 
 
 @pytest.mark.parametrize("data", EMPTY_VALUES)
-@pytest.mark.parametrize("expression", ["=comment != null", '=comment != ""', '="comment" in globals() and comment != ""'])
+@pytest.mark.parametrize("expression", ["=comment != null", '=comment != ""', "=comment != []", '="comment" in globals() and comment != ""'])
 def test__a_check_for_a_value_is_false_for_every_empty_value(expression, data):
     """The other direction, including the guard older workflows use."""
     assert _condition(expression, data) is False
@@ -153,6 +153,13 @@ def test__an_empty_list_reads_as_null():
     """A multi select with nothing chosen is empty, as in a form's hide-if."""
     assert _condition("=tags = null", {"tags": []}) is True
     assert _condition("=tags != null", {"tags": ["a"]}) is True
+    assert _condition("=tags != []", {"tags": ["a"]}) is True
+    assert _condition("=tags = []", {"tags": ["a"]}) is False
+
+
+def test__the_empty_list_literal_in_a_chain_reads_as_null():
+    assert _condition("=tags = [] = other", {"tags": []}) is True
+    assert _condition("=tags = [] = other", {"tags": [], "other": "x"}) is False
 
 
 @pytest.mark.parametrize("data", [{"amount": ""}, {"amount": "  "}])

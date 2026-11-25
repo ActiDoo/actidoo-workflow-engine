@@ -105,6 +105,11 @@
         "title": "",
         "hideif": "=tags_for_empty_check = null"
       },
+      "Field_needs_tags_list": {
+        "type": "null",
+        "title": "",
+        "hideif": "=tags_for_empty_check = []"
+      },
       "Field_defaults": {
         "type": "null",
         "title": ""
@@ -453,6 +458,9 @@
       "Row_needs_tags": [
         "Field_needs_tags"
       ],
+      "Row_needs_tags_list": [
+        "Field_needs_tags_list"
+      ],
       "Row_defaults": [
         "Field_defaults"
       ],
@@ -663,7 +671,7 @@
       "ui:hideif": "=text_optional = \"\""
     },
     "Field_empty_tags_case": {
-      "ui:description": "### 3b. Checking an empty multi select with `= null`\n\n**Error case — the message stays visible after the last tag is removed.**\n\nRemove the selected tag. The message below should disappear.",
+      "ui:description": "### 3b. Checking an empty multi select with `= null` or `= []`\n\n**Error case — a message stays visible after the last tag is removed.**\n\nRemove the selected tag. Both messages below should disappear.",
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "Field_empty_tags_case"
@@ -678,12 +686,20 @@
       "ui:widget": "MultiSelectStatic"
     },
     "Field_needs_tags": {
-      "ui:description": "Message for selected tags",
+      "ui:description": "Message for selected tags, checked with `= null`",
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "Field_needs_tags"
       ],
       "ui:hideif": "=tags_for_empty_check = null"
+    },
+    "Field_needs_tags_list": {
+      "ui:description": "Message for selected tags, checked with `= []`",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_needs_tags_list"
+      ],
+      "ui:hideif": "=tags_for_empty_check = []"
     },
     "Field_defaults": {
       "ui:description": "### 4. Clearing a field with a default\n\n**Error case — the default reappears.**\n\nClear the number 5 and submit. The number field should reopen empty.",

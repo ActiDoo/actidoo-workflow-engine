@@ -1071,7 +1071,7 @@ def _unsupported_form(condition: str) -> dict:
     }
 
 
-UNSUPPORTED_CONDITIONS = ['=due > "2024-01-01"', "=1 < amount < 5", '=contains(name,"x")', '="x" in name']
+UNSUPPORTED_CONDITIONS = ['=due > "2024-01-01"', "=1 < amount < 5", '=contains(name,"x")', '="x" in name', '=name = ["a"]']
 
 
 @pytest.mark.parametrize("condition", UNSUPPORTED_CONDITIONS)
@@ -1094,18 +1094,44 @@ def _tags_form(condition: str) -> dict:
     }
 
 
+@pytest.mark.parametrize("empty", ["null", "[]"])
 @pytest.mark.parametrize(
-    ("tags", "hidden_by_null", "hidden_by_not_null"),
+    ("tags", "hidden_by_empty", "hidden_by_not_empty"),
     [([], True, False), (["a"], False, True)],
 )
-def test__an_empty_multi_select_reads_as_null(tags, hidden_by_null, hidden_by_not_null):
+def test__an_empty_multi_select_reads_as_null(tags, hidden_by_empty, hidden_by_not_empty, empty):
     """A multi select with nothing chosen is empty, as in the browser: '= null'
-    matches it, '!= null' does not. There was no way to test for 'nothing chosen'."""
-    by_null = _validate(_tags_form("=tags = null"), {"tags": tags})
-    by_not_null = _validate(_tags_form("=tags != null"), {"tags": tags})
+    matches it, '!= null' does not, and '[]' is another spelling of 'null'. There
+    was no way to test for 'nothing chosen'."""
+    by_empty = _validate(_tags_form(f"=tags = {empty}"), {"tags": tags})
+    by_not_empty = _validate(_tags_form(f"=tags != {empty}"), {"tags": tags})
 
-    assert (_required_errors(by_null) == set()) is hidden_by_null
-    assert (_required_errors(by_not_null) == set()) is hidden_by_not_null
+    assert (_required_errors(by_empty) == set()) is hidden_by_empty
+    assert (_required_errors(by_not_empty) == set()) is hidden_by_not_empty
+
+
+def test__the_empty_list_literal_reads_as_null_wherever_null_does():
+    """'[]' also matches a field that was never filled, may stand on the left, and
+    works for a field of a list row."""
+    assert not _validate(_tags_form("=[] = tags"), {}).error_schema
+
+    form = {
+        "components": [
+            {
+                "type": "dynamiclist",
+                "path": "rows",
+                "components": [
+                    {"type": "select", "key": "tags", "properties": {"custom_type": "select_multi"}, "values": AB_OPTIONS},
+                    {"type": "textfield", "key": "note", "conditional": {"hide": "=this.tags = []"}},
+                ],
+            },
+        ],
+    }
+    result = _validate(form, {"rows": [{"tags": [], "note": "dropped"}, {"tags": ["a"], "note": "kept"}]})
+
+    assert not result.error_schema
+    assert "note" not in result.task_data["rows"][0]
+    assert result.task_data["rows"][1]["note"] == "kept"
 
 
 @pytest.mark.parametrize("text", ["true_positive", "a=b", "null"])
