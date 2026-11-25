@@ -193,6 +193,41 @@ def test__a_form_template_takes_nothing_from_a_hidden_field():
     assert drop_hidden_fields(form, {"category": "a", "detail": None, "tags": [], "extra": 1}) == {"category": "a", "extra": 1}
 
 
+def _chain_form(order: list[str]) -> dict:
+    """flag hides code, code hides detail, detail hides extra - in the given field order."""
+    fields = {
+        "flag": {"type": "textfield", "key": "flag"},
+        "code": {"type": "textfield", "key": "code", "conditional": {"hide": '=flag = "a"'}},
+        "detail": {"type": "textfield", "key": "detail", "conditional": {"hide": '=code = "x"'}},
+        "extra": {"type": "textfield", "key": "extra", "conditional": {"hide": '=detail = "y"'}},
+    }
+    return {"components": [fields[key] for key in order]}
+
+
+@pytest.mark.parametrize("order", [["flag", "code", "detail"], ["flag", "detail", "code"], ["detail", "code", "flag"]])
+def test__a_hidden_field_reads_as_empty_in_other_conditions_whatever_the_field_order(order):
+    """flag hides code, so code counts as empty and its value cannot hide detail: the
+    browser shows detail, and what the user typed there is kept. The server used to
+    decide in field order and dropped detail when it stood before code."""
+    form = _chain_form(order)
+    submitted = {"flag": "a", "code": "x", "detail": "typed"}
+
+    result = _validate(form, submitted)
+
+    assert not result.error_schema
+    assert result.task_data == {"flag": "a", "detail": "typed"}
+    assert drop_hidden_fields(transform_camunda_form(form), submitted) == {"flag": "a", "detail": "typed"}
+
+
+@pytest.mark.parametrize("order", [["flag", "code", "detail", "extra"], ["extra", "detail", "code", "flag"]])
+def test__a_visible_field_still_hides_the_next_one_in_a_chain(order):
+    """code is hidden, so detail is visible - and the visible detail hides extra."""
+    result = _validate(_chain_form(order), {"flag": "a", "code": "x", "detail": "y", "extra": "dropped"})
+
+    assert not result.error_schema
+    assert result.task_data == {"flag": "a", "detail": "y"}
+
+
 def test__submitted_disabled_value_cannot_override_stored_one():
     """The client sends testclass "a", but the stored value is "b". testclass is
     disabled, so the stored "b" wins: approval stays shown and required."""

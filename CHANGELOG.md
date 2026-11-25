@@ -136,6 +136,14 @@ server now apply the same rules.
   - Now: each comparison is checked on its own level, including nested
     combinations of `or` and `and` and conditions across more than two levels.
     Such a condition may contain at most 10 comparisons; more raise an error.
+- **When** a `hide-if` reads a field that another `hide-if` hides, for example
+  `detail` hides while `code = "x"`, and `code` hides while `flag = "a"`:
+  - Before: the browser read the hidden `code` as empty and showed `detail`.
+    The server decided in the order of the fields in the form. When `detail`
+    stood before `code`, it dropped what the user entered in `detail`,
+    without an error.
+  - Now: the server reads a hidden field as empty in other conditions, like
+    the browser, in any field order.
 - **When** a `hide-if` uses `<`, `>`, `<=` or `>=`:
   - Before: the server read them as `=`. For `amount > 10`, the server hid the
     field at 10 and showed it at 20. The browser did the opposite.

@@ -136,6 +136,41 @@ def _is_removed_value(error) -> bool:
     return error.schema in (HIDDEN_FIELD_KEEPS_EMPTY, HIDDEN_FIELD_KEEPS_NOTHING) or (error.validator == "type" and error.validator_value == "null")
 
 
+def _remove_hidden_values(data, validation_schema) -> list[list]:
+    """Remove the values of hidden fields from ``data`` and return their paths.
+
+    A hidden field reads as empty in the other conditions, as in the browser. A value
+    is therefore removed only if its field is still hidden once the other values found
+    are taken out - a field that is hidden only by the value of a hidden field stays.
+    Conditions that hide each other leave no such value; then all of them go.
+    """
+    # The plain validator: workflow functions (options, validation) have no say here.
+    validator = jsonschema.Draft202012Validator(validation_schema)
+
+    def hidden_paths(candidate_data) -> list[list]:
+        paths = []
+        for error in validator.iter_errors(candidate_data):
+            path = list(error.absolute_path)
+            if _is_removed_value(error) and path not in paths:
+                paths.append(path)
+        return paths
+
+    removed = []
+    while found := hidden_paths(data):
+        hidden = []
+        for path in found:
+            without_the_others = copy.deepcopy(data)
+            for other in found:
+                if other != path:
+                    remove_item(without_the_others, other)
+            if path in hidden_paths(without_the_others):
+                hidden.append(path)
+        for path in hidden or found:
+            remove_item(data, path)
+            removed.append(path)
+    return removed
+
+
 def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None, hidden_field_schema=HIDDEN_FIELD_KEEPS_EMPTY):
     # hier haben wir das jsonschema schon aufgebaut und in den properties zusätzlich "hideif" definiert
     # das müssen wir nun in allOf/if/then konstruke umwandeln
@@ -1280,6 +1315,7 @@ def validate_task_data(
         validation_schema,
         on_remove=_collect_unknown_field if preserve_unknown_fields else None,
     )
+    removed = _remove_hidden_values(cleaned_task_data, validation_schema)
 
     current_path: list = []
     position, tracked_task_data = get_position_tracker(cleaned_task_data, current_path=current_path)
@@ -1303,21 +1339,7 @@ def validate_task_data(
 
     validator_instance: jsonschema.Validator = CustomValidator(validation_schema, format_checker=jsonschema.Draft202012Validator.FORMAT_CHECKER)
 
-    run_again = True
-    removed = []
-    while run_again:
-        run_again = False
-        # Remove values of hidden fields via iter_errors, not validate(): an unrelated error
-        # (e.g. a missing required field) must not short-circuit removal of deeper hidden fields.
-        for ex in validator_instance.iter_errors(tracked_task_data):
-            if _is_removed_value(ex):
-                tracked_task_data = remove_item(tracked_task_data, ex.absolute_path)
-                removed.append(list(ex.absolute_path))
-                run_again = True
-                break  # re-validate after each removal to keep the remaining paths valid
-
     error_schema = validate_and_create_error_dict(validator=validator_instance, instance=tracked_task_data, uischema=form.uischema, locale=locale)
-    # log.debug("removed = %s", removed)
 
     untracked_task_data = copy.deepcopy(tracked_task_data)
 
@@ -1364,13 +1386,9 @@ def drop_hidden_fields(form: ReactJsonSchemaFormData, data: dict) -> dict:
     """``data`` without anything in a hidden field, an empty value included - the rule of
     a submission, for data from the browser that is not stored task data, such as a form
     template."""
-    validator = jsonschema.Draft202012Validator(get_jsonschema_for_validation(form, hidden_field_schema=HIDDEN_FIELD_KEEPS_NOTHING))
     data = copy.deepcopy(data)
-    while True:
-        hidden = next((error for error in validator.iter_errors(data) if _is_removed_value(error)), None)
-        if hidden is None:
-            return data
-        data = remove_item(data, hidden.absolute_path)
+    _remove_hidden_values(data, get_jsonschema_for_validation(form, hidden_field_schema=HIDDEN_FIELD_KEEPS_NOTHING))
+    return data
 
 
 def iterate_and_replace_datauri(json_data, replace_function):
