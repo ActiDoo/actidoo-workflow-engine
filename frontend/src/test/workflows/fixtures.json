@@ -17,5 +17,8 @@
   },
   "test-flow-depends-on/form010-fill.fixture.json": {
     "form": "TestFlow_DependsOn/Form010_Fill.form"
+  },
+  "test-flow-demo-change-function/enter-gifts.fixture.json": {
+    "form": "TestFlowDemoChangeFunction/EnterGifts.form"
   }
 }

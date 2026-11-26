@@ -1,0 +1,168 @@
+{
+  "components": [
+    {
+      "text": "## Gifts\n\nPick a product in a gift row: the server sets its price. Change the company: all prices follow.",
+      "type": "text",
+      "layout": {
+        "row": "Row_intro",
+        "columns": null
+      },
+      "id": "Text_gifts"
+    },
+    {
+      "label": "Company",
+      "values": [
+        {
+          "label": "Parent company",
+          "value": "parent"
+        },
+        {
+          "label": "Subsidiary (+10 %)",
+          "value": "subsidiary"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_company",
+        "columns": 16
+      },
+      "id": "Field_Row_company_company",
+      "key": "company",
+      "properties": {
+        "change_function": "update_prices"
+      }
+    },
+    {
+      "label": "Gifts",
+      "components": [
+        {
+          "label": "Product",
+          "values": [
+            {
+              "label": "Pen",
+              "value": "pen"
+            },
+            {
+              "label": "Mug",
+              "value": "mug"
+            },
+            {
+              "label": "Backpack",
+              "value": "backpack"
+            }
+          ],
+          "type": "select",
+          "layout": {
+            "row": "Row_gift",
+            "columns": 6
+          },
+          "id": "Field_Row_gift_product",
+          "key": "product",
+          "properties": {
+            "change_function": "update_gift"
+          }
+        },
+        {
+          "label": "Price",
+          "type": "number",
+          "layout": {
+            "row": "Row_gift",
+            "columns": 4
+          },
+          "id": "Field_Row_gift_price",
+          "key": "price",
+          "disabled": true
+        },
+        {
+          "label": "Remark (suggested, editable)",
+          "type": "textfield",
+          "layout": {
+            "row": "Row_gift",
+            "columns": 6
+          },
+          "id": "Field_Row_gift_remark",
+          "key": "remark"
+        }
+      ],
+      "showOutline": true,
+      "isRepeating": true,
+      "allowAddRemove": true,
+      "defaultRepetitions": 1,
+      "type": "dynamiclist",
+      "layout": {
+        "row": "Row_gifts",
+        "columns": 16
+      },
+      "id": "Field_gifts",
+      "path": "gifts",
+      "disableCollapse": true
+    },
+    {
+      "text": "## Product contacts\n\nPick a product: product manager and CCC group follow.",
+      "type": "text",
+      "layout": {
+        "row": "Row_contacts_intro",
+        "columns": null
+      },
+      "id": "Text_contacts"
+    },
+    {
+      "label": "Product",
+      "values": [
+        {
+          "label": "Pisco",
+          "value": "pisco"
+        },
+        {
+          "label": "Wine",
+          "value": "wine"
+        },
+        {
+          "label": "Olive oil",
+          "value": "olive_oil"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_contacts",
+        "columns": 6
+      },
+      "id": "Field_Row_contacts_sales_product",
+      "key": "sales_product",
+      "properties": {
+        "change_function": "update_contacts"
+      }
+    },
+    {
+      "label": "Product manager",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_contacts",
+        "columns": 5
+      },
+      "id": "Field_Row_contacts_product_manager",
+      "key": "product_manager",
+      "disabled": true
+    },
+    {
+      "label": "CCC group",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_contacts",
+        "columns": 5
+      },
+      "id": "Field_Row_contacts_ccc_group",
+      "key": "ccc_group",
+      "disabled": true
+    }
+  ],
+  "type": "default",
+  "id": "EnterGifts",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.6.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.38.1"
+  },
+  "schemaVersion": 19
+}

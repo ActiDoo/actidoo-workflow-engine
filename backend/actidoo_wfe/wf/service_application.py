@@ -676,6 +676,7 @@ def _clean_submitted_task_data(workflow, task, submitted_data, locale: str, rais
         options_folder=options_folder,
         functions_env=functions_env,
         authoritative_disabled_values=task.data if isinstance(task.data, dict) else {},
+        skip_failing_change_functions=not raise_on_errors,
         locale=locale,
     )
 
@@ -905,6 +906,24 @@ def _resolve_accessible_usertask(
     if task is None:
         raise TaskIsNotInReadyUsertasksException()
     return workflow, task
+
+
+def get_form_changes(
+    db: Session,
+    user_id: uuid.UUID,
+    task_id: uuid.UUID,
+    property_path: list[str | int],
+    form_data: dict,
+) -> list[dict]:
+    workflow, _usertask = _resolve_accessible_usertask(db=db, user_id=user_id, task_id=task_id)
+    if not workflow_providers.workflow_definition_available(workflow.spec.name):
+        return []
+    return service_workflow.get_form_changes_for_property(
+        workflow=workflow,
+        task_id=task_id,
+        property_path=property_path,
+        form_data=form_data,
+    )
 
 
 class PropertyOptionsPage(NamedTuple):

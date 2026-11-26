@@ -249,6 +249,27 @@ class SearchPropertyOptionsResponseItem(BaseModel):
     label: str
 
 
+class FormChangeRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: uuid.UUID
+    property_path: list[str | int]
+    form_data: dict = Field(default_factory=lambda: {})
+
+
+class FormChangeResponseItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    path: list[str | int]
+    value: Any = None
+
+
+class FormChangeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    changes: list[FormChangeResponseItem]
+
+
 class StripHiddenFieldsRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

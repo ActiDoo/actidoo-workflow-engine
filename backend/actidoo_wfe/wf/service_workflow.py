@@ -56,6 +56,7 @@ from actidoo_wfe.wf.exceptions import (
     TaskIsNotErroneousException,
 )
 from actidoo_wfe.wf.service_form import (
+    get_form_changes,
     get_options,
     get_options_detailed,
     get_row_id,
@@ -1146,6 +1147,20 @@ def get_options_for_property(
     )
 
     return data
+
+
+def get_form_changes_for_property(
+    workflow: BpmnWorkflow,
+    task_id: uuid.UUID,
+    property_path: list[str | int],
+    form_data: dict,
+) -> list[dict]:
+    functions_env = _get_workflow_functions_env(workflow.spec.name)
+    task: Task = workflow.get_task_from_id(task_id)
+    form = get_react_json_schema_form_data(task=task)
+    if form is None:
+        raise FormNotFoundException()
+    return get_form_changes(form=form, property_path=property_path, form_data=form_data, functions_env=functions_env)
 
 
 def get_options_detailed_for_property(

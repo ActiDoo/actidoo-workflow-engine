@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 ActiDoo GmbH
 
-import React from 'react';
+import React, { useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { Form } from '@rjsf/react-bootstrap';
+import type { IChangeEvent } from '@rjsf/core';
 import { customizeValidator } from '@rjsf/validator-ajv8';
 import type {
   Experimental_DefaultFormStateBehavior,
@@ -34,6 +36,7 @@ import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
 import { collectHiddenPaths, dropErrorsOfHiddenFields } from '@/services/FeelService';
+import { useChangeFunctions } from '@/rjsf-customs/hooks/useChangeFunctions';
 
 // Patterns use the backend regex dialect. Leave their evaluation to submit;
 // the remaining JSON Schema constraints still run in the browser.
@@ -128,9 +131,39 @@ const TaskForm: React.FC<TaskFormProps> = ({
       : visibleErrors;
   };
 
+  const { taskId: routeTaskId } = useParams();
+  const lastChangeEventRef = useRef<IChangeEvent | undefined>(undefined);
+  const changeFunctions = useChangeFunctions({
+    taskId: routeTaskId ?? (rest.formContext as { taskId?: string } | undefined)?.taskId,
+    schema: rest.schema,
+    uiSchema: rest.uiSchema,
+    formData: rest.formData,
+    onChange: formData => {
+      const event: Partial<IChangeEvent> = { ...lastChangeEventRef.current, formData };
+      rest.onChange?.(event as IChangeEvent);
+    },
+  });
+
+  const onChange: BaseFormProps['onChange'] = (event, id) => {
+    lastChangeEventRef.current = event;
+    rest.onChange?.(event, id);
+    changeFunctions.handleChange(event.formData);
+  };
+
+  const onSubmit: BaseFormProps['onSubmit'] = (event, nativeEvent) => {
+    const settled = changeFunctions.whenSettled();
+    if (!settled) {
+      rest.onSubmit?.(event, nativeEvent);
+      return;
+    }
+    void settled.then(formData => rest.onSubmit?.({ ...event, formData }, nativeEvent));
+  };
+
   return (
     <Form
       {...rest}
+      onChange={onChange}
+      onSubmit={onSubmit}
       _internalFormWrapper={FormWithoutEnterSubmit}
       validator={providedValidator ?? validator}
       transformErrors={transformErrors}
