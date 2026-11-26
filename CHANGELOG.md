@@ -100,11 +100,6 @@ a `hide-if` hides. Browser and server now apply the same rules.
   - Now: the server keeps the stored value and ignores what the browser
     sends. A list is locked as a whole. If users should change such a field,
     remove `readonly`.
-- **When** you copy an instance and its data breaks the current rules, for
-  example an empty required field:
-  - Before: the copy failed.
-  - Now: the data goes into the form. The engine checks it when the user
-    submits.
 - **When** a task's form hides a field that holds a value from an earlier
   step, for example a rejection reason that only shows for a rejection:
   - Before: the value was removed from the task data for good, as soon as the
@@ -122,8 +117,8 @@ a `hide-if` hides. Browser and server now apply the same rules.
 - **When** an instance was started before the update:
   - It keeps the form definitions from its start. No migration is needed.
   - At once: the required check, all `hide-if` fixes, gateway conditions, the
-    mail output, copying an instance, and hidden fields keeping their value.
-    A value that was already removed from an open task does not come back.
+    mail output, and hidden fields keeping their value. A value that was
+    already removed from an open task does not come back.
   - Only for new instances: cleared fields become `null`, required lists need
     one entry, `readonly` works like `disabled`, locked lists.
 
