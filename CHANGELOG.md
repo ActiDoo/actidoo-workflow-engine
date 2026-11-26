@@ -7,6 +7,18 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Added
+
+- **When** a form value follows from another field, e.g. the price of the
+  chosen product:
+  - Before: the form could not show it while the user filled it in.
+    Workflows put the information into the option labels instead.
+  - Now: the custom property `change_function` on a field names a function
+    `<name>(cth)` in the workflow module. It runs when the user changes the
+    field and sets other form values, also inside dynamic lists. On submit
+    the server runs the functions again and takes the values of disabled
+    fields from them. See `docs/workflows.md`, "Change functions".
+
 ## [0.1.47] - 2026-11-24
 
 ### Added

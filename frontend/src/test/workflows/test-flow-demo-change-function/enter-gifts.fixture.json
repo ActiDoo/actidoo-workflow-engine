@@ -1,0 +1,244 @@
+{
+  "jsonschema": {
+    "definitions": {},
+    "type": "object",
+    "properties": {
+      "Text_gifts": {
+        "type": "null",
+        "title": ""
+      },
+      "company": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Company",
+        "custom_properties": {
+          "change_function": "update_prices"
+        },
+        "oneOf": [
+          {
+            "const": "parent",
+            "title": "Parent company"
+          },
+          {
+            "const": "subsidiary",
+            "title": "Subsidiary (+10 %)"
+          },
+          {
+            "const": null,
+            "title": "(null)"
+          }
+        ]
+      },
+      "gifts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "product": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "title": "Product",
+              "custom_properties": {
+                "change_function": "update_gift"
+              },
+              "oneOf": [
+                {
+                  "const": "pen",
+                  "title": "Pen"
+                },
+                {
+                  "const": "mug",
+                  "title": "Mug"
+                },
+                {
+                  "const": "backpack",
+                  "title": "Backpack"
+                },
+                {
+                  "const": null,
+                  "title": "(null)"
+                }
+              ]
+            },
+            "price": {
+              "type": "number",
+              "title": "Price"
+            },
+            "remark": {
+              "type": "string",
+              "title": "Remark (suggested, editable)"
+            }
+          }
+        },
+        "title": "Gifts"
+      },
+      "Text_contacts": {
+        "type": "null",
+        "title": ""
+      },
+      "sales_product": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Product",
+        "custom_properties": {
+          "change_function": "update_contacts"
+        },
+        "oneOf": [
+          {
+            "const": "pisco",
+            "title": "Pisco"
+          },
+          {
+            "const": "wine",
+            "title": "Wine"
+          },
+          {
+            "const": "olive_oil",
+            "title": "Olive oil"
+          },
+          {
+            "const": null,
+            "title": "(null)"
+          }
+        ]
+      },
+      "product_manager": {
+        "type": "string",
+        "title": "Product manager"
+      },
+      "ccc_group": {
+        "type": "string",
+        "title": "CCC group"
+      }
+    }
+  },
+  "uischema": {
+    "ui:field": "layout",
+    "ui:layout": {
+      "Row_intro": [
+        "Text_gifts"
+      ],
+      "Row_company": [
+        "company"
+      ],
+      "gifts": [
+        "gifts"
+      ],
+      "Row_contacts_intro": [
+        "Text_contacts"
+      ],
+      "Row_contacts": [
+        "sales_product",
+        "product_manager",
+        "ccc_group"
+      ]
+    },
+    "Text_gifts": {
+      "ui:description": "## Gifts\n\nPick a product in a gift row: the server sets its price. Change the company: all prices follow.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Text_gifts"
+      ]
+    },
+    "company": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "company"
+      ],
+      "ui:columns": 16,
+      "ui:changeFunction": true,
+      "ui:widget": "SelectStatic"
+    },
+    "gifts": {
+      "items": {
+        "ui:field": "layout",
+        "ui:layout": {
+          "Row_gift": [
+            "product",
+            "price",
+            "remark"
+          ]
+        },
+        "product": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "gifts",
+            "product"
+          ],
+          "ui:columns": 6,
+          "ui:changeFunction": true,
+          "ui:widget": "SelectStatic"
+        },
+        "price": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "gifts",
+            "price"
+          ],
+          "ui:columns": 4,
+          "ui:disabled": true
+        },
+        "remark": {
+          "ui:description": "",
+          "ui:enableMarkdownInDescription": true,
+          "ui:path": [
+            "gifts",
+            "remark"
+          ],
+          "ui:columns": 6
+        }
+      },
+      "ui:arrayAddButtonText": "Add",
+      "ui:arrayAllowAddRemove": "True",
+      "ui:arrayOverviewButtonText": "Overview",
+      "ui:defaultRepetitions": 1,
+      "ui:label": "Gifts",
+      "ui:copyable": true
+    },
+    "Text_contacts": {
+      "ui:description": "## Product contacts\n\nPick a product: product manager and CCC group follow.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Text_contacts"
+      ]
+    },
+    "sales_product": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "sales_product"
+      ],
+      "ui:columns": 6,
+      "ui:changeFunction": true,
+      "ui:widget": "SelectStatic"
+    },
+    "product_manager": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "product_manager"
+      ],
+      "ui:columns": 5,
+      "ui:disabled": true
+    },
+    "ccc_group": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "ccc_group"
+      ],
+      "ui:columns": 5,
+      "ui:disabled": true
+    },
+    "ui:templateMode": "blacklist"
+  }
+}

@@ -281,6 +281,8 @@ def _insert_single_component(
     _handle_disable(component, uischema, jsonschema, key)
 
     custom_properties = _handle_custom_properties(component, jsonschema, key)
+    if custom_properties.get("change_function"):
+        uischema[key]["ui:changeFunction"] = True
 
     if component["type"] == "text":
         jsonschema["properties"][component["id"]].update({"type": "null", "title": ""})

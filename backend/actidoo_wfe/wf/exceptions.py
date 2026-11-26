@@ -58,6 +58,10 @@ class OptionFunctionNotFound(Exception):
     pass
 
 
+class ChangeFunctionNotFound(Exception):
+    pass
+
+
 class AttachmentNotFoundException(Exception):
     pass
 

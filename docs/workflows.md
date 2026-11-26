@@ -116,6 +116,7 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 | `options_limit` | integer, default 50, `0` = all at once | how many dynamic options the select loads at a time | load fewer options at a time, or all at once |
 | `pattern_message` | text, e.g. `Cost center like CC-1234` | the error shown when the field's regex (`pattern`) does not match; translatable like a label | a user cannot act on `must match pattern "^CC-[0-9]{4}$"` |
 | `validation_function` | function name | calls `<name>(vth)` on submit, which can reject the field with a message | checks the schema cannot express, e.g. a lookup |
+| `change_function` | function name | calls `<name>(cth)` when the user changes the field; the function sets other form values | values derived from other fields, e.g. a price for the chosen product |
 | `currency` | symbol, e.g. `EUR` | renders a number field as a currency input | monetary amounts |
 | `template_field` | `true` / `false` | includes or excludes the field from saved form templates | control what a [form template](glossary.md#form-template) captures |
 | `minItems` | integer | minimum row count of a dynamic list, checked while it is visible | require at least N rows |
@@ -173,6 +174,33 @@ Dynamic options are searched on the server and sent in pages of `options_limit` 
 ### Validation functions
 
 Set `validation_function: <name>` on a field and write `<name>(vth)` in the workflow module. The engine calls it on every submit that passes the schema checks; the function reads `vth.form_data` and rejects the value with `vth.raise_error("<message>")`, which shows the message at the field and keeps the task open. `vth.key` and `vth.value` hold the field being checked and its value, `vth.path` its full path including the row index, e.g. `["gifts", 2, "sap_number"]`; inside a dynamic list the function is called once per row and an error marks only that row. Use it for checks the schema cannot express, for example a lookup through a connector or a data model.
+
+### Change functions
+
+Set `change_function: <name>` on a field and write `<name>(cth)` in the workflow module. When the user changes the field, the browser sends the current form data to the server, the function changes `cth.form_data`, and the changed values appear in the form. Use it for values that follow from other fields: a price for the chosen product, a responsible person for the chosen cost center.
+
+`cth.path` is the changed field including the row index, e.g. `["gifts", 2, "product"]`, `cth.key` its key and `cth.value` its value. `cth.row` is the object that holds the field: the row inside a dynamic list, the form data at the top level. `cth.get_connector` and `cth.get_model` work as in options functions.
+
+```python
+def update_product(cth):
+    cth.row["price"] = PRICES.get(cth.value)
+
+
+def update_prices(cth):
+    for row in cth.form_data.get("gifts") or []:
+        row["price"] = PRICES.get(row.get("product"))
+```
+
+Several fields may name the same function. A value the function sets does not trigger further change functions.
+
+On submit the server runs every change function again, once per field and once per row inside a dynamic list, in form order. From the result it takes the values of `disabled` fields; this is how a disabled field shows a derived value that the user cannot manipulate. Values of editable fields are suggestions: on submit the user's value wins. Write change functions so that they derive values from the current form data only; then it does not matter how often they run. Change functions run before hidden fields are dropped, in the browser and on submit alike, so a function also sees the value of a field that hide-if currently hides.
+
+| When | Then |
+|---|---|
+| the function adds, removes or reorders rows of a dynamic list | its result is discarded and an error is logged; a function may only change values |
+| the function raises on submit | the submit fails |
+| the function raises while a copied workflow is prepared | it is skipped and logged; the next submit runs it again |
+| the form is opened | no change function runs, unless a default value fills a field that has one; prefill other values in a service task |
 
 ## Service tasks
 

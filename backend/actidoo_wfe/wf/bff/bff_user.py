@@ -25,6 +25,9 @@ from actidoo_wfe.wf.bff.bff_user_schema import (
     DeleteFormTemplateRequest,
     DeleteFormTemplateResponse,
     DownloadAttachmentRequest,
+    FormChangeRequest,
+    FormChangeResponse,
+    FormChangeResponseItem,
     FormTemplateListItem,
     GetMyWfeUserResponse,
     GetPinnedWorkflowsResponse,
@@ -526,6 +529,22 @@ def search_property_options(
         has_more=page.has_more,
         next_offset=page.next_offset,
     )
+
+
+@router.post("/form_change", name="form_change")
+def form_change(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[WorkflowUser, Depends(get_user)],
+    reqdata: FormChangeRequest,
+) -> FormChangeResponse:
+    changes = service_application.get_form_changes(
+        db=db,
+        user_id=user.id,
+        task_id=reqdata.task_id,
+        property_path=reqdata.property_path,
+        form_data=reqdata.form_data,
+    )
+    return FormChangeResponse(changes=[FormChangeResponseItem(**change) for change in changes])
 
 
 @router.post("/strip_hidden_fields", name="strip_hidden_fields")

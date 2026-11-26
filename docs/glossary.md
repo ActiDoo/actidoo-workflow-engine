@@ -160,7 +160,7 @@ The variables of one task: a dictionary the engine passes from task to task alon
 
 ## task helper
 
-The object every service, options and validation function receives as its argument. It gives access to task data, workflow data, users, attachments, mails, connectors and data models. By convention it is named `sth` in service functions, `oth` in options functions and `vth` in validation functions.
+The object every service, options, validation and change function receives as its argument. It gives access to task data, workflow data, users, attachments, mails, connectors and data models. By convention it is named `sth` in service functions, `oth` in options functions, `vth` in validation functions and `cth` in change functions.
 
 ## task state
 

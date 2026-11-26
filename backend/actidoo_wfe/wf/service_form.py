@@ -28,8 +28,10 @@ from SpiffWorkflow.bpmn.script_engine.feel_engine import fixes as feel_fixes
 from actidoo_wfe.helpers.collections import remove_item, set_item
 from actidoo_wfe.helpers.datauri import DATA_URI_RE
 from actidoo_wfe.helpers.json_traverse import get_position_tracker
+from actidoo_wfe.wf.change_task_helper import ChangeTaskHelper
 from actidoo_wfe.wf.error_schema import set_nested_error, validate_and_create_error_dict
 from actidoo_wfe.wf.exceptions import (
+    ChangeFunctionNotFound,
     OptionFunctionNotFound,
     OptionsFileCouldNotBeReadException,
     OptionsFileNotExistsException,
@@ -652,6 +654,90 @@ def get_options_detailed(jsonschema, property_path: list[str], options_folder, f
     return data
 
 
+def _iter_change_function_fields(jsonschema, uischema, data, path=()):
+    """Yield ``(path, function_name)`` for every occurrence of a field with a
+    ``change_function`` in form order, once per row inside dynamic lists."""
+    if not isinstance(data, dict) or not isinstance(uischema, dict):
+        return
+    for key, node in jsonschema.get("properties", {}).items():
+        if not isinstance(node, dict):
+            continue
+        function_name = node.get("custom_properties", {}).get("change_function")
+        if function_name:
+            yield [*path, key], function_name
+        ui = uischema.get(key)
+        ui_items = ui.get("items") if isinstance(ui, dict) else None
+        if _is_dynamic_list_items_ui(ui_items) and isinstance(data.get(key), list):
+            for index, row in enumerate(data[key]):
+                yield from _iter_change_function_fields(node.get("items", {}), ui_items, row, (*path, key, index))
+
+
+def _dynamic_list_rows(uischema, data):
+    return [(path, [get_row_id(row) for row in rows]) for path, rows in iter_dynamic_lists(uischema, data)]
+
+
+def run_change_function(form: ReactJsonSchemaFormData, path: list, function_name: str, form_data: dict, functions_env: dict) -> dict:
+    """Run one change function for the field at ``path`` on a copy of
+    ``form_data`` and return it. A function may only change values: a result with
+    added, removed or reordered dynamic-list rows is discarded."""
+    try:
+        func = functions_env[function_name]
+    except KeyError:
+        raise ChangeFunctionNotFound(f"Error when looking up change_function '{function_name}'")
+
+    cth = ChangeTaskHelper(
+        form_data=copy.deepcopy(form_data),
+        path=path,
+        allowed_data_models=set(functions_env.get("DATA_MODELS", [])),
+        jsonschema=form.jsonschema,
+    )
+    func(cth=cth)
+
+    if _dynamic_list_rows(form.uischema, cth.form_data) != _dynamic_list_rows(form.uischema, form_data):
+        log.error("change_function '%s' changed the rows of a dynamic list, its result is discarded", function_name)
+        return form_data
+    return cth.form_data
+
+
+def run_change_functions(form: ReactJsonSchemaFormData, form_data: dict, functions_env: dict, skip_failing: bool = False) -> dict:
+    """Run every change function of the form, once per occurrence of its field."""
+    for path, function_name in list(_iter_change_function_fields(form.jsonschema, form.uischema, form_data)):
+        try:
+            form_data = run_change_function(form, path, function_name, form_data, functions_env)
+        except Exception:
+            if not skip_failing:
+                raise
+            log.exception("change_function '%s' failed and is skipped", function_name)
+    return form_data
+
+
+def get_form_changes(form: ReactJsonSchemaFormData, property_path: list, form_data: dict, functions_env: dict) -> list[dict]:
+    """The form values the change function of the field at ``property_path`` derives from ``form_data``."""
+    fields = _iter_change_function_fields(form.jsonschema, form.uischema, form_data)
+    function_name = next((name for path, name in fields if path == property_path), None)
+    if function_name is None:
+        return []
+    changed = run_change_function(form, property_path, function_name, form_data, functions_env)
+    return _diff_form_data(form.jsonschema, form.uischema, form_data, changed)
+
+
+def _diff_form_data(jsonschema, uischema, before, after, path=()) -> list[dict]:
+    """The form fields whose value differs between ``before`` and ``after``, as
+    ``{"path": [...], "value": ...}``. Rows of dynamic lists are compared by position."""
+    changes = []
+    for key, node in jsonschema.get("properties", {}).items():
+        old = before.get(key) if isinstance(before, dict) else None
+        new = after.get(key) if isinstance(after, dict) else None
+        ui = uischema.get(key) if isinstance(uischema, dict) else None
+        ui_items = ui.get("items") if isinstance(ui, dict) else None
+        if _is_dynamic_list_items_ui(ui_items) and isinstance(old, list) and isinstance(new, list):
+            for index, (old_row, new_row) in enumerate(zip(old, new)):
+                changes += _diff_form_data(node.get("items", {}), ui_items, old_row, new_row, (*path, key, index))
+        elif old != new:
+            changes.append({"path": [*path, key], "value": new})
+    return changes
+
+
 def get_custom_properties(jsonschema, path: list[str]):
     node = _get_subschema(global_jsonschema=jsonschema, path=path)
     return node.get("custom_properties", {})
@@ -1084,6 +1170,7 @@ def validate_task_data(
     authoritative_disabled_values: dict | None = None,
     log_validation_errors: bool = True,
     locale: str | None = None,
+    skip_failing_change_functions: bool = False,
 ) -> ValidationResult:
     """Validate incoming task data against a form definition and clean it up.
 
@@ -1102,6 +1189,8 @@ def validate_task_data(
     default, which acts as a declared forced assignment (ADR 010). The effective
     value feeds the hide-if evaluation (matching the frontend's FEEL evaluation),
     is not content-validated, and stays in the result so the merge persists it.
+    Change functions then run on that data, and the disabled values they derive
+    replace the effective ones - the browser's copy of them is never trusted.
 
     The function returns the cleaned task data together with an error payload."""
 
@@ -1121,6 +1210,10 @@ def validate_task_data(
                 disabled_path,
                 default=default,
             )
+        derived = run_change_functions(form, task_data, functions_env, skip_failing=skip_failing_change_functions)
+        if derived is not task_data:
+            for disabled_path, _default in _iter_disabled_field_paths(form.jsonschema, form.uischema):
+                _overwrite_disabled_field_with_authoritative_value(task_data, derived, disabled_path)
 
     validation_schema = get_jsonschema_for_validation(
         form,
