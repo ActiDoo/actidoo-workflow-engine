@@ -533,8 +533,16 @@ def get_static_options(jsonschema, path):
     return {}
 
 
+def _resolve_options_file(options_folder: pathlib.Path, options_file: str) -> pathlib.Path:
+    filepath = options_folder / options_file
+    if filepath.exists():
+        return filepath
+    shared_filepath = options_folder.parent.parent / "options" / options_file
+    return shared_filepath if shared_filepath.exists() else filepath
+
+
 def get_file_options(options_folder, options_file) -> list[tuple[str, str]]:
-    filepath: pathlib.Path = options_folder / options_file
+    filepath: pathlib.Path = _resolve_options_file(options_folder, options_file)
     data: list[tuple[str, str]] = []
 
     if not filepath.exists():
@@ -608,7 +616,7 @@ def get_options_detailed(jsonschema, property_path: list[str], options_folder, f
     options_function = custom_properties.get("options_function", None)
 
     if options_file is not None:
-        filepath: pathlib.Path = options_folder / options_file
+        filepath: pathlib.Path = _resolve_options_file(options_folder, options_file)
 
         if not filepath.exists():
             raise OptionsFileNotExistsException()

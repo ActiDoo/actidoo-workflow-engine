@@ -61,7 +61,7 @@
             ],
             "title": "Select Dynamic",
             "custom_properties": {
-                "options_file": "test_options.csv"
+                "options_file": "shared_options.csv"
             }
         },
         "select_dynamic_multiple": {

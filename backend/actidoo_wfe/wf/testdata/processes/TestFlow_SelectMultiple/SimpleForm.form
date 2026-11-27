@@ -71,7 +71,7 @@
       "id": "Field_0o5zasw",
       "key": "select_dynamic",
       "properties": {
-        "options_file": "test_options.csv"
+        "options_file": "shared_options.csv"
       }
     },
     {
