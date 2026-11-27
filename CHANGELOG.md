@@ -7,6 +7,16 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Added
+
+- **When** several workflows use the same options file for a select, e.g.
+  `approver_list.csv`:
+  - Before: every workflow needed its own copy in its `options/` folder.
+  - Now: the file can be kept once in the shared folder
+    `workflows/options/`. A file of the same name in a workflow's own
+    `options/` folder takes precedence. See `docs/workflows.md`,
+    "Options".
+
 ## [0.1.47] - 2026-11-24
 
 ### Added

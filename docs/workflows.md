@@ -110,7 +110,7 @@ Set these in the Modeler's "Custom properties" panel of a field or list. In `Ent
 |---|---|---|---|
 | `custom_type` | `select_multi`, `attachment_single`, `attachment_multi` | turns a select into a multi-select, or a text field into a single or multi file upload | multiple choices, or file uploads in forms from before the file picker |
 | `accept` | comma-separated file types, e.g. `pdf, xml` or `image/*` | restricts a text field upload (`custom_type: attachment_*`) to these file types, like the file picker's "Supported file formats" | only certain documents |
-| `options_file` | `<name>.csv` | takes the select's options from `options/<name>.csv` in the workflow directory | a fixed lookup list kept out of the form |
+| `options_file` | `<name>.csv` | takes the select's options from `options/<name>.csv` in the workflow directory, or from the shared folder `workflows/options/` | a fixed lookup list kept out of the form |
 | `options_function` | function name | takes the select's options from a function `<name>(oth)` in the workflow module | options computed at fill time, e.g. from a data model or connector |
 | `depends_on` | comma-separated keys; the nearest containing row defining the key takes precedence, even when empty, then the top level | the select clears and reloads its options when one of those fields changes | options that depend on another field |
 | `options_limit` | integer, default 50, `0` = all at once | how many dynamic options the select loads at a time | load fewer options at a time, or all at once |
@@ -166,6 +166,16 @@ cat_beta;Beta Category
 ```python
 def categories(oth):
     return [("cat_alpha", "Alpha Category"), ("cat_beta", "Beta Category")]
+```
+
+The engine looks for an options file first in the workflow's own `options/` folder, then in the shared folder `workflows/options/`. Put a list that several workflows use, such as `approver_list.csv`, into the shared folder once; a file of the same name in a workflow's own folder takes precedence for that workflow. The shared folder serves only the workflows of the same provider.
+
+```
+workflows/
+├── options/approver_list.csv     shared by all workflows below
+├── ExpenseApproval/
+│   └── options/categories.csv    used by ExpenseApproval only
+└── TravelRequest/
 ```
 
 Dynamic options are searched on the server and sent in pages of `options_limit` options. The select loads the next page when the user scrolls to the end of the list. For every page the server reads the whole file or runs the whole function again and sends only that page. On submit the value must be one of the options; for a function, the function runs again with the submitted data. Option labels from files and functions are not translated by the engine.

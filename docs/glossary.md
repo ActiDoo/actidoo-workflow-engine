@@ -124,7 +124,7 @@ A data model whose rows are the running business numbers it has issued — there
 
 ## options
 
-The choices of a select field. Static options are listed in the form file; dynamic options come from a CSV file in the `options/` folder of the workflow directory (custom property `options_file`) or from a function in the workflow module (custom property `options_function`) and are loaded while the user fills the form. Also called select values, choices, lookup values (avoid).
+The choices of a select field. Static options are listed in the form file; dynamic options come from a CSV file in the `options/` folder of the workflow directory or in the shared folder `workflows/options/` (custom property `options_file`) or from a function in the workflow module (custom property `options_function`) and are loaded while the user fills the form. Also called select values, choices, lookup values (avoid).
 
 ## role
 
