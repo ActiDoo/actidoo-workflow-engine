@@ -1037,18 +1037,33 @@ def _unsupported_form(condition: str) -> dict:
     }
 
 
-UNSUPPORTED_CONDITIONS = ['=due > "2024-01-01"', "=1 < amount < 5", '=contains(name,"x")', '="x" in name', '=name = ["a"]']
+UNSUPPORTED_CONDITIONS = ['=due > "2024-01-01"', "=1 < amount < 5", '=contains(name,"x")', '="x" in name', '=name = ["a"]', "=name = amount", "=name = empty"]
 
 
 @pytest.mark.parametrize("condition", UNSUPPORTED_CONDITIONS)
 def test__a_hide_if_the_server_cannot_evaluate_fails_when_the_definition_loads(condition):
     """Ordering against text, a chain of comparisons, contains and 'in' have no
-    server-side meaning; they used to be read as '='. The check that runs when a
-    workflow definition is loaded rejects them and names workflow, form and field."""
+    server-side meaning; they used to be read as '='. A second field or a word without
+    quotes was read as text, while the browser compares two fields. The check that runs
+    when a workflow definition is loaded rejects them and names workflow, form and field."""
     form = transform_camunda_form(_unsupported_form(condition))
 
     with pytest.raises(UnsupportedHideIfException, match=r"^workflow W, form F\.form, field detail: "):
         check_hide_if_conditions(form, "workflow W, form F.form")
+
+
+@pytest.mark.parametrize("condition", UNSUPPORTED_CONDITIONS)
+def test__a_hide_if_the_server_cannot_evaluate_is_skipped_in_a_running_task(condition):
+    """An instance keeps the form it was started with, so the load check cannot protect a
+    task whose form an older engine version accepted. The server skips such a condition:
+    it cannot tell whether the field is shown, so it takes a value that fits the field and
+    does not require one. The submit works either way and nothing the user typed is lost."""
+    sent = _validate(_unsupported_form(condition), {"name": "x", "detail": "typed"})
+    left_out = _validate(_unsupported_form(condition), {"name": "x"})
+
+    assert sent.error_schema is None and sent.task_data == {"name": "x", "detail": "typed"}
+    assert left_out.error_schema is None and left_out.task_data == {"name": "x"}
+    assert _validate(_unsupported_form(condition), {"detail": 5}).error_schema == {"detail": {"__errors": ["5 is not of type 'string', 'null'"]}}
 
 
 def _tags_form(condition: str) -> dict:

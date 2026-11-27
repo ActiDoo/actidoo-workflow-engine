@@ -160,11 +160,19 @@ a `hide-if` hides. Browser and server now apply the same rules.
     text, or a chain like `1 < amount < 5`, is rejected when the definition
     loads, as described below.
 - **When** a form has a `hide-if` outside the supported subset, for example
-  `contains(...)`, `in` or `not(...)`:
+  `contains(...)`, `in`, `not(...)` or a comparison of two fields like
+  `=a = b`:
   - Before: the server could read the condition incorrectly or fail when
-    the form was used.
+    the form was used. It read `=a = b` as `a = "b"`, also for a word without
+    quotes like `=status = open`.
   - Now: the workflow definition fails to load and is not offered for
     start. The log identifies the workflow, form and field.
+- **When** an instance that was started before has such a `hide-if` in its
+  form:
+  - Before: the server treated the field as always hidden. What the user
+    entered there was dropped without an error.
+  - Now: the server skips the condition and logs it. It takes a value that
+    fits the field and does not require one.
 - **When** a `disabled` or `readonly` field holds a stored value that breaks a
   rule of the form, for example a text longer than the maximum length:
   - Before: the browser showed an error at the field and sent nothing. No
@@ -219,7 +227,8 @@ Forms:
   receives the values of hidden fields.
 - Rewrite `hide-if` conditions outside the supported subset, including
   ordering comparisons with text, chains like `1 < x < 5`, `contains(...)`,
-  `in` and `not(...)`. Their workflow definitions now fail to load.
+  `in`, `not(...)` and comparisons of two fields. Put text in quotes:
+  `=status = "open"`. Their workflow definitions now fail to load.
 - Split a `hide-if` that mixes list-row fields with other fields in more than
   10 comparisons, for example with a helper field set by a service task. It
   now raises an error.

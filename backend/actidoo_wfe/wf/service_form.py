@@ -166,7 +166,9 @@ def _remove_hidden_values(data, validation_schema) -> None:
             remove_item(data, path)
 
 
-def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None):
+def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None, strict=False):
+    # ``strict`` raises for a hide-if the server cannot evaluate (definition load). Otherwise the
+    # condition is logged and skipped - a running instance keeps the form it was started with.
     # hier haben wir das jsonschema schon aufgebaut und in den properties zusätzlich "hideif" definiert
     # das müssen wir nun in allOf/if/then konstruke umwandeln
     # Wir iterieren über all properties und gehen rekursiv in array/objects rein.
@@ -181,6 +183,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
     # Die aktuelle Node (jsonschema) sollte direkt "properties" Kinder haben
     for key in jsonschema["properties"]:
         hideif = None
+        outer_ifthenschema = None
         try:
             node = jsonschema["properties"][key]
 
@@ -196,6 +199,7 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
                     + [
                         key,
                     ],
+                    strict=strict,
                 )
 
             if node.get("hideif", None) is not None:
@@ -302,11 +306,20 @@ def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None
 
         except Exception as error:
             log.exception(f"{type(error).__name__}: {error.args}. Raised in convert_hide_if_props_to_declarative_jsonschema for key={key}")
-            if hideif is not None:
+            if hideif is None:
+                raise
+            if strict:
                 # The server cannot evaluate this hide-if: say which field and condition.
                 reason = str(error) or type(error).__name__
                 raise UnsupportedHideIfException(f"field {'.'.join([*path, key])}: the server cannot evaluate the hide-if {hideif!r} ({reason})") from error
-            raise error
+            # Skipped: take the half-built condition out again and leave the field without it.
+            jsonschema["properties"][key] = {name: value for name, value in node.items() if name != "hideif"}
+            if outer_ifthenschema is not None:
+                global_jsonschema["allOf"] = [entry for entry in global_jsonschema["allOf"] if entry is not outer_ifthenschema]
+                if not global_jsonschema["allOf"]:
+                    del global_jsonschema["allOf"]
+            if key in jsonschema.get("required", []):
+                jsonschema["required"].remove(key)
 
 
 def _build_hide_if_decision_schema(expression, comparisons, field_path, visible_schema, hidden_schema):
@@ -362,6 +375,10 @@ def _camunda_hide_if_expression_ast_to_jsonschema(node: ast.expr, global_jsonsch
         operand_types = (ast.Name, ast.Attribute, *literal_types)
         assert isinstance(node.left, operand_types)
         assert isinstance(node.comparators[0], operand_types)
+        names = (getattr(node.left, "id", None), getattr(node.comparators[0], "id", None))
+        if isinstance(node.left, (ast.Name, ast.Attribute)) and isinstance(node.comparators[0], ast.Name) and "null" not in names:
+            # Two names: the browser compares two fields, the server has no rule for that.
+            raise NotImplementedError(f"hide-if compares a field with a fixed value, not with the name {names[1]!r}; put text in quotes")
 
         hops = 0
         scoped = False
@@ -602,7 +619,7 @@ def check_hide_if_conditions(form: ReactJsonSchemaFormData, location: str) -> No
     # Disabled fields do not change what a condition means, so the plain schema covers
     # every hide-if the validation converts.
     try:
-        convert_hide_if_props_to_declarative_jsonschema(copy.deepcopy(form.jsonschema), [])
+        convert_hide_if_props_to_declarative_jsonschema(copy.deepcopy(form.jsonschema), [], strict=True)
     except UnsupportedHideIfException as error:
         raise UnsupportedHideIfException(f"{location}, {error}") from error
 
