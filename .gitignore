@@ -221,4 +221,5 @@ upload_dir/
 .playwright-mcp
 .codex
 .claude
+tmp/
 
