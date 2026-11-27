@@ -79,6 +79,38 @@ describe('Test Flow Form Semantics — validation on submit', () => {
     await expect.element(reopened.field('number_optional')).toHaveValue(null);
   });
 
+  it('2b: sends null for a cleared date with time', async () => {
+    const { field, submitted, submit } = renderTaskForm(form010, {
+      ...initialData,
+      datetime_optional: '2026-01-31T10:00:00.000Z',
+    });
+    await field('datetime_optional').clear();
+    await submit();
+    expect(submitted).toHaveBeenCalledOnce();
+    expect(submitted.mock.calls[0][0].datetime_optional).toBeNull();
+  });
+
+  it('11b: submits although a read-only value breaks its maximum length', async () => {
+    const { submitted, submit } = renderTaskForm(form010, {
+      ...initialData,
+      locked_code: 'ABCDEF',
+    });
+    await submit();
+    expect(submitted).toHaveBeenCalledOnce();
+    expect(submitted.mock.calls[0][0].locked_code).toBe('ABCDEF');
+  });
+
+  it('13: shows the stored value of a hidden field again once it is visible', async () => {
+    const { field } = renderTaskForm(form010, {
+      ...initialData,
+      hide_reason: true,
+      kept_reason: 'Stored reason',
+    });
+    await expect.element(field('kept_reason')).not.toBeInTheDocument();
+    await field('hide_reason').click();
+    await expect.element(field('kept_reason')).toHaveValue('Stored reason');
+  });
+
   it('11: locks the prefilled text', async () => {
     const { field } = renderTaskForm(form010, initialData);
     await expect.element(field('locked_text')).toBeDisabled();

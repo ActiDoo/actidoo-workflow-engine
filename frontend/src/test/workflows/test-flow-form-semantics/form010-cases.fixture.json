@@ -56,6 +56,18 @@
         "title": "Stored date",
         "format": "date"
       },
+      "Field_clear_datetime": {
+        "type": "null",
+        "title": ""
+      },
+      "datetime_optional": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Stored date with time",
+        "format": "datetime"
+      },
       "Field_empty_condition": {
         "type": "null",
         "title": ""
@@ -347,6 +359,22 @@
         },
         "title": "Read-only list"
       },
+      "Field_locked_invalid": {
+        "type": "null",
+        "title": ""
+      },
+      "store_long_code": {
+        "type": "boolean",
+        "title": "Store a too long code"
+      },
+      "locked_code": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Read-only code",
+        "maxLength": 3
+      },
       "Field_combined_errors_case": {
         "type": "null",
         "title": ""
@@ -394,6 +422,22 @@
         "default": 10,
         "minimum": 10
       },
+      "Field_hidden_keeps": {
+        "type": "null",
+        "title": ""
+      },
+      "hide_reason": {
+        "type": "boolean",
+        "title": "Hide reason"
+      },
+      "kept_reason": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "Reason to keep",
+        "hideif": "=hide_reason = true"
+      },
       "Field_finish": {
         "type": "null",
         "title": ""
@@ -436,6 +480,12 @@
       ],
       "Row_date_optional": [
         "date_optional"
+      ],
+      "Row_clear_datetime": [
+        "Field_clear_datetime"
+      ],
+      "Row_datetime_optional": [
+        "datetime_optional"
       ],
       "Row_empty_condition": [
         "Field_empty_condition"
@@ -533,6 +583,15 @@
       "locked_rows": [
         "locked_rows"
       ],
+      "Row_locked_invalid": [
+        "Field_locked_invalid"
+      ],
+      "Row_store_long_code": [
+        "store_long_code"
+      ],
+      "Row_locked_code": [
+        "locked_code"
+      ],
       "Row_combined_errors_case": [
         "Field_combined_errors_case"
       ],
@@ -553,6 +612,15 @@
       ],
       "Row_minimum_quantity": [
         "minimum_quantity"
+      ],
+      "Row_hidden_keeps": [
+        "Field_hidden_keeps"
+      ],
+      "Row_hide_reason": [
+        "hide_reason"
+      ],
+      "Row_kept_reason": [
+        "kept_reason"
       ],
       "Row_finish": [
         "Field_finish"
@@ -636,6 +704,21 @@
       "ui:enableMarkdownInDescription": true,
       "ui:path": [
         "date_optional"
+      ],
+      "ui:emptyValue": null
+    },
+    "Field_clear_datetime": {
+      "ui:description": "### 2b. Clearing a date with time\n\n**Error case — the old date and time survive clearing.**\n\nClear the stored date and time and submit. **Last submit** should show `2b. Stored date with time = null`.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_clear_datetime"
+      ]
+    },
+    "datetime_optional": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "datetime_optional"
       ],
       "ui:emptyValue": null
     },
@@ -964,6 +1047,29 @@
       "ui:copyable": true,
       "ui:disabled": true
     },
+    "Field_locked_invalid": {
+      "ui:description": "### 11b. A read-only field holds a value its rules do not allow\n\n**Error case — the form cannot be submitted.**\n\nTick **Store a too long code** and submit. The service task then stores `ABCDEF` in **Read-only code**, which allows three characters. Submit the next task: it should go through, and **Last submit** should show `11b. Read-only code = \"ABCDEF\"`.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_locked_invalid"
+      ]
+    },
+    "store_long_code": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "store_long_code"
+      ]
+    },
+    "locked_code": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "locked_code"
+      ],
+      "ui:disabled": true,
+      "ui:emptyValue": null
+    },
     "Field_combined_errors_case": {
       "ui:description": "### 12a. Two errors on one submit\n\n**Error case — the browser stops at one error.**\n\nClear **Required name**, replace **Two-letter code** with `A` and submit once. Both fields should show their own error immediately.",
       "ui:enableMarkdownInDescription": true,
@@ -1015,6 +1121,29 @@
       "ui:path": [
         "minimum_quantity"
       ],
+      "ui:emptyValue": null
+    },
+    "Field_hidden_keeps": {
+      "ui:description": "### 13. A hidden field keeps its value\n\n**Error case — a hidden value is gone when the field shows again.**\n\nTick **Hide reason** and submit. In the next task, untick **Hide reason**. **Reason to keep** should show `Stored reason` again.",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "Field_hidden_keeps"
+      ]
+    },
+    "hide_reason": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "hide_reason"
+      ]
+    },
+    "kept_reason": {
+      "ui:description": "",
+      "ui:enableMarkdownInDescription": true,
+      "ui:path": [
+        "kept_reason"
+      ],
+      "ui:hideif": "=hide_reason = true",
       "ui:emptyValue": null
     },
     "Field_finish": {

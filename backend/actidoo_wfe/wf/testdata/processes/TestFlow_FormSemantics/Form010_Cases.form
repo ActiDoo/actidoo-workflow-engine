@@ -101,6 +101,27 @@
       "key": "date_optional"
     },
     {
+      "text": "### 2b. Clearing a date with time\n\n**Error case — the old date and time survive clearing.**\n\nClear the stored date and time and submit. **Last submit** should show `2b. Stored date with time = null`.",
+      "type": "text",
+      "layout": {
+        "row": "Row_clear_datetime",
+        "columns": null
+      },
+      "id": "Field_clear_datetime"
+    },
+    {
+      "subtype": "datetime",
+      "dateLabel": "Stored date with time",
+      "timeLabel": "Time",
+      "type": "datetime",
+      "key": "datetime_optional",
+      "layout": {
+        "row": "Row_datetime_optional",
+        "columns": null
+      },
+      "id": "Field_datetime_optional"
+    },
+    {
       "text": "### 3a. Checking empty text with `= \"\"` or `= null`\n\n**Error case — spaces leave a dependent message visible.**\n\nReplace the sample text with three spaces. Both messages below should disappear.",
       "type": "text",
       "layout": {
@@ -549,6 +570,39 @@
       "readonly": true
     },
     {
+      "text": "### 11b. A read-only field holds a value its rules do not allow\n\n**Error case — the form cannot be submitted.**\n\nTick **Store a too long code** and submit. The service task then stores `ABCDEF` in **Read-only code**, which allows three characters. Submit the next task: it should go through, and **Last submit** should show `11b. Read-only code = \"ABCDEF\"`.",
+      "type": "text",
+      "layout": {
+        "row": "Row_locked_invalid",
+        "columns": null
+      },
+      "id": "Field_locked_invalid"
+    },
+    {
+      "label": "Store a too long code",
+      "type": "checkbox",
+      "key": "store_long_code",
+      "layout": {
+        "row": "Row_store_long_code",
+        "columns": null
+      },
+      "id": "Field_store_long_code"
+    },
+    {
+      "label": "Read-only code",
+      "type": "textfield",
+      "key": "locked_code",
+      "readonly": true,
+      "validate": {
+        "maxLength": 3
+      },
+      "layout": {
+        "row": "Row_locked_code",
+        "columns": null
+      },
+      "id": "Field_locked_code"
+    },
+    {
       "type": "text",
       "layout": {
         "row": "Row_combined_errors_case",
@@ -630,6 +684,38 @@
       "validate": {
         "min": 10
       }
+    },
+    {
+      "text": "### 13. A hidden field keeps its value\n\n**Error case — a hidden value is gone when the field shows again.**\n\nTick **Hide reason** and submit. In the next task, untick **Hide reason**. **Reason to keep** should show `Stored reason` again.",
+      "type": "text",
+      "layout": {
+        "row": "Row_hidden_keeps",
+        "columns": null
+      },
+      "id": "Field_hidden_keeps"
+    },
+    {
+      "label": "Hide reason",
+      "type": "checkbox",
+      "key": "hide_reason",
+      "layout": {
+        "row": "Row_hide_reason",
+        "columns": null
+      },
+      "id": "Field_hide_reason"
+    },
+    {
+      "label": "Reason to keep",
+      "type": "textfield",
+      "key": "kept_reason",
+      "conditional": {
+        "hide": "=hide_reason = true"
+      },
+      "layout": {
+        "row": "Row_kept_reason",
+        "columns": null
+      },
+      "id": "Field_kept_reason"
     },
     {
       "text": "To finish the instance, untick **Open this form again** and submit.",
