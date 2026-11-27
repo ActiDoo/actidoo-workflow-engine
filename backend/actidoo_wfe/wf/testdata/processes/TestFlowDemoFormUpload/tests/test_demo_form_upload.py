@@ -74,8 +74,10 @@ def test__a_file_in_a_hidden_field_stays_linked_after_the_submit(db_engine_ctx, 
     """A server-built start hands the first task a file in a field its form hides. The
     stored reference stays, so the submit must not unlink the file from the instance."""
     with db_engine_ctx():
+        # A file that no visible field of the later submits holds as well.
+        only_here = _file("only-in-the-hidden-field.txt", "text/plain")
         source = _start_workflow()
-        source.user("initiator").submit(task_data=FORM_DATA, workflow_instance_id=source.workflow_instance_id)
+        source.user("initiator").submit(task_data={**FORM_DATA, "file_single": only_here}, workflow_instance_id=source.workflow_instance_id)
         reference = source.user("initiator").get_usertasks(source.workflow_instance_id, 1)[0].data["file_single"]
 
         seeded = WorkflowDummy(

@@ -796,7 +796,10 @@ def submit_task_data(
 
     # Now, we are going to extract all attachments, and cleanup the remaining
     # If illegal attachments had been attached before, they will be cleaned up here.
-    attachements = get_attachments(cleaned_task_data)
+    # A file stays if the task data still refers to it after the merge: the stored value
+    # of a hidden field is not in the cleaned submission, yet the merge keeps it.
+    merged_task_data = service_workflow.update(deepcopy(task.data), deepcopy(cleaned_task_data))
+    attachements = get_attachments(merged_task_data)
     _delete_unused_attachments(db, workflow.task_tree.id, task.id, attachements)
     # process attachments END
 
