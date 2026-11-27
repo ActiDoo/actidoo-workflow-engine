@@ -7,6 +7,17 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+### Fixed
+
+- **When** a `hide-if` mixes fields from different levels with `or` or `and`,
+  for example a field of a list row and a field outside the list:
+  - Before: the server looked for all fields on the level of the first one.
+    It hid or required the wrong fields: a visible field in a list row could
+    lose what the user entered, or a hidden required field blocked the submit.
+  - Now: each comparison is checked on its own level, including nested
+    combinations of `or` and `and` and conditions across more than two levels.
+    Such a condition may contain at most 10 comparisons; more raise an error.
+
 ## [0.1.47] - 2026-11-24
 
 ### Added
