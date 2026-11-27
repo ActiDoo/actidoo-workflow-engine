@@ -7,6 +7,8 @@ releases correspond to the git tags of this repository.
 
 ## [Unreleased]
 
+## [0.1.48] - 2026-11-27
+
 ### Fixed
 
 - **When** a `hide-if` mixes fields from different levels with `or` or `and`,
@@ -521,7 +523,8 @@ releases correspond to the git tags of this repository.
 Last release before this changelog was introduced. See the git history for
 earlier changes.
 
-[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.47...HEAD
+[Unreleased]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.48...HEAD
+[0.1.48]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.47...v0.1.48
 [0.1.47]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.46...v0.1.47
 [0.1.46]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.45...v0.1.46
 [0.1.45]: https://github.com/ActiDoo/actidoo-workflow-engine/compare/v0.1.44...v0.1.45
