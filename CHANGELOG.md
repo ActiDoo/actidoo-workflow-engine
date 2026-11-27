@@ -93,6 +93,15 @@ a `hide-if` hides. Browser and server now apply the same rules.
   - Now: `= null`, `= ""` and `= []` match missing values, `null`, empty or
     whitespace-only text and empty lists. `!= null`, `!= ""` and `!= []` are
     false for them, and ordering comparisons are false.
+- **When** an options function or a validation function reads the form data,
+  `oth.form_data` or `vth.form_data`:
+  - Before: in the option search it got what the browser sent, also the
+    browser's copy of locked fields and of data from earlier steps. On submit
+    it got only the fields of the form. An option that depended on data of an
+    earlier step was offered and then rejected.
+  - Now: both get the same data: the task data of the server with the form's
+    current input on top. Locked fields and data of earlier steps come from
+    the server. A hidden field reads as empty.
 - **When** a field or a whole dynamic list is marked `readonly` or `disabled`:
   - Before: `readonly` had no effect; users could edit it and the server took
     what the browser sent. Individual `disabled` fields were already protected

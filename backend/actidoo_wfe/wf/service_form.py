@@ -1303,6 +1303,10 @@ def validate_task_data(
 
     cleaned_task_data = remove_unknown_fields_from_task_data(task_data, validation_schema)
     _remove_hidden_values(cleaned_task_data, validation_schema)
+    # What data_for_functions hands the functions in the options search; the cleaned data
+    # already has locked values from the server and no hidden values.
+    other_steps = {key: value for key, value in (authoritative_disabled_values or {}).items() if key not in form.jsonschema["properties"]}
+    function_data = {**other_steps, **cleaned_task_data} if submission else cleaned_task_data
 
     current_path: list = []
     position, tracked_task_data = get_position_tracker(cleaned_task_data, current_path=current_path)
@@ -1315,7 +1319,7 @@ def validate_task_data(
             "custom_properties": make_custom_properties_validator(
                 options_folder=options_folder,
                 functions_env=functions_env,
-                task_data=cleaned_task_data,
+                task_data=function_data,
                 property_path=position,
                 form=form,
                 current_path=current_path,
@@ -1364,6 +1368,17 @@ def drop_hidden_fields(form: ReactJsonSchemaFormData, data: dict) -> dict:
     data = copy.deepcopy(data)
     _remove_hidden_values(data, get_jsonschema_for_validation(form))
     return data
+
+
+def data_for_functions(form: ReactJsonSchemaFormData, stored: dict, sent: dict) -> dict:
+    """What an options or a validation function reads, in the options search and on a
+    submit alike: the task data of the server with the form's fields as the client sent
+    them on top. Data of other steps and locked fields come from the server, never from
+    the client, and a hidden field reads as empty."""
+    sent = {key: value for key, value in copy.deepcopy(sent).items() if key in form.jsonschema.get("properties", {})}
+    for disabled_path, default in _iter_disabled_field_paths(form.jsonschema, form.uischema):
+        _overwrite_disabled_field_with_authoritative_value(sent, stored, disabled_path, default=default)
+    return drop_hidden_fields(form, {**stored, **sent})
 
 
 def iterate_and_replace_datauri(json_data, replace_function):

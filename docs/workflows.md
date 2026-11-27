@@ -169,7 +169,7 @@ A select takes its choices from one of three sources; radios use static values o
 |---|---|---|
 | static values | fill "Values" in the Modeler | translatable labels, delivered with the form |
 | CSV file | `options_file: <name>.csv` in `options/` | `;`-separated, first line is a header, first column value, second label; loaded while filling |
-| function | `options_function: <name>`, write `<name>(oth)` in the workflow module | returns `(value, label)` pairs; `oth` carries the current form data, so options can depend on other fields |
+| function | `options_function: <name>`, write `<name>(oth)` in the workflow module | returns `(value, label)` pairs; `oth.form_data` holds the task data with the form's current input on top, so options can depend on other fields and on data of earlier steps. A hidden field reads as empty. The submit checks the chosen value with the same data |
 
 ```
 key;label
@@ -186,7 +186,7 @@ Dynamic options are searched on the server and sent in pages of `options_limit` 
 
 ### Validation functions
 
-Set `validation_function: <name>` on a field and write `<name>(vth)` in the workflow module. The engine calls it on every submit that passes the schema checks; the function reads `vth.form_data` and rejects the value with `vth.raise_error("<message>")`, which shows the message at the field and keeps the task open. `vth.key` and `vth.value` hold the field being checked and its value, `vth.path` its full path including the row index, e.g. `["gifts", 2, "sap_number"]`; inside a dynamic list the function is called once per row and an error marks only that row. Use it for checks the schema cannot express, for example a lookup through a connector or a data model.
+Set `validation_function: <name>` on a field and write `<name>(vth)` in the workflow module. The engine calls it on every submit that passes the schema checks; the function reads `vth.form_data` - the same data an options function gets - and rejects the value with `vth.raise_error("<message>")`, which shows the message at the field and keeps the task open. `vth.key` and `vth.value` hold the field being checked and its value, `vth.path` its full path including the row index, e.g. `["gifts", 2, "sap_number"]`; inside a dynamic list the function is called once per row and an error marks only that row. Use it for checks the schema cannot express, for example a lookup through a connector or a data model.
 
 ## Service tasks
 

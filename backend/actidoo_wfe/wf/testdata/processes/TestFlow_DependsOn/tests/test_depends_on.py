@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 from actidoo_wfe.database import SessionLocal
-from actidoo_wfe.wf.form_transformation import transform_camunda_form_from_file
-from actidoo_wfe.wf.service_form import get_options, validate_task_data
+from actidoo_wfe.wf.form_transformation import transform_camunda_form, transform_camunda_form_from_file
+from actidoo_wfe.wf.service_form import data_for_functions, get_options, validate_task_data
 from actidoo_wfe.wf.testdata.processes.TestFlow_DependsOn import get_car_sub_type_options
 from actidoo_wfe.wf.tests.helpers.workflow_dummy import WorkflowDummy
 
@@ -55,6 +55,40 @@ def test_the_search_reads_a_hidden_dependency_as_empty_like_the_submit(db_engine
 
         assert search({"car_type": "truck"}) == []  # no vehicles: car_type is hidden
         assert {value for value, _label in search({"car_type": "truck", "vehicles": [{}]})} == {"pickup", "semi", "dump"}
+
+
+def test_a_function_reads_the_same_data_in_the_search_and_on_submit():
+    """An options function reads the task data of the server with the form's fields as the
+    client sent them on top. Data of an earlier step and a locked field come from the
+    server, whatever the client sends for them, and a hidden field reads as empty. The
+    search and the submit hand over the same view, so the search offers nothing the
+    submit refuses."""
+    options = [{"label": "A", "value": "a"}, {"label": "B", "value": "b"}]
+    form = transform_camunda_form(
+        {
+            "components": [
+                {"type": "select", "key": "ctrl", "values": options},
+                {"type": "textfield", "key": "note", "conditional": {"hide": '=ctrl = "a"'}},
+                {"type": "textfield", "key": "owner", "disabled": True},
+                {"type": "select", "key": "choice", "properties": {"options_function": "choices"}},
+            ]
+        }
+    )
+    seen = []
+
+    def choices(oth):
+        seen.append(copy.deepcopy(oth.form_data))
+        return [("x", "X")] if oth.form_data.get("earlier_step") == "allow" else []
+
+    stored = {"owner": "stored owner", "earlier_step": "allow", "note": "stored note"}
+    sent = {"ctrl": "a", "note": "typed before it was hidden", "owner": "copy of the browser", "earlier_step": "sent by the client", "choice": "x"}
+    view = {"ctrl": "a", "owner": "stored owner", "earlier_step": "allow", "choice": "x"}
+
+    assert data_for_functions(form, stored, sent) == view
+
+    result = validate_task_data(form, copy.deepcopy(sent), Path("."), {"choices": choices}, authoritative_disabled_values=stored)
+    assert result.error_schema is None
+    assert seen and all(data == view for data in seen)
 
 
 @pytest.mark.parametrize("row", [{}, {"car_type": None}])
