@@ -165,6 +165,12 @@ a `hide-if` hides. Browser and server now apply the same rules.
     the form was used.
   - Now: the workflow definition fails to load and is not offered for
     start. The log identifies the workflow, form and field.
+- **When** a `disabled` or `readonly` field holds a stored value that breaks a
+  rule of the form, for example a text longer than the maximum length:
+  - Before: the browser showed an error at the field and sent nothing. No
+    submit was possible, although the user cannot change the value and the
+    server does not check it.
+  - Now: the browser does not check such fields either.
 - **When** a dynamic-list overview checks a row's `hide-if` against `""`:
   - Before: the overview could show a field that the form hid.
   - Now: the overview and the form use the same empty-value comparison.

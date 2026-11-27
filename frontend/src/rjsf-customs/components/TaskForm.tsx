@@ -40,7 +40,11 @@ import MultiSelectDynamic from '@/rjsf-customs/custom-widgets/MultiSelectDynamic
 import MultiSelectStatic from '@/rjsf-customs/custom-widgets/MultiSelectStatic';
 import SelectDynamic from '@/rjsf-customs/custom-widgets/SelectDynamic';
 import SelectStatic from '@/rjsf-customs/custom-widgets/SelectStatic';
-import { collectHiddenPaths, dropErrorsOfHiddenFields } from '@/services/FeelService';
+import {
+  collectHiddenPaths,
+  dropErrorsOfHiddenFields,
+  type FormPath,
+} from '@/services/FeelService';
 import { collectBlankRequiredPaths } from '@/services/emptyValues';
 import { useTranslation } from '@/i18n';
 
@@ -117,6 +121,20 @@ FormWithoutEnterSubmit.displayName = 'FormWithoutEnterSubmit';
 
 type BaseFormProps = React.ComponentProps<typeof Form>;
 
+// Disabled and read-only fields: the backend marks both with ui:disabled.
+const collectLockedPaths = (
+  uiSchema: unknown,
+  formData: unknown,
+  path: FormPath = []
+): FormPath[] =>
+  Object.entries((uiSchema ?? {}) as Record<string, any>).flatMap(([key, ui]) => {
+    if (key.startsWith('ui:') || !ui || typeof ui !== 'object') return [];
+    if (ui['ui:disabled'] === true) return [[...path, key]];
+    const rows = (formData as Record<string, any> | undefined)?.[key];
+    if (!ui.items || !Array.isArray(rows)) return [];
+    return rows.flatMap((row, index) => collectLockedPaths(ui.items, row, [...path, key, index]));
+  });
+
 export type TaskFormProps = Omit<BaseFormProps, 'validator'> & {
   validator?: BaseFormProps['validator'];
 };
@@ -151,14 +169,20 @@ const TaskForm: React.FC<TaskFormProps> = ({
     if (rest.extraErrors) focusError();
   }, [rest.extraErrors, focusError]);
 
-  // Errors of fields the form does not show must not block the submit: the backend treats
-  // a hidden field and everything below it as absent, and so does this filter. Visibility
-  // is read from the same data the hide-if rendering uses (formContext.formData).
+  // Fields whose errors must not block the submit. The backend treats a hidden field and
+  // everything below it as absent. A locked field holds the server's value, which the
+  // backend does not validate and the user cannot repair.
+  const uncheckedPaths = (uiSchema: BaseFormProps['uiSchema'], formData: unknown): FormPath[] => [
+    ...collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData),
+    ...collectLockedPaths(uiSchema ?? rest.uiSchema, formData),
+  ];
+
+  // Visibility is read from the same data the hide-if rendering uses (formContext.formData).
   const transformErrors: NonNullable<BaseFormProps['transformErrors']> = (errors, uiSchema) => {
     const formData =
       (rest.formContext as { formData?: unknown } | undefined)?.formData ?? rest.formData;
-    const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
-    const visibleErrors = dropErrorsOfHiddenFields(errors, hiddenPaths).map(error => {
+    const unchecked = uncheckedPaths(uiSchema, formData);
+    const visibleErrors = dropErrorsOfHiddenFields(errors, unchecked).map(error => {
       if (
         error.name === 'const' &&
         error.params?.allowedValue === true &&
@@ -178,15 +202,15 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   // 'required' means a value was entered: an emptied field is null (ui:emptyValue) and a
   // whitespace-only one a string, and both pass AJV's presence check - they are reported
-  // here instead. Custom errors bypass transformErrors, so hidden fields are skipped up front.
+  // here instead. Custom errors bypass transformErrors, so unchecked fields are skipped up front.
   const customValidate: NonNullable<BaseFormProps['customValidate']> = (
     formData,
     errors,
     uiSchema,
     schemaErrors
   ) => {
-    const hiddenPaths = collectHiddenPaths(uiSchema ?? rest.uiSchema, rest.schema, formData);
-    for (const path of collectBlankRequiredPaths(rest.schema, formData, hiddenPaths)) {
+    const unchecked = uncheckedPaths(uiSchema, formData);
+    for (const path of collectBlankRequiredPaths(rest.schema, formData, unchecked)) {
       const handler = path.reduce((current: any, segment) => current?.[segment], errors);
       handler?.addError?.(t('formErrors.required'));
     }

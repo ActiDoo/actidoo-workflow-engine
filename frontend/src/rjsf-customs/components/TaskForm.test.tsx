@@ -108,6 +108,47 @@ describe('TaskForm', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("does not check a locked field: its stored value is the server's", async () => {
+    const lockedSchema: RJSFSchema = {
+      type: 'object',
+      properties: {
+        code: { type: 'string', title: 'Code', maxLength: 3 },
+        rows: {
+          type: 'array',
+          items: { type: 'object', properties: { part: { type: 'string', maxLength: 3 } } },
+        },
+      },
+    };
+    const formData = { code: 'far too long', rows: [{ part: 'far too long' }] };
+    const submitWith = async (
+      uiSchema: Record<string, unknown>
+    ): Promise<ReturnType<typeof vi.fn>> => {
+      const onSubmit = vi.fn();
+      const { unmount } = render(
+        <I18nProvider>
+          <TaskForm
+            schema={lockedSchema}
+            uiSchema={uiSchema}
+            formData={formData}
+            onSubmit={onSubmit}>
+            <button type="submit">Absenden</button>
+          </TaskForm>
+        </I18nProvider>
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Absenden' }));
+      unmount();
+      return onSubmit;
+    };
+
+    expect(await submitWith({})).not.toHaveBeenCalled();
+    expect(
+      await submitWith({
+        code: { 'ui:disabled': true },
+        rows: { items: { part: { 'ui:disabled': true } } },
+      })
+    ).toHaveBeenCalledTimes(1);
+  });
+
   it('submits via the submit button', async () => {
     const onSubmit = vi.fn();
     renderForm(onSubmit);
