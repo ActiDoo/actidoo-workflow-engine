@@ -35,9 +35,9 @@ a `hide-if` hides. Browser and server now apply the same rules.
   - Before: the browser did not send a cleared text, number or date field or
     a removed file. The old value stayed in the task data.
   - Now: the browser sends `null` and the server stores it. The old value is
-    gone. This works for text, number, date, select and a removed file. A
-    multi select becomes an empty list. If a request leaves a field out, the
-    stored value stays, as before.
+    gone. This works for text, number, date, date with time, select and a
+    removed file. A multi select becomes an empty list. If a request leaves
+    a field out, the stored value stays, as before.
 - **When** the cleared field has a default:
   - Before: if clearing left a stored value unchanged, the next form showed
     that old value. If no value was stored, it showed the default.

@@ -31,7 +31,9 @@ import { skipMinItemsPopulation } from '@/rjsf-customs/arrayDefaults';
 import CustomSelect from '@/rjsf-customs/custom-widgets/CustomSelect';
 import CustomCheckbox from '@/rjsf-customs/custom-widgets/CustomCheckbox';
 import CustomTextWidget from '@/rjsf-customs/custom-widgets/CustomTextWidget';
-import CustomDateWidget from '@/rjsf-customs/custom-widgets/CustomDateWidget';
+import CustomDateWidget, {
+  CustomDateTimeWidget,
+} from '@/rjsf-customs/custom-widgets/CustomDateWidget';
 import CurrencyNumberWidget from '@/rjsf-customs/custom-widgets/CurrencyNumberWidget';
 import CustomFieldErrorTemplate from '@/rjsf-customs/templates/CustomFieldErrorTemplate';
 import CustomDescriptionFieldTemplate from '@/rjsf-customs/templates/CustomDescriptionFieldTemplate';
@@ -86,6 +88,7 @@ const customWidgets: RegistryWidgetsType = {
   CheckboxWidget: CustomCheckbox,
   TextWidget: CustomTextWidget,
   DateWidget: CustomDateWidget,
+  DateTimeWidget: CustomDateTimeWidget,
   CurrencyNumberWidget,
   MultiSelectDynamic,
   MultiSelectStatic,
