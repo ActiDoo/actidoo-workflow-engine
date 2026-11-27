@@ -796,6 +796,11 @@ def submit_task_data(
         submitted_data=task_data,
         locale=user.locale,
     )  # may raise ValidationResultContainsErrors - nothing has been stored at this point
+    cleaned_task_data = service_form.empty_unsent_fields(
+        ReactJsonSchemaFormData(jsonschema=task.jsonschema, uischema=task.uischema),
+        cleaned_task_data,
+        task.data if isinstance(task.data, dict) else {},
+    )
 
     # Only now, for the references the cleaning kept: a file whose field is disabled,
     # hidden or unknown never reaches the database.

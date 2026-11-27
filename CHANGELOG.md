@@ -36,8 +36,17 @@ a `hide-if` hides. Browser and server now apply the same rules.
     a removed file. The old value stayed in the task data.
   - Now: the browser sends `null` and the server stores it. The old value is
     gone. This works for text, number, date, date with time, select and a
-    removed file. A multi select becomes an empty list. If a request leaves
-    a field out, the stored value stays, as before.
+    removed file. A multi select becomes an empty list.
+- **When** a submit leaves out a field of its form, for example a client that
+  calls the API directly:
+  - Before: the required check and `hide-if` read the field as empty, but the
+    stored value stayed. A client could leave out the field that controls a
+    `hide-if` and so skip a required field.
+  - Now: a field left out is empty in every respect. Where a value was
+    stored, it becomes `null`, a multi select or list `[]`. A hidden or
+    locked field keeps its value. The browser sends every field, so it
+    behaves as before; a cleared field of an older instance, which the browser
+    leaves out, is now emptied too.
 - **When** the cleared field has a default:
   - Before: if clearing left a stored value unchanged, the next form showed
     that old value. If no value was stored, it showed the default.
@@ -128,8 +137,10 @@ a `hide-if` hides. Browser and server now apply the same rules.
   - At once: the required check, all `hide-if` fixes, gateway conditions, the
     mail output, and hidden fields keeping their value. A value that was
     already removed from an open task does not come back.
-  - Only for new instances: cleared fields become `null`, required lists need
-    one entry, `readonly` works like `disabled`, locked lists.
+  - At once as well: a cleared field is emptied, although the browser leaves it
+    out there instead of sending `null`.
+  - Only for new instances: required lists need one entry, `readonly` works
+    like `disabled`, locked lists.
 
 ### Fixed
 

@@ -1372,13 +1372,49 @@ def drop_hidden_fields(form: ReactJsonSchemaFormData, data: dict) -> dict:
 
 def data_for_functions(form: ReactJsonSchemaFormData, stored: dict, sent: dict) -> dict:
     """What an options or a validation function reads, in the options search and on a
-    submit alike: the task data of the server with the form's fields as the client sent
-    them on top. Data of other steps and locked fields come from the server, never from
-    the client, and a hidden field reads as empty."""
-    sent = {key: value for key, value in copy.deepcopy(sent).items() if key in form.jsonschema.get("properties", {})}
+    submit alike: the data of other steps from the server, the form's fields as the client
+    sent them. Locked fields come from the server, never from the client. A field the
+    client left out and a hidden field read as empty."""
+    fields = form.jsonschema.get("properties", {})
+    sent = {key: value for key, value in copy.deepcopy(sent).items() if key in fields}
     for disabled_path, default in _iter_disabled_field_paths(form.jsonschema, form.uischema):
         _overwrite_disabled_field_with_authoritative_value(sent, stored, disabled_path, default=default)
-    return drop_hidden_fields(form, {**stored, **sent})
+    other_steps = {key: value for key, value in stored.items() if key not in fields}
+    return drop_hidden_fields(form, {**other_steps, **sent})
+
+
+def empty_unsent_fields(form: ReactJsonSchemaFormData, cleaned: dict, stored: dict) -> dict:
+    """A submit holds every field of its form, as the browser sends it. A field it leaves
+    out is empty: where the task data holds a value, it becomes null, a multi select or
+    list the empty list. A hidden or locked field keeps its stored value, and a field
+    that holds nothing stays missing."""
+    data = copy.deepcopy(cleaned)
+    if _fill_unsent_fields(form.jsonschema, data, stored):
+        _remove_hidden_values(data, get_jsonschema_for_validation(form, opaque_disabled_fields=True))
+    return data
+
+
+def _fill_unsent_fields(schema: dict, data: dict, stored: dict) -> bool:
+    """Whether a field was emptied."""
+    filled = False
+    for key, node in schema.get("properties", {}).items():
+        if not isinstance(node, dict):
+            continue
+        types = node.get("type") if isinstance(node.get("type"), list) else [node.get("type")]
+        if types == ["null"]:
+            continue  # static text carries no data
+        if key not in data:
+            value = stored.get(key)
+            if not is_blank_value(value) and value != []:
+                data[key] = [] if "array" in types else None
+                filled = True
+        elif _is_array_of_objects(node) and isinstance(data[key], list):
+            stored_rows = index_rows_by_id(stored.get(key))
+            for row in data[key]:
+                stored_row = stored_rows.get(get_row_id(row))
+                if isinstance(row, dict) and isinstance(stored_row, dict):
+                    filled = _fill_unsent_fields(node["items"], row, stored_row) or filled
+    return filled
 
 
 def iterate_and_replace_datauri(json_data, replace_function):

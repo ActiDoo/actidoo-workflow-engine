@@ -5,8 +5,8 @@
 
 Two user tasks share the optional text field ``textfield_1``. The second task is
 handed out with the value the first one stored. The browser sends null for a field
-the user cleared, and null must overwrite the stored value in the merge - a field
-the submission leaves out keeps it.
+the user cleared, and null must overwrite the stored value in the merge. A field
+the submission leaves out is empty as well.
 """
 
 from actidoo_wfe.database import SessionLocal
@@ -56,11 +56,11 @@ def test_an_emptied_field_clears_its_stored_value(db_engine_ctx, mock_send_text_
         assert data["textfield_1"] is None
 
 
-def test_a_field_left_out_of_the_submission_keeps_its_stored_value(db_engine_ctx, mock_send_text_mail):
+def test_a_field_left_out_of_the_submission_is_emptied(db_engine_ctx, mock_send_text_mail):
     with db_engine_ctx():
         workflow = _start_workflow()
         _submit(workflow, STEP_1, {"textfield_1": "old"})
         _submit(workflow, STEP_2, {"extended": "kept"})
         workflow.assert_completed()
 
-        assert _completed_task_data(workflow, STEP_2)["textfield_1"] == "old"
+        assert _completed_task_data(workflow, STEP_2)["textfield_1"] is None

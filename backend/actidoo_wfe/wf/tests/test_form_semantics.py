@@ -30,7 +30,7 @@ import pytest
 from actidoo_wfe.wf.constants import ROW_ID_KEY
 from actidoo_wfe.wf.exceptions import UnsupportedHideIfException
 from actidoo_wfe.wf.form_transformation import transform_camunda_form
-from actidoo_wfe.wf.service_form import MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS, check_hide_if_conditions, drop_hidden_fields, normalize_blank_values, validate_task_data
+from actidoo_wfe.wf.service_form import MAX_MIXED_LEVEL_HIDE_IF_COMPARISONS, check_hide_if_conditions, drop_hidden_fields, empty_unsent_fields, normalize_blank_values, validate_task_data
 from actidoo_wfe.wf.service_workflow import update
 
 OPTIONS_FOLDER = Path(__file__).parent / "options"
@@ -1337,3 +1337,61 @@ def test__checkbox_confirmation_only_applies_to_visible_editable_fields_per_row(
     assert not result.error_schema
     assert "confirmed" not in result.task_data["rows"][0]
     assert result.task_data["rows"][1]["skip"] is False
+
+
+UNSENT_FORM = {
+    "components": [
+        {"type": "select", "key": "ctrl", "values": AB_OPTIONS},
+        {"type": "textfield", "key": "note"},
+        {"type": "select", "key": "tags", "properties": {"custom_type": "select_multi"}, "values": AB_OPTIONS},
+        {"type": "textfield", "key": "reason", "conditional": {"hide": '=ctrl = "a"'}},
+        {"type": "textfield", "key": "owner", "disabled": True},
+        {"type": "textfield", "key": "never"},
+        {"type": "dynamiclist", "path": "rows", "components": [{"type": "textfield", "key": "name"}, {"type": "textfield", "key": "remark"}]},
+    ],
+}
+
+
+def _submit(form: dict, sent: dict, stored: dict) -> dict:
+    """What the task data holds after a submit: cleaning, emptying unsent fields, merge."""
+    result = _validate(form, sent, stored)
+    assert result.error_schema is None, result.error_schema
+    return update(copy.deepcopy(stored), empty_unsent_fields(transform_camunda_form(form), result.task_data, stored))
+
+
+def test__a_field_a_submit_leaves_out_is_emptied_like_a_cleared_field():
+    """A client must send every field of its form, as the browser does. A field it leaves
+    out counts as empty in the checks and in hide-if, and so it is stored: a stored value
+    becomes null, a multi select the empty list. Hidden and locked fields, data of other
+    steps and fields that never held a value are left alone."""
+    stored = {
+        "ctrl": "a",
+        "note": "old note",
+        "tags": ["a"],
+        "reason": "kept while hidden",
+        "owner": "server",
+        "other_step": "kept",
+        "rows": [{ROW_ID_KEY: "r1", "name": "first", "remark": "old remark"}],
+    }
+
+    after = _submit(UNSENT_FORM, {"ctrl": "a", "rows": [{ROW_ID_KEY: "r1", "name": "first"}]}, stored)
+
+    assert after == {
+        "ctrl": "a",
+        "note": None,
+        "tags": [],
+        "reason": "kept while hidden",
+        "owner": "server",
+        "other_step": "kept",
+        "rows": [{ROW_ID_KEY: "r1", "name": "first", "remark": None}],
+    }
+
+
+def test__leaving_out_the_field_a_hide_if_reads_empties_it_as_well():
+    """Left out, the controlling field is empty: the field it would hide is visible and
+    the stored data says so too, instead of keeping a value under which it was hidden."""
+    stored = {"ctrl": "a", "reason": "stored"}
+
+    after = _submit(UNSENT_FORM, {"reason": "now visible"}, stored)
+
+    assert after == {"ctrl": None, "reason": "now visible"}
