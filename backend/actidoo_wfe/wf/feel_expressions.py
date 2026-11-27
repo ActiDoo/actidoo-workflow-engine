@@ -10,6 +10,7 @@ does the rewriting, so hide-if and gateway conditions read an expression the sam
 
 import ast
 import builtins
+import functools
 import operator
 import re
 
@@ -29,6 +30,7 @@ _FIXES = [(r"\btrue\b", "True") if fix == ("true", "True") else (r"\bfalse\b", "
 _SPIFF_KEYWORD_ARGUMENT = re.compile(r",(?:leftOpen|rightOpen|invert)=True\b")
 
 
+@functools.lru_cache(maxsize=4096)  # the rewrite is costly, and the same conditions come back on every request
 def feel_to_python(expression: str) -> str:
     """Rewrite a FEEL-like expression to Python: Spiff's FEEL rewrites (functions,
     ``true``/``false``), a single ``=`` as ``==``, and the literal ``null`` as ``None``.
