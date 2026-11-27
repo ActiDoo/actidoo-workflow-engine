@@ -137,13 +137,26 @@ def _is_removed_value(error) -> bool:
 def _remove_hidden_values(data, validation_schema) -> None:
     """Remove the values of hidden fields from ``data``.
 
-    A hidden field reads as empty in the other conditions, as in the browser. A value
-    is therefore removed only if its field is still hidden once the other values found
-    are taken out - a field that is hidden only by the value of a hidden field stays.
-    Conditions that hide each other leave no such value; then all of them go.
+    The rule, as in the browser: a hidden field reads as empty in the other conditions.
+    So a field that is hidden only because a hidden field holds a value is not hidden.
+
+    Example - ``code`` is hidden while ``flag = "a"``, ``detail`` while ``code = "x"``.
+    Submitted: ``flag = "a"``, ``code = "x"``, ``detail = "typed"``.
+
+    1. A first check finds ``code`` and ``detail`` hidden, because ``code`` still holds "x".
+    2. Each such value is checked again without the other ones found. Without ``code``,
+       ``detail`` is visible, so ``detail`` stays. ``code`` is hidden without ``detail``
+       too, so ``code`` goes.
+    3. Repeat with what is left until no hidden value is found. Here: none.
+
+    Step 2 needs only few checks. Taking out a value changes only the conditions that
+    read it - here ``code``. One check without all such values answers for every value
+    no condition reads (``detail``); only a value a condition reads gets a check of its
+    own. Conditions that hide each other in a circle keep no value; then all of them go.
     """
     # The plain validator: workflow functions (options, validation) have no say here.
     validator = jsonschema.Draft202012Validator(validation_schema)
+    read_by_conditions = _names_read_by_conditions(validation_schema)
 
     def hidden_paths(candidate_data) -> list[list]:
         paths = []
@@ -153,17 +166,38 @@ def _remove_hidden_values(data, validation_schema) -> None:
                 paths.append(path)
         return paths
 
+    def hidden_without(paths) -> list[list]:
+        candidate = copy.deepcopy(data)
+        for path in paths:
+            remove_item(candidate, path)
+        return hidden_paths(candidate)
+
     while found := hidden_paths(data):
-        hidden = []
-        for path in found:
-            without_the_others = copy.deepcopy(data)
-            for other in found:
-                if other != path:
-                    remove_item(without_the_others, other)
-            if path in hidden_paths(without_the_others):
-                hidden.append(path)
+        # Step 2 of the docstring.
+        read = [path for path in found if path[-1] in read_by_conditions]
+        unread_hidden = hidden_without(read)
+        hidden = [path for path in found if path not in read and path in unread_hidden]
+        hidden += [path for path in read if path in hidden_without([other for other in read if other != path])]
         for path in hidden or found:
             remove_item(data, path)
+
+
+def _names_read_by_conditions(schema) -> set:
+    """The field names any hide-if condition reads: the properties inside an "if"."""
+    names = set()
+
+    def walk(node, in_condition):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if in_condition and key == "properties" and isinstance(value, dict):
+                    names.update(value)
+                walk(value, in_condition or key == "if")
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, in_condition)
+
+    walk(schema, False)
+    return names
 
 
 def convert_hide_if_props_to_declarative_jsonschema(global_jsonschema, path=None, strict=False):
