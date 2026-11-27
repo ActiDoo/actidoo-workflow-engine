@@ -179,6 +179,12 @@ a `hide-if` hides. Browser and server now apply the same rules.
     submit was possible, although the user cannot change the value and the
     server does not check it.
   - Now: the browser does not check such fields either.
+- **When** a workflow is started with data that names a stored file, as a copy
+  or through a link that carries data:
+  - Before: the server attached every stored file whose id the data named to
+    the new instance.
+  - Now: a copy takes only files of the copied instance. Data sent by a
+    client cannot name a stored file; such a start fails.
 - **When** a dynamic-list overview checks a row's `hide-if` against `""`:
   - Before: the overview could show a field that the form hid.
   - Now: the overview and the form use the same empty-value comparison.

@@ -166,11 +166,21 @@ def start_workflow(
             if attachments:
                 copied_task_attachments.append((first_task.id, attachments))
 
+    if trusted_seed:
+        linkable_attachment_ids = None  # server-built data may refer to any stored file
+    elif source is not None:
+        # A copy takes only files of the instance it copies: its user could see them there.
+        source_links = repository.find_task_attachments_by_worfklow_instance_id(db=db, workflow_instance_id=source.task_tree.id)
+        linkable_attachment_ids = {link.workflow_attachment_id for link in source_links}
+    else:
+        linkable_attachment_ids = set()  # data sent by a client has no instance its files could come from
+
     repository.store_workflow_instance(db=db, workflow=workflow, triggered_by=user_id)
     _persist_copied_attachments(
         db=db,
         workflow_instance_id=workflow.task_tree.id,
         task_attachments=copied_task_attachments,
+        linkable_attachment_ids=linkable_attachment_ids,
     )
 
     return workflow.task_tree.id
@@ -691,7 +701,10 @@ def _persist_copied_attachments(
     db: Session,
     workflow_instance_id: uuid.UUID,
     task_attachments: list[tuple[uuid.UUID, list[UploadedAttachmentRepresentation]]],
+    linkable_attachment_ids: set[uuid.UUID] | None,
 ) -> None:
+    """Links the stored files the first task's data refers to with the new instance.
+    ``linkable_attachment_ids`` names the files that may be linked; ``None`` allows any."""
     if not task_attachments:
         return
 
@@ -703,7 +716,7 @@ def _persist_copied_attachments(
                 db=db,
                 attachment_id=attachment.id,
             )
-            if attachment_obj is None:
+            if attachment_obj is None or (linkable_attachment_ids is not None and attachment_obj.id not in linkable_attachment_ids):
                 raise AttachmentNotFoundException()
 
             if attachment_obj.id not in seen_workflow_attachment_ids:

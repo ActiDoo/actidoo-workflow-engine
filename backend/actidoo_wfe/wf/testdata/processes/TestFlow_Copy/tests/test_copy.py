@@ -10,7 +10,7 @@ import pytest
 
 from actidoo_wfe.database import SessionLocal
 from actidoo_wfe.wf import providers, repository, service_workflow
-from actidoo_wfe.wf.exceptions import UserMayNotCopyWorkflowException, ValidationResultContainsErrors
+from actidoo_wfe.wf.exceptions import AttachmentNotFoundException, UserMayNotCopyWorkflowException, ValidationResultContainsErrors
 from actidoo_wfe.wf.service_application import (
     get_usertasks_for_user_id,
     get_workflow_preview,
@@ -28,7 +28,7 @@ ATTACHMENT_DATAURI = f"data:{ATTACHMENT_MIMETYPE};name={ATTACHMENT_FILENAME};bas
 ATTACHMENT_HASH = hashlib.sha256(ATTACHMENT_CONTENT).hexdigest()
 
 
-def start_my_workflow():
+def start_my_workflow(start_user="initiator"):
     db_session = SessionLocal()
     wf = WorkflowDummy(
         db_session=db_session,
@@ -40,7 +40,7 @@ def start_my_workflow():
             "otherwfowner": ["wf-user", "wf-owner-testflowworkflowownerpermissionsb"],
         },
         workflow_name=WF_NAME,
-        start_user="initiator",
+        start_user=start_user,
     )
 
     return wf, db_session
@@ -143,6 +143,29 @@ def test_copyWorkflowInstance(db_engine_ctx, mock_send_text_mail):
                 user_id=workflow.user("admin").user.id,
                 copy_from=workflow.workflow_instance_id,
             )
+
+
+def test_a_start_links_only_files_of_the_copied_instance(db_engine_ctx, mock_send_text_mail):
+    """A submit stores a file reference as it is sent. A start must not turn the reference to
+    someone else's file into a link: a copy takes files of the copied instance only, and data
+    sent by a client cannot refer to a stored file at all."""
+    with db_engine_ctx():
+        other, db = start_my_workflow(start_user="other@example.com")
+        other.user("other@example.com").assign_submit(
+            workflow_instance_id=other.workflow_instance_id,
+            task_data={"text1": "private", "attachments": [{"datauri": ATTACHMENT_DATAURI}]},
+        )
+        foreign_file = repository.find_task_attachments_by_worfklow_instance_id(db=db, workflow_instance_id=other.workflow_instance_id)[0].attachment
+        reference = {"id": str(foreign_file.id), "hash": foreign_file.hash, "filename": ATTACHMENT_FILENAME, "mimetype": ATTACHMENT_MIMETYPE}
+
+        mine, _ = start_my_workflow()
+        initiator = mine.user("initiator")
+        initiator.assign_submit(workflow_instance_id=mine.workflow_instance_id, task_data={"text1": "mine", "attachments": [reference]})
+
+        with pytest.raises(AttachmentNotFoundException):
+            start_workflow(db=db, name=None, user_id=initiator.user.id, copy_from=mine.workflow_instance_id)
+        with pytest.raises(AttachmentNotFoundException):
+            start_workflow(db=db, name=WF_NAME, user_id=initiator.user.id, initial_task_data={"text1": "mine", "attachments": [reference]})
 
 
 def test_copyWorkflowInstance_strips_unknown_fields(db_engine_ctx, mock_send_text_mail):
